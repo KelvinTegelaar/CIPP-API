@@ -164,19 +164,40 @@ function Invoke-ListGraphRequest {
         $GraphRequestParams.AsApp = [System.Convert]::ToBoolean($Request.Query.AsApp)
     }
 
+    # AllTenants only: queue just the tenants missing from a partial cache, serving the cached rows meanwhile.
+    if ($Request.Query.FillMissing) {
+        $GraphRequestParams.FillMissing = [System.Convert]::ToBoolean($Request.Query.FillMissing)
+    }
+
+    # AllTenants only: query every tenant again although a cache exists, serving the cached rows until each is replaced.
+    if ($Request.Query.RefreshCache) {
+        $GraphRequestParams.RefreshCache = [System.Convert]::ToBoolean($Request.Query.RefreshCache)
+    }
+
+    $CacheStatus = @{}
+    if ($Request.Query.TenantFilter -eq 'AllTenants') {
+        $GraphRequestParams.CacheStatus = $CacheStatus
+    }
+
     $Metadata = $GraphRequestParams
 
     # Use raw JSON passthrough for AllTenants cached results when no post-processing is needed.
     $UseRawJson = $Request.Query.TenantFilter -eq 'AllTenants' -and
                   -not $Request.Query.ListProperties -and
-                  -not $Request.Query.Sort -and
-                  -not $Request.Query.QueueId
+                  -not $Request.Query.Sort
 
     try {
         if ($UseRawJson) {
             $GraphRequestParams.RawJsonArray = $true
         }
         $Results = Get-GraphRequestList @GraphRequestParams
+        # How many tenants the cached rows cover, and the run filling in the rest
+        $Metadata.Remove('CacheStatus')
+        if ($CacheStatus.ExpectedTenants) {
+            $Metadata.CachedTenants = $CacheStatus.CachedTenants
+            $Metadata.ExpectedTenants = $CacheStatus.ExpectedTenants
+            if ($CacheStatus.QueueId) { $Metadata.QueueId = $CacheStatus.QueueId }
+        }
 
         if ($script:LastGraphResponseHeaders) {
             $Metadata.GraphHeaders = $script:LastGraphResponseHeaders

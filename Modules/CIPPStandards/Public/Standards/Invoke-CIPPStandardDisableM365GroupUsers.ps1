@@ -14,7 +14,7 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
             Entra (AAD) Standards
         TAG
             "CISA (MS.AAD.21.1v1)"
-            "ZTNA21868"
+            "CIS_5_1_3_4"
         EXECUTIVETEXT
             Restricts the creation of Microsoft 365 groups, Teams, and SharePoint sites to authorized administrators, preventing uncontrolled proliferation of collaboration spaces. This ensures proper governance, naming conventions, and resource management while maintaining oversight of all collaborative environments. An approved group of designated users can optionally retain the ability to create groups.
         ADDEDCOMPONENT

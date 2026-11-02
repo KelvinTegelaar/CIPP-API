@@ -14,8 +14,7 @@
   "addedDate": "2026-05-15",
   "powershellEquivalent": "Update-MgBetaPolicyDeviceRegistrationPolicy",
   "appliesToTest": [
-    "CIS_5_1_4_1",
-    "SMB1001_2_8"
+    "CIS_5_1_4_1"
   ],
   "recommendedBy": [],
   "requiredCapabilities": [],

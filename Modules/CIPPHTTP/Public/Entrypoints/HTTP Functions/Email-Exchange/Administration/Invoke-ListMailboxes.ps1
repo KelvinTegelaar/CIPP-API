@@ -5,7 +5,7 @@ function Invoke-ListMailboxes {
     .ROLE
         Exchange.Mailbox.Read
     .DESCRIPTION
-        Lists Exchange Online mailboxes for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. When manualPagination is also set, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
+        Lists Exchange Online mailboxes for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. AllTenants reads, and any read with manualPagination set, return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -13,8 +13,8 @@ function Invoke-ListMailboxes {
     $TenantFilter = $Request.Query.tenantFilter
     # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
     $UseReportDB = $Request.Query.UseReportDB -eq $true
-    # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.
-    $ManualPagination = $Request.Query.manualPagination -and [System.Convert]::ToBoolean($Request.Query.manualPagination)
+    # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only. Always on for AllTenants.
+    $ManualPagination = ($Request.Query.manualPagination -and [System.Convert]::ToBoolean($Request.Query.manualPagination)) -or $TenantFilter -eq 'AllTenants'
     try {
         # If UseReportDB is specified, retrieve from report database
         if ($UseReportDB) {

@@ -22,8 +22,9 @@ function Invoke-ListTenantAlignment {
     # Granular flattens to one row per standard; it is a detail view and never a summary source.
     if ($Summary) { $Granular = $false }
     try {
-        # Use the new Get-CIPPTenantAlignment function to get alignment data
-        $AlignmentData = Get-CIPPTenantAlignment
+        # With Baselines on, classic standards stop running and their report rows age out, so the roll-up reads baselines.
+        $UseBaselines = $Summary -and ($(try { Get-CIPPFeatureFlag -Id 'Baselines' } catch { $null })).Enabled -eq $true
+        $AlignmentData = if (-not $UseBaselines) { Get-CIPPTenantAlignment }
 
         # Build a GUID -> displayName lookup from the templates table for all template types
         $TemplateLookup = @{}
@@ -123,7 +124,15 @@ function Invoke-ListTenantAlignment {
             }
         }
 
-        if ($Summary) {
+        if ($UseBaselines) {
+            $BaselineTenants = @(Get-CIPPBaselineAlignment -TenantScores | Where-Object { $_.applicable -gt 0 })
+            $Scores = foreach ($Tenant in $BaselineTenants) {
+                [PSCustomObject]@{ Tenant = $Tenant.tenantFilter; Name = $Tenant.displayName; Score = [int]$Tenant.alignedPercentage }
+            }
+            $Scores = @($Scores)
+            $PendingDeviations = [int](($BaselineTenants | Measure-Object -Property drift -Sum).Sum)
+            $PendingTenantCount = @($BaselineTenants | Where-Object { $_.drift -gt 0 }).Count
+        } elseif ($Summary) {
             # Average a tenant's rows before bucketing: five templates is still one tenant.
             $ByTenant = @{}
             $PendingByTenant = @{}
@@ -159,7 +168,10 @@ function Invoke-ListTenantAlignment {
                         Score  = [int]$Average
                     })
             }
+            $PendingTenantCount = $PendingByTenant.Keys.Count
+        }
 
+        if ($Summary) {
             $Buckets = [ordered]@{ Strong = 0; Good = 0; Weak = 0; Poor = 0 }
             foreach ($Entry in $Scores) {
                 if ($Entry.Score -ge 90) { $Buckets['Strong']++ }
@@ -180,7 +192,7 @@ function Invoke-ListTenantAlignment {
                         Buckets            = [PSCustomObject]$Buckets
                         Lowest             = @($Scores | Sort-Object -Property Score, Tenant | Select-Object -First 4)
                         PendingDeviations  = $PendingDeviations
-                        PendingTenantCount = $PendingByTenant.Keys.Count
+                        PendingTenantCount = $PendingTenantCount
                     }
                 })
         }

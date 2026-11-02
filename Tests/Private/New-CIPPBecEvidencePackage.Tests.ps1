@@ -9,9 +9,10 @@ BeforeAll {
     function Write-LogMessage { param($message, $tenant, $API, $tenantId, $headers, $user, $sev, $LogData) }
     # The reports are rendered server-side through the report builder + kit; stub them so the unit test
     # never loads OfficeIMO - the package's job here is collation, not the kit's PDF bytes.
-    function Get-CippReportTenantName { param($TenantFilter) }
+    function Get-CippReportTenantName { param($TenantFilter, $BrandingPresetId) }
     function Build-CippBecReportTree { param($UserData, $BecData, $TenantName, $Variant) }
     function ConvertTo-CippReportPdf { param($Blocks, $Variables, $TenantName, $TenantFilter, $ReportName, $Branding, $BrandingPresetId, $GeneratedOn, $PageSize, [switch]$Landscape) }
+    function Get-CIPPBrandingSettings { }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/New-CIPPBecEvidencePackage.ps1')
 
     $script:Run = [pscustomobject]@{
@@ -57,7 +58,8 @@ Describe 'New-CIPPBecEvidencePackage' {
             )
         }
         Mock Write-LogMessage { }
-        Mock Get-CippReportTenantName { 'Contoso' }
+        Mock Get-CIPPBrandingSettings { [pscustomobject]@{ reportDefaults = [pscustomobject]@{ bec = 'p-full'; becSummary = 'p-summary' } } }
+        Mock Get-CippReportTenantName { "name-$BrandingPresetId" }
         Mock Build-CippBecReportTree { @{ Blocks = @(@{ type = 'blank' }); Variables = @{ coverlabel = 'Security Incident Report' } } }
         Mock ConvertTo-CippReportPdf { $script:FakePdf }
     }
@@ -83,6 +85,19 @@ Describe 'New-CIPPBecEvidencePackage' {
         Should -Invoke Set-CIPPBecReport -Times 0 -Because 'an export leaves no record on the run'
     }
 
+    It 'renders the full and summary PDFs with their own report presets' {
+        $null = New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001'
+        Should -Invoke ConvertTo-CippReportPdf -Times 1 -Exactly -ParameterFilter { $BrandingPresetId -eq 'p-full' -and $TenantName -eq 'name-p-full' }
+        Should -Invoke ConvertTo-CippReportPdf -Times 1 -Exactly -ParameterFilter { $BrandingPresetId -eq 'p-summary' -and $TenantName -eq 'name-p-summary' }
+    }
+
+    It 'names the tenant once when both PDFs share a preset' {
+        Mock Get-CIPPBrandingSettings { [pscustomobject]@{ reportDefaults = [pscustomobject]@{} } }
+        $null = New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001'
+        Should -Invoke Get-CippReportTenantName -Times 1 -Exactly
+        Should -Invoke ConvertTo-CippReportPdf -Times 2 -Exactly -ParameterFilter { $BrandingPresetId -eq '' }
+    }
+
     It 'flattens arrays and nested objects into CSV cells' {
         $Package = New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-20260820120000-ev0001'
         $Entries = Read-Zip -Bytes $Package.ZipBytes
@@ -106,7 +121,15 @@ Describe 'New-CIPPBecEvidencePackage' {
         $Log = [System.Text.Encoding]::UTF8.GetString($Entries['logbook.json'])
         $Log | Should -Not -Match 'Hunter2'
         $Log | Should -Match '\[redacted\]'
-        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -ParameterFilter { $Filter -like "BecCaseId eq 'BEC-20260820120000-ev0001'*" -and $Filter -like "*PartitionKey ge '20260819'*" }
+        # The query starts a day before the run but never before the 60-day floor, which moves with the clock.
+        $ExpectedFrom = ([datetime]$script:Run.RequestedAt).ToUniversalTime().AddDays(-1)
+        $RetentionFloor = [datetime]::UtcNow.AddDays(-60)
+        if ($ExpectedFrom -lt $RetentionFloor) { $ExpectedFrom = $RetentionFloor }
+        $ExpectedPartition = $ExpectedFrom.ToString('yyyyMMdd')
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -ParameterFilter {
+            $Filter -like "BecCaseId eq 'BEC-20260820120000-ev0001'*" -and
+            $Filter -like "*PartitionKey ge '$ExpectedPartition'*"
+        }
     }
 
     It 'refuses an incomplete run' {

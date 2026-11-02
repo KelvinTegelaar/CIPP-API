@@ -17,6 +17,9 @@ function Send-CIPPAlert {
         $RowKey = [string][guid]::NewGuid(),
         $Attachments,
         $AffectedUser,
+        # Device the alert is about: IntuneId and/or EntraDeviceId and/or SerialNumber, DisplayName. PSA extensions that
+        # can attach a device use it; the others ignore it.
+        $AffectedDevice,
         $PsaTicketPriority,
         $PSAReference,
         $PSATicketId,
@@ -74,7 +77,7 @@ function Send-CIPPAlert {
             }
         }
         $Summary = "Push sent to $Sent of $($Subscriptions.Count) device(s) for $TargetUser"
-        if ($Pruned) { $Summary += " ($Pruned expired subscription(s) removed)" }
+        if ($Pruned) { $Summary = "$Summary ($Pruned expired subscription(s) removed)" }
         return $Summary
     }
 
@@ -451,6 +454,10 @@ function Send-CIPPAlert {
                     $Alert.AffectedUser = $AffectedUser
                     $UserLabel = if ($AffectedUser.UPN) { $AffectedUser.UPN } elseif ($AffectedUser.AzureOID) { "OID:$($AffectedUser.AzureOID)" } else { 'unknown' }
                     Write-Information "PSA alert AffectedUser: $UserLabel"
+                }
+                if ($AffectedDevice) {
+                    $Alert.AffectedDevice = $AffectedDevice
+                    Write-Information "PSA alert AffectedDevice: $($AffectedDevice.DisplayName ?? $AffectedDevice.SerialNumber ?? $AffectedDevice.IntuneId)"
                 }
                 if ($PsaTicketPriority) {
                     $Alert.PsaTicketPriority = $PsaTicketPriority

@@ -15,6 +15,9 @@ function Get-CIPPAzDataTableEntity {
 
     On TableNotFound, invalidates the CreateTable cache, recreates the table, and
     retries once so a stale CIPPEnsuredTables entry cannot permanently break reads.
+
+    With -Stream, entities go down the pipeline as pages arrive instead of being collected
+    first, so a caller that pipes the read can process a large partition without holding it.
     #>
     [CmdletBinding()]
     param(
@@ -25,7 +28,8 @@ function Get-CIPPAzDataTableEntity {
         $Skip,
         $Sort,
         [switch]$Count,
-        [int]$MaxRetries = 3
+        [int]$MaxRetries = 3,
+        [switch]$Stream
     )
 
     # ErrorAction and ErrorVariable are set below, so a caller that passed its own would collide
@@ -34,8 +38,14 @@ function Get-CIPPAzDataTableEntity {
     $Parameters['MaxRetries'] = $MaxRetries
     $null = $Parameters.Remove('ErrorAction')
     $null = $Parameters.Remove('ErrorVariable')
+    $null = $Parameters.Remove('Stream')
 
-    $Results = Get-AzDataTableLargeEntity @Parameters -ErrorAction SilentlyContinue -ErrorVariable TableErrors
+    # TableNotFound fails the first page, so a streamed read has emitted nothing when it is retried.
+    if ($Stream) {
+        Get-AzDataTableLargeEntity @Parameters -ErrorAction SilentlyContinue -ErrorVariable TableErrors
+    } else {
+        $Results = Get-AzDataTableLargeEntity @Parameters -ErrorAction SilentlyContinue -ErrorVariable TableErrors
+    }
 
     # Do not pipe $null/$empty into Where-Object - PowerShell invokes the block once with $_ = $null.
     $NotFoundErrors = [System.Collections.Generic.List[object]]::new()
@@ -49,7 +59,11 @@ function Get-CIPPAzDataTableEntity {
         try {
             Repair-CIPPTable -Context $Context
             $TableErrors = $null
-            $Results = Get-AzDataTableLargeEntity @Parameters -ErrorAction SilentlyContinue -ErrorVariable TableErrors
+            if ($Stream) {
+                Get-AzDataTableLargeEntity @Parameters -ErrorAction SilentlyContinue -ErrorVariable TableErrors
+            } else {
+                $Results = Get-AzDataTableLargeEntity @Parameters -ErrorAction SilentlyContinue -ErrorVariable TableErrors
+            }
         } finally {
             $script:CIPPRepairingTable = $false
         }
@@ -83,5 +97,5 @@ function Get-CIPPAzDataTableEntity {
         }
     }
 
-    $Results
+    if (-not $Stream) { $Results }
 }

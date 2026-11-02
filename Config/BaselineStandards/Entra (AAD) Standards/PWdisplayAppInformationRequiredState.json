@@ -22,12 +22,8 @@
   "appliesToTest": [
     "CIS_5_2_3_1",
     "EIDSCAAM01",
-    "EIDSCAAM03",
-    "EIDSCAAM04",
     "EIDSCAAM06",
-    "EIDSCAAM07",
-    "EIDSCAAM09",
-    "EIDSCAAM10"
+    "EIDSCAAM07"
   ],
   "recommendedBy": [
     "CIS"

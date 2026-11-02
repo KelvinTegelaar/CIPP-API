@@ -1,6 +1,7 @@
 # Pester tests for the PDF path of Push-ExecGenerateReportBuilderReport: a rendered PDF is stored in
 # its own table (never on the report row the list reads), attached to the scheduled-email envelope,
-# and -PreviewOnly returns bytes without storing anything.
+# and -PreviewOnly returns bytes without storing anything. The report row keeps the content only
+# when there is no stored PDF to show.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -55,6 +56,29 @@ Describe 'Push-ExecGenerateReportBuilderReport PDF path' {
         $result = Push-ExecGenerateReportBuilderReport -TenantFilter 'contoso.onmicrosoft.com' -TemplateName 'Test Report' -Blocks $script:Blocks
         $result.TaskAttachments | Should -Not -BeNullOrEmpty
         @($result.TaskAttachments | Where-Object { $_.ContentType -eq 'application/pdf' }).Count | Should -Be 1
+    }
+
+    It 'leaves the content off the report row when the PDF is stored' {
+        $script:Stored = @{}
+        $null = Push-ExecGenerateReportBuilderReport -TenantFilter 'contoso.onmicrosoft.com' -TemplateName 'Test Report' -Blocks $script:Blocks
+        $script:Stored['ReportBuilderPdfs'] | Should -Not -BeNullOrEmpty
+        $script:Stored['ReportBuilderReports'].Blocks | Should -BeNullOrEmpty
+    }
+
+    It 'keeps the content on the report row when the PDF cannot be stored' {
+        $script:Stored = @{}
+        Mock Add-CIPPAzDataTableEntity -ParameterFilter { $Context -eq 'ReportBuilderPdfs' } { throw 'table write failed' }
+        Mock Add-CIPPAzDataTableEntity -ParameterFilter { $Context -eq 'ReportBuilderReports' } { $script:Stored[$Context] = $Entity }
+        $null = Push-ExecGenerateReportBuilderReport -TenantFilter 'contoso.onmicrosoft.com' -TemplateName 'Test Report' -Blocks $script:Blocks
+        $script:Stored['ReportBuilderReports'].Blocks | Should -BeLike '*Summary*'
+    }
+
+    It 'keeps the content on the report row when the PDF does not render' {
+        $script:Stored = @{}
+        Mock ConvertTo-CippReportPdf { throw 'render failed' }
+        $null = Push-ExecGenerateReportBuilderReport -TenantFilter 'contoso.onmicrosoft.com' -TemplateName 'Test Report' -Blocks $script:Blocks
+        $script:Stored.ContainsKey('ReportBuilderPdfs') | Should -BeFalse
+        $script:Stored['ReportBuilderReports'].Blocks | Should -BeLike '*Summary*'
     }
 
     It 'PreviewOnly returns bytes without persisting anything' {

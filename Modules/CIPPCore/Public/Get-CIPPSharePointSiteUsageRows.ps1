@@ -33,13 +33,15 @@ function Get-CIPPSharePointSiteUsageRows {
     $ReportRefreshDate = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
     $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
-    $AdminRows = @(Get-CIPPSPOAdminListData -TenantFilter $TenantFilter -AdminUrl $SharePointInfo.AdminUrl -Type SharePoint)
+    $AdminRows = @(Get-CIPPSPOAdminListData -TenantFilter $TenantFilter -AdminUrl $SharePointInfo.AdminUrl -Type SharePoint -RowLimit 5000 -ViewFields @(
+            'Title', 'SiteUrl', 'SiteId', 'StorageUsed', 'StorageQuota', 'NumOfFiles', 'TemplateName', 'TimeCreated', 'SiteOwnerName', 'SiteOwnerEmail', 'LastActivityOn'
+        ))
 
     $GraphBulk = New-GraphBulkRequest -tenantid $TenantFilter -Requests @(
         @{
             id     = 'listAllSites'
             method = 'GET'
-            url    = "sites/getAllSites?`$filter=isPersonalSite eq false&`$select=id,createdDateTime,description,name,displayName,isPersonalSite,lastModifiedDateTime,webUrl,siteCollection,sharepointIds&`$top=999"
+            url    = "sites/getAllSites?`$filter=isPersonalSite eq false&`$select=id,createdDateTime,displayName,isPersonalSite,webUrl,sharepointIds&`$top=999"
         }
     ) -asapp $true
     $SitesResponse = @($GraphBulk | Where-Object { $_.id -eq 'listAllSites' }) | Select-Object -First 1
@@ -72,7 +74,7 @@ function Get-CIPPSharePointSiteUsageRows {
         @{
             id     = [string]$RequestId++
             method = 'GET'
-            url    = "sites/$($SiteUri.Host):$($SiteUri.AbsolutePath)?`$select=id,createdDateTime,description,name,displayName,webUrl,sharepointIds"
+            url    = "sites/$($SiteUri.Host):$($SiteUri.AbsolutePath)?`$select=id,createdDateTime,displayName,webUrl,sharepointIds"
         }
     }
     if (@($MissingSiteRequests).Count -gt 0) {
@@ -173,15 +175,14 @@ function Get-CIPPSharePointSiteUsageRows {
         @{
             id     = $RequestId++
             method = 'GET'
-            url    = "sites/$($Site.sharepointIds.siteId)/lists?`$select=id,name,list,parentReference"
+            url    = "sites/$($Site.sharepointIds.siteId)/lists?`$select=id,list,parentReference"
         }
     }
 
     $ListIdBySiteKey = @{}
     if (@($ListRequests).Count -gt 0) {
         try {
-            $LibraryLists = (New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($ListRequests) -asapp $true).body.value
-            foreach ($List in @($LibraryLists)) {
+            foreach ($List in @((New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($ListRequests) -asapp $true).body.value)) {
                 if ($List.list.template -ne 'DocumentLibrary') { continue }
                 $ParentSiteId = $List.parentReference.siteId
                 if (-not $ParentSiteId) { continue }
@@ -189,7 +190,6 @@ function Get-CIPPSharePointSiteUsageRows {
                     if ($Key -and -not $ListIdBySiteKey.ContainsKey($Key)) { $ListIdBySiteKey[$Key] = $List.id }
                 }
             }
-            $LibraryLists = $null
         } catch {
             Write-LogMessage -Message "Error getting auto map urls for SharePoint site usage: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter -API $LogApi -LogData (Get-CippException -Exception $_)
         }
@@ -198,6 +198,7 @@ function Get-CIPPSharePointSiteUsageRows {
     foreach ($Site in $SiteListing) {
         $SiteKey = [string]$Site.sharepointIds.siteId
         $ListId = if ($SiteKey) { $ListIdBySiteKey[$SiteKey] } else { $null }
+        if (-not $ListId) { continue }
         $Site.AutoMapUrl = "tenantId=$($TenantId)&webId={$($Site.sharepointIds.webId)}&siteid={$($Site.sharepointIds.siteId)}&webUrl=$($Site.webUrl)&listId={$ListId}"
     }
 

@@ -14,8 +14,30 @@ function Start-ReportAttachmentRetentionCleanup {
     try {
         $ConfigTable = Get-CippTable -tablename Config
         $RetentionSettings = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'ReportAttachmentRetention' and RowKey eq 'Settings'"
-        $RetentionDays = if ($RetentionSettings.RetentionDays) { [math]::Max(7, [int]$RetentionSettings.RetentionDays) } else { 360 }
+        $RetentionDays = if ($RetentionSettings.RetentionDays) { [math]::Min(180, [math]::Max(7, [int]$RetentionSettings.RetentionDays)) } else { 90 }
         $CutoffDate = (Get-Date).AddDays(-$RetentionDays).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+
+        if ($PSCmdlet.ShouldProcess('ReportBuilderReports, ReportBuilderPdfs', 'Delete expired generated reports')) {
+            # Split part rows share their head row's write time, so the Timestamp filter removes them together.
+            $null = Start-CIPPOrchestrator -InputObject @{
+                OrchestratorName = 'ReportBuilderRetentionCleanup'
+                Batch            = @(foreach ($ReportTable in 'ReportBuilderReports', 'ReportBuilderPdfs') {
+                        @{
+                            FunctionName   = 'TableCleanupTask'
+                            Type           = 'CleanupRule'
+                            TableName      = $ReportTable
+                            DataTableProps = @{
+                                Filter   = "Timestamp lt datetime'$CutoffDate'"
+                                First    = 10000
+                                Property = @('PartitionKey', 'RowKey', 'ETag')
+                            }
+                        }
+                    })
+                AllowCollision   = $false
+                Priority         = 8
+                SkipLog          = $true
+            }
+        }
 
         $AttachmentTable = Get-CippTable -tablename 'ReportAttachmentBlobs'
         $OldAttachments = @(Get-CIPPAzDataTableEntity @AttachmentTable -Filter "PartitionKey eq 'ReportAttachment' and Timestamp lt datetime'$CutoffDate'")

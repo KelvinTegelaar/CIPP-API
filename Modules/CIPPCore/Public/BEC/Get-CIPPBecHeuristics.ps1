@@ -17,7 +17,8 @@ function Get-CIPPBecHeuristics {
 
     $CatalogNames = try {
         $RiskyPermissions = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\RiskyPermissions.json')) | ConvertFrom-Json -ErrorAction Stop
-        @($RiskyPermissions | Where-Object { $_.type -eq 'Delegated' -and $_.name } | ForEach-Object { $_.name } | Select-Object -Unique)
+        # Grants are matched on scope name alone, so leave out APIs whose scope names are generic (user_impersonation).
+        @($RiskyPermissions | Where-Object { $_.type -eq 'Delegated' -and $_.name -and $_.api -in 'Microsoft Graph', 'Exchange Online', 'SharePoint Online' } | ForEach-Object { $_.name } | Select-Object -Unique)
     } catch {
         Write-Information "BEC heuristics: could not merge RiskyPermissions.json: $($_.Exception.Message)"
         @()

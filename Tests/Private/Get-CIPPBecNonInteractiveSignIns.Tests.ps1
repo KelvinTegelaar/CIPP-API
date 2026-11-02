@@ -1,6 +1,6 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    function Search-CIPPBecSignIn { param($TenantFilter, $Filter, $StartDate, $EndDate, $Select, $AsApp) }
+    function Search-CIPPBecSignIn { param($TenantFilter, $Filter, $StartDate, $EndDate, $Select, $AsApp, [switch]$Stream) }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) $Value }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/New-CIPPBecCollectorResult.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecNonInteractiveSignIns.ps1')
@@ -21,7 +21,6 @@ BeforeAll {
             location                     = if ($null -eq $Country) { $null } else { [pscustomobject]@{ city = 'Amsterdam'; countryOrRegion = $Country } }
             userAgent                    = 'Mozilla/5.0'
             incomingTokenType            = 'refreshToken'
-            tokenProtectionStatusDetails = [pscustomobject]@{ signInSessionStatus = 'unbound' }
             riskLevelDuringSignIn        = 'none'
             signInEventTypes             = @('nonInteractiveUser')
         }
@@ -30,7 +29,7 @@ BeforeAll {
 
 Describe 'Get-CIPPBecNonInteractiveSignIns' {
     BeforeEach {
-        Mock Search-CIPPBecSignIn { [pscustomobject]@{ Rows = @($script:SignIns); Incomplete = $false } }
+        Mock Search-CIPPBecSignIn { $script:SignIns }
         Mock ConvertTo-CIPPODataFilterValue { $Value }
         $script:SignIns = @()
     }
@@ -39,7 +38,7 @@ Describe 'Get-CIPPBecNonInteractiveSignIns' {
         $null = Get-CIPPBecNonInteractiveSignIns -TenantFilter 'contoso.com' -UserId $script:UserId -StartDate $script:Start -UsageLocation 'NL'
         Should -Invoke ConvertTo-CIPPODataFilterValue -Times 1 -ParameterFilter { $Value -eq $script:UserId -and $Type -eq 'Guid' }
         Should -Invoke Search-CIPPBecSignIn -Times 1 -ParameterFilter {
-            $Filter -eq "userId eq '$($script:UserId)' and signInEventTypes/any(t: t eq 'nonInteractiveUser')" -and $TenantFilter -eq 'contoso.com' -and $StartDate -eq $script:Start
+            $Filter -eq "userId eq '$($script:UserId)' and signInEventTypes/any(t: t eq 'nonInteractiveUser')" -and $TenantFilter -eq 'contoso.com' -and $StartDate -eq $script:Start -and $Stream -and $Select -notmatch 'tokenProtectionStatusDetails' -and $Select -match 'sessionId'
         }
     }
 
@@ -63,10 +62,22 @@ Describe 'Get-CIPPBecNonInteractiveSignIns' {
         $Row.City | Should -Be 'Amsterdam'
         $Row.UserAgent | Should -Be 'Mozilla/5.0'
         $Row.IncomingTokenType | Should -Be 'refreshToken'
-        $Row.TokenProtection | Should -Be 'unbound'
         $Row.RiskLevelDuringSignIn | Should -Be 'none'
         $Row.ForeignLocation | Should -BeOfType [bool]
         $Row.ForeignLocation | Should -BeFalse
+    }
+
+    It 'keeps the rows read before a page fails, and reports the check incomplete' {
+        Mock Search-CIPPBecSignIn { Get-SignInFixture -Id 's1'; throw 'the next page timed out' }
+        $Result = Get-CIPPBecNonInteractiveSignIns -TenantFilter 'contoso.com' -UserId $script:UserId -StartDate $script:Start -UsageLocation 'NL'
+        @($Result.Data.id) | Should -Be @('s1')
+        $Result.Complete | Should -BeFalse
+        $Result.Error | Should -Match 'after 1 sign-in\(s\): the next page timed out'
+    }
+
+    It 'fails the check when nothing could be read' {
+        Mock Search-CIPPBecSignIn { throw 'Tenant does not have a premium licence' }
+        { Get-CIPPBecNonInteractiveSignIns -TenantFilter 'contoso.com' -UserId $script:UserId -StartDate $script:Start -UsageLocation 'NL' } | Should -Throw -ExpectedMessage '*premium licence*'
     }
 
     It 'derives Status from the conditional access outcome and the error code' {

@@ -14,8 +14,7 @@
   "addedDate": "2024-01-17",
   "powershellEquivalent": "Get-OwaMailboxPolicy | Set-OwaMailboxPolicy -AdditionalStorageProvidersEnabled $False",
   "appliesToTest": [
-    "CIS_6_5_3",
-    "ZTNA21817"
+    "CIS_6_5_3"
   ],
   "recommendedBy": [
     "CIS"

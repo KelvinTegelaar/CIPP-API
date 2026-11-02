@@ -15,9 +15,9 @@ function Invoke-CippTestZTNA21803 {
 
         $PolicyMigrationState = $AuthMethodsPolicy.policyMigrationState
 
-        if ($PolicyMigrationState -eq 'migrationComplete') {
+        if ($PolicyMigrationState -eq 'migrationComplete' -or [string]::IsNullOrEmpty($PolicyMigrationState)) {
             $Status = 'Passed'
-            $Result = 'Tenant has migrated from legacy MFA and SSPR policies to authentication methods policy'
+            $Result = 'Tenant uses the authentication methods policy (migration complete or not applicable)'
         } elseif ($PolicyMigrationState -eq 'migrationInProgress') {
             $Status = 'Investigate'
             $Result = 'Tenant migration from legacy MFA and SSPR policies is in progress'

@@ -16,8 +16,7 @@
   "addedDate": "2025-06-16",
   "powershellEquivalent": "Portal only",
   "appliesToTest": [
-    "CIS_2_1_10",
-    "SMB1001_2_12"
+    "CIS_2_1_10"
   ],
   "recommendedBy": [
     "CIS",

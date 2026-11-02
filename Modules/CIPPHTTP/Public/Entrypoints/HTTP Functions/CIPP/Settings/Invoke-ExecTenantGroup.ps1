@@ -56,7 +56,7 @@ function Invoke-ExecTenantGroup {
         'AddEdit' {
             $Results = [System.Collections.Generic.List[object]]::new()
             # Update group details
-            $GroupEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$groupId'"
+            $GroupEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $groupId)'"
             if ($GroupEntity) {
                 if ($groupName) {
                     $GroupEntity.Name = $groupName
@@ -96,7 +96,7 @@ function Invoke-ExecTenantGroup {
 
             if ($groupType -eq 'static') {
                 # Static group - manage members manually
-                $CurrentMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq 'Member' and GroupId eq '$groupId'"
+                $CurrentMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq 'Member' and GroupId eq '$(ConvertTo-CIPPODataFilterValue -Value $groupId)'"
 
                 # Add members
                 foreach ($member in $members) {
@@ -149,7 +149,7 @@ function Invoke-ExecTenantGroup {
         }
         'Delete' {
             # Delete group
-            $GroupEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$groupId'"
+            $GroupEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $groupId)'"
             if ($GroupEntity) {
                 Remove-CIPPAzDataTableEntity @Table -Entity $GroupEntity -Force
                 $Result = "Group '$($GroupEntity.Name)' deleted successfully"

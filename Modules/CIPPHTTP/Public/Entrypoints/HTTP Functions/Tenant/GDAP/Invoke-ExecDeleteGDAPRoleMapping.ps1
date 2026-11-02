@@ -16,7 +16,7 @@ Function Invoke-ExecDeleteGDAPRoleMapping {
     $Table = Get-CIPPTable -TableName 'GDAPRoles'
     $GroupId = $Request.Query.GroupId ?? $Request.Body.GroupId
     try {
-        $Filter = "PartitionKey eq 'Roles' and RowKey eq '{0}'" -f $GroupId
+        $Filter = "PartitionKey eq 'Roles' and RowKey eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $GroupId)
         $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entity
         $Results = [pscustomobject]@{'Results' = 'Success. GDAP relationship mapping deleted' }

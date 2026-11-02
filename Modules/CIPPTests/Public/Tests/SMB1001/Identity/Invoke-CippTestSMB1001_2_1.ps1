@@ -13,6 +13,11 @@ function Invoke-CippTestSMB1001_2_1 {
     $Name = 'Strong password hygiene is maintained'
 
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset Entra -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Microsoft Entra Password Protection. Required capabilities: AAD_PREMIUM, AAD_PREMIUM_P2.' -Risk 'High' -Name $Name -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Password Hygiene'
+            return
+        }
+
         $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
 
         if (-not $Settings) {

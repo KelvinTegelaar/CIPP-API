@@ -7,18 +7,21 @@ BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $AlertPath = Join-Path $RepoRoot 'Modules/CIPPAlerts/Public/Alerts/Get-CIPPAlertVulnerabilities.ps1'
 
-    function Get-DefenderTvmRaw { param($TenantId, [switch]$Stream) }
+    function Get-DefenderTvmRaw { param($TenantId, [switch]$Stream, [string[]]$Property) }
     function Write-AlertTrace { param($cmdletName, $tenantFilter, $data) }
     function Write-LogMessage { param($message, $API, $tenant, $sev) }
 
     . $AlertPath
 
+    # Called from the Get-DefenderTvmRaw mocks, so $Property is the projection the alert asked for: like the
+    # real reader, a field left out of it is never on the record.
     function New-TvmRecord ($CveId, $DeviceName, $FirstSeen, $Cvss = 8.0) {
-        [pscustomobject]@{
+        $Record = [pscustomobject]@{
             cveId = $CveId; deviceName = $DeviceName; firstSeenTimestamp = [datetime]$FirstSeen
             lastSeenTimestamp = [datetime]'2026-09-01'; cvssScore = $Cvss; softwareName = "app-$FirstSeen"
             vulnerabilitySeverityLevel = 'High'; exploitabilityLevel = 'ExploitIsPublic'
         }
+        if ($Property) { $Record | Select-Object -Property $Property } else { $Record }
     }
 }
 
@@ -41,6 +44,13 @@ Describe 'Get-CIPPAlertVulnerabilities' {
         Should -Invoke Get-DefenderTvmRaw -Times 1 -Exactly -ParameterFilter { $Stream.IsPresent }
     }
 
+    It 'asks for every field it reports, so a projected record still fills the row' {
+        Get-CIPPAlertVulnerabilities -InputValue @{ VulnerabilityAgeHours = 0 } -TenantFilter 'contoso.com'
+        Should -Invoke Get-DefenderTvmRaw -Times 1 -Exactly -ParameterFilter { $Property -contains 'cveId' -and $Property -contains 'deviceName' }
+        $A = $script:Captured[0]
+        ($A.CVSSScore, $A.Severity, $A.ExploitabilityLevel, $A.LastSeenTimestamp) | Should -Be @(8.0, 'High', 'ExploitIsPublic', [datetime]'2026-09-01')
+    }
+
     It 'emits one row per CVE with the earliest record, record count and unique devices' {
         Get-CIPPAlertVulnerabilities -InputValue @{ VulnerabilityAgeHours = 0 } -TenantFilter 'contoso.com'
         $script:Captured.CVE | Should -Be @('CVE-A', 'CVE-B')
@@ -48,6 +58,16 @@ Describe 'Get-CIPPAlertVulnerabilities' {
         $A.AffectedDeviceCount | Should -Be 3
         $A.AffectedDevices | Should -Be 'PC1, PC2'
         $A.SoftwareName | Should -Be 'app-2026-02-01'
+    }
+
+    It 'keys each row on its CVE, so the lifecycle sees the same item while its age and devices change' {
+        . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-AlertContentHash.ps1')
+        Get-CIPPAlertVulnerabilities -InputValue @{ VulnerabilityAgeHours = 0 } -TenantFilter 'contoso.com'
+        $Before = Get-AlertContentHash -AlertItem $script:Captured[0]
+        Mock Get-DefenderTvmRaw { New-TvmRecord 'CVE-A' 'PC9' '2026-01-01' }
+        Get-CIPPAlertVulnerabilities -InputValue @{ VulnerabilityAgeHours = 0 } -TenantFilter 'contoso.com'
+        $After = Get-AlertContentHash -AlertItem $script:Captured[0]
+        ($Before.KeyField, $After.ContentHash) | Should -Be @('Id', $Before.ContentHash)
     }
 
     It 'applies the CVSS threshold to the earliest record' {

@@ -50,6 +50,8 @@ function Invoke-ListCippQueues {
         }
     }
 
+    $Queues = @(Select-CippAllowedQueueData -Queues $Queues -User ([string]$Request.Headers.'x-ms-client-principal-name'))
+
     # Task totals across every queue, so the progress bar reflects real work rather than an
     # average of percentages (queues differ wildly in size - a permission scan is a handful of
     # batches, a sharing link scan is one activity per site).

@@ -23,7 +23,7 @@ function Get-CIPPMailboxRulesReport {
 
         $RulesByTenant = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxRules' -ByTenant
         if ($TenantFilter -ne 'AllTenants' -and $RulesByTenant.Count -eq 0) {
-            throw 'No mailbox rules data found in reporting database. Sync the report data first.'
+            throw [System.Management.Automation.ItemNotFoundException]::new('No mailbox rules data found in reporting database. Sync the report data first.')
         }
 
         $AllRules = [System.Collections.Generic.List[PSCustomObject]]::new()

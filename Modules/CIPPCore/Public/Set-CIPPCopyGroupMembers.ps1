@@ -6,7 +6,11 @@ function Set-CIPPCopyGroupMembers {
         [string]$CopyFromId,
         [string]$TenantFilter,
         [string]$APIName = 'Copy User Groups',
-        [switch]$ExchangeOnly
+        [switch]$ExchangeOnly,
+        # For a brand-new user: Exchange is not ready for the recipient yet, so queue those adds instead.
+        [switch]$DeferExchange,
+        # Set on the queued Exchange retry so it adds only the groups still pending, not every group again.
+        [string[]]$GroupIds
     )
 
     $Requests = @(
@@ -51,6 +55,7 @@ function Set-CIPPCopyGroupMembers {
     $Memberships = [System.Collections.Generic.List[object]]::new()
 
     foreach ($Group in @($CopyFromMemberships | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' })) {
+        if ($GroupIds -and $GroupIds -notcontains $Group.id) { continue }
         $GroupLabel = if ([string]::IsNullOrWhiteSpace($Group.displayName)) { $Group.id } else { $Group.displayName }
         if ($Group.groupTypes -contains 'DynamicMembership') {
             $Skipped.Add("Skipped $($GroupLabel): its membership is set by a dynamic rule, so members cannot be added directly.")
@@ -74,60 +79,71 @@ function Set-CIPPCopyGroupMembers {
         Write-LogMessage -headers $Headers -API $APIName -message $SkipMessage -Sev 'Info' -tenant $TenantFilter
     }
 
-    $ScheduleExchangeGroupTask = $false
+    $DeferredExchangeGroups = [System.Collections.Generic.List[object]]::new()
     foreach ($MailGroup in $Memberships) {
         try {
             if ($PSCmdlet.ShouldProcess($MailGroup.displayName, "Add $UserId to group")) {
                 if ($MailGroup.MailEnabled -and $MailGroup.ResourceProvisioningOptions -notcontains 'Team' -and $MailGroup.groupTypes -notcontains 'Unified') {
+                    if ($DeferExchange.IsPresent -and !$ExchangeOnly.IsPresent) {
+                        $DeferredExchangeGroups.Add($MailGroup)
+                        continue
+                    }
                     $Params = @{ Identity = $MailGroup.id; Member = $UserId; BypassSecurityGroupManagerCheck = $true }
                     try {
                         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
                     } catch {
-                        if ($_.Exception.Message -match 'Ex94914C|Microsoft.Exchange.Configuration.Tasks.ManagementObjectNotFoundException') {
-                            if (($User.assignedLicenses | Measure-Object).Count -gt 0 -and !$ExchangeOnly.IsPresent) {
-                                $ScheduleExchangeGroupTask = $true
-                            } else {
-                                throw $_
-                            }
-                        } else {
-                            throw $_
+                        # A licensed recipient Exchange has not provisioned yet joins the single queued retry below.
+                        if ($_.Exception.Message -match 'Ex94914C|Microsoft.Exchange.Configuration.Tasks.ManagementObjectNotFoundException' -and ($User.assignedLicenses | Measure-Object).Count -gt 0 -and !$ExchangeOnly.IsPresent) {
+                            $DeferredExchangeGroups.Add($MailGroup)
+                            continue
                         }
+                        throw $_
                     }
                 } elseif (!$ExchangeOnly.IsPresent) {
                     $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($MailGroup.id)/members/`$ref" -tenantid $TenantFilter -body $AddMemberBody -Verbose
                 }
             }
 
-            if ($ScheduleExchangeGroupTask) {
-                $TaskBody = [PSCustomObject]@{
-                    TenantFilter  = $TenantFilter
-                    Name          = "Copy Exchange Group Membership: $UserId from $CopyFromId"
-                    Command       = @{
-                        value = 'Set-CIPPCopyGroupMembers'
-                    }
-                    Parameters    = [PSCustomObject]@{
-                        UserId       = $UserId
-                        CopyFromId   = $CopyFromId
-                        TenantFilter = $TenantFilter
-                        ExchangeOnly = $true
-                    }
-                    ScheduledTime = [int64](([datetime]::UtcNow).AddMinutes(5) - (Get-Date '1/1/1970')).TotalSeconds
-                    PostExecution = @{
-                        Webhook = $false
-                        Email   = $false
-                        PSA     = $false
-                    }
-                }
-                Add-CIPPScheduledTask -Task $TaskBody -hidden $false
-                $Errors.Add("We've scheduled a task to add $UserId to the Exchange group $($MailGroup.displayName)") | Out-Null
-            } else {
-                Write-LogMessage -headers $Headers -API $APIName -message "Added $UserId to group $($MailGroup.displayName)" -Sev 'Info' -tenant $TenantFilter
-                $Success.Add("Added user to group: $($MailGroup.displayName)") | Out-Null
-            }
+            Write-LogMessage -headers $Headers -API $APIName -message "Added $UserId to group $($MailGroup.displayName)" -Sev 'Info' -tenant $TenantFilter
+            $Success.Add("Added user to group: $($MailGroup.displayName)") | Out-Null
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $Errors.Add("We've failed to add the group $($MailGroup.displayName): $($ErrorMessage.NormalizedError)") | Out-Null
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Group adding failed for group $($_.displayName):  $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Group adding failed for group $($MailGroup.displayName):  $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        }
+    }
+
+    if ($DeferredExchangeGroups.Count -gt 0) {
+        $GroupList = $DeferredExchangeGroups.displayName -join ', '
+        try {
+            $TaskBody = [PSCustomObject]@{
+                TenantFilter  = $TenantFilter
+                Name          = "Copy Exchange Group Membership: $UserId from $CopyFromId"
+                Command       = @{
+                    value = 'Set-CIPPCopyGroupMembers'
+                }
+                Parameters    = [PSCustomObject]@{
+                    UserId       = $UserId
+                    CopyFromId   = $CopyFromId
+                    TenantFilter = $TenantFilter
+                    ExchangeOnly = $true
+                    GroupIds     = @($DeferredExchangeGroups.id)
+                }
+                ScheduledTime = [int64](([datetime]::UtcNow).AddMinutes(15) - (Get-Date '1/1/1970')).TotalSeconds
+                PostExecution = @{
+                    Webhook = $false
+                    Email   = $false
+                    PSA     = $false
+                }
+            }
+            $ScheduleResult = Add-CIPPScheduledTask -Task $TaskBody -hidden $false -Headers $Headers
+            if ($ScheduleResult -like 'Successfully added task:*') {
+                $Success.Add("Scheduled adding $UserId to the Exchange groups $GroupList in 15 minutes, once Exchange has provisioned the mailbox.")
+            } else {
+                $Errors.Add("Failed to schedule adding $UserId to the Exchange groups $($GroupList): $ScheduleResult")
+            }
+        } catch {
+            $Errors.Add("Failed to schedule adding $UserId to the Exchange groups $($GroupList): $($_.Exception.Message)")
         }
     }
 

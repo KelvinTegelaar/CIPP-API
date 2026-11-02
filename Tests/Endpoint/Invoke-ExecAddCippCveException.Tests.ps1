@@ -30,8 +30,14 @@ BeforeAll {
     function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
     function Get-CippException { param($Exception) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $sev, $LogData) }
+    function Test-CIPPAccess { param($Request, [switch]$TenantList) $script:TenantAccess }
+    function Select-CippAllowedTenantData {
+        param([Parameter(ValueFromPipeline = $true)]$InputObject, [string[]]$TenantProperty)
+        process { if ($script:TenantAccess -contains 'AllTenants' -or $script:TenantAccess -contains $InputObject.($TenantProperty[0])) { $InputObject } }
+    }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
 
     function New-ExceptionRequest {
         param(
@@ -76,6 +82,7 @@ BeforeAll {
 Describe 'Invoke-ExecAddCippCveException' {
     BeforeEach {
         $script:Written = [System.Collections.Generic.List[object]]::new()
+        $script:TenantAccess = @('AllTenants')
 
         Mock -CommandName Write-LogMessage -MockWith { }
         Mock -CommandName Get-CippException -MockWith { @{ NormalizedError = $Exception.Exception.Message } }
@@ -140,6 +147,29 @@ Describe 'Invoke-ExecAddCippCveException' {
 
             $Response.Body.TenantsAffected | Should -Be 1
             @($script:Written).Count | Should -Be 1
+        }
+    }
+
+    Context 'tenant-restricted caller' {
+        BeforeEach { $script:TenantAccess = @('contoso.onmicrosoft.com') }
+
+        It 'writes AllAffected exceptions only for tenants the caller can access' {
+            Mock -CommandName Get-CIPPDbItem -MockWith {
+                New-CachedCveRow -CveId 'CVE-2024-0001' -Tenant 'contoso.onmicrosoft.com'
+                New-CachedCveRow -CveId 'CVE-2024-0001' -Tenant 'fabrikam.onmicrosoft.com'
+            }
+
+            $Response = Invoke-ExecAddCippCveException -Request (New-ExceptionRequest -ApplyTo 'AllAffected') -TriggerMetadata @{}
+
+            $Response.StatusCode | Should -Be ([HttpStatusCode]::OK)
+            @($script:Written).RowKey | Should -Be @('contoso.onmicrosoft.com')
+        }
+
+        It 'refuses a Global exception' {
+            $Response = Invoke-ExecAddCippCveException -Request (New-ExceptionRequest -ApplyTo 'Global') -TriggerMetadata @{}
+
+            $Response.StatusCode | Should -Be ([HttpStatusCode]::Forbidden)
+            @($script:Written).Count | Should -Be 0
         }
     }
 

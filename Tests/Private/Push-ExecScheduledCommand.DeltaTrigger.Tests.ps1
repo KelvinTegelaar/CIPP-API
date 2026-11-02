@@ -20,7 +20,7 @@ BeforeAll {
     function Test-DeltaQueryConditions { param($Query, $Trigger, $TenantFilter, $LastTrigger) }
     function Get-CippException { param($Exception) }
     function Write-LogMessage { param($API, $tenant, $tenantid, $message, $sev, $LogData, $headers) }
-    function Set-CippScheduledTaskContext { param($TaskId, $AlertReNotify) }
+    function Set-CippScheduledTaskContext { param($TaskId, $AlertReNotify, $AlertRun) }
     function Set-CippUserAgentContext { param($Headers, $Source, $TaskId) }
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function Get-CIPPSchedulerBlockedCommands { }

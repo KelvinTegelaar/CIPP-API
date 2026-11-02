@@ -122,6 +122,17 @@ Describe 'Set-CIPPAssignedPolicy' {
         }
     }
 
+    Context 'an enrollment configuration' {
+        It 'sends the assignments under enrollmentConfigurationAssignments, the name its assign action takes' {
+            $null = Set-CIPPAssignedPolicy -GroupName 'Sales Users' -PolicyId 'acc_SinglePlatformRestriction' -Type 'deviceEnrollmentConfigurations' -TenantFilter $script:Tenant -AssignmentMode 'replace'
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $uri -like "*/deviceEnrollmentConfigurations('acc_SinglePlatformRestriction')/assign" -and
+                ($body | ConvertFrom-Json).enrollmentConfigurationAssignments.target.groupId -eq $script:SalesId
+            }
+        }
+    }
+
     Context 'broad targets on an App Protection policy' {
         # The MAM service rejects any assign carrying a target class other than group/exclusion, so
         # the whole assignment fails - which is how a remediated policy ended up with none at all.
@@ -210,6 +221,41 @@ Describe 'Set-CIPPAssignedPolicy' {
                 $Types -contains '#microsoft.graph.allLicensedUsersAssignmentTarget' -and
                 @(($body | ConvertFrom-Json).assignments.target.groupId) -notcontains $script:ExcludedId
             }
+        }
+    }
+
+    Context 'when an exclude group name does not resolve' {
+        BeforeEach {
+            $script:ExclId = '22222222-2222-2222-2222-222222222222'
+            Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*/groups?*' } -MockWith {
+                @(
+                    [PSCustomObject]@{ id = $script:SalesId; displayName = 'Sales Users' },
+                    [PSCustomObject]@{ id = $script:ExclId; displayName = 'Real - Excluded' }
+                )
+            }
+        }
+
+        It 'throws, warns naming the group, and does not post' {
+            { Set-CIPPAssignedPolicy -GroupName 'AllDevices' -ExcludeGroup 'Missing - Excluded' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant } |
+                Should -Throw
+
+            Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
+            Should -Invoke Write-LogMessage -ParameterFilter { $Sev -eq 'Warning' -and $message -like '*Missing - Excluded*' }
+        }
+
+        It 'names only the unresolved name when another resolves' {
+            { Set-CIPPAssignedPolicy -GroupName 'AllDevices' -ExcludeGroup 'Real - Excluded,Missing - Excluded' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant } |
+                Should -Throw
+
+            Should -Invoke Write-LogMessage -ParameterFilter { $Sev -eq 'Warning' -and $message -like '*Missing - Excluded*' -and $message -notlike '*Real - Excluded*' }
+            Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
+        }
+
+        It 'still assigns when the exclude name resolves' {
+            $Result = Set-CIPPAssignedPolicy -GroupName 'AllDevices' -ExcludeGroup 'Real - Excluded' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant
+
+            $Result | Should -BeLike "*excluded group 'Real - Excluded'*"
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter { ($body | ConvertFrom-Json).assignments.target.groupId -contains $script:ExclId }
         }
     }
 

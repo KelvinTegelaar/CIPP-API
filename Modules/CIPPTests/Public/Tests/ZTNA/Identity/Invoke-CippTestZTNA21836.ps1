@@ -58,6 +58,10 @@ function Invoke-CippTestZTNA21836 {
             }
             $null = $ResultMarkdown.Append("`n")
             $null = $ResultMarkdown.Append("`n**Recommendation:** Review and remove privileged role assignments from workload identities unless absolutely necessary. Use least-privilege principles and consider alternative approaches like managed identities with specific API permissions instead of directory roles.`n")
+            $CippAppId = [Environment]::GetEnvironmentVariable('ApplicationID')
+            if ($CippAppId -and $WorkloadIdentitiesWithPrivilegedRoles.AppId -contains $CippAppId) {
+                $null = $ResultMarkdown.Append("`n**Note:** The CIPP application is expected to appear here. CIPP assigns it the roles it needs to manage this tenant, so do not remove them.`n")
+            }
         } else {
             $ResultMarkdown = [System.Text.StringBuilder]::new("✅ **No workload identities found with privileged role assignments.**`n")
         }

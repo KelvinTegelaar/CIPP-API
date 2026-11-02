@@ -21,7 +21,7 @@ function Push-ExecScheduledCommand {
     }
 
     $item = $Item | ConvertTo-Json -Depth 100 | ConvertFrom-Json
-    Write-Information "We are going to be running a scheduled task: $($Item.TaskInfo | ConvertTo-Json -Depth 10)"
+    Write-Information "We are going to be running a scheduled task: $($Item.TaskInfo.Name) ($($Item.TaskInfo.RowKey)), command $($Item.Command), tenant $($Item.TaskInfo.Tenant), recurrence $($Item.TaskInfo.Recurrence), state $($Item.TaskInfo.TaskState)"
 
     # Define orchestrator-based commands that handle their own post-execution and state updates
     $OrchestratorBasedCommands = @('Invoke-CIPPOffboardingJob')
@@ -29,7 +29,8 @@ function Push-ExecScheduledCommand {
     # Initialize AsyncLocal storage for thread-safe per-invocation context
     # Store task id in CIPPCore module-scoped AsyncLocal storage so Write-LogMessage can read it -
     # global vars are unreliable in Azure Functions
-    Set-CippScheduledTaskContext -TaskId $Item.TaskInfo.RowKey -AlertReNotify ([string]$Item.TaskInfo.AlertReNotify -eq 'True')
+    $AlertRun = @{}
+    Set-CippScheduledTaskContext -TaskId $Item.TaskInfo.RowKey -AlertReNotify ([string]$Item.TaskInfo.AlertReNotify -eq 'True') -AlertRun $AlertRun
 
     # Store action source + creating user identity (from stored headers) for outbound User-Agent attribution
     Set-CippUserAgentContext -Headers $Item.Parameters.Headers -Source 'scheduled-task' -TaskId $Item.TaskInfo.RowKey
@@ -76,17 +77,11 @@ function Push-ExecScheduledCommand {
     # deadlocked tasks and blocked the orchestrator's stuck-task recovery. ScheduledTime is the
     # single source of truth.
 
-    # One-time task rerun protection based on ExecutedTime (the task's own field, not a cache)
-    if ((!$task.Recurrence -or $task.Recurrence -eq '0') -and $task.ExecutedTime -and !$IsMultiTenantExecution) {
-        $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
-        $timeSinceExecution = $currentUnixTime - [int64]$task.ExecutedTime
-
-        # If executed within last 15 minutes, skip (likely a duplicate pickup)
-        if ($timeSinceExecution -lt 900) {
-            Write-Information "One-time task $($task.Name) for tenant $Tenant was recently executed ($timeSinceExecution seconds ago). Skipping to prevent duplicate execution."
-            Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
-            return
-        }
+    # Each claim stamps ExecutedTime on its dispatch; a newer value on the row means this dispatch was superseded (e.g. a stale Pending reclaim)
+    if (!$IsMultiTenantExecution -and $task.ExecutedTime -and [string]$CurrentTask.ExecutedTime -ne [string]$task.ExecutedTime) {
+        Write-Information "Task $($task.Name) for tenant $Tenant was claimed again after this dispatch. Skipping to prevent duplicate execution."
+        Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+        return
     }
 
     if ($task.Trigger) {
@@ -160,6 +155,60 @@ function Push-ExecScheduledCommand {
         }
     } else {
         $IsTriggerTask = $false
+    }
+
+    # An alert's catalog entry can set a minimumRunInterval. A task still saved with a shorter recurrence keeps its
+    # schedule, but a run whose slot is sooner than the minimum after this tenant's last completed slot is skipped.
+    # Slots (ScheduledTime) sit on the recurrence grid, so a run picked up late does not push later runs back.
+    $IsAlert = $Item.Command -like 'Get-CIPPAlert*'
+    $MinimumInterval = $null
+    $RunStart = [datetime]::UtcNow
+    $RunSlot = $task.ScheduledTime -as [int64]
+    if ($RunSlot -le 0) { $RunSlot = [datetimeoffset]::new($RunStart).ToUnixTimeSeconds() }
+    if ($IsAlert) {
+        try {
+            $AlertName = $Item.Command -replace '^Get-CIPPAlert', ''
+            $Catalog = Get-Content -Path (Join-Path $env:CIPPRootPath 'Config\alerts.json') -Raw | ConvertFrom-Json
+            $MinimumInterval = $Catalog.Where({ $_.name -eq $AlertName }, 'First')[0].minimumRunInterval
+        } catch {
+            Write-Information "Could not read the alert catalog: $($_.Exception.Message)"
+        }
+    }
+    if ($MinimumInterval) {
+        $RecurrenceSeconds, $MinimumSeconds = foreach ($Value in [string]$task.Recurrence, [string]$MinimumInterval) {
+            if ($Value -match '^\d+$') { $Value = '{0}d' -f $Value }
+            switch -Regex ($Value) {
+                '(\d+)m$' { [int64]$Matches[1] * 60 }
+                '(\d+)h$' { [int64]$Matches[1] * 3600 }
+                '(\d+)d$' { [int64]$Matches[1] * 86400 }
+                default { [int64]0 }
+            }
+        }
+        if ($RecurrenceSeconds -lt $MinimumSeconds) {
+            $TenantKey = if ($TenantInfo.customerId) { $TenantInfo.customerId } else { $Tenant }
+            $HistoryTable = Get-CippTable -tablename 'AlertRunHistory'
+            $SafeRowKey = ConvertTo-CIPPODataFilterValue -Value ('{0}_{1}' -f $task.RowKey, $TenantKey) -Type String
+            $LastRun = Get-CIPPAzDataTableEntity @HistoryTable -Filter "PartitionKey eq 'LastRun' and RowKey eq '$SafeRowKey'"
+            $LastSlot = [int64]($LastRun.ScheduledTime -as [int64])
+            if ($LastSlot -gt 0 -and ($RunSlot - $LastSlot) -lt $MinimumSeconds) {
+                $Summary = 'Skipped: this alert runs at most every {0}, and it last completed for this tenant for the run scheduled at {1:yyyy-MM-dd HH:mm} UTC.' -f $MinimumInterval, [datetimeoffset]::FromUnixTimeSeconds($LastSlot).UtcDateTime
+                Write-Information $Summary
+                Add-CIPPAlertRunHistory -Task $task -Tenant $Tenant -TenantId $TenantInfo.customerId -Outcome 'Skipped' -Summary $Summary -StartedUtc $RunStart -ScheduledTime $RunSlot
+                if (!$IsMultiTenantExecution) {
+                    $nextRunUnixTime = Get-CIPPScheduledTaskNextRun -Recurrence $task.Recurrence -ScheduledTime $task.ScheduledTime
+                    if ($nextRunUnixTime -eq 0) { $nextRunUnixTime = $task.ScheduledTime }
+                    $null = Update-AzDataTableEntity -Force @Table -Entity @{
+                        PartitionKey  = $task.PartitionKey
+                        RowKey        = $task.RowKey
+                        TaskState     = 'Planned'
+                        ScheduledTime = "$nextRunUnixTime"
+                    }
+                }
+                Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+                # Push-ScheduledTaskPostExecution counts an empty result as a failed tenant.
+                return 'Task Skipped: ran within its minimum interval.'
+            }
+        }
     }
 
     # Only update parent task state if this is NOT a multi-tenant execution
@@ -302,7 +351,9 @@ function Push-ExecScheduledCommand {
                 Write-Information "Failed to process trigger data parameters for individual execution: $($_.Exception.Message)"
             }
             try {
-                Write-Information "Executing command $($Item.Command) for individual matched data item with parameters: $($individualCommandParameters | ConvertTo-Json -Depth 10)"
+                $LoggedParameters = $individualCommandParameters.Clone()
+                $LoggedParameters.Remove('Headers')
+                Write-CippResultLog -Prefix "Executing command $($Item.Command) for individual matched data item with parameters" -Value $LoggedParameters
                 & $Item.Command @individualCommandParameters
                 Write-CippResultLog -Prefix 'Results for individual execution' -Value $results
             } catch {
@@ -320,7 +371,10 @@ function Push-ExecScheduledCommand {
                     $commandParameters['TaskInfo'] = $task
                 }
 
-                Write-Information "Starting task: $($Item.Command) for tenant: $Tenant with parameters: $($commandParameters | ConvertTo-Json -Depth 10)"
+                $LoggedParameters = $commandParameters.Clone()
+                $LoggedParameters.Remove('Headers')
+                $LoggedParameters.Remove('TaskInfo')
+                Write-CippResultLog -Prefix "Starting task: $($Item.Command) for tenant: $Tenant with parameters" -Value $LoggedParameters
                 $results = & $Item.Command @commandParameters
             } catch {
                 $results = "Task Failed: $($_.Exception.Message)"
@@ -342,6 +396,13 @@ function Push-ExecScheduledCommand {
         Write-CippResultLog -Prefix 'Results' -Value $results
         if ($item.command -like 'Get-CIPPAlert*') {
             Write-Information 'This is an alert task. Processing results as alerts.'
+            $Outcome = if ($State -eq 'Failed') { 'Failed' } elseif ($AlertRun.Reported) { 'Completed' } else { 'Not reported' }
+            $Summary = switch ($Outcome) {
+                'Failed' { [string]$results }
+                'Completed' { '{0} new, {1} reopened, {2} continuing, {3} resolved, {4} snoozed' -f [int]$AlertRun.New, [int]$AlertRun.Reopened, [int]$AlertRun.Continuing, [int]$AlertRun.Resolved, [int]$AlertRun.Snoozed }
+                default { 'The alert finished without reporting a result, so the check may not have completed. See the logbook for this tenant.' }
+            }
+            Add-CIPPAlertRunHistory -Task $task -Tenant $Tenant -TenantId $TenantInfo.customerId -Outcome $Outcome -Summary $Summary -Counts $AlertRun -StartedUtc $RunStart -ScheduledTime $RunSlot -DurationMs ([int64]([datetime]::UtcNow - $RunStart).TotalMilliseconds) -RecordCompletion:($Outcome -eq 'Completed' -and [bool]$MinimumInterval)
             $results = @($results)
             $TaskType = 'Alert'
         } else {

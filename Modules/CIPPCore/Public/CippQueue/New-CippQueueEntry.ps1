@@ -19,10 +19,17 @@ function New-CippQueueEntry {
         Status       = 'Queued'
         TotalTasks   = $TotalTasks
     }
+    # Only the user who started a queue may cancel it (ExecCancelCippQueue).
+    if ($script:CippRealtimeUser) { $QueueEntry.Owner = [string]$script:CippRealtimeUser }
 
     if ($env:CIPPNG -eq 'true') {
         [Craft.Services.QueueStatusBridge]::RegisterQueueMetadata($QueueEntry.RowKey, $Name, $Link, $Reference)
         Add-CIPPRealtimeWatch -JobId $QueueEntry.RowKey -Run
+        if ($QueueEntry.Owner) {
+            $CippQueue = Get-CippTable -TableName CippQueue
+            $CippQueue.Entity = $QueueEntry
+            Add-CIPPAzDataTableEntity @CippQueue
+        }
         return $QueueEntry
     }
 

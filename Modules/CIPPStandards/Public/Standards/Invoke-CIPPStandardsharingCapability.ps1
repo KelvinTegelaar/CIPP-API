@@ -16,8 +16,6 @@ function Invoke-CIPPStandardsharingCapability {
             "CIS M365 5.0 (7.2.3)"
             "CISA (MS.AAD.14.1v1)"
             "CISA (MS.SPO.1.1v1)"
-            "ZTNA21803"
-            "ZTNA21804"
         EXECUTIVETEXT
             Defines the organization's default policy for sharing files and folders in SharePoint and OneDrive, balancing collaboration needs with security requirements. This fundamental setting determines whether employees can share with external users, anonymous links, or only internal colleagues.
         ADDEDCOMPONENT

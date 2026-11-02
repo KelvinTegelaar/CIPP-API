@@ -23,8 +23,14 @@ function Start-TenantDynamicGroupOrchestrator {
 
         if ($TenantGroups.Count -gt 0) {
             Write-Information "Found $($TenantGroups.Count) dynamic tenant groups"
-            $Queue = New-CippQueueEntry -Name 'Dynamic Tenant Groups' -TotalTasks $TenantGroups.Count
-            $TenantBatch = $TenantGroups | Select-Object Name, Id, @{n = 'FunctionName'; exp = { 'UpdateDynamicTenantGroup' } }, @{n = 'QueueId'; exp = { $Queue.RowKey } }
+            $Queue = New-CippQueueEntry -Name 'Dynamic Tenant Groups' -TotalTasks 1
+            # One task for all groups, so tenants and licences are loaded once rather than per group
+            $TenantBatch = [PSCustomObject]@{
+                Name         = if ($GroupId -eq 'All') { 'All dynamic groups' } else { $TenantGroups.Name }
+                Id           = if ($GroupId -ne 'All') { $GroupId }
+                FunctionName = 'UpdateDynamicTenantGroup'
+                QueueId      = $Queue.RowKey
+            }
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'UpdateDynamicTenantGroups'
                 AllowCollision   = $GroupId -ne 'All'

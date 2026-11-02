@@ -17,7 +17,7 @@ Function Invoke-DomainAnalyser_List {
     # Get all the things
 
     if ($Request.Query.tenantFilter -ne 'AllTenants') {
-        $DomainTable.Filter = "TenantId eq '{0}'" -f $Request.Query.tenantFilter
+        $DomainTable.Filter = "TenantId eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $Request.Query.tenantFilter)
     }
 
     try {

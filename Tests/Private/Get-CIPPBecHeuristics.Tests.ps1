@@ -53,15 +53,16 @@ Describe 'Get-CIPPBecHeuristics' {
         'Urgent action required' | Should -Match $H.phishingSubjectPatterns.'Urgent action language'
     }
 
-    It 'merges the delegated names from RiskyPermissions.json into catalogNames' {
+    It 'merges the Microsoft 365 delegated names from RiskyPermissions.json into catalogNames' {
         $H = Get-CIPPBecHeuristics
         $Catalog = Get-Content (Join-Path $script:BackendRoot 'Config/RiskyPermissions.json') -Raw | ConvertFrom-Json
-        $Delegated = @($Catalog | Where-Object type -EQ 'Delegated' | ForEach-Object name)
+        $Delegated = @($Catalog | Where-Object { $_.type -eq 'Delegated' -and $_.api -in 'Microsoft Graph', 'Exchange Online', 'SharePoint Online' } | ForEach-Object name)
         $ApplicationOnly = @($Catalog | Where-Object { $_.type -eq 'Application' -and $_.name -notin $Delegated } | ForEach-Object name)
         $Delegated | Should -Not -BeNullOrEmpty
         $ApplicationOnly | Should -Not -BeNullOrEmpty
         foreach ($Name in $Delegated) { @($H.riskyScopes.catalogNames) | Should -Contain $Name }
         foreach ($Name in $ApplicationOnly) { @($H.riskyScopes.catalogNames) | Should -Not -Contain $Name -Because 'application permissions are not delegated scopes' }
+        @($H.riskyScopes.catalogNames) | Should -Not -Contain 'user_impersonation' -Because 'grants are matched on name alone and every custom API exposes user_impersonation'
     }
 
     It 'throws when the file is missing' {

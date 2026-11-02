@@ -16,6 +16,7 @@ BeforeAll {
     function Get-CIPPTemplateSourceUrl { param($Source, $SourcePath, $Repos) if ($Source) { "https://github.com/$Source" } }
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaseline.ps1')
+    . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPTenantLookup.ps1')
 
     # Serializes the way the HTTP layer does, so the assertions see the wire shape.
     function script:Get-WireShape {

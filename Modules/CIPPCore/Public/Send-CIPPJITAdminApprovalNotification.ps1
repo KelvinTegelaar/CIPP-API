@@ -1,7 +1,7 @@
 function Send-CIPPJITAdminApprovalNotification {
     <#
     .SYNOPSIS
-        Sends a JIT admin approval request event through the configured notification methods and to push subscribers
+        Sends a JIT admin approval request event through the configured notification methods, by email to each approver (or the requester on a decision), and by push on CIPP-NG
     .FUNCTIONALITY
         Internal
     #>
@@ -51,9 +51,10 @@ function Send-CIPPJITAdminApprovalNotification {
         if ($Config.webhook) { $null = Send-CIPPAlert -Type 'webhook' -Title $Title -JSONContent ([pscustomobject]$Details) -TenantFilter $Tenant -APIName 'JITAdminApproval' }
         if ($Config.sendtoIntegration) { $null = Send-CIPPAlert -Type 'psa' -Title $Title -HTMLContent $Html -TenantFilter $Tenant -APIName 'JITAdminApproval' }
 
-        # Push is CIPP-NG only: approvers come from allowedUsers, which only CIPP-NG populates
-        if ($env:CIPPNG -ne 'true') { return }
-        $PushTargets = if ($Status -eq 'Requested') {
+        # Approvers (or the requester on a decision) each get a personal email. Push goes to the same people,
+        # but only on CIPP-NG where devices can register. Both read allowedUsers, which classic CIPP only
+        # fills for group-mapped and manually added users.
+        $Targets = if ($Status -eq 'Requested') {
             $ApproverRoles = @($ApprovalRequest.ApproverRoles | ConvertFrom-Json)
             $UsersTable = Get-CIPPTable -TableName 'allowedUsers'
             foreach ($CippUser in (Get-CIPPAzDataTableEntity @UsersTable -Filter "PartitionKey eq 'User'")) {
@@ -63,8 +64,11 @@ function Send-CIPPJITAdminApprovalNotification {
         } else {
             $ApprovalRequest.RequestedBy
         }
-        foreach ($Target in $PushTargets) {
-            $null = Send-CIPPAlert -Type 'push' -Title $Title -TargetUser $Target -PushMessage "$($ApprovalRequest.RoleNames) $($ApprovalRequest.GroupNames)".Trim() -Url $Path -APIName 'JITAdminApproval'
+        foreach ($Target in $Targets) {
+            $null = Send-CIPPAlert -Type 'email' -Title $Title -HTMLContent $Html -altEmail $Target -TenantFilter $Tenant -APIName 'JITAdminApproval'
+            if ($env:CIPPNG -eq 'true') {
+                $null = Send-CIPPAlert -Type 'push' -Title $Title -TargetUser $Target -PushMessage "$($ApprovalRequest.RoleNames) $($ApprovalRequest.GroupNames)".Trim() -Url $Path -APIName 'JITAdminApproval'
+            }
         }
     } catch {
         Write-LogMessage -API 'JITAdminApproval' -tenant $ApprovalRequest.Tenant -message "Failed to send JIT admin approval notification: $($_.Exception.Message)" -Sev 'Warning'

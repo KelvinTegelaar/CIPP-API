@@ -62,6 +62,15 @@ function Invoke-ExecDeviceAction {
                 } | ConvertTo-Json -Compress -Depth 5
                 break
             }
+            'initiateOnDemandProactiveRemediation' {
+                # Graph takes only the remediation script id, not the rest of the request body
+                $ScriptPolicyId = $Request.Body.scriptPolicyId.value ?? $Request.Body.scriptPolicyId
+                if ([string]::IsNullOrWhiteSpace($ScriptPolicyId)) {
+                    throw 'Select a remediation script to run.'
+                }
+                $ActionBody = @{ scriptPolicyId = "$ScriptPolicyId" } | ConvertTo-Json -Compress
+                break
+            }
             default { $ActionBody = $Request.Body | ConvertTo-Json -Compress }
         }
 

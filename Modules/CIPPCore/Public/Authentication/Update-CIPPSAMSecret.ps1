@@ -26,7 +26,8 @@ function Update-CIPPSAMSecret {
     }
 
     try {
-        $AppPolicyStatus = Update-AppManagementPolicy
+        # Minting a secret needs password addition allowed, whatever auth mode is active right now.
+        $AppPolicyStatus = Update-AppManagementPolicy -CertificateOnly $false
         Write-Information $AppPolicyStatus.PolicyAction
     } catch {
         Write-Warning "Error updating app management policy $($_.Exception.Message)."

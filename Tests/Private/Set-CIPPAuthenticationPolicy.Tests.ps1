@@ -185,6 +185,20 @@ Describe 'Set-CIPPAuthenticationPolicy' {
         @($body.excludeTargets).Count | Should -Be 0
     }
 
+    It 'writes exclude targets for methods other than Email' {
+        $script:mockCurrentInfo = [pscustomobject]@{
+            state          = 'disabled'
+            excludeTargets = @()
+        }
+
+        Set-CIPPAuthenticationPolicy -Tenant 'contoso.onmicrosoft.com' -AuthenticationMethodId 'softwareOath' `
+            -Enabled $true -ExcludeGroupIds @('admins')
+
+        $body = $script:lastBody | ConvertFrom-Json
+        $body.excludeTargets[0].id | Should -Be 'admins'
+        $body.excludeTargets[0].targetType | Should -Be 'group'
+    }
+
     It 'writes the Voice isOfficePhoneAllowed setting to the PATCH body' {
         $script:mockCurrentInfo = [pscustomobject]@{
             state               = 'disabled'

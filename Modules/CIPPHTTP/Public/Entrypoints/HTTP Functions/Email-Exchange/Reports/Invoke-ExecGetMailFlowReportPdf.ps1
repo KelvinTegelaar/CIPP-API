@@ -23,7 +23,8 @@ function Invoke-ExecGetMailFlowReportPdf {
         }
         # Reporting window in days (1-90).
         $Days = [Math]::Min([Math]::Max([int]($Request.Query.days ?? 14), 1), 90)
-        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter
+        $BrandingPresetId = [string]($Request.Body.brandingPresetId ?? $Request.Query.brandingPresetId)
+        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $BrandingPresetId
 
         $Window = @{
             StartDate = (Get-Date).AddDays(-$Days).ToUniversalTime().ToString('s')
@@ -57,7 +58,7 @@ function Invoke-ExecGetMailFlowReportPdf {
             topSpamRecipients = Get-TopList 'TopSpamRecipient'
         }
 
-        $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'Mail Flow Report'
+        $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'Mail Flow Report' -BrandingPresetId $BrandingPresetId
         $FileName = ("Mail_Flow_Report_$TenantFilter" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
         return ([HttpResponseContext]@{
                 StatusCode  = [HttpStatusCode]::OK

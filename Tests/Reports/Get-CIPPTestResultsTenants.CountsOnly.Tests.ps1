@@ -17,6 +17,7 @@ BeforeAll {
     function Get-CippException { [CmdletBinding()] param($Exception) @{ NormalizedError = $Exception.Exception.Message } }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
 
     $script:Tenants = @(
         [pscustomobject]@{ defaultDomainName = 'alpha.onmicrosoft.com'; displayName = 'Alpha'; customerId = 'aaaa-1111' }
@@ -120,5 +121,21 @@ Describe 'Get-CIPPTestResultsTenants -CountsOnly' {
         @($Result.Results).Count | Should -Be 0
         $Result.Counts.TotalResults | Should -Be 0
         $Result.Counts.HighRiskTenants | Should -Be 0
+    }
+}
+
+Describe 'Get-CIPPTestResultsTenants filter values' {
+    It 'escapes every caller-supplied value so a filter cannot reach another tenant''s partition' {
+        Mock -CommandName Get-CippTable -MockWith { @{ Table = 'CippTestResults' } }
+        Mock -CommandName Get-Tenants -MockWith { $script:Tenants }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { param($Table, $Filter, $Property) $script:Filters.Add($Filter) }
+        $script:Filters = [System.Collections.Generic.List[string]]::new()
+        $Inject = "x' or PartitionKey ne '"
+
+        Get-CIPPTestResultsTenants -TenantFilter 'alpha.onmicrosoft.com' -AllowedTenantIds 'aaaa-1111' -TestId $Inject -Status $Inject -TestType $Inject -Risk $Inject -Category $Inject | Out-Null
+
+        $script:Filters.Count | Should -Be 1
+        $script:Filters[0] | Should -Not -Match "(?<!')'x' or"
+        ([regex]::Matches($script:Filters[0], "x'' or PartitionKey ne ''")).Count | Should -Be 5
     }
 }

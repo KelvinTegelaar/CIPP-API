@@ -79,6 +79,13 @@ Describe 'Get-CIPPBaselineSetDefaultMailboxFontState' {
         $Prepared.NoDataReason | Should -Match 'no mailbox message configuration'
     }
 
+    It 'accepts a point size above the legacy 1-7 scale and grades against it' {
+        Mock New-CIPPDbRequest { @(Get-FontRow 'eleven@contoso.com' -Size 11; Get-FontRow 'three@contoso.com' -Size 3) }
+        $Prepared = Invoke-Hook -Size '11'
+        $Prepared.NoDataReason | Should -BeNullOrEmpty
+        $Prepared.Current.offenders | Should -Be @('three@contoso.com')
+    }
+
     It 'returns a null Current on an empty cache so the engine collects' {
         $Prepared = Invoke-Hook
         $Prepared.Current | Should -BeNullOrEmpty
@@ -86,7 +93,8 @@ Describe 'Get-CIPPBaselineSetDefaultMailboxFontState' {
     }
 
     It 'rejects <Case> before reading anything' -ForEach @(
-        @{ Case = 'a size out of range'; Size = '8'; Color = '#000000'; Reason = 'not a valid font size' }
+        @{ Case = 'a size above 72'; Size = '73'; Color = '#000000'; Reason = 'not a valid font size' }
+        @{ Case = 'a size below 1'; Size = '0'; Color = '#000000'; Reason = 'not a valid font size' }
         @{ Case = 'a non-numeric size'; Size = 'big'; Color = '#000000'; Reason = 'not a valid font size' }
         @{ Case = 'shorthand colour'; Size = '3'; Color = '#000'; Reason = 'not a valid hex colour' }
     ) {

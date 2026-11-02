@@ -145,7 +145,7 @@ function Get-CIPPBaselineWorkItems {
             foreach ($IdentityKey in $StageConfigs.Keys) {
                 foreach ($Config in $StageConfigs[$IdentityKey]) {
                     $InstanceKey = "$($Config.instance ?? $Config.standard)"
-                    if ($StandardName -and $InstanceKey -ne $StandardName) { continue }
+                    if ($StandardName -and $InstanceKey -notin $StandardName) { continue }
                     $Key = '{0}|{1}' -f $Domain, $IdentityKey
                     $Candidate = @{
                         Rank      = $Rank
@@ -215,10 +215,12 @@ function Get-CIPPBaselineWorkItems {
     # Ad-hoc tenant overrides (templateId '') replace whatever a baseline resolved, or stand alone.
     $DeltaTable = Get-CippTable -tablename 'Baselines'
     $OverrideFilter = "PartitionKey eq 'standardItem' and templateId eq '' and scope eq 'tenant'"
+    $TenantLookup = Get-CIPPTenantLookup
     foreach ($Delta in @(Get-CIPPAzDataTableEntity @DeltaTable -Filter $OverrideFilter)) {
         if (-not $Delta) { continue }
-        if ($TenantFilter -and $Delta.scopeId -notin @($TenantFilter)) { continue }
-        if ($StandardName -and $Delta.standardName -ne $StandardName) { continue }
+        $OverrideTenant = $TenantLookup["$($Delta.scopeId)"].defaultDomainName ?? "$($Delta.scopeId)"
+        if ($TenantFilter -and $OverrideTenant -notin @($TenantFilter)) { continue }
+        if ($StandardName -and $Delta.standardName -notin $StandardName) { continue }
         if ($TemplateId) { continue } # a baseline-scoped run never picks up ad-hoc overrides of other config
         $Variables = $(try { $Delta.expectedValue | ConvertFrom-Json -ErrorAction Stop } catch { [PSCustomObject]@{} }) ?? [PSCustomObject]@{}
         # An override targets a specific resolved instance: find the effective entry whose
@@ -226,11 +228,11 @@ function Get-CIPPBaselineWorkItems {
         # only fall back to computing an identity when the override stands alone.
         $Key = $null
         foreach ($ExistingKey in @($Effective.Keys)) {
-            if ($ExistingKey -notlike "$($Delta.scopeId)|*") { continue }
+            if ($ExistingKey -notlike "$OverrideTenant|*") { continue }
             $KeyWinner = @($Effective[$ExistingKey].Candidates | Sort-Object -Property UpdatedAt -Descending)[0]
             if ($KeyWinner.Item.Standard -eq $Delta.standardName) { $Key = $ExistingKey; break }
         }
-        if (-not $Key) { $Key = '{0}|{1}' -f $Delta.scopeId, (& $IdentityFor $Delta.standardName $Variables) }
+        if (-not $Key) { $Key = '{0}|{1}' -f $OverrideTenant, (& $IdentityFor $Delta.standardName $Variables) }
         $Winning = if ($Effective[$Key]) { @($Effective[$Key].Candidates | Sort-Object -Property UpdatedAt -Descending)[0] } else { $null }
         $Tiers = [System.Collections.Generic.List[object]]::new()
         foreach ($Tier in @($Winning.Item.Tiers)) {
@@ -240,7 +242,7 @@ function Get-CIPPBaselineWorkItems {
         }
         $Tiers.Add([PSCustomObject]@{
                 templateName     = 'Tenant Override'
-                assignedTo       = $Delta.scopeId
+                assignedTo       = $OverrideTenant
                 variables        = $Variables
                 remediateEnabled = [bool]$Delta.remediateEnabled
                 alertEnabled     = [bool]$Delta.alertEnabled
@@ -254,8 +256,8 @@ function Get-CIPPBaselineWorkItems {
                 UpdatedAt   = [int64]($Delta.updatedAt ?? 0)
                 Fingerprint = & $Fingerprint $Variables
                 Item        = [PSCustomObject]@{
-                    TenantFilter     = $Delta.scopeId
-                    TenantName       = $Winning.Item.TenantName ?? $Delta.scopeId
+                    TenantFilter     = $OverrideTenant
+                    TenantName       = $Winning.Item.TenantName ?? $OverrideTenant
                     Standard         = $Delta.standardName
                     BaseName         = ($Delta.standardName -split '#')[0]
                     TemplateId       = ''

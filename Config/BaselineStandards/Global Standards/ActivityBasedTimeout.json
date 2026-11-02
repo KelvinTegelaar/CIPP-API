@@ -14,10 +14,7 @@
   "addedDate": "2022-04-13",
   "powershellEquivalent": "Portal or Graph API",
   "appliesToTest": [
-    "CIS_1_3_2",
-    "ZTNA21813",
-    "ZTNA21814",
-    "ZTNA21815"
+    "CIS_1_3_2"
   ],
   "recommendedBy": [
     "CIS"

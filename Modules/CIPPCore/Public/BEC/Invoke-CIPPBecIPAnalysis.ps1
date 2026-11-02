@@ -89,13 +89,14 @@ function Invoke-CIPPBecIPAnalysis {
     }
 
     $Events = @(ConvertTo-CIPPBecIPEvents -Results $Results -UserPrincipalName $UserPrincipalName)
-    $SignIns = @($Results.SuspectUserSignIns | Where-Object { $_ })
-    $NonInteractive = @($Results.NonInteractiveSignIns | Where-Object { $_ })
+    $SignIns = @(@($Results.SuspectUserSignIns).Where({ $_ }))
+    $NonInteractive = @(@($Results.NonInteractiveSignIns).Where({ $_ }))
 
-    $AllIPs = @(
-        @($SignIns.IPAddress) + @($NonInteractive.IPAddress) + @($Events.IP) |
-            Where-Object { $_ } | ForEach-Object { ConvertTo-CIPPBecHostAddress -Address ([string]$_) } | Where-Object { $_ } | Select-Object -Unique
-    )
+    # distinct raw addresses first: a busy user has tens of thousands of sign-ins from a few hundred addresses
+    $RawIPs = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    foreach ($Address in @($SignIns.IPAddress) + @($NonInteractive.IPAddress) + @($Events.IP)) { if ($Address) { $null = $RawIPs.Add([string]$Address) } }
+    $UniqueIPs = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    $AllIPs = @(foreach ($Address in $RawIPs) { $IP = ConvertTo-CIPPBecHostAddress -Address $Address; if ($IP -and $UniqueIPs.Add($IP)) { $IP } })
     Write-Information "BEC IP analysis: geo for $($AllIPs.Count) address(es)"
     $Geo = @{}
     if ($AllIPs.Count -gt 0) {

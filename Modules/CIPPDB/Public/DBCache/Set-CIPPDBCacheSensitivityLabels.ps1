@@ -42,6 +42,11 @@ function Set-CIPPDBCacheSensitivityLabels {
         }
 
     } catch {
+        # Graph answers 404 for a tenant that has never published a label
+        if ($_.Exception.Message -like '*could not be found*') {
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SensitivityLabels' -Data @() -AddCount -ClearOnEmpty
+            return
+        }
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache sensitivity labels: $($ErrorMessage.NormalizedError)" -sev Warning -LogData $ErrorMessage
     }

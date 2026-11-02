@@ -17,6 +17,8 @@ function Invoke-ListGeneratedReports {
         $ReportGUID = $Request.Query.ReportGUID
 
         $Table = Get-CippTable -tablename 'ReportBuilderReports'
+        # The list never needs a report's content, and Blocks is what makes these rows large
+        $ListProperties = @('PartitionKey', 'RowKey', 'TemplateName', 'TenantFilter', 'GeneratedAt', 'Status')
 
         if ($ReportGUID) {
             # Fetch specific report
@@ -28,55 +30,67 @@ function Invoke-ListGeneratedReports {
             $TenantFilter = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type 'String'
             if ($TenantFilter -ne 'AllTenants') {
                 $Filter = "PartitionKey eq '$TenantFilter'"
-                $Entities = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+                $Entities = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property $ListProperties)
             } else {
-                $Tenants = Get-Tenants -IncludeErrors
-                $AllReports = Get-CIPPAzDataTableEntity @Table
-                $Entities = foreach ($Tenant in $Tenants) {
-                    $AllReports | Where-Object { $_.PartitionKey -eq $Tenant.defaultDomainName }
-                }
+                $TenantDomains = [System.Collections.Generic.HashSet[string]]::new([string[]]@((Get-Tenants -IncludeErrors).defaultDomainName), [System.StringComparer]::OrdinalIgnoreCase)
+                $Entities = @(Get-CIPPAzDataTableEntity @Table -Property $ListProperties).Where({ $TenantDomains.Contains([string]$_.PartitionKey) })
             }
         } else {
             # Fetch all reports
-            $Entities = @(Get-CIPPAzDataTableEntity @Table)
+            $Entities = @(Get-CIPPAzDataTableEntity @Table -Property $ListProperties)
         }
 
-        $Reports = @($Entities | ForEach-Object {
-                $Blocks = @()
-                if ($_.Blocks) {
-                    try {
-                        $Blocks = @(ConvertFrom-Json -InputObject $_.Blocks)
-                    } catch {
-                        $Blocks = @()
+        if (-not $ReportGUID) {
+            # Without the split markers in the projection, split rows come back raw, so skip the part rows
+            $Reports = @(foreach ($Entity in $Entities) {
+                    if ($Entity.RowKey -match '-part\d+$') { continue }
+                    [PSCustomObject]@{
+                        RowKey       = $Entity.RowKey
+                        TemplateName = $Entity.TemplateName
+                        TenantFilter = $Entity.TenantFilter
+                        GeneratedAt  = $Entity.GeneratedAt
+                        Status       = $Entity.Status
+                        ReportURL    = "/tools/report-builder?reportId=$($Entity.RowKey)"
                     }
-                }
-                # Page setup and branding the report was generated with. Older reports have none,
-                # and the renderer falls back to its defaults for those.
-                $ReportSettings = $null
-                if ($_.Settings) {
-                    try {
-                        $ReportSettings = ConvertFrom-Json -InputObject $_.Settings
-                    } catch {
-                        $ReportSettings = $null
+                })
+        } else {
+            $Reports = @($Entities | ForEach-Object {
+                    $Blocks = @()
+                    if ($_.Blocks) {
+                        try {
+                            $Blocks = @(ConvertFrom-Json -InputObject $_.Blocks)
+                        } catch {
+                            $Blocks = @()
+                        }
                     }
-                }
-                $SectionCount = $Blocks.Count
-                $TestCount = @($Blocks | Where-Object { $_.type -eq 'test' }).Count
-                $CustomCount = @($Blocks | Where-Object { $_.type -eq 'blank' }).Count
-                [PSCustomObject]@{
-                    RowKey       = $_.RowKey
-                    TemplateName = $_.TemplateName
-                    TenantFilter = $_.TenantFilter
-                    Blocks       = $Blocks
-                    Settings     = $ReportSettings
-                    Sections     = $SectionCount
-                    TestCount    = $TestCount
-                    CustomCount  = $CustomCount
-                    GeneratedAt  = $_.GeneratedAt
-                    Status       = $_.Status
-                    ReportURL    = "/tools/report-builder?reportId=$($_.RowKey)"
-                }
-            })
+                    # Page setup and branding the report was generated with. Older reports have none,
+                    # and the renderer falls back to its defaults for those.
+                    $ReportSettings = $null
+                    if ($_.Settings) {
+                        try {
+                            $ReportSettings = ConvertFrom-Json -InputObject $_.Settings
+                        } catch {
+                            $ReportSettings = $null
+                        }
+                    }
+                    $SectionCount = $Blocks.Count
+                    $TestCount = @($Blocks | Where-Object { $_.type -eq 'test' }).Count
+                    $CustomCount = @($Blocks | Where-Object { $_.type -eq 'blank' }).Count
+                    [PSCustomObject]@{
+                        RowKey       = $_.RowKey
+                        TemplateName = $_.TemplateName
+                        TenantFilter = $_.TenantFilter
+                        Blocks       = $Blocks
+                        Settings     = $ReportSettings
+                        Sections     = $SectionCount
+                        TestCount    = $TestCount
+                        CustomCount  = $CustomCount
+                        GeneratedAt  = $_.GeneratedAt
+                        Status       = $_.Status
+                        ReportURL    = "/tools/report-builder?reportId=$($_.RowKey)"
+                    }
+                })
+        }
 
         $StatusCode = [HttpStatusCode]::OK
         $Body = @($Reports)

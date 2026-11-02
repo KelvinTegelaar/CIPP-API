@@ -84,7 +84,9 @@ function New-GraphGetRequest {
 
                     if ($ReturnRawResponse) {
                         $GraphRequest.SkipHttpErrorCheck = $true
-                        $Data = Invoke-WebRequest @GraphRequest
+                        $GraphRequest.StatusCodeVariable = 'RawStatusCode'
+                        $GraphRequest.ResponseHeadersVariable = 'ResponseHeaders'
+                        $Data = Invoke-CIPPRestMethod @GraphRequest
                     } else {
                         $GraphRequest.ResponseHeadersVariable = 'ResponseHeaders'
                         $Data = (Invoke-CIPPRestMethod @GraphRequest)
@@ -95,21 +97,13 @@ function New-GraphGetRequest {
                     $RequestSuccessful = $true
 
                     if ($ReturnRawResponse) {
-                        try {
-                            if ($Data.Content -and (Test-Json -Json $Data.Content -ErrorAction Stop)) {
-                                $Content = $Data.Content | ConvertFrom-Json
-                            } else {
-                                $Content = $Data.Content
-                            }
-                        } catch {
-                            $Content = $Data.Content
-                        }
-
+                        $RawHeaders = [System.Collections.Generic.Dictionary[string, System.Collections.Generic.IEnumerable[string]]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                        foreach ($Key in $ResponseHeaders.Keys) { $RawHeaders[$Key] = [string[]]@($ResponseHeaders[$Key]) }
                         [PSCustomObject]@{
-                            StatusCode        = $Data.StatusCode
-                            StatusDescription = $Data.StatusDescription
-                            Content           = $Content
-                            Headers           = $Data.Headers
+                            StatusCode        = $RawStatusCode
+                            StatusDescription = ([System.Net.HttpStatusCode]$RawStatusCode).ToString()
+                            Content           = $Data
+                            Headers           = $RawHeaders
                         }
                         $nextURL = $null
                     } elseif ($CountOnly) {
@@ -158,11 +152,13 @@ function New-GraphGetRequest {
                         }
                     }
 
+                    # A network failure has no response to read Retry-After from, and the header may be a date, not seconds
+                    $RetryAfter = if ($_.Exception.Response) { $_.Exception.Response.Headers['Retry-After'] -as [int] }
+
                     # Check for 429 Too Many Requests
                     if ($_.Exception.Response.StatusCode -eq 429) {
-                        $RetryAfterHeader = $_.Exception.Response.Headers['Retry-After']
-                        if ($RetryAfterHeader) {
-                            $WaitTime = [int]$RetryAfterHeader
+                        if ($RetryAfter) {
+                            $WaitTime = $RetryAfter
                             Write-Warning "Rate limited (429). Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries"
                             $ShouldRetry = $true
                         } else {
@@ -176,7 +172,7 @@ function New-GraphGetRequest {
                     # ("Server busy, please retry" is transient and safe to retry).
                     elseif ($_.Exception.Response.StatusCode -eq 503 -or $Message -like '*Resource temporarily unavailable*' -or $Message -like '*Too many requests*' -or $Message -like '*Server busy*') {
                         if ($RetryCount -lt $MaxRetries) {
-                            $WaitTime = $_.Exception.Response.Headers['Retry-After'] ? [int]$_.Exception.Response.Headers['Retry-After'] : (Get-Random -Minimum 1.1 -Maximum 3.1)  # Random sleep between 1-2 seconds
+                            $WaitTime = $RetryAfter ? $RetryAfter : (Get-Random -Minimum 1.1 -Maximum 3.1)  # Random sleep between 1-2 seconds
                             Write-Warning "Resource temporarily unavailable. Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries"
                             $ShouldRetry = $true
                         }

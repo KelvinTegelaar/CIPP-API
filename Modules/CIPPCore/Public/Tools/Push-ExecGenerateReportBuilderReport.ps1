@@ -224,33 +224,41 @@ function Push-ExecGenerateReportBuilderReport {
         $PdfBase64 = if ($PdfBytes) { [Convert]::ToBase64String($PdfBytes) } else { '' }
         $PdfFileName = ("$($TemplateName ?? 'Report')_$TenantFilter" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
 
-        # Store the generated report
         $ReportGUID = (New-Guid).GUID
+
+        # The finished PDF goes in its own table, keyed by the report GUID, so listing reports never pulls
+        # the base64. Add-CIPPAzDataTableEntity auto-splits the oversized property across part rows, so a
+        # multi-MB report survives the Azure Table 64KB/property limit.
+        $PdfStored = $false
+        if ($PdfBase64) {
+            try {
+                $PdfTable = Get-CippTable -tablename 'ReportBuilderPdfs'
+                Add-CIPPAzDataTableEntity @PdfTable -Force -Entity @{
+                    PartitionKey = $TenantFilter
+                    RowKey       = [string]$ReportGUID
+                    FileName     = $PdfFileName
+                    Pdf          = $PdfBase64
+                }
+                $PdfStored = $true
+            } catch {
+                $PdfError = Get-CippException -Exception $_
+                Write-LogMessage -API 'ReportBuilder' -tenant $TenantFilter -message "Storing the report PDF failed, keeping the report content instead: $($PdfError.NormalizedError)" -Sev 'Warning' -LogData $PdfError
+            }
+        }
+
+        # The PDF holds the rendered content, so the blocks are only kept for reports without one
         $ReportTable = Get-CippTable -tablename 'ReportBuilderReports'
         $ReportEntity = @{
             PartitionKey   = $TenantFilter
             RowKey         = [string]$ReportGUID
             TemplateName   = [string]($TemplateName ?? 'Scheduled Report')
             TenantFilter   = [string]$TenantFilter
-            Blocks         = [string](ConvertTo-Json -InputObject @($EnrichedBlocks) -Depth 20 -Compress)
+            Blocks         = if ($PdfStored) { '' } else { [string](ConvertTo-Json -InputObject @($EnrichedBlocks) -Depth 20 -Compress) }
             GeneratedAt    = [string](Get-Date).ToString('o')
             Status         = 'Completed'
             Settings       = if ($ParsedSettings) { [string](ConvertTo-Json -InputObject $ParsedSettings -Depth 10 -Compress) } else { '' }
         }
         Add-CIPPAzDataTableEntity @ReportTable -Entity $ReportEntity -Force
-
-        # The finished PDF goes in its own table, keyed by the report GUID, so listing reports never pulls
-        # the base64. Add-CIPPAzDataTableEntity auto-splits the oversized property across part rows, so a
-        # multi-MB report survives the Azure Table 64KB/property limit.
-        if ($PdfBase64) {
-            $PdfTable = Get-CippTable -tablename 'ReportBuilderPdfs'
-            Add-CIPPAzDataTableEntity @PdfTable -Force -Entity @{
-                PartitionKey = $TenantFilter
-                RowKey       = [string]$ReportGUID
-                FileName     = $PdfFileName
-                Pdf          = $PdfBase64
-            }
-        }
         Write-LogMessage -API 'ReportBuilder' -tenant $TenantFilter -message "Generated report builder report '$TemplateName' with GUID $ReportGUID" -Sev 'Info'
 
         # Build result message with direct link

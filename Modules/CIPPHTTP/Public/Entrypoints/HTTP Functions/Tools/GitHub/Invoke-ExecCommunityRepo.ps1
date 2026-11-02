@@ -18,9 +18,9 @@ function Invoke-ExecCommunityRepo {
     $Action = $Request.Body.Action
     $Id = $Request.Body.Id
     if ($Request.Body.Id) {
-        $Filter = "PartitionKey eq 'CommunityRepos' and RowKey eq '$($Id)'"
+        $Filter = "PartitionKey eq 'CommunityRepos' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Id)'"
     } elseif ($Request.Body.FullName) {
-        $Filter = "PartitionKey eq 'CommunityRepos' and FullName eq '$($Request.Body.FullName)'"
+        $Filter = "PartitionKey eq 'CommunityRepos' and FullName eq '$(ConvertTo-CIPPODataFilterValue -Value $Request.Body.FullName)'"
     } else {
         $Results = @(
             @{
@@ -247,7 +247,7 @@ function Invoke-ExecCommunityRepo {
         'UploadScript' {
             $ScriptGuid = $Request.Body.GUID
             $ScriptTable = Get-CippTable -tablename 'CustomPowershellScripts'
-            $ScriptFilter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '$($ScriptGuid)'"
+            $ScriptFilter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '$(ConvertTo-CIPPODataFilterValue -Value $ScriptGuid)'"
             $ScriptVersions = @(Get-CIPPAzDataTableEntity @ScriptTable -Filter $ScriptFilter)
             $Branch = $RepoEntity.UploadBranch ?? $RepoEntity.DefaultBranch
 

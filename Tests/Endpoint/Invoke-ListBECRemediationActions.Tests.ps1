@@ -38,11 +38,18 @@ Describe 'Invoke-ListBECRemediationActions' {
 
     It 'projects exactly the fields the frontend renders, each with a label and description' {
         $Response = Invoke-ListBECRemediationActions -Request (New-Request) -TriggerMetadata $null
-        $Expected = @('Id', 'Label', 'Description', 'Impact', 'Reversible', 'DefaultSelected', 'Order', 'TargetSource', 'ParameterName')
+        $Expected = @('Id', 'Label', 'Description', 'Impact', 'Reversible', 'DefaultSelected', 'Order', 'TargetSource', 'ParameterName', 'Release')
         foreach ($Row in $Response.Body) { @($Row.PSObject.Properties.Name) | Should -Be $Expected }
         @($Response.Body | Where-Object { -not $_.Label -or -not $_.Description }).Count | Should -Be 0
         ($Response.Body | Where-Object { $_.Id -eq 'RemoveMFA' }).ParameterName | Should -Be 'MfaMethodIds'
         ($Response.Body | Where-Object { $_.Id -eq 'RemoveMFA' }).TargetSource | Should -Be 'MFADevices'
+    }
+
+    It 'gives every action a release mode, reversing only the lockouts on the user' {
+        $Response = Invoke-ListBECRemediationActions -Request (New-Request) -TriggerMetadata $null
+        @($Response.Body | Where-Object { $_.Release -notin @('Reverse', 'Keep', 'Manual') }).Count | Should -Be 0
+        @($Response.Body | Where-Object { $_.Release -eq 'Reverse' }).Id | Should -Be @('DisableAccount', 'BlockProtocols', 'BlockMobileDevices', 'DisableRegisteredDevices', 'TargetedCAPolicy')
+        @($Response.Body | Where-Object { $_.Release -eq 'Reverse' -and -not $_.Reversible }).Count | Should -Be 0
     }
 
     It 'flags the destructive actions as Critical and keeps every impact within the four levels' {

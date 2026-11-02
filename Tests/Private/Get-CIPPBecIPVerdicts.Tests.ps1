@@ -92,9 +92,41 @@ Describe 'Get-CIPPBecIPVerdicts' {
     }
 
     It 'takes a compliant device on a new address in the usual network and city for the user' {
-        $Compliant = Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '203.0.113.50' -Compliant $true)) '203.0.113.50'
+        $Compliant = Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '192.0.2.50' -Compliant $true)) '192.0.2.50'
         $Compliant.Verdict | Should -Be 'LikelyUser'
-        (Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '203.0.113.50')) '203.0.113.50').Verdict | Should -Be 'Unknown'
+        (Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '192.0.2.50')) '192.0.2.50').Verdict | Should -Be 'Unknown'
+    }
+
+    It 'reads a new address in an IPv4 /24 the user regularly used as theirs, but not on a hosting network' {
+        $Neighbour = Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '203.0.113.50')) '203.0.113.50'
+        $Neighbour.Verdict | Should -Be 'LikelyUser'
+        @($Neighbour.Reasons.Code) | Should -Contain 'BaselineRegular'
+        $script:Geo['203.0.113.51'] = [pscustomobject]@{ CountryOrRegion = 'AU'; City = 'Sydney'; Proxy = $false; Hosting = $true; ASName = 'CLOUD' }
+        $Hosted = Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '203.0.113.51')) '203.0.113.51'
+        @($Hosted.Reasons.Code) | Should -Contain 'NewToUser'
+        $script:Geo.Remove('203.0.113.51')
+    }
+
+    It 'weighs the network a user nearly always uses: credit on it, more suspicion off it' {
+        $On = Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '192.0.2.50')) '192.0.2.50'
+        ($On.Reasons | Where-Object Code -EQ 'KnownNetwork').Weight | Should -Be -2
+        $Off = Get-Row (Get-Verdicts -SignIns @(New-SignIn -IP '192.0.2.60' -ASN '7545')) '192.0.2.60'
+        ($Off.Reasons | Where-Object Code -EQ 'NewNetwork').Weight | Should -Be 2
+    }
+
+    It 'does not score a scripted client the user already ran from that address or network' {
+        $Baseline = [pscustomobject]@{
+            Successful = 40
+            IPs        = @([pscustomobject]@{ IP = '203.0.113.10'; SignIns = 40; Share = 1.0; Days = 20; Apps = @('MCP-Connector') })
+            ASNs       = @([pscustomobject]@{ ASN = '1221'; SignIns = 40; Share = 1.0 })
+            Locations  = @([pscustomobject]@{ Country = 'AU'; City = 'Sydney'; SignIns = 40; Share = 1.0 })
+        }
+        $Known = New-SignIn -IP '203.0.113.20' -UserAgent 'python-httpx/0.28.1'
+        $Known | Add-Member -NotePropertyName AppDisplayName -NotePropertyValue 'MCP-Connector'
+        @((Get-Row (Get-Verdicts -SignIns @($Known) -Baseline $Baseline) '203.0.113.20').Reasons.Code) | Should -Contain 'KnownScriptedClient'
+        $Other = New-SignIn -IP '203.0.113.20' -UserAgent 'python-httpx/0.28.1'
+        $Other | Add-Member -NotePropertyName AppDisplayName -NotePropertyValue 'Azure CLI'
+        @((Get-Row (Get-Verdicts -SignIns @($Other) -Baseline $Baseline) '203.0.113.20').Reasons.Code) | Should -Contain 'ScriptedClient'
     }
 
     It 'classes an address in the Microsoft 365 ranges as a service even when the user signed in from it' {

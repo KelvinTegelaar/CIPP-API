@@ -381,7 +381,7 @@ function Invoke-ExecCustomData {
                 $null = New-GraphPOSTRequest -Type DELETE -Uri $Uri -AsApp $true -NoAuthCheck $true -tenantid $env:TenantID
                 try {
                     $CustomDataTable = Get-CippTable -TableName 'CustomData'
-                    $ExtensionEntity = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'DirectoryExtension' and RowKey eq '$ExtensionName'"
+                    $ExtensionEntity = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'DirectoryExtension' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $ExtensionName)'"
                     # Remove the extension from the custom data table
                     if ($ExtensionEntity) {
                         Remove-CIPPAzDataTableEntity @CustomDataTable -Entity $ExtensionEntity

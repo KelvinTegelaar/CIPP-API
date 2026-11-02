@@ -7,8 +7,7 @@ function Invoke-AddEdgeApp {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
-    $Tenants = ($Request.Body.selectedTenants | Where-Object { $AllowedTenants -contains $_.customerId -or $AllowedTenants -contains 'AllTenants' }).defaultDomainName
+    $Tenants = (Resolve-CippBulkSelectedTenant -Request $Request -SelectedTenants $Request.Body.selectedTenants).defaultDomainName
     $Headers = $Request.Headers
     $APIName = $Request.Params.CIPPEndpoint
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }

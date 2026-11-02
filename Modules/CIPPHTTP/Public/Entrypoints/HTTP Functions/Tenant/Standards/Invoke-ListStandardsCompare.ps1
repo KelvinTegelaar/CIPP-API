@@ -61,7 +61,7 @@ function Invoke-ListStandardsCompare {
 
     $Filters = [system.collections.generic.list[string]]::new()
     if ($TenantFilter) {
-        $Filters.Add("PartitionKey eq '{0}'" -f $TenantFilter)
+        $Filters.Add("PartitionKey eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $TenantFilter))
     }
     $Filter = $Filters -join ' and '
 

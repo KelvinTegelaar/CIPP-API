@@ -40,7 +40,8 @@ BeforeAll {
     # A single generic (Graph) group template, stored the way Invoke-AddGroupTemplate persists it.
     function script:New-GenericTemplateEntity {
         [pscustomobject]@{
-            JSON = ([pscustomobject]@{
+            RowKey = '11111111-1111-1111-1111-111111111111'
+            JSON   = ([pscustomobject]@{
                     displayName     = $script:GroupName
                     description     = 'Test description'
                     groupType       = 'generic'
@@ -53,7 +54,8 @@ BeforeAll {
     # A dynamic distribution template - presence is checked against Exchange, not Graph.
     function script:New-DynamicDistroTemplateEntity {
         [pscustomobject]@{
-            JSON = ([pscustomobject]@{
+            RowKey = '22222222-2222-2222-2222-222222222222'
+            JSON   = ([pscustomobject]@{
                     displayName     = $script:GroupName
                     description     = 'Test description'
                     groupType       = 'dynamicDistribution'
@@ -70,7 +72,8 @@ BeforeAll {
     $script:ResolvedGroupName = 'Contoso-Group'
     function script:New-VariableTemplateEntity {
         [pscustomobject]@{
-            JSON = ([pscustomobject]@{
+            RowKey = '33333333-3333-3333-3333-333333333333'
+            JSON   = ([pscustomobject]@{
                     displayName     = $script:VariableGroupName
                     description     = 'Test description'
                     groupType       = 'generic'
@@ -87,6 +90,19 @@ BeforeAll {
             report        = [bool]$Report
             groupTemplate = [pscustomobject]@{ value = '11111111-1111-1111-1111-111111111111' }
         }
+    }
+
+    # Settings for tiers merged into one run, shaped as the queue delivers them: one element per
+    # contributing standards template, round-tripped through JSON.
+    function script:New-MergedSettings {
+        param([string[][]]$Selections)
+        @(foreach ($Selection in $Selections) {
+                @{
+                    remediate     = $true
+                    report        = $true
+                    groupTemplate = @($Selection | ForEach-Object { @{ label = "Group $_"; value = $_ } })
+                }
+            }) | ConvertTo-Json -Depth 5 | ConvertFrom-Json
     }
 }
 
@@ -224,6 +240,75 @@ Describe 'Invoke-CIPPStandardGroupTemplate' {
                 @($CurrentValue.MissingGroups).Count -eq 0 -and
                 @($CurrentValue.MissingTemplates).Count -eq 0
             } -Because 'the DDL is reported as skipped/not-supported, identical on both sides so it shows without reading as drift'
+        }
+    }
+
+    Context 'standards templates from several tiers merged into one run' {
+        # The engine runs every template's Group Template instance as one standard, so Settings
+        # arrives as one element per contributing standards template, with overlapping selections.
+        BeforeEach {
+            $script:GroupTemplateRows = @(
+                foreach ($Id in 'aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000003') {
+                    [pscustomobject]@{
+                        RowKey = $Id
+                        JSON   = (@{ displayName = "Group $Id"; description = 'Test description'; groupType = 'generic'; GUID = $Id } | ConvertTo-Json)
+                    }
+                }
+            )
+            # Behaves like the table service: answers the filter it is given and rejects a filter
+            # with more than the 15 comparisons it allows, reporting it the way Get-CIPPAzDataTableEntity does.
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                param($Filter)
+                if ([regex]::Matches($Filter, ' eq ').Count -gt 15) {
+                    Write-Error -Message 'The query filter has too many comparisons.'
+                    return
+                }
+                $script:GroupTemplateRows | Where-Object { $Filter -notmatch 'RowKey' -or $Filter -match "RowKey eq '$($_.RowKey)'" }
+            }
+            Mock -CommandName New-GraphGetRequest -MockWith { @() }
+        }
+
+        It 'creates each selected group once' {
+            $Settings = script:New-MergedSettings -Selections @(
+                , @('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002')
+                , @('aaaaaaaa-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000003')
+                , @('aaaaaaaa-0000-0000-0000-000000000001')
+            )
+
+            Invoke-CIPPStandardGroupTemplate -Tenant $script:Tenant -Settings $Settings
+
+            Should -Invoke -CommandName New-CIPPGroup -Times 3 -Exactly
+            @($script:logs | Where-Object { $_.Message -match 'no longer exist' }).Count | Should -Be 0
+        }
+
+        It 'counts a missing template once, against the unique selection' {
+            $Settings = script:New-MergedSettings -Selections @(
+                , @('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-00000000dead')
+                , @('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-00000000dead')
+            )
+
+            Invoke-CIPPStandardGroupTemplate -Tenant $script:Tenant -Settings $Settings
+
+            $Missing = @($script:logs | Where-Object { $_.Message -match 'no longer exist' })
+            $Missing.Count | Should -Be 1
+            $Missing[0].Message | Should -Match '1 of 2 selected group templates no longer exist \(ids: aaaaaaaa-0000-0000-0000-00000000dead\)'
+        }
+    }
+
+    Context 'the template table cannot be read' {
+        BeforeEach {
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { Write-Error -Message 'The table service is unavailable.' }
+            Mock -CommandName New-GraphGetRequest -MockWith { @() }
+        }
+
+        It 'logs the read failure and skips the run instead of calling the templates missing' {
+            { Invoke-CIPPStandardGroupTemplate -Tenant $script:Tenant -Settings (script:New-Settings -Remediate -Report) } |
+                Should -Not -Throw
+
+            Should -Invoke -CommandName New-CIPPGroup -Times 0 -Exactly
+            Should -Invoke -CommandName Set-CIPPStandardsCompareField -Times 0 -Exactly -Because 'a failed read is not drift'
+            @($script:logs | Where-Object { $_.Message -match 'no longer exist' }).Count | Should -Be 0
+            @($script:logs | Where-Object { $_.Sev -eq 'Error' -and $_.Message -match 'could not read the group template table' }).Count | Should -Be 1
         }
     }
 }

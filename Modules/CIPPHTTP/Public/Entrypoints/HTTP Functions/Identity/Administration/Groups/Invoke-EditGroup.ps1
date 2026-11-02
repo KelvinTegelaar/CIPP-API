@@ -421,6 +421,63 @@ function Invoke-EditGroup {
 
 
 
+    # Send As and Send on Behalf only exist on mail-enabled groups
+    if ($GroupType -in @('Distribution List', 'Mail-Enabled Security', 'Microsoft 365')) {
+        foreach ($SendAsChange in @(
+                @{ Action = 'Add'; Items = $UserObj.AddSendAs }
+                @{ Action = 'Remove'; Items = $UserObj.RemoveSendAs }
+            )) {
+            foreach ($Item in @($SendAsChange.Items | Where-Object { $_ })) {
+                $Trustee = $Item.addedFields.userPrincipalName ?? $Item.value ?? $Item
+                $Cmdlet = Set-CIPPMailboxPermission -UserId $GroupId -AccessUser $Trustee -PermissionLevel 'SendAs' -Action $SendAsChange.Action -TenantFilter $TenantId -AsCmdletObject
+                $SendAsGuid = [Guid]::NewGuid().ToString()
+                $ExoBulkRequests.Add(@{
+                        CmdletInput   = @{
+                            CmdletName = $Cmdlet.CmdletName
+                            Parameters = $Cmdlet.Parameters
+                        }
+                        OperationGuid = $SendAsGuid
+                    })
+                $Verb = if ($SendAsChange.Action -eq 'Add') { "Granted $Trustee Send As on" } else { "Removed Send As for $Trustee from" }
+                $ExoLogs.Add(@{
+                        message       = "$Verb $($GroupName) group"
+                        target        = $GroupId
+                        OperationGuid = $SendAsGuid
+                    })
+            }
+        }
+
+        $AddSendOnBehalf = @($UserObj.AddSendOnBehalf | Where-Object { $_ } | ForEach-Object { $_.addedFields.userPrincipalName ?? $_.value ?? $_ })
+        $RemoveSendOnBehalf = @($UserObj.RemoveSendOnBehalf | Where-Object { $_ } | ForEach-Object { $_.addedFields.userPrincipalName ?? $_.value ?? $_ })
+        if ($AddSendOnBehalf.Count -gt 0 -or $RemoveSendOnBehalf.Count -gt 0) {
+            $SendOnBehalfChange = @{ '@odata.type' = '#Exchange.GenericHashTable' }
+            if ($AddSendOnBehalf.Count -gt 0) { $SendOnBehalfChange.add = $AddSendOnBehalf }
+            if ($RemoveSendOnBehalf.Count -gt 0) { $SendOnBehalfChange.remove = $RemoveSendOnBehalf }
+            $Params = @{ Identity = $GroupId; GrantSendOnBehalfTo = $SendOnBehalfChange }
+            if ($GroupType -eq 'Microsoft 365') {
+                $SendOnBehalfCmdlet = 'Set-UnifiedGroup'
+            } else {
+                $SendOnBehalfCmdlet = 'Set-DistributionGroup'
+                $Params.BypassSecurityGroupManagerCheck = $true
+            }
+            # One call carries every Send on Behalf change, so its result is reported once per user
+            $SendOnBehalfGuid = [Guid]::NewGuid().ToString()
+            $ExoBulkRequests.Add(@{
+                    CmdletInput   = @{
+                        CmdletName = $SendOnBehalfCmdlet
+                        Parameters = $Params
+                    }
+                    OperationGuid = $SendOnBehalfGuid
+                })
+            foreach ($User in $AddSendOnBehalf) {
+                $ExoLogs.Add(@{ message = "Granted $User Send on Behalf on $($GroupName) group"; target = $GroupId; OperationGuid = $SendOnBehalfGuid; SendOnBehalf = $true })
+            }
+            foreach ($User in $RemoveSendOnBehalf) {
+                $ExoLogs.Add(@{ message = "Removed Send on Behalf for $User from $($GroupName) group"; target = $GroupId; OperationGuid = $SendOnBehalfGuid; SendOnBehalf = $true })
+            }
+        }
+    }
+
     Write-Information "Graph Bulk Requests: $($BulkRequests.Count)"
     if ($BulkRequests.Count -gt 0) {
         #Write-Warning 'EditUser - Executing Graph Bulk Requests'
@@ -465,7 +522,12 @@ function Invoke-EditGroup {
                 $Results.Add("Success - $($ExoResult.Operation.message)")
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message $ExoResult.Operation.message -Sev 'Info'
             } else {
-                $Results.Add("Error - $($ExoResult.ErrorMessage)")
+                $ErrorText = $ExoResult.ErrorMessage
+                # Send on Behalf only accepts recipients with a mailbox; Exchange reports anything else as not found
+                if ($ExoResult.Operation.SendOnBehalf -and $ErrorText -match 'Couldn''t find object "([^"]+)"') {
+                    $ErrorText = "Send on Behalf was not changed on $($GroupName): $($Matches[1]) has no mailbox. Send on Behalf can only be given to users with a mailbox."
+                }
+                $Results.Add("Error - $ErrorText")
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message "$($ExoResult.Operation.message) failed: $($ExoResult.ErrorMessage)" -Sev 'Error'
             }
         }

@@ -32,7 +32,7 @@ function Push-UpdatePermissionsQueue {
         # consent. -eq 'Failed' so status-less legacy rows don't re-consent the estate on deploy.
         $NeedsConsent = !$ConsentRow -or $ConsentRow.LastStatus -eq 'Failed'
 
-        if ($NeedsConsent -and $Tenant.delegatedPrivilegeStatus -ne 'directTenant') {
+        if ($NeedsConsent -and $Tenant.delegatedPrivilegeStatus -ne 'directTenant' -and $Item.customerId -ne $env:TenantID) {
             # Only a reset can fix an entry that exists but is wrong ('Permission entry already
             # exists' short-circuits a plain re-consent). Escalate on a known consent error or
             # after a failed re-consent; at most one reset per week since it briefly drops access.

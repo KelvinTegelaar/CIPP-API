@@ -28,6 +28,7 @@ BeforeAll {
     function Push-CIPPBaselineToRepo { param($GUID, $FullName, $Message, $Branch) }
 
     . $Exec
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     . (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Get-CippErrorStatusCode.ps1' -File | Select-Object -First 1 -ExpandProperty FullName)
     . $List
 }

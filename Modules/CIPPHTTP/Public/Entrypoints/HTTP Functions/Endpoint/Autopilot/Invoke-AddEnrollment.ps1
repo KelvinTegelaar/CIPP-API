@@ -9,6 +9,14 @@ function Invoke-AddEnrollment {
     param($Request, $TriggerMetadata)
     # Input bindings are passed in via param block.
     $Tenants = $Request.Body.selectedTenants.value
+
+    # Tenant scope: a scoped role must not reach tenants outside its allowed set through selectedTenants.
+    $AllowedTenants = Test-CippAccess -Request $Request -TenantList
+    if ($AllowedTenants -ne 'AllTenants') {
+        $AllowedTenantList = (Get-Tenants -IncludeErrors) | Where-Object { $_.customerId -in $AllowedTenants }
+        $Tenants = $Tenants | Where-Object { $_ -in $AllowedTenantList.defaultDomainName }
+    }
+
     $Profbod = $Request.Body
     $Results = foreach ($Tenant in $Tenants) {
         $ParamSplat = @{

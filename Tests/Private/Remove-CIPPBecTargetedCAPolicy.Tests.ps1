@@ -10,12 +10,13 @@ BeforeAll {
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = [string]$Exception.Exception.Message } }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Remove-CIPPBecTargetedCAPolicy.ps1')
 
-    # Two containment policies for u1, one for u2, and an unmanaged policy without a description.
+    # Two containment policies for u1, one for u2, and an unmanaged policy that also includes u1.
+    function New-Policy { param($Id, $Name, $User) [pscustomobject]@{ id = $Id; displayName = $Name; conditions = @{ users = @{ includeUsers = @($User) } } } }
     $script:Policies = @(
-        [pscustomobject]@{ id = 'pol-a'; description = 'ManagedBy=CIPP-BEC;Target=u1;CaseId=BEC-1;ExpiresUtc=2026-09-07T10:00:00.0000000Z' }
-        [pscustomobject]@{ id = 'pol-b'; description = 'ManagedBy=CIPP-BEC;Target=u1;CaseId=BEC-2;ExpiresUtc=2026-09-08T10:00:00.0000000Z' }
-        [pscustomobject]@{ id = 'pol-c'; description = 'ManagedBy=CIPP-BEC;Target=u2;CaseId=BEC-3;ExpiresUtc=2026-09-08T10:00:00.0000000Z' }
-        [pscustomobject]@{ id = 'pol-d'; description = $null }
+        New-Policy 'pol-a' 'CIPP BEC containment - victim@contoso.com - expires 2026-09-07 10:00Z' 'u1'
+        New-Policy 'pol-b' 'CIPP BEC containment - victim@contoso.com - expires 2026-09-08 10:00Z' 'u1'
+        New-Policy 'pol-c' 'CIPP BEC containment - other@contoso.com - expires 2026-09-08 10:00Z' 'u2'
+        New-Policy 'pol-d' 'Require MFA for everyone' 'u1'
     )
 }
 
@@ -55,7 +56,7 @@ Describe 'Remove-CIPPBecTargetedCAPolicy' {
 
     It 'removes every CIPP-BEC policy targeting the user, and only those, when given a UserId' {
         $Message = Remove-CIPPBecTargetedCAPolicy -TenantFilter 'contoso.com' -UserId 'u1'
-        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies?*' -and $tenantid -eq 'contoso.com' -and $AsApp -eq $true }
+        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies?*' -and $uri -notlike '*description*' -and $tenantid -eq 'contoso.com' -and $AsApp -eq $true }
         Should -Invoke New-GraphPOSTRequest -Times 2 -Exactly -ParameterFilter { $type -eq 'DELETE' }
         Should -Invoke New-GraphPOSTRequest -Times 1 -ParameterFilter { $uri -like '*/policies/pol-a' }
         Should -Invoke New-GraphPOSTRequest -Times 1 -ParameterFilter { $uri -like '*/policies/pol-b' }

@@ -1,0 +1,151 @@
+{
+  "requestBody": {
+    "content": {
+      "application/json": {
+        "schema": {
+          "description": "Either one mailbox (userID + permissions) or many (mailboxRequests), all in the same tenant.",
+          "properties": {
+            "mailboxRequests": {
+              "type": "array",
+              "description": "Bulk format. One entry per calendar mailbox; replaces the top-level userID and permissions.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "userID",
+                  "permissions"
+                ],
+                "properties": {
+                  "userID": {
+                    "type": "string",
+                    "description": "UPN or object id of the mailbox whose calendar is modified."
+                  },
+                  "permissions": {
+                    "type": "array",
+                    "description": "Permission changes to apply to the mailbox's calendar folder.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "UserID": {
+                          "description": "Grantee: UPN, recipient id, or the display name Exchange reports. A single value, a {label,value} object, or an array of either.",
+                          "oneOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "$ref": "#/components/schemas/LabelValue"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/LabelValue"
+                              }
+                            }
+                          ]
+                        },
+                        "PermissionLevel": {
+                          "description": "Folder access right, e.g. Reviewer or Editor. A string or a {label,value} object.",
+                          "oneOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "$ref": "#/components/schemas/LabelValue"
+                            }
+                          ]
+                        },
+                        "Modification": {
+                          "type": "string",
+                          "enum": [
+                            "Add",
+                            "Remove"
+                          ]
+                        },
+                        "FolderName": {
+                          "type": "string",
+                          "description": "Calendar folder name, localized per mailbox (e.g. Kalender). Defaults to Calendar."
+                        },
+                        "CanViewPrivateItems": {
+                          "type": "boolean"
+                        },
+                        "SendNotificationToUser": {
+                          "type": "boolean"
+                        },
+                        "DisplayName": {
+                          "type": "string",
+                          "description": "Name used in log and result messages when UserID is an id."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "permissions": {
+              "type": "array",
+              "description": "Permission changes to apply to the mailbox's calendar folder.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "UserID": {
+                    "description": "Grantee: UPN, recipient id, or the display name Exchange reports. A single value, a {label,value} object, or an array of either.",
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/LabelValue"
+                        }
+                      }
+                    ]
+                  },
+                  "PermissionLevel": {
+                    "description": "Folder access right, e.g. Reviewer or Editor. A string or a {label,value} object.",
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ]
+                  },
+                  "Modification": {
+                    "type": "string",
+                    "enum": [
+                      "Add",
+                      "Remove"
+                    ]
+                  },
+                  "FolderName": {
+                    "type": "string",
+                    "description": "Calendar folder name, localized per mailbox (e.g. Kalender). Defaults to Calendar."
+                  },
+                  "CanViewPrivateItems": {
+                    "type": "boolean"
+                  },
+                  "SendNotificationToUser": {
+                    "type": "boolean"
+                  },
+                  "DisplayName": {
+                    "type": "string",
+                    "description": "Name used in log and result messages when UserID is an id."
+                  }
+                }
+              }
+            },
+            "userID": {
+              "type": "string",
+              "description": "Legacy single-mailbox format: UPN or object id of the mailbox whose calendar is modified."
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-cipp-override-reason": "permissions is read off each mailboxRequests element (or the legacy top-level body), so the generator loses the element shape behind the loop variable."
+}

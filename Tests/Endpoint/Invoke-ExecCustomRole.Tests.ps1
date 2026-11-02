@@ -37,6 +37,7 @@ BeforeAll {
     function New-GraphGetRequest { param($uri, $tenantid, $NoAuthCheck) }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
 
     function New-RoleRequest {
         param($Body)

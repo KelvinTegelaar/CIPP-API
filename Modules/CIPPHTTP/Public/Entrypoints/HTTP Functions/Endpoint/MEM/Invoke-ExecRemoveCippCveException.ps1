@@ -23,10 +23,17 @@ function Invoke-ExecRemoveCippCveException {
             }
         }
 
+        if ($RemoveScope -eq 'Global' -and @(Test-CIPPAccess -Request $Request -TenantList) -notcontains 'AllTenants') {
+            return [HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ Results = "You don't have access to all tenants, so you can't remove the All Tenants (Global) exception. Choose All Affected Tenants to remove it from the tenants you can access." }
+            }
+        }
+
         $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
 
         # Load all exceptions for this CVE
-        $AllCveExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$CveId'"
+        $AllCveExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $CveId)'"
 
         $ExceptionsToRemove = switch ($RemoveScope) {
             'CurrentTenant' {
@@ -36,7 +43,7 @@ function Invoke-ExecRemoveCippCveException {
                 @($TenantFilter)
             }
             'AllAffected' {
-                @($AllCveExceptions | Where-Object { $_.RowKey -ne 'ALL' } | Select-Object -ExpandProperty RowKey)
+                @($AllCveExceptions | Where-Object { $_.RowKey -ne 'ALL' } | Select-CippAllowedTenantData -TenantProperty 'RowKey' | Select-Object -ExpandProperty RowKey)
             }
             'Global' {
                 @('ALL')

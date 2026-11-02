@@ -49,6 +49,12 @@ function Invoke-EditJITAdminTemplate {
 
         # Parse existing template data
         $ExistingData = $ExistingTemplate.JSON | ConvertFrom-Json -Depth 100
+        if (-not ($ExistingData | Select-CippAllowedTenantData -TenantProperty 'tenantFilter')) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ Results = "This template is for $($ExistingData.tenantFilter -eq 'AllTenants' ? 'all tenants' : $ExistingData.tenantFilter), which is outside your access." }
+                })
+        }
 
         # Check if template name is unique (excluding current template)
         $AllTemplates = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'JITAdminTemplate'"

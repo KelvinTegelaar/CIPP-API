@@ -11,7 +11,7 @@ function Get-CIPPBaselineNudgeMFAState {
         to all_users. The literal 'AllUsers' entry targets everyone explicitly.
 
         Group entries resolve from the Groups cache with the classic's startsWith rule,
-        keeping EVERY match. An entry that resolves to nothing reports No Data - grading
+        keeping EVERY match unless one is an exact name match. An entry that resolves to nothing reports No Data - grading
         against a half-resolved target list would drift forever.
     .FUNCTIONALITY
         Internal
@@ -49,6 +49,8 @@ function Get-CIPPBaselineNudgeMFAState {
         foreach ($Entry in $Entries) {
             if ($Entry -match '^(all_users|allusers|all users)$') { $Resolved.Add(@{ id = 'all_users'; targetType = 'group' }); continue }
             $Matched = @($Groups | Where-Object { "$($_.displayName)".StartsWith($Entry) })
+            $Exact = $Matched.Where({ $_.displayName -eq $Entry })
+            if ($Exact.Count -gt 0) { $Matched = @($Exact) }
             if ($Matched.Count -eq 0) { return $null }
             foreach ($Group in $Matched) { $Resolved.Add(@{ id = "$($Group.id)"; targetType = 'group' }) }
         }

@@ -15,7 +15,7 @@ function Invoke-CippTestEIDSCAAG01 {
 
         $MigrationState = $AuthMethodsPolicy.policyMigrationState
 
-        if ($MigrationState -in @('migrationComplete', '')) {
+        if ($MigrationState -eq 'migrationComplete' -or [string]::IsNullOrEmpty($MigrationState)) {
             $Status = 'Passed'
             $Result = "Policy migration is complete or not applicable: $MigrationState"
         } else {

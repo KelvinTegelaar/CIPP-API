@@ -46,7 +46,7 @@ function Invoke-AddAppTemplate {
 
         # Upsert: if GUID provided, update existing template
         if ($Body.GUID) {
-            $Filter = "PartitionKey eq 'AppTemplate' and RowKey eq '$($Body.GUID)'"
+            $Filter = "PartitionKey eq 'AppTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Body.GUID)'"
             $ExistingEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         }
 

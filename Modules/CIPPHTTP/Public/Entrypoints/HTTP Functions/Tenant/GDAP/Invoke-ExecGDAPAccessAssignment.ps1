@@ -26,7 +26,7 @@ function Invoke-ExecGDAPAccessAssignment {
                 }
             } else {
                 $GDAPRoleTemplatesTable = Get-CIPPTable -TableName 'GDAPRoleTemplates'
-                $Mappings = Get-CIPPAzDataTableEntity @GDAPRoleTemplatesTable -Filter "PartitionKey eq 'RoleTemplate' and RowKey eq '$($RoleTemplateId)'" | Select-Object -ExpandProperty RoleMappings | ConvertFrom-Json
+                $Mappings = Get-CIPPAzDataTableEntity @GDAPRoleTemplatesTable -Filter "PartitionKey eq 'RoleTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $RoleTemplateId)'" | Select-Object -ExpandProperty RoleMappings | ConvertFrom-Json
 
                 $RelationshipRequests = @(
                     @{

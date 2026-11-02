@@ -30,6 +30,7 @@ BeforeAll {
     function New-GraphGetRequest { param($uri, $NoAuthCheck, $asapp, [switch]$ComplexFilter) }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
 
     function New-AddUpdateRequest {
         param([bool]$McpAllowed)

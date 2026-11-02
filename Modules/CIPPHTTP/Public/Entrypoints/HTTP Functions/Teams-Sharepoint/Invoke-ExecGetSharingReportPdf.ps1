@@ -20,7 +20,8 @@ function Invoke-ExecGetSharingReportPdf {
         if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'A tenantFilter is required' })
         }
-        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter
+        $BrandingPresetId = [string]($Request.Body.brandingPresetId ?? $Request.Query.brandingPresetId)
+        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $BrandingPresetId
 
         # The same shaped data the Sharing page reads (from the reporting cache; no live Graph enumeration).
         $Raw = Get-CIPPSharePointSharingReport -TenantFilter $TenantFilter
@@ -32,7 +33,7 @@ function Invoke-ExecGetSharingReportPdf {
             topLibraries  = $Raw.topLibraries
         }
 
-        $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'Sharing Report'
+        $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'Sharing Report' -BrandingPresetId $BrandingPresetId
         $FileName = ("Sharing_Report_$TenantFilter" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
         return ([HttpResponseContext]@{
                 StatusCode  = [HttpStatusCode]::OK

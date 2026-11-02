@@ -49,7 +49,8 @@ function Set-CIPPBecReport {
     }
 
     if ($PSBoundParameters.ContainsKey('Results') -and $null -ne $Results) {
-        $Json = ConvertTo-Json -InputObject $Results -Depth 15 -Compress
+        $Json = [CIPP.CippJson]::ToJson($Results, 15)
+        if ($null -eq $Json) { throw "BEC results for $CaseId hold a value that cannot be written as JSON" }
         $ResultsTable = Get-CIPPTable -TableName 'BecResults'
         if ($PSCmdlet.ShouldProcess("$TenantFilter/$CaseId", 'Write BEC results row')) {
             Add-CIPPAzDataTableEntity @ResultsTable -Entity @{

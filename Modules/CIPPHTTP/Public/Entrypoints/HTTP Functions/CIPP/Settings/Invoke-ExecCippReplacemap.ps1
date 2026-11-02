@@ -19,7 +19,9 @@ function Invoke-ExecCippReplacemap {
     # partition at once rather than about one tenant - so it is handled before the tenant is
     # resolved, and needs no tenantId.
     if ($Action -eq 'Usage') {
-        $AllRows = Get-CIPPAzDataTableEntity @Table
+        $AllRows = @(Get-CIPPAzDataTableEntity @Table)
+        # Global rows apply to every tenant; a tenant's own rows only reach callers whose roles cover it.
+        $AllRows = @($AllRows.Where({ $_.PartitionKey -eq 'AllTenants' })) + @($AllRows.Where({ $_.PartitionKey -ne 'AllTenants' }) | Select-CippAllowedTenantData -TenantProperty 'PartitionKey')
 
         $TenantLookup = @{}
         foreach ($KnownTenant in (Get-Tenants -IncludeAll)) {
@@ -89,6 +91,14 @@ function Invoke-ExecCippReplacemap {
             })
     }
 
+    # Without a tenantId the lookup below would match every tenant the caller can see.
+    if ([string]::IsNullOrWhiteSpace($TenantId)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'Provide tenantId: a tenant ID or domain, or AllTenants for global variables.' }
+            })
+    }
+
     if ($TenantId -eq 'AllTenants') {
         $customerId = $TenantId
     } else {
@@ -99,10 +109,17 @@ function Invoke-ExecCippReplacemap {
 
     if (!$customerId) {
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
-                Body       = 'customerId is required'
+                StatusCode = [HttpStatusCode]::NotFound
+                Body       = @{ Results = "Tenant '$TenantId' was not found." }
             })
-        return
+    }
+
+    $AllowedPermissions = Get-CippRequestAllowedPermissions
+    if ($customerId -eq 'AllTenants' -and $Action -in @('AddEdit', 'Delete') -and $AllowedPermissions -notcontains 'Tenant.GlobalVariables.ReadWrite') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ Results = 'Changing global variables requires the Tenant.GlobalVariables.ReadWrite permission.' }
+            })
     }
 
     $StatusCode = [HttpStatusCode]::OK
@@ -196,7 +213,9 @@ function Invoke-ExecCippReplacemap {
                 }
                 'list' {
                     # One value per line is stored as the JSON array the substitution reads.
-                    if (-not $TrimmedValue.StartsWith('[') -and -not $TrimmedValue.StartsWith('{')) {
+                    # A line may start with '[' ('[HQ] Office'), so only parseable or JSON-looking values count as JSON.
+                    $IsJsonArray = $TrimmedValue.StartsWith('[') -and (Test-Json -Json $TrimmedValue -ErrorAction SilentlyContinue)
+                    if (-not $IsJsonArray -and -not $TrimmedValue.StartsWith('{') -and -not $TrimmedValue.StartsWith('["')) {
                         $TrimmedValue = ConvertTo-Json -InputObject @($TrimmedValue -split '\r?\n' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) -Compress
                         $VariableValue = $TrimmedValue
                     }

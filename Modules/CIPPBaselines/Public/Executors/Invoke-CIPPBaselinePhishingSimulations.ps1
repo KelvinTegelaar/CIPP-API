@@ -56,7 +56,7 @@ function Invoke-CIPPBaselinePhishingSimulations {
     }
     if (@($Current.missingUrls).Count -gt 0) {
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-TenantAllowBlockListItems' -cmdParams @{
-            ListType = 'Url'; ListSubType = 'AdvancedDelivery'; Allow = $true; Entries = @($Current.missingUrls)
+            ListType = 'Url'; ListSubType = 'AdvancedDelivery'; Allow = $true; NoExpiration = $true; Entries = @($Current.missingUrls)
         }
     }
     Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message 'Aligned the phishing simulation overrides.' -Sev 'Info'

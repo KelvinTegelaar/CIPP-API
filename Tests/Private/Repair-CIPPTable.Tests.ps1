@@ -64,7 +64,10 @@ BeforeAll {
                     [System.Exception]::new('throttled'), 'TooManyRequests', [System.Management.Automation.ErrorCategory]::OperationTimeout, $Context))
             return
         }
-        [pscustomobject]@{ PartitionKey = 'Search'; RowKey = '1' }
+        for ($i = 1; $i -le $script:GetRowCount; $i++) {
+            [pscustomobject]@{ PartitionKey = 'Search'; RowKey = "$i" }
+            $script:Emitted = $i
+        }
     }
 
     function Add-AzDataTableLargeEntity {
@@ -119,6 +122,8 @@ BeforeAll {
         $script:CIPPRepairingTable = $false
         $script:CreateCalls.Clear()
         $script:GetCalls = 0
+        $script:GetRowCount = 1
+        $script:Emitted = 0
         $script:AddCalls = 0
         $script:RemoveCalls = 0
         $script:FailGetWithNotFound = $false
@@ -210,6 +215,28 @@ Describe 'Get-CIPPAzDataTableEntity TableNotFound self-heal' {
         $script:GetCalls | Should -Be 2
         $script:CreateCalls | Should -Be @('AuditLogSearches')
         $Result.RowKey | Should -Be '1'
+    }
+
+    It 'repairs and retries once on TableNotFound when streaming' {
+        $script:FailGetWithNotFound = $true
+        $Context = New-AzDataTableContext -ConnectionString $env:AzureWebJobsStorage -TableName 'AuditLogSearches'
+
+        $Result = @(Get-CIPPAzDataTableEntity -Context $Context -Stream)
+
+        $script:GetCalls | Should -Be 2
+        $script:CreateCalls | Should -Be @('AuditLogSearches')
+        $Result.RowKey | Should -Be '1'
+    }
+
+    It 'hands rows on as they arrive with -Stream, and only after the read without it' {
+        $script:GetRowCount = 3
+        $Context = New-AzDataTableContext -ConnectionString $env:AzureWebJobsStorage -TableName 'AuditLogSearches'
+
+        $Seen = Get-CIPPAzDataTableEntity -Context $Context -Stream | & { process { $script:Emitted } }
+        $Collected = Get-CIPPAzDataTableEntity -Context $Context | & { process { $script:Emitted } }
+
+        $Seen | Should -Be @(0, 1, 2)
+        $Collected | Should -Be @(3, 3, 3)
     }
 
     It 'does not repair non-TableNotFound errors' {

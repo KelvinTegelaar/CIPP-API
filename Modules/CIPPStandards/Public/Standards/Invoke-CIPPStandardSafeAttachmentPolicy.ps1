@@ -18,8 +18,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             "mdo_commonattachmentsfilter"
             "mdo_safeattachmentpolicy"
             "NIST CSF 2.0 (DE.CM-09)"
-            "ORCA158"
             "ORCA227"
+            "ORCA124"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.SafeAttachmentPolicy.name","label":"Policy Name","required":true,"defaultValue":"CIPP Default Safe Attachment Policy"}
             {"type":"select","multiple":false,"label":"Safe Attachment Action","name":"standards.SafeAttachmentPolicy.SafeAttachmentAction","options":[{"label":"Allow","value":"Allow"},{"label":"Block","value":"Block"},{"label":"DynamicDelivery","value":"DynamicDelivery"}]}

@@ -37,7 +37,7 @@
     "log": ["audit log logbook activity history"],
     "audit": ["log logbook activity history"],
     "webhook": ["notification alert subscription"],
-    "psa": ["integration halo autotask connectwise"],
+    "psa": ["integration halo syncro autotask connectwise"],
     "rmm": ["integration ninja datto syncro"],
     "backup": ["restore recovery export"],
     "restore": ["backup recovery import"],

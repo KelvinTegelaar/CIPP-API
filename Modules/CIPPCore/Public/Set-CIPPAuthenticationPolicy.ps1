@@ -26,7 +26,7 @@ function Set-CIPPAuthenticationPolicy {
         [Parameter()][ValidateRange(1, 395)]$QRCodeLifetimeInDays = 365,
         [Parameter()][ValidateRange(8, 20)]$QRCodePinLength = 8,
         [Parameter()][ValidateSet('default', 'enabled', 'disabled')]$EmailAllowExternalIdToUseEmailOtp,
-        [Parameter()][string[]]$EmailExcludeGroupIds,
+        [Parameter()][Alias('EmailExcludeGroupIds')][string[]]$ExcludeGroupIds,
         [Parameter()][bool]$FIDO2AttestationEnforced,
         [Parameter()][bool]$FIDO2SelfServiceRegistration,
         [Parameter()][bool]$VoiceIsOfficePhoneAllowed,
@@ -156,22 +156,6 @@ function Set-CIPPAuthenticationPolicy {
                     $CurrentInfo.allowExternalIdToUseEmailOtp = $EmailAllowExternalIdToUseEmailOtp
                     $OptionalLogMessage = "with allowExternalIdToUseEmailOtp set to $EmailAllowExternalIdToUseEmailOtp"
                 }
-                # Present (even empty) means the caller is setting the exclude list; an empty array clears it
-                if ($PSBoundParameters.ContainsKey('EmailExcludeGroupIds')) {
-                    $CurrentInfo.excludeTargets = @(
-                        foreach ($id in $EmailExcludeGroupIds) {
-                            [pscustomobject]@{
-                                targetType = 'group'
-                                id         = $id
-                            }
-                        }
-                    )
-                    if ($EmailExcludeGroupIds) {
-                        $OptionalLogMessage += " and excluded groups set to $($EmailExcludeGroupIds -join ', ')"
-                    } else {
-                        $OptionalLogMessage += ' and excluded groups cleared'
-                    }
-                }
             }
         }
 
@@ -211,8 +195,22 @@ function Set-CIPPAuthenticationPolicy {
                 }
             }
         )
-        $OptionalLogMessage += " and targeted groups set to $($CurrentInfo.includeTargets.id -join ', ')"
+        $IncludeLogMessage = "and targeted groups set to $($CurrentInfo.includeTargets.id -join ', ')"
     }
+
+    # Present (even empty) means the caller is setting the exclude list; an empty array clears it
+    if ($State -eq 'enabled' -and $PSBoundParameters.ContainsKey('ExcludeGroupIds')) {
+        $CurrentInfo.excludeTargets = @(
+            foreach ($id in $ExcludeGroupIds) {
+                [pscustomobject]@{
+                    targetType = 'group'
+                    id         = $id
+                }
+            }
+        )
+        $ExcludeLogMessage = if ($ExcludeGroupIds) { "and excluded groups set to $($ExcludeGroupIds -join ', ')" } else { 'and excluded groups cleared' }
+    }
+    $OptionalLogMessage = @($OptionalLogMessage, $IncludeLogMessage, $ExcludeLogMessage).Where({ $_ }) -join ' '
 
 
     # Set state of the authentication method

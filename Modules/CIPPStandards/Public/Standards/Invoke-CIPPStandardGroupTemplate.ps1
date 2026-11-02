@@ -43,17 +43,27 @@ function Invoke-CIPPStandardGroupTemplate {
         return
     }
 
-    $Settings.groupTemplate ? ($Settings | Add-Member -NotePropertyName 'TemplateList' -NotePropertyValue $Settings.groupTemplate) : $null
+    # Tiers merged into one run deliver Settings as one element per standards template; collect each id once.
+    $RequestedIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($Id in @($Settings.groupTemplate.value; $Settings.TemplateList.value)) {
+        if (-not [string]::IsNullOrWhiteSpace($Id)) { $null = $RequestedIds.Add($Id) }
+    }
 
     $Table = Get-CippTable -tablename 'templates'
-    $Filter = "PartitionKey eq 'GroupTemplate' and (RowKey eq '$($Settings.TemplateList.value -join "' or RowKey eq '")')"
+    # Read the partition and match in memory: one RowKey comparison per id exceeds the table service's filter limits.
+    try {
+        $TemplateRows = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'GroupTemplate'" -ErrorAction Stop | Where-Object { $_.RowKey -in $RequestedIds })
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Group Template: could not read the group template table, skipping this run. Error: $ErrorMessage" -sev 'Error'
+        return
+    }
     # Resolve %variables% (e.g. %tenantname%) in the template body before any comparison. Groups are
     # created through New-GraphPostRequest, which substitutes these tokens, so the tenant's actual
     # group ends up named with the resolved value. Comparing the raw token-bearing name against it
     # never matched, which recreated the group on every run and left the report permanently
     # non-compliant. Replacement runs against the serialized JSON (escaped for that context), exactly
     # as Push-CIPPStandard does for the settings.
-    $TemplateRows = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
     $GroupTemplates = foreach ($TemplateJSON in $TemplateRows.JSON) {
         if ($TemplateJSON -match '%') {
             $TemplateJSON = Get-CIPPTextReplacement -TenantFilter $Tenant -Text $TemplateJSON -EscapeForJson
@@ -62,8 +72,10 @@ function Invoke-CIPPStandardGroupTemplate {
     }
 
     # Referenced ids may no longer exist (deleted, or recreated by the library sync); report that instead of passing.
-    $RequestedIds = @(@($Settings.TemplateList.value) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-    $ResolvedIds = @(@($TemplateRows.RowKey) + @($GroupTemplates.GUID) | Where-Object { $_ } | Select-Object -Unique)
+    $ResolvedIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($Id in @($TemplateRows.RowKey; $GroupTemplates.GUID)) {
+        if ($Id) { $null = $ResolvedIds.Add($Id) }
+    }
     $MissingIds = @($RequestedIds | Where-Object { $_ -notin $ResolvedIds })
 
     # Dynamic Distribution Groups are no longer supported by CIPP: EXO canonicalises RecipientFilter
@@ -92,7 +104,6 @@ function Invoke-CIPPStandardGroupTemplate {
     }
 
     if ($Settings.remediate -eq $true) {
-        #Because the list name changed from TemplateList to groupTemplate by someone :@, we'll need to set it back to TemplateList
         foreach ($Template in $GroupTemplates) {
             Write-Information "Processing template: $($Template.displayName)"
             try {

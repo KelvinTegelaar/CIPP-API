@@ -13,7 +13,7 @@ BeforeAll {
     function Get-CippTable { param($tablename) @{} }
     function Get-CIPPAzDataTableEntity { param($Filter) $script:Rows }
     function ConvertTo-CIPPODataFilterValue { param($Value) $Value }
-    function Test-CIPPStandardLicense { $true }
+    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $RequiredCapabilities, [switch]$SkipLog) $true }
     function Get-CIPPBaselineDefinition { param($Name) $script:Definitions[$Name] }
     function Invoke-CIPPBaselineStandard { param($Item, $Mode, [switch]$GradeOnly) [pscustomobject]@{ Compliant = $false; CurrentValue = 1; Diff = @([pscustomobject]@{ Property = 'live' }) } }
 
@@ -72,5 +72,16 @@ Describe 'Get-CippSecuritySimulationContext baseline reuse' {
         $State = Get-State 'WithVars'
         $State.detail | Should -Be 'Differs on: live'
         Should -Invoke Invoke-CIPPBaselineStandard -Times 1 -ParameterFilter { $Item.Standard -eq 'WithVars' }
+    }
+
+    It 'reports License missing when one AND-ed capability group is absent' {
+        $script:Definitions.PerUserMFA | Add-Member -NotePropertyName requiredCapabilities -NotePropertyValue @(@('EXO'), @('RMS')) -Force
+        Mock Test-CIPPStandardLicense { $RequiredCapabilities -contains 'EXO' }
+        $script:Rows = @(New-Row 'PerUserMFA' 'Compliant')
+        try {
+            (Get-State 'PerUserMFA').status | Should -Be 'License missing'
+        } finally {
+            $script:Definitions.PerUserMFA.PSObject.Properties.Remove('requiredCapabilities')
+        }
     }
 }

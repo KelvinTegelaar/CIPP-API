@@ -333,6 +333,13 @@ Describe 'Template family executors' {
         Should -Invoke Set-CIPPRetentionCompliancePolicy -Times 1 -Exactly
     }
 
+    It 'deploys every retention template and then fails the run when one failed' {
+        Mock Set-CIPPRetentionCompliancePolicy { if ($Template.Name -eq 'A') { throw 'rule A failed' } }
+        $Current = [PSCustomObject]@{ missingPolicies = @(); templateBodies = @([PSCustomObject]@{ Name = 'A' }, [PSCustomObject]@{ Name = 'B' }) }
+        { Invoke-CIPPBaselineRetentionCompliancePolicyTemplate -Remediate $null -TenantFilter $script:Tenant -Current $Current } | Should -Throw 'rule A failed'
+        Should -Invoke Set-CIPPRetentionCompliancePolicy -Times 2 -Exactly
+    }
+
     It 'writes only the SITs the hook marked remediable' {
         Mock Set-CIPPSensitiveInfoType { 'Updated Employee ID' }
         $Current = [PSCustomObject]@{

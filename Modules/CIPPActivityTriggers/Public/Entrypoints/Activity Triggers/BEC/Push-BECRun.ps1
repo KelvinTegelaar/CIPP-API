@@ -75,7 +75,16 @@ function Push-BECRun {
         Set-CIPPBecRunState -CaseId $CaseId -Section '00-Run' -Values @{ UserName = $UserName; StartDate = $startDate.ToString('o'); EndDate = $endDate.ToString('o'); WindowDays = $WindowDays }
         $State = @{ Completeness = [ordered]@{} }
     } else {
-        $State = Get-CIPPBecRunState -CaseId $CaseId
+        # Only what this phase reads is built (Score reads everything); Push-BECRun.Tests checks the lists against each phase
+        $StateNames = @('UserName', 'WindowDays', 'StartDate', 'EndDate'; switch ($Key) {
+                { $_ -in @('MailboxRules', 'Activity') } { 'AuditLogEnabled' }
+                'MailboxInventory' { 'PermissionsLog' }
+                'ReceivedMail' { 'AcceptedDomains' }
+                'Directory' { 'UsageLocation' }
+                { $_ -in @('IPAnalysis', 'IPPeers') } { 'SuspectUserSignIns', 'NonInteractiveSignIns', 'RuleChangesLog', 'PermissionsLog', 'SafelistChanges', 'SharingChanges', 'TransportRuleChanges', 'DirectoryAudits', 'SentMessages', 'SentMessageAnalysis', 'MailActivity', 'RulesLog', 'UsageLocation', 'TravelWindows', 'IPBaseline' }
+                'AttackerActivity' { 'IPVerdicts', 'IPPeers', 'ReceivedSubjects', 'SentSubjects', 'SuspectUserSignIns', 'NonInteractiveSignIns', 'MailRecords', 'SharingChanges', 'SuspectUserDetail', 'PermissionsLog', 'MailActivity' }
+            })
+        $State = if ($Key -eq 'Score') { Get-CIPPBecRunState -CaseId $CaseId } else { Get-CIPPBecRunState -CaseId $CaseId -Name $StateNames }
         # the first phase never started the run (no resolvable UPN), so there is nothing to add to
         if ([string]::IsNullOrWhiteSpace([string]$State.UserName)) {
             Write-Information "BEC: case $CaseId has no run state; skipping phase $Key"
@@ -98,7 +107,7 @@ function Push-BECRun {
     }
     # Every array read from the state goes through here: a phase that failed left the value unset, and @($null) is one row.
     # The leading comma keeps a one-row array an array when it leaves the scriptblock.
-    $Rows = { param($Name) , @($State[$Name] | Where-Object { $_ }) }
+    $Rows = { param($Name) , @(@($State[$Name]).Where({ $_ })) }
     $AuditPages = [int]($Heuristics.caps.auditLogPages ?? 10)
 
     # Completeness marker per collector: { Complete, Cap, Error, Skipped, Requirement, Count }.
@@ -251,7 +260,7 @@ function Push-BECRun {
                 try {
                     # Every interactive sign-in in the window, paged to the end: the score's foreign sign-in
                     # signals count these, so a newest-N cut would hide the first foreign access.
-                    $SuspectUserSignIns = @((Search-CIPPBecSignIn -TenantFilter $TenantFilter -Filter "userId eq '$SuspectUser'" -StartDate $startDate -AsApp $false).Rows | Select-Object @{ Name = 'CreatedDateTime'; Expression = $SignInDate },
+                    $SuspectUserSignIns = @((Search-CIPPBecSignIn -TenantFilter $TenantFilter -Filter "userId eq '$SuspectUser'" -StartDate $startDate -AsApp $false -Select 'id,createdDateTime,resourceDisplayName,clientAppUsed,conditionalAccessStatus,status,ipAddress,location,autonomousSystemNumber,riskLevelDuringSignIn,riskEventTypes_v2,userAgent,deviceDetail,sessionId,uniqueTokenIdentifier,appId').Rows | Select-Object @{ Name = 'CreatedDateTime'; Expression = $SignInDate },
                         id,
                         @{ Name = 'AppDisplayName'; Expression = { $_.resourceDisplayName } },
                         @{ Name = 'ClientAppUsed'; Expression = { $_.clientAppUsed } },
@@ -275,7 +284,10 @@ function Push-BECRun {
                         @{ Name = 'SessionId'; Expression = { $_.sessionId } },
                         @{ Name = 'UniqueTokenId'; Expression = { $_.uniqueTokenIdentifier } },
                         # the CIPP application's own sign-ins (its service account) are not the user's or an attacker's
-                        @{ Name = 'AppId'; Expression = { $_.appId } })
+                        @{ Name = 'AppId'; Expression = { $_.appId } },
+                        # set by the score step
+                        @{ Name = 'ForeignLocation'; Expression = { $null } },
+                        @{ Name = 'IPVerdict'; Expression = { $null } })
                     & $Mark 'SignIns' ([pscustomobject]@{ Complete = $true; Cap = $null; Error = $null; Count = $SuspectUserSignIns.Count })
                 } catch {
                     $SuspectUserSignIns = @()
@@ -953,16 +965,14 @@ function Push-BECRun {
                     & $Mark 'SignInBaseline' $IPAnalysis; & $Mark 'IPGuidance' $IPAnalysis; & $Mark 'IPVerdicts' $IPAnalysis
                     $IPVerdicts = @(); $IPBaseline = $null; $IPGuidance = @(); $IPPeers = @()
                 }
-                Set-CIPPBecIPVerdictStamp -Results $IPDraft -Verdicts $IPVerdicts
-                # the stamped rows replace the earlier phases' copies
+                # the stamped rows replace the earlier phases' copies; the sign-ins, much the largest, are stamped by Score instead
+                Set-CIPPBecIPVerdictStamp -Results ($IPDraft | Select-Object -Property * -ExcludeProperty SuspectUserSignIns, NonInteractiveSignIns) -Verdicts $IPVerdicts
                 & $Save @{
                     IPVerdicts            = $IPVerdicts
                     IPBaseline            = $IPBaseline
                     IPGuidance            = $IPGuidance
                     IPPeers               = $IPPeers
                     IPTechnicians         = $TechnicianIPs
-                    SuspectUserSignIns    = $SuspectUserSignIns
-                    NonInteractiveSignIns = $NonInteractiveSignIns
                     RuleChangesLog        = $RuleChangesLog
                     PermissionsLog        = $PermissionsLog
                     SafelistChanges       = $SafelistChanges
@@ -1083,8 +1093,32 @@ function Push-BECRun {
                             ForeignLocation = (& $TestForeign $Geo.CountryOrRegion $Row.Received)
                         }) -Force
                 }
-                foreach ($Row in @($SuspectUserSignIns) + @($NonInteractiveSignIns)) {
-                    $Row | Add-Member -NotePropertyName 'ForeignLocation' -NotePropertyValue (& $TestForeign $Row.Country $Row.CreatedDateTime) -Force
+                # verdict and location on every sign-in, inline: tens of thousands of rows on a busy user. The rows carry
+                # both fields from collection, so this is a plain assignment; rows saved before they did take Add-Member.
+                $VerdictOf = @{}
+                foreach ($Verdict in (& $Rows 'IPVerdicts')) { if ($Verdict.IP) { $VerdictOf[[string]$Verdict.IP] = [string]$Verdict.Verdict } }
+                $HostOf = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::Ordinal)
+                $HasTravel = $TravelWindows.Count -gt 0
+                foreach ($SignInSet in @(, $SuspectUserSignIns) + @(, $NonInteractiveSignIns)) {
+                    $Fields = $SignInSet.Count -gt 0 -and $null -ne $SignInSet[0].PSObject.Properties['IPVerdict'] -and $null -ne $SignInSet[0].PSObject.Properties['ForeignLocation']
+                    foreach ($Row in $SignInSet) {
+                        $Raw = [string]$Row.IPAddress
+                        $IP = $HostOf[$Raw]
+                        if ($null -eq $IP) { $IP = [string](ConvertTo-CIPPBecHostAddress -Address $Raw); $HostOf[$Raw] = $IP }
+                        $Verdict = if ($IP) { $VerdictOf[$IP] }
+                        $Country = $Row.Country
+                        $Foreign = if (-not $UsageLocation -or [string]::IsNullOrWhiteSpace($Country) -or $Country -eq 'Unknown') { $null }
+                        elseif ($Country -eq $UsageLocation) { $false }
+                        elseif ($HasTravel -and (Find-CIPPBecApprovedTravel -TravelWindows $TravelWindows -Country $Country -When $Row.CreatedDateTime)) { $false }
+                        else { $true }
+                        if ($Fields) {
+                            if ($Verdict) { $Row.IPVerdict = $Verdict }
+                            $Row.ForeignLocation = $Foreign
+                        } else {
+                            if ($Verdict) { $Row | Add-Member -NotePropertyName 'IPVerdict' -NotePropertyValue $Verdict -Force }
+                            $Row | Add-Member -NotePropertyName 'ForeignLocation' -NotePropertyValue $Foreign -Force
+                        }
+                    }
                 }
 
                 # activity from a relay, a Microsoft service or the user's own device is not foreign activity, wherever it geolocates

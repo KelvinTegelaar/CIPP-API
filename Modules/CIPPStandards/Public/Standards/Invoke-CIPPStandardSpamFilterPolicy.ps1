@@ -16,20 +16,18 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             "ORCA100"
             "ORCA101"
             "ORCA102"
-            "ORCA103"
             "ORCA104"
-            "ORCA123"
             "ORCA139"
             "ORCA140"
             "ORCA141"
             "ORCA142"
             "ORCA143"
-            "ORCA224"
             "ORCA231"
-            "ORCA241"
             "CISAMSEXO141"
             "CISAMSEXO142"
             "CISAMSEXO143"
+            "ORCA106"
+            "CIS_2_1_14"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.SpamFilterPolicy.name","label":"Policy Name","required":true,"defaultValue":"CIPP Default Spam Filter Policy"}
             {"type":"number","label":"Bulk email threshold (Default 7)","name":"standards.SpamFilterPolicy.BulkThreshold","defaultValue":7,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":9,"message":"Maximum value is 9"}}}

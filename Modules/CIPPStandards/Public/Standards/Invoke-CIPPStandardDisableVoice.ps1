@@ -17,6 +17,7 @@ function Invoke-CIPPStandardDisableVoice {
             "EIDSCA.AV01"
             "NIST CSF 2.0 (PR.AA-03)"
             "EIDSCAAV01"
+            "ZTNA21804"
         EXECUTIVETEXT
             Disables voice call authentication due to security vulnerabilities and social engineering risks. This forces users to adopt more secure authentication methods like authenticator apps, improving overall account security by eliminating phone-based attack vectors.
         ADDEDCOMPONENT

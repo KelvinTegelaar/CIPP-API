@@ -80,6 +80,15 @@ Describe 'Invoke-CIPPStandardMessageEncryption' {
 
             Should -Invoke New-ExoRequest -Times 0 -Exactly
         }
+
+        It 'bails out when the tenant has Exchange but no Azure RMS' {
+            Mock -CommandName Test-CIPPStandardLicense -MockWith { $false } -ParameterFilter { $RequiredCapabilities -contains 'RMS_S_ENTERPRISE' }
+            Mock -CommandName New-ExoRequest -MockWith { New-IRMConfig -AzureRMSLicensingEnabled $false }
+
+            Invoke-CIPPStandardMessageEncryption -Tenant $tenant -Settings @{ remediate = $true }
+
+            Should -Invoke New-ExoRequest -Times 0 -Exactly
+        }
     }
 
     Context 'remediation' {

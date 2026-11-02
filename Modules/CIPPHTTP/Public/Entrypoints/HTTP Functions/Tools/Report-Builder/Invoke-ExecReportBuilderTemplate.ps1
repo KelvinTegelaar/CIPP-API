@@ -62,7 +62,7 @@ function Invoke-ExecReportBuilderTemplate {
                     throw 'Template GUID is required for deletion'
                 }
 
-                $ExistingEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ReportBuilderTemplate' and RowKey eq '$($Body.GUID)'"
+                $ExistingEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ReportBuilderTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Body.GUID)'"
                 if ($ExistingEntity) {
                     Remove-CIPPAzDataTableEntity @Table -Entity $ExistingEntity
                     Write-LogMessage -headers $Headers -API $APIName -message "Deleted report builder template '$($Body.GUID)'" -Sev 'Info'

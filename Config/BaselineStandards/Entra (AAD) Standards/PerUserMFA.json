@@ -25,10 +25,7 @@
   "appliesToTest": [
     "SMB1001_2_5",
     "SMB1001_2_6",
-    "SMB1001_2_9",
-    "ZTNA21780",
-    "ZTNA21782",
-    "ZTNA21796"
+    "SMB1001_2_9"
   ],
   "recommendedBy": [],
   "requiredCapabilities": [],

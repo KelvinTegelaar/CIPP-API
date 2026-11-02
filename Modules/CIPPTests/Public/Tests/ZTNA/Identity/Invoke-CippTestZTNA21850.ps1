@@ -14,31 +14,29 @@ function Invoke-CippTestZTNA21850 {
 
         $PortalLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/PasswordProtection/fromNav/'
 
-        if ($null -eq $PasswordRuleSettings) {
-            $Passed = 'Failed'
-            $ResultMarkdown = [System.Text.StringBuilder]::new('❌ Password rule settings template not found.')
+        $LockoutThresholdSetting = foreach ($Value in $PasswordRuleSettings.values) { if ($Value.name -eq 'LockoutThreshold') { $Value } }
+
+        if (-not $Settings -and -not (Get-CIPPDbItem -TenantFilter $Tenant -Type 'Settings' -CountsOnly)) {
+            $Passed = 'Skipped'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('No data found in database. Directory settings have not been collected yet.')
+        } elseif ($null -eq $LockoutThresholdSetting) {
+            $Passed = 'Passed'
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ Smart lockout has not been customised, so the Microsoft default threshold of 10 applies. [Password protection settings]($PortalLink)")
         } else {
-            $LockoutThresholdSetting = foreach ($Value in $PasswordRuleSettings.values) { if ($Value.name -eq 'LockoutThreshold') { $Value } }
+            $LockoutThreshold = [int]$LockoutThresholdSetting.value
 
-            if ($null -eq $LockoutThresholdSetting) {
-                $Passed = 'Failed'
-                $ResultMarkdown = [System.Text.StringBuilder]::new("❌ Lockout threshold setting not found in [password rule settings]($PortalLink).")
+            if ($LockoutThreshold -le 10) {
+                $Passed = 'Passed'
+                $ResultMarkdown = [System.Text.StringBuilder]::new("✅ Smart lockout threshold is set to 10 or below.`n`n")
             } else {
-                $LockoutThreshold = [int]$LockoutThresholdSetting.value
-
-                if ($LockoutThreshold -le 10) {
-                    $Passed = 'Passed'
-                    $ResultMarkdown = [System.Text.StringBuilder]::new("✅ Smart lockout threshold is set to 10 or below.`n`n")
-                } else {
-                    $Passed = 'Failed'
-                    $ResultMarkdown = [System.Text.StringBuilder]::new("❌ Smart lockout threshold is configured above 10.`n`n")
-                }
-
-                $null = $ResultMarkdown.Append("## [Smart lockout configuration]($PortalLink)`n`n")
-                $null = $ResultMarkdown.Append("| Setting | Value |`n")
-                $null = $ResultMarkdown.Append("| :---- | :---- |`n")
-                $null = $ResultMarkdown.Append("| Lockout threshold | $LockoutThreshold attempts |`n")
+                $Passed = 'Failed'
+                $ResultMarkdown = [System.Text.StringBuilder]::new("❌ Smart lockout threshold is configured above 10.`n`n")
             }
+
+            $null = $ResultMarkdown.Append("## [Smart lockout configuration]($PortalLink)`n`n")
+            $null = $ResultMarkdown.Append("| Setting | Value |`n")
+            $null = $ResultMarkdown.Append("| :---- | :---- |`n")
+            $null = $ResultMarkdown.Append("| Lockout threshold | $LockoutThreshold attempts |`n")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'Medium' -Name 'Smart lockout threshold set to 10 or less' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'

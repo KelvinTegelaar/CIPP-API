@@ -10,7 +10,7 @@ function Invoke-ListApiEgress {
         storage account, so this reads it directly): a per-day audit row per client plus an instance
         total, and 15-minute buckets for the trend. Returns today's instance summary (used-of-cap,
         enforcing, when the cap was first hit, how many requests were shed), the per-client breakdown,
-        the top endpoints by egress (instance-wide and per client), signed-in user traffic (reported,
+        the top endpoints and caller IPs by egress (instance-wide and per client), signed-in user traffic (reported,
         never capped), and the last-24h instance trend. When the table has no data for today - accounting off, a
         non-hosted instance, or simply no app-only traffic yet - Enabled is false and the UI hides the
         card. SuperAdmin only.
@@ -71,22 +71,27 @@ function Invoke-ListApiEgress {
             Write-Information "ListApiEgress: ApiClients name lookup failed, using AppIds ($($_.Exception.Message))"
         }
 
-        # Craft stores per-endpoint egress as JSON: label -> [Bytes, Requests, MaxBytes, CacheHits, Errors, Shed].
+        # Craft stores per-endpoint and per-IP egress as JSON: label -> [Bytes, Requests, MaxBytes, CacheHits, Errors, Shed,
+        # BrRequests, BrBytes, GzipRequests, GzipBytes]. Rows written before Craft tracked encoding stop at Shed (encoding null).
         $ExpandEndpoints = {
-            param($Json, $First = 100)
+            param($Json, $First = 100, $Key = 'Endpoint')
             $Map = if ($Json) { try { ConvertFrom-Json -InputObject $Json -AsHashtable } catch { $null } }
             if (-not $Map) { return }
             $(foreach ($Label in $Map.Keys) {
                     $Values = @($Map[$Label])
                     [PSCustomObject]@{
-                        Endpoint  = [string]$Label
+                        $Key      = [string]$Label
                         Bytes     = [long]$Values[0]
                         Requests  = [long]$Values[1]
                         AvgBytes  = if ([long]$Values[1] -gt 0) { [long][math]::Round($Values[0] / $Values[1]) } else { [long]0 }
                         MaxBytes  = [long]$Values[2]
                         CacheHits = [long]$Values[3]
                         Errors    = [long]$Values[4]
-                        Shed      = [long]$Values[5]
+                        Shed         = [long]$Values[5]
+                        BrRequests   = $Values[6]
+                        BrBytes      = $Values[7]
+                        GzipRequests = $Values[8]
+                        GzipBytes    = $Values[9]
                     }
                 }) | Sort-Object -Property Bytes -Descending | Select-Object -First $First
         }
@@ -101,6 +106,7 @@ function Invoke-ListApiEgress {
                     Requests  = [long]($_.Requests ?? 0)
                     Shed      = [long]($_.Shed ?? 0)
                     Endpoints = @(& $ExpandEndpoints $_.Endpoints)
+                    Ips       = @(& $ExpandEndpoints $_.Ips 100 'Ip')
                 }
             } | Sort-Object -Property Bytes -Descending
         )
@@ -112,6 +118,7 @@ function Invoke-ListApiEgress {
                 Bytes     = [long]($InteractiveRow.Bytes ?? 0)
                 Requests  = [long]($InteractiveRow.Requests ?? 0)
                 Endpoints = @(& $ExpandEndpoints $InteractiveRow.Endpoints)
+                Ips       = @(& $ExpandEndpoints $InteractiveRow.Ips 100 'Ip')
             }
         }
 
@@ -151,6 +158,7 @@ function Invoke-ListApiEgress {
                 ShedRequests  = [long]($Instance.Shed ?? 0)
                 Clients       = $Clients
                 Endpoints     = @(& $ExpandEndpoints $Instance.Endpoints)
+                Ips           = @(& $ExpandEndpoints $Instance.Ips 100 'Ip')
                 Interactive   = $Interactive
                 ClientIds     = $ClientIds
                 ClientNames   = $ClientNames

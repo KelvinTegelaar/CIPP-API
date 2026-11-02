@@ -7,8 +7,8 @@ function Invoke-CIPPStandardSetDefaultMailboxFont {
     .SYNOPSIS
         (Label) Set default mailbox font, size and colour
     .DESCRIPTION
-        (Helptext) Sets the default compose font name, size and colour for all user and shared mailboxes. Font size is the 1-7 scale Exchange stores, not a point size. Applies to Outlook on the web and new Outlook only - classic Outlook for Windows/Mac uses its own local font settings and is not affected.
-        (DocsDescription) Loops through all UserMailbox and SharedMailbox recipients and sets the Outlook on the web default compose font using \`Set-MailboxMessageConfiguration\`. Mailboxes already matching the configured font are skipped, so steady-state runs make no writes. Font size is the integer 1-7 scale Exchange stores rather than a point size: 3 is the Exchange default and corresponds to 12pt. Note that these settings apply to Outlook on the web and the new Outlook client only; classic Outlook for Windows and Mac read their compose font from local client settings. See [Microsoft's documentation.](https://learn.microsoft.com/powershell/module/exchangepowershell/set-mailboxmessageconfiguration)
+        (Helptext) Sets the default compose font name, size and colour for all user and shared mailboxes. Font size is either the legacy 1-7 scale Exchange stores (3 is 12pt) or a point size from 8 to 72. Applies to Outlook on the web and new Outlook only - classic Outlook for Windows/Mac uses its own local font settings and is not affected.
+        (DocsDescription) Loops through all UserMailbox and SharedMailbox recipients and sets the Outlook on the web default compose font using \`Set-MailboxMessageConfiguration\`. Mailboxes already matching the configured font are skipped, so steady-state runs make no writes. Font size accepts the legacy integer 1-7 scale (3 is the Exchange default and corresponds to 12pt) or a point size from 8 to 72; Outlook on the web renders values above 7 as that point size, so 11 gives 11pt. Note that these settings apply to Outlook on the web and the new Outlook client only; classic Outlook for Windows and Mac read their compose font from local client settings. See [Microsoft's documentation.](https://learn.microsoft.com/powershell/module/exchangepowershell/set-mailboxmessageconfiguration)
     .NOTES
         CAT
             Exchange Standards
@@ -17,7 +17,7 @@ function Invoke-CIPPStandardSetDefaultMailboxFont {
             Applies a consistent default font, size and colour to outgoing email so that messages from across the organisation look uniform and on-brand. This affects the web and new Outlook clients; users can still change the font on an individual message.
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":true,"required":true,"name":"standards.SetDefaultMailboxFont.DefaultFontName","label":"Default font name","helperText":"Font applied to new messages. You can type a font that is not in this list.","options":[{"label":"Aptos","value":"Aptos"},{"label":"Arial","value":"Arial"},{"label":"Calibri","value":"Calibri"},{"label":"Cambria","value":"Cambria"},{"label":"Georgia","value":"Georgia"},{"label":"Helvetica","value":"Helvetica"},{"label":"Segoe UI","value":"Segoe UI"},{"label":"Tahoma","value":"Tahoma"},{"label":"Times New Roman","value":"Times New Roman"},{"label":"Trebuchet MS","value":"Trebuchet MS"},{"label":"Verdana","value":"Verdana"}]}
-            {"type":"number","required":true,"name":"standards.SetDefaultMailboxFont.DefaultFontSize","label":"Default font size (1-7)","defaultValue":3,"helperText":"Exchange stores a 1-7 size scale, not a point size. 3 is the Exchange default and corresponds to 12pt; lower is smaller, higher is larger.","validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":7,"message":"Maximum value is 7"}}}
+            {"type":"number","required":true,"name":"standards.SetDefaultMailboxFont.DefaultFontSize","label":"Default font size (1-7 scale or 8-72 pt)","defaultValue":3,"helperText":"1-7 is the legacy Exchange scale where 3 is the default and corresponds to 12pt. Values from 8 to 72 are treated as point sizes, so 11 gives 11pt.","validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":72,"message":"Maximum value is 72"}}}
             {"type":"textField","required":true,"name":"standards.SetDefaultMailboxFont.DefaultFontColor","label":"Default font colour","placeholder":"#000000","helperText":"Six-digit hex colour in the #xxxxxx format, for example #000000. Exchange stores six digits, so shorthand such as #000 is not accepted."}
         IMPACT
             Low Impact
@@ -55,9 +55,9 @@ function Invoke-CIPPStandardSetDefaultMailboxFont {
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SetDefaultMailboxFont: Font name and colour must both be set' -Sev Error
         return
     }
-    # DefaultFontSize is the 1-7 scale Exchange stores, not a point size. 3 is the default (12pt).
-    if ($SizeParsed -eq $false -or $FontSize -lt 1 -or $FontSize -gt 7) {
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "SetDefaultMailboxFont: '$($Settings.DefaultFontSize)' is not a valid font size. Exchange accepts an integer between 1 and 7" -Sev Error
+    # 1-7 is the legacy scale Exchange documents (3 = 12pt), but Exchange also stores 8-72 and OWA renders those as point sizes (issue #881)
+    if ($SizeParsed -eq $false -or $FontSize -lt 1 -or $FontSize -gt 72) {
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "SetDefaultMailboxFont: '$($Settings.DefaultFontSize)' is not a valid font size. Exchange accepts an integer between 1 and 72 (1-7 is the legacy scale, 8-72 is a point size)" -Sev Error
         return
     }
     # Exchange stores colours as #xxxxxx; accepting #abc would never match the read-back and rewrite every mailbox on every run

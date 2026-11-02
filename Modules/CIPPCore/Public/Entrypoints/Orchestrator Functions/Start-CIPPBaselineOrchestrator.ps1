@@ -51,7 +51,8 @@ function Start-CIPPBaselineOrchestrator {
         }
     }
 
-    $WorkItems = @(Get-CIPPBaselineWorkItems -TenantFilter $TenantFilter -StandardName $StandardName -TemplateId $TemplateId)
+    # A manual run by a tenant-restricted role only reaches the tenants that role allows.
+    $WorkItems = @(Get-CIPPBaselineWorkItems -TenantFilter $TenantFilter -StandardName $StandardName -TemplateId $TemplateId | Select-CippAllowedTenantData -TenantProperty 'TenantFilter')
 
     # Scheduled full runs reconcile the resolved store: rows for pairs nothing resolves
     # anymore (standard removed from its baseline, tenant unassigned, override deleted)
@@ -100,6 +101,18 @@ function Start-CIPPBaselineOrchestrator {
         $WorkItems = @($WorkItems | Where-Object { -not $_.DisableScheduledRuns })
     }
 
+    # CA templates share named locations: deploy them one at a time per tenant, never beside another CA run for that tenant.
+    $CAStandard = if ($Mode -ne 'compare') { 'ConditionalAccessTemplate' }
+    if ($CAStandard -and $env:CIPPNG -eq 'true') {
+        $BusyTenants = @($WorkItems.Where({ $_.BaseName -eq $CAStandard }).TenantFilter | Select-Object -Unique).Where({ [Craft.Services.OrchestratorBridge]::IsRunActive("BaselineCA_$_") })
+        if ($BusyTenants.Count -gt 0) {
+            $BusyMessage = "A Conditional Access deployment is already running for $($BusyTenants -join ', '). Try again once it finishes."
+            $WorkItems = @($WorkItems.Where({ $_.BaseName -ne $CAStandard -or $_.TenantFilter -notin $BusyTenants }))
+            if ($WorkItems.Count -eq 0) { throw [System.ArgumentException]::new($BusyMessage) }
+            Write-LogMessage -API 'Baselines' -message $BusyMessage -Sev 'Warning'
+        }
+    }
+
     if ($WorkItems.Count -eq 0) {
         Write-Information 'Start-CIPPBaselineOrchestrator: no baseline work items resolved - nothing to do.'
         return 0
@@ -131,22 +144,27 @@ function Start-CIPPBaselineOrchestrator {
         }
     }
 
-    $InputObject = [PSCustomObject]@{
-        Batch            = @($Batch)
-        OrchestratorName = "BaselineRun_$Mode"
-        SkipLog          = $false
-        # Right under the audit log pipeline (P2) and ahead of the default 4: a drift
-        # check racing a fleet-wide report sweep must not sit behind it for hours, and
-        # remediation doubly so.
-        Priority         = 3
-        # After every check has run, refresh ONLY the caches remediations wrote to -
-        # otherwise the next run re-reads stale data and re-detects fixed drift.
-        PostExecution    = @{
-            FunctionName = 'CIPPBaselineCacheRefresh'
-            Parameters   = @{ RunId = $RunId }
-        }
+    # One run for everything else (empty group key), one per tenant for its CA templates.
+    foreach ($Group in ($Batch | Group-Object -Property { if ($_.Item.BaseName -eq $CAStandard) { $_.Item.TenantFilter } })) {
+        $IsCA = [bool]$Group.Name
+        $null = Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
+                Batch            = @($Group.Group)
+                OrchestratorName = $IsCA ? "BaselineCA_$($Group.Name)" : "BaselineRun_$Mode"
+                SkipLog          = $false
+                # Right under the audit log pipeline (P2) and ahead of the default 4: a drift
+                # check racing a fleet-wide report sweep must not sit behind it for hours, and
+                # remediation doubly so.
+                Priority         = 3
+                MaxConcurrency   = $IsCA ? 1 : 0
+                AllowCollision   = -not $IsCA
+                # After every check has run, refresh ONLY the caches remediations wrote to -
+                # otherwise the next run re-reads stale data and re-detects fixed drift.
+                PostExecution    = @{
+                    FunctionName = 'CIPPBaselineCacheRefresh'
+                    Parameters   = @{ RunId = $RunId }
+                }
+            })
     }
-    $null = Start-CIPPOrchestrator -InputObject $InputObject
     Write-LogMessage -API 'Baselines' -message "Baseline $Mode started by ${TriggeredBy}: $($WorkItems.Count) (tenant, standard) checks queued - Run $RunId" -Sev 'Info'
 
     # 90-day history retention (design doc §4.3): prune on the scheduled run only. The newest

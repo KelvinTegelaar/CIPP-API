@@ -106,7 +106,10 @@ BeforeAll {
         }
     }
 
+    function Get-CIPPTenantLookup { @{} }
+
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPTenantDriftState.ps1')
 }
 
 Describe 'Get-CIPPDrift - Intune extra-policy matching (#6347 and Settings Catalog regression)' {
@@ -748,5 +751,94 @@ Describe 'Get-CIPPDrift - stale drift entity pruning' {
         Get-CIPPDrift -TenantFilter 'contoso.onmicrosoft.com' -TemplateId 'drift-template-1' | Out-Null
 
         $script:RemovedDriftEntities.Count | Should -Be 0
+    }
+}
+
+Describe 'Get-CIPPDrift - decisions saved under an older default domain' {
+    BeforeEach {
+        $script:IntuneTemplateRows = @()
+        $script:CATemplateRows = @()
+        $script:ReusableTemplateRows = @()
+        $script:AddedDriftEntities = [System.Collections.Generic.List[object]]::new()
+        $script:RemovedDriftEntities = [System.Collections.Generic.List[object]]::new()
+        $script:DriftEntityRows = @(
+            [pscustomobject]@{ PartitionKey = 'contoso.onmicrosoft.com'; RowKey = 'standards_EnableOnlineArchiving'; StandardName = 'standards.EnableOnlineArchiving'; Status = 'DeniedRemediate'; Reason = 'keep archives on'; User = 'tech@contoso.com'; Timestamp = (Get-Date).AddDays(-150) }
+            [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = 'standards_EnableOnlineArchiving'; StandardName = 'standards.EnableOnlineArchiving'; Status = 'New'; Timestamp = (Get-Date).AddDays(-90) }
+        )
+        $Tenant = [pscustomobject]@{ customerId = 'cid-1'; defaultDomainName = 'contoso.com'; initialDomainName = 'contoso.onmicrosoft.com' }
+        $script:Lookup = @{ 'cid-1' = $Tenant; 'contoso.com' = $Tenant; 'contoso.onmicrosoft.com' = $Tenant }
+
+        Mock -CommandName Get-CIPPTenantLookup -MockWith { $script:Lookup }
+        Mock -CommandName Test-CIPPStandardLicense -MockWith { $false }
+        Mock -CommandName Get-CippTable -MockWith { param($tablename) @{ TableName = $tablename } }
+        Mock -CommandName New-GraphBulkRequest -MockWith { @() }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            param($Filter, $TableName)
+            switch -Wildcard ($Filter) {
+                "*PartitionKey eq 'IntuneTemplate'*" { return @($script:IntuneTemplateRows) }
+                "*PartitionKey eq 'CATemplate'*" { return @($script:CATemplateRows) }
+                "*PartitionKey eq 'IntuneReusableSettingTemplate'*" { return @($script:ReusableTemplateRows) }
+                default { return @($script:DriftEntityRows | Where-Object { $Filter -like "*PartitionKey eq '$($_.PartitionKey)'*" }) }
+            }
+        }
+        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith {
+            param($Entity, [switch]$Force, $TableName)
+            foreach ($e in @($Entity)) { $script:AddedDriftEntities.Add($e) }
+        }
+        Mock -CommandName Remove-CIPPAzDataTableEntity -MockWith {
+            param($Entity, $TableName)
+            $script:RemovedDriftEntities.Add($Entity)
+        }
+        Mock -CommandName Get-CIPPTenantAlignment -MockWith {
+            @([pscustomobject]@{
+                    standardType         = 'drift'
+                    StandardName         = 'Standard'
+                    StandardId           = 'sid-7'
+                    AlignmentScore       = 90
+                    CompliantStandards   = 1
+                    LatestDataCollection = (Get-Date)
+                    ComparisonDetails    = @(
+                        [pscustomobject]@{ StandardName = 'standards.EnableOnlineArchiving'; Compliant = $false; StandardValue = $true; ComplianceStatus = 'Non-Compliant' }
+                        [pscustomobject]@{ StandardName = 'standards.DisableSMS'; Compliant = $false; StandardValue = $true; ComplianceStatus = 'Non-Compliant' }
+                    )
+                })
+        }
+    }
+
+    It 'keeps a decision made before the default domain changed instead of raising it as new drift' {
+        $Result = Get-CIPPDrift -TenantFilter 'contoso.com'
+
+        $Archive = @($Result[0].currentDeviations + $Result[0].deniedDeviations) | Where-Object standardName -EQ 'standards.EnableOnlineArchiving' | Select-Object -First 1
+        $Archive.Status | Should -Be 'DeniedRemediate'
+        $Result[0].newDeviationsCount | Should -Be 1
+        $Result[0].deniedDeviationsCount | Should -Be 1
+    }
+
+    It 'moves the decision to the customerId partition and removes the domain-keyed rows' {
+        Get-CIPPDrift -TenantFilter 'contoso.com' | Out-Null
+
+        $Moved = @($script:AddedDriftEntities | Where-Object { $_.StandardName -eq 'standards.EnableOnlineArchiving' })
+        $Moved.Count | Should -Be 1
+        $Moved[0].PartitionKey | Should -Be 'cid-1'
+        $Moved[0].Status | Should -Be 'DeniedRemediate'
+        $Moved[0].Reason | Should -Be 'keep archives on'
+        @($script:RemovedDriftEntities.PartitionKey | Sort-Object) | Should -Be @('contoso.com', 'contoso.onmicrosoft.com')
+    }
+
+    It 'writes a newly detected deviation under the customerId' {
+        Get-CIPPDrift -TenantFilter 'contoso.com' | Out-Null
+
+        $New = @($script:AddedDriftEntities | Where-Object { $_.StandardName -eq 'standards.DisableSMS' })
+        $New.Count | Should -Be 1
+        $New[0].PartitionKey | Should -Be 'cid-1'
+        $New[0].Status | Should -Be 'New'
+    }
+
+    It 'prefers the customerId decision over an older domain-keyed one' {
+        $script:DriftEntityRows = @(
+            [pscustomobject]@{ PartitionKey = 'contoso.onmicrosoft.com'; StandardName = 'standards.EnableOnlineArchiving'; Status = 'DeniedRemediate'; Timestamp = (Get-Date).AddDays(-150) }
+            [pscustomobject]@{ PartitionKey = 'cid-1'; StandardName = 'standards.EnableOnlineArchiving'; Status = 'Accepted'; Timestamp = (Get-Date).AddDays(-200) }
+        )
+        (Get-CIPPTenantDriftState -TenantFilter 'contoso.com').States['standards.EnableOnlineArchiving'].Status | Should -Be 'Accepted'
     }
 }

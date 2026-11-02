@@ -51,20 +51,85 @@ function Write-AlertTrace {
     $StaleCutoff = $Now.AddDays(-30)
     $RetentionCutoff = $Now.AddDays(-90)
 
+    # Hash the run first, so the history read below already knows which rows this run has seen.
+    $Hashed = [System.Collections.Generic.List[object]]::new()
+    $Seen = [System.Collections.Generic.HashSet[string]]::new()
+    $KeyedItems = 0
+    $UnkeyedItems = 0
+    foreach ($Item in @($data)) {
+        if ($null -eq $Item) { continue }
+        $Hash = Get-AlertContentHash -AlertItem $Item
+        if ($Hash.KeyField) { $KeyedItems++ } else { $UnkeyedItems++ }
+        if ($Seen.Add($Hash.ContentHash)) { $Hashed.Add([pscustomobject]@{ Item = $Item; Hash = $Hash }) }
+    }
+    # A row hashed from the whole item (its preview is the item JSON) can never match again once every item
+    # carries a key field, so it is dropped rather than kept for 90 days and read on every run.
+    $DropWholeItemRows = $KeyedItems -gt 0 -and $UnkeyedItems -eq 0
+
     $Table = Get-CIPPTable -tablename 'AlertLifecycle'
     $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter -Type String
     $SafeCmdlet = ConvertTo-CIPPODataFilterValue -Value $CmdletName -Type String
-    $Existing = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeTenant' and CmdletName eq '$SafeCmdlet'")
+    # The stored item is never read: seen items are rewritten from this run and resolves merge a few fields.
+    # The read is streamed and rows to drop are deleted 100 at a time (one batch per partition) as it pages in, so only
+    # the rows this run keeps are held and a run that dies partway still makes progress. Without split markers in the
+    # projection the rows come back raw: a split item's "-partN" rows (no ContentHash) are held aside and deleted once
+    # their row is no longer kept, which also clears parts orphaned by an interrupted run.
+    $Filter = "PartitionKey eq '$SafeTenant' and RowKey ge '$SafeCmdlet-' and RowKey lt '$SafeCmdlet.'"
+    $Existing = [System.Collections.Generic.List[object]]::new()
+    $PartRows = [System.Collections.Generic.List[object]]::new()
+    $Purge = [System.Collections.Generic.List[hashtable]]::new()
+    $PurgeStats = @{ Dropped = 0; Failed = 0 }
+    Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, ContentHash, ContentPreview, Status, FirstSeen, LastSeen, ReopenCount, ResolvedAt, SnoozeRowKey, SnoozeUntilResolved -Stream | & { process {
+            if (-not $_.ContentHash) { $PartRows.Add($_); return }
+            $Status = [string]$_.Status
+            $Drop = $false
+            if ($Status -ne 'Snoozed' -and -not $Seen.Contains([string]$_.ContentHash)) {
+                if ($DropWholeItemRows -and ([string]$_.ContentPreview).StartsWith('{')) {
+                    $Drop = $true
+                } elseif ($Status -eq 'Resolved') {
+                    [datetime]$ResolvedAt = [datetime]::MinValue
+                    $Drop = [datetime]::TryParse([string]$_.ResolvedAt, [cultureinfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind, [ref]$ResolvedAt) -and $ResolvedAt -lt $RetentionCutoff
+                }
+            }
+            if (-not $Drop) { $Existing.Add($_); return }
+            $PurgeStats.Dropped = $PurgeStats.Dropped + 1
+            $Purge.Add(@{ PartitionKey = [string]$_.PartitionKey; RowKey = [string]$_.RowKey })
+            if ($Purge.Count -lt 100) { return }
+            try {
+                Remove-AzDataTableEntity @Table -Entity $Purge.ToArray() -Force | Out-Null
+            } catch {
+                $PurgeStats.Failed = $PurgeStats.Failed + $Purge.Count
+            }
+            $Purge.Clear()
+        } }
+
+    $Kept = [System.Collections.Generic.HashSet[string]]::new([string[]]@(foreach ($Row in $Existing) { [string]$Row.RowKey }))
+    foreach ($Part in $PartRows) {
+        if (-not $Kept.Contains(([string]$Part.RowKey -replace '-part\d+$', ''))) {
+            $Purge.Add(@{ PartitionKey = [string]$Part.PartitionKey; RowKey = [string]$Part.RowKey })
+        }
+    }
+    for ($i = 0; $i -lt $Purge.Count; $i = $i + 100) {
+        $Chunk = $Purge.GetRange($i, [Math]::Min(100, $Purge.Count - $i)).ToArray()
+        try {
+            Remove-AzDataTableEntity @Table -Entity $Chunk -Force | Out-Null
+        } catch {
+            $PurgeStats.Failed = $PurgeStats.Failed + $Chunk.Count
+        }
+    }
+    if ($PurgeStats.Failed) {
+        Write-Information "Could not purge $($PurgeStats.Failed) old alert rows for $CmdletName / $TenantFilter, the next run retries them"
+    }
 
     $ByHash = @{}
     foreach ($Row in $Existing) {
-        if ($Row.ContentHash) { $ByHash[[string]$Row.ContentHash] = $Row }
+        $ByHash[[string]$Row.ContentHash] = $Row
     }
 
     # One-time seed: the first reconcile for a cmdlet/tenant pair after the upgrade treats the
     # items of its last AlertLastRun row as already open, so nothing that was already known
     # is announced as new.
-    if ($Existing.Count -eq 0) {
+    if ($Existing.Count -eq 0 -and $PurgeStats.Dropped -eq 0) {
         try {
             $LastRunTable = Get-CIPPTable -tablename 'AlertLastRun'
             $SafeLastRunKey = ConvertTo-CIPPODataFilterValue -Value "$($TenantFilter)-$($CmdletName)" -Type String
@@ -109,16 +174,13 @@ function Write-AlertTrace {
 
     $Snoozes = Get-CIPPActiveAlertSnoozes -CmdletName $CmdletName -TenantFilter $TenantFilter
 
-    $Seen = [System.Collections.Generic.HashSet[string]]::new()
     $Writes = [System.Collections.Generic.List[object]]::new()
     $Notify = [System.Collections.Generic.List[object]]::new()
     $Counts = @{ New = 0; Reopened = 0; Continuing = 0; Resolved = 0; Snoozed = 0 }
 
-    foreach ($Item in @($data)) {
-        if ($null -eq $Item) { continue }
-        $Hash = Get-AlertContentHash -AlertItem $Item
-        if (-not $Seen.Add($Hash.ContentHash)) { continue }
-
+    foreach ($Entry in $Hashed) {
+        $Item = $Entry.Item
+        $Hash = $Entry.Hash
         $Snooze = $Snoozes[$Hash.ContentHash]
         $Keys = Get-CIPPAlertLifecycleKey -CmdletName $CmdletName -TenantFilter $TenantFilter -ContentHash $Hash.ContentHash
         $ItemJson = [string](ConvertTo-Json -InputObject $Item -Compress -Depth 10)
@@ -177,19 +239,12 @@ function Write-AlertTrace {
         $Writes.Add($Entity)
     }
 
-    $Removals = [System.Collections.Generic.List[object]]::new()
+    $Resolves = [System.Collections.Generic.List[object]]::new()
     $SnoozesToDrop = [System.Collections.Generic.List[object]]::new()
     foreach ($Row in $Existing) {
         if ($Seen.Contains([string]$Row.ContentHash)) { continue }
         $Status = [string]$Row.Status
-
-        if ($Status -eq 'Resolved') {
-            [datetime]$ResolvedAt = [datetime]::MinValue
-            if ([datetime]::TryParse([string]$Row.ResolvedAt, [cultureinfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind, [ref]$ResolvedAt) -and $ResolvedAt -lt $RetentionCutoff) {
-                $Removals.Add($Row)
-            }
-            continue
-        }
+        if ($Status -eq 'Resolved') { continue }
 
         $ResolveIt = $true
         if ($Append) {
@@ -198,15 +253,13 @@ function Write-AlertTrace {
         }
         if (-not $ResolveIt) { continue }
 
-        # Rewrite the whole row: the upsert replaces rather than merges.
-        $Resolved = @{}
-        foreach ($Prop in $Row.PSObject.Properties) {
-            if ($Prop.Name -in @('ETag', 'Timestamp')) { continue }
-            $Resolved[$Prop.Name] = $Prop.Value
+        $Resolved = @{
+            PartitionKey = [string]$Row.PartitionKey
+            RowKey       = [string]$Row.RowKey
+            Status       = 'Resolved'
+            ResolvedAt   = $NowIso
+            LastChecked  = $NowIso
         }
-        $Resolved.Status = 'Resolved'
-        $Resolved.ResolvedAt = $NowIso
-        $Resolved.LastChecked = $NowIso
         if ($Status -eq 'Snoozed' -and [string]$Row.SnoozeUntilResolved -eq 'True') {
             # An "until resolved" snooze has done its job; drop it so a comeback notifies again.
             $SnoozesToDrop.Add([string]$Row.SnoozeRowKey)
@@ -217,25 +270,15 @@ function Write-AlertTrace {
             $Resolved.SnoozeVisible = ''
             $Resolved.SnoozeUntilResolved = ''
         }
-        $Writes.Add($Resolved)
+        $Resolves.Add($Resolved)
         $Counts.Resolved++
     }
 
     if ($Writes.Count -gt 0) {
         Add-CIPPAzDataTableEntity @Table -Entity @($Writes) -Force | Out-Null
     }
-    if ($Removals.Count -gt 0) {
-        try {
-            foreach ($Old in $Removals) {
-                Remove-CIPPAzDataTableEntity @Table -Entity @{
-                    PartitionKey = [string]$Old.PartitionKey
-                    RowKey       = [string]$Old.RowKey
-                    ETag         = '*'
-                } | Out-Null
-            }
-        } catch {
-            Write-Information "Could not purge resolved alert rows for $CmdletName / $TenantFilter : $($_.Exception.Message)"
-        }
+    if ($Resolves.Count -gt 0) {
+        Update-CIPPAzDataTableEntity @Table -Entity @($Resolves) | Out-Null
     }
     if ($SnoozesToDrop.Count -gt 0) {
         try {
@@ -254,6 +297,11 @@ function Write-AlertTrace {
     }
 
     Write-Information ("Alert reconcile for {0} / {1}: {2} new, {3} reopened, {4} continuing, {5} resolved, {6} snoozed" -f $CmdletName, $TenantFilter, $Counts.New, $Counts.Reopened, $Counts.Continuing, $Counts.Resolved, $Counts.Snoozed)
+    $AlertRun = $script:CippAlertRunStorage.Value
+    if ($null -ne $AlertRun) {
+        foreach ($Key in $Counts.Keys) { $AlertRun[$Key] = [int]$AlertRun[$Key] + $Counts[$Key] }
+        $AlertRun.Reported = $true
+    }
 
     if ($Notify.Count -gt 0) {
         return @($Notify)

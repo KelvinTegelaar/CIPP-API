@@ -231,9 +231,10 @@ namespace CIPP
     //   SPO             5   *.sharepoint.com CSOM/_api (concurrent per-site fan-out)
     //   DNS             2   dns.google.com, cloudflare-dns.com (per host)
     //   NinjaOne       12   *.ninjarmm.com, *.ninjaone.com (tenant sync fan-out)
+    //   Syncro          5   *.syncromsp.com (PSA tickets, customer mapping)
     //   Default         5   catch-all + absorbs legacy Invoke-RestMethod calls
     //   ─────────────
-    //   Total          96   leaves a 29-port buffer for the Functions host,
+    //   Total         101   leaves a 24-port buffer for the Functions host,
     //                       Durable extension, AppInsights, Azure SDK clients,
     //                       and any stragglers that bypass the pool.
     //
@@ -288,6 +289,7 @@ namespace CIPP
         private static HttpClient? _spoClient;
         private static HttpClient? _dnsClient;
         private static HttpClient? _ninjaOneClient;
+        private static HttpClient? _syncroClient;
         private static HttpClient? _defaultClient;
 
         /// <summary>
@@ -323,9 +325,9 @@ namespace CIPP
         //     graceful-recycle churn and cuts the TIME_WAIT tail under steady
         //     load — a small but measurable port saving.
         //
-        //   PooledConnectionIdleTimeout  2 min — idle connections that have
-        //     not been used for 2 minutes are closed and removed from the
-        //     pool. Keeps the pool lean during quiet periods.
+        //   PooledConnectionIdleTimeout  3 min — idle connections are closed
+        //     before the Azure SNAT silently drops an idle flow at 4 minutes,
+        //     so a pooled connection is never reused after its mapping is gone.
         //
         //   MaxConnectionsPerServer — hard cap on simultaneous TCP connections
         //     to a single host:port pair. Requests beyond this limit queue
@@ -352,7 +354,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,   // Graph supports HTTP/2; streams share connections
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
@@ -370,7 +372,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
@@ -388,7 +390,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 5,
@@ -408,7 +410,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = false,  // 3xx IS the expected response here
             MaxConnectionsPerServer        = MaxConn("ComplianceMaxConnectionsPerServer", 5),
@@ -424,7 +426,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
@@ -440,7 +442,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
@@ -459,7 +461,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
@@ -477,7 +479,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = false,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 5,
@@ -497,11 +499,26 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
             MaxConnectionsPerServer        = MaxConn("NinjaOneMaxConnectionsPerServer", 12),
+        }) { Timeout = Timeout.InfiniteTimeSpan };
+
+        /// <summary>
+        /// Syncro client — *.syncromsp.com. Kept off the catch-all so PSA ticket creation does not
+        /// queue behind other third-party traffic. Cap: 5 connections.
+        /// </summary>
+        private static HttpClient BuildSyncroClient() => new HttpClient(new SocketsHttpHandler
+        {
+            AutomaticDecompression         = DecompressionMethods.All,
+            PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
+            EnableMultipleHttp2Connections = true,
+            AllowAutoRedirect              = true,
+            MaxAutomaticRedirections       = 10,
+            MaxConnectionsPerServer        = MaxConn("SyncroMaxConnectionsPerServer", 5),
         }) { Timeout = Timeout.InfiniteTimeSpan };
 
         /// <summary>
@@ -516,7 +533,7 @@ namespace CIPP
         {
             AutomaticDecompression         = DecompressionMethods.All,
             PooledConnectionLifetime       = TimeSpan.FromMinutes(30),
-            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(2),
+            PooledConnectionIdleTimeout    = TimeSpan.FromMinutes(3),
             EnableMultipleHttp2Connections = true,
             AllowAutoRedirect              = true,
             MaxAutomaticRedirections       = 10,
@@ -543,6 +560,7 @@ namespace CIPP
                 _spoClient        is not null &&
                 _dnsClient        is not null &&
                 _ninjaOneClient   is not null &&
+                _syncroClient     is not null &&
                 _defaultClient    is not null)
                 return;
 
@@ -561,6 +579,7 @@ namespace CIPP
                     _spoClient        = BuildSpoClient();
                     _dnsClient        = BuildDnsClient();
                     _ninjaOneClient   = BuildNinjaOneClient();
+                    _syncroClient     = BuildSyncroClient();
                     _defaultClient    = BuildDefaultClient();
                 }
             }
@@ -660,6 +679,8 @@ namespace CIPP
                 var h when h.EndsWith(".ninjarmm.com", StringComparison.OrdinalIgnoreCase)
                         || h.EndsWith(".ninjaone.com", StringComparison.OrdinalIgnoreCase) => (_ninjaOneClient!, "NinjaOne", host),
 
+                var h when h.EndsWith(".syncromsp.com", StringComparison.OrdinalIgnoreCase) => (_syncroClient!, "Syncro", host),
+
                 // Rule 8 — catch-all
                 _                                                           => (_defaultClient!, "Default", host),
             };
@@ -754,7 +775,7 @@ namespace CIPP
             using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(uri));
             // A request defaults to HTTP/1.1, so EnableMultipleHttp2Connections alone never multiplexes.
             // These are the lanes that enable it; a host without h2 falls back to 1.1 in the TLS handshake.
-            if (selection.Pool is "Graph" or "Exo" or "PartnerCenter" or "AdminPlane" or "SPO" or "NinjaOne" or "Default")
+            if (selection.Pool is "Graph" or "Exo" or "PartnerCenter" or "AdminPlane" or "SPO" or "NinjaOne" or "Syncro" or "Default")
             {
                 request.Version       = HttpVersion.Version20;
                 request.VersionPolicy = HttpVersionPolicy.RequestVersionOrLower;

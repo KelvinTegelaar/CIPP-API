@@ -25,11 +25,12 @@ function Set-CIPPMobileDevice(
 
     try {
         if ($Quarantine -eq 'false') {
-            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-CASMailbox' -cmdParams @{Identity = $UserId; ActiveSyncAllowedDeviceIDs = @{'@odata.type' = '#Exchange.GenericHashTable'; add = $DeviceId } }
+            # Each list change also takes the id off the opposite list, so allowing a device that was blocked unblocks it
+            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-CASMailbox' -cmdParams @{Identity = $UserId; ActiveSyncAllowedDeviceIDs = @{'@odata.type' = '#Exchange.GenericHashTable'; add = $DeviceId }; ActiveSyncBlockedDeviceIDs = @{'@odata.type' = '#Exchange.GenericHashTable'; remove = $DeviceId } }
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Allow Active Sync Device for $UserId" -Sev 'Info'
             return "Allowed Active Sync Device for $UserId"
         } elseif ($Quarantine -eq 'true') {
-            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-CASMailbox' -cmdParams @{Identity = $UserId; ActiveSyncBlockedDeviceIDs = @{'@odata.type' = '#Exchange.GenericHashTable'; add = $DeviceId } }
+            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-CASMailbox' -cmdParams @{Identity = $UserId; ActiveSyncBlockedDeviceIDs = @{'@odata.type' = '#Exchange.GenericHashTable'; add = $DeviceId }; ActiveSyncAllowedDeviceIDs = @{'@odata.type' = '#Exchange.GenericHashTable'; remove = $DeviceId } }
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Blocked Active Sync Device for $UserId" -Sev 'Info'
             return "Blocked Active Sync Device for $UserId"
         }

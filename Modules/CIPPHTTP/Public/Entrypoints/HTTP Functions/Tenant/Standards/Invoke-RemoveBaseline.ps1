@@ -21,6 +21,10 @@ function Invoke-RemoveBaseline {
         $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'rollout' and RowKey eq '$SafeID'"
         if (-not $Entity) { throw "No baseline found with ID $ID." }
         $BaselineName = $Entity.templateName ?? $ID
+        $OutOfScope = @(Get-CIPPBaselineOutOfScopeAssignment -Assignments (Get-CIPPBaseline -ID $ID | Select-Object -First 1).assignments)
+        if ($OutOfScope.Count -gt 0) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Forbidden; Body = @{ Results = "Your role can't remove $BaselineName, because it is assigned to tenants outside your access: $($OutOfScope -join ', ')." } })
+        }
         Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entity
 
         # The exploded delta rows and rollout state for this baseline go with it.

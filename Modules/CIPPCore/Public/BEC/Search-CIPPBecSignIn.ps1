@@ -8,6 +8,9 @@ function Search-CIPPBecSignIn {
         tenant-wide search past 7 days lands in Graph's 504s.
         Rows come back newest first. Throws when a slice fails, as a single search would.
         Returns { Rows, Incomplete }: Incomplete when Graph stopped paging a slice part-way.
+        -Stream instead emits the rows (still newest first) as each page arrives, one slice at a time, for
+        a caller that folds them: a busy user's sign-ins are then never all in memory. A page that still
+        fails after the retries throws, after the rows before it were emitted.
     .PARAMETER TenantFilter
         Tenant default domain name.
     .PARAMETER Filter
@@ -30,7 +33,8 @@ function Search-CIPPBecSignIn {
         [Parameter(Mandatory = $true)][datetime]$StartDate,
         [datetime]$EndDate = [datetime]::UtcNow,
         [string]$Select,
-        [bool]$AsApp = $true
+        [bool]$AsApp = $true,
+        [switch]$Stream
     )
 
     $End = $EndDate.ToUniversalTime()
@@ -40,6 +44,12 @@ function Search-CIPPBecSignIn {
         $Url = "auditLogs/signIns?`$filter=$Filter and createdDateTime ge $($From.ToString('yyyy-MM-ddTHH:mm:ssZ')) and createdDateTime lt $($To.ToString('yyyy-MM-ddTHH:mm:ssZ'))&`$top=999"
         if ($Select) { $Url = "$Url&`$select=$Select" }
         $Requests.Add(@{ id = "s$($Requests.Count)"; method = 'GET'; url = $Url })
+    }
+    if ($Stream) {
+        for ($i = $Requests.Count - 1; $i -ge 0; $i--) {
+            New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Requests[$i].url)" -tenantid $TenantFilter -AsApp $AsApp -Stream
+        }
+        return
     }
     if ($Requests.Count -eq 0) { return [pscustomobject]@{ Rows = @(); Incomplete = $false } }
 

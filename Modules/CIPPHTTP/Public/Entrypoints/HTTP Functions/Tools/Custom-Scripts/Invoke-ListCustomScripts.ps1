@@ -21,7 +21,7 @@ function Invoke-ListCustomScripts {
 
         if ($ScriptGuid) {
             # Get specific script
-            $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f $ScriptGuid
+            $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $ScriptGuid)
             $Scripts = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object -Property Version -Descending
 
             if ($Scripts) {

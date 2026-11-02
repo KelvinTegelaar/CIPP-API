@@ -16,9 +16,7 @@
   "powershellEquivalent": "Update-MgBetaAdminSharePointSetting",
   "appliesToTest": [
     "CIS_7_2_3",
-    "CIS_7_2_4",
-    "ZTNA21803",
-    "ZTNA21804"
+    "CIS_7_2_4"
   ],
   "recommendedBy": [
     "CIS",

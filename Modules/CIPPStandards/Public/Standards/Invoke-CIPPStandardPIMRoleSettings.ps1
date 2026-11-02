@@ -21,6 +21,9 @@ function Invoke-CIPPStandardPIMRoleSettings {
         ADDEDDATE
             2026-08-23
         TAG
+            "ZTNA21817"
+            "ZTNA21819"
+            "ZTNA21820"
         EXECUTIVETEXT
             Enforces consistent Privileged Identity Management settings so that administrator roles can only be used for a limited time, after strong authentication and with a recorded reason. This keeps standing administrative access to a minimum and makes every use of privilege visible and accountable.
         ADDEDCOMPONENT
@@ -31,6 +34,7 @@ function Invoke-CIPPStandardPIMRoleSettings {
             "CIPP"
         REQUIREDCAPABILITIES
             "AAD_PREMIUM_P2"
+            "Entra_Identity_Governance"
         UPDATECOMMENTBLOCK
             Run the tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
@@ -42,9 +46,9 @@ function Invoke-CIPPStandardPIMRoleSettings {
     $TemplateId = $Settings.TemplateList.value ?? $Settings.TemplateList
     $FieldName = "standards.PIMRoleSettings.$TemplateId"
 
-    $TestResult = Test-CIPPStandardLicense -StandardName 'PIMRoleSettings' -TenantFilter $Tenant -Preset EntraP2
+    $TestResult = Test-CIPPStandardLicense -StandardName 'PIMRoleSettings' -TenantFilter $Tenant -Preset PIM
     if ($TestResult -eq $false) {
-        Set-CIPPStandardsCompareField -FieldName $FieldName -FieldValue 'This tenant does not have the Entra ID P2 license required for Privileged Identity Management.' -LicenseAvailable $false -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName $FieldName -FieldValue 'This tenant does not have the Entra ID P2 or ID Governance license required for Privileged Identity Management.' -LicenseAvailable $false -TenantFilter $Tenant
         return $true
     }
 

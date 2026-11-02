@@ -1,7 +1,7 @@
 # Pester tests for the group add/remove blocks of Set-CIPPUser (the Edit User page).
 #
-# Set-CIPPUser carries its own copy of the "does this group live in Exchange or in the directory"
-# decision, separate from Add-CIPPGroupMember. It reads the type off the autocomplete option the
+# Set-CIPPUser makes the "does this group live in Exchange or in the directory" decision through
+# Test-CIPPGroupIsExchangeBacked (shared with New-CIPPUserTask). It reads the type off the autocomplete option the
 # form posted: calculatedGroupType when present, otherwise the display groupType. Getting it wrong
 # means Graph is asked to change membership on a classic distribution list, which it refuses with
 # "Cannot Update a mail-enabled security groups and or distribution list".
@@ -30,6 +30,7 @@ BeforeAll {
     function Get-NormalizedError { param($message) $message }
 
     . $FunctionPath
+    . (Join-Path (Split-Path -Parent $FunctionPath) 'Test-CIPPGroupIsExchangeBacked.ps1')
 
     # An autocomplete option as the Edit User form posts it. The options are built from
     # /api/ListGroups, which supplies both type fields.

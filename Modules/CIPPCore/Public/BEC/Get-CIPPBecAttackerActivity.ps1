@@ -75,7 +75,15 @@ function Get-CIPPBecAttackerActivity {
     $MaxPages = [int]($Heuristics.caps.auditLogPages ?? 10)
     $AttackerSide = @('Compromised', 'LikelyAttacker', 'Suspicious', 'Unknown')
     $Rank = @{ Compromised = 0; LikelyAttacker = 1; Suspicious = 2; Unknown = 3; LikelyUser = 4; Safe = 5; Service = 6 }
-    $HostOf = { param($Value) ConvertTo-CIPPBecHostAddress -Address ([string]$Value) }
+    # every sign-in and record names one of a few hundred addresses: normalise each once
+    $HostCache = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::Ordinal)
+    $HostOf = {
+        param($Value)
+        $Raw = [string]$Value
+        $IP = $HostCache[$Raw]
+        if ($null -eq $IP) { $IP = [string](ConvertTo-CIPPBecHostAddress -Address $Raw); $HostCache[$Raw] = $IP }
+        if ($IP) { $IP }
+    }
     $VerdictOf = @{}
     foreach ($Row in @($Verdicts | Where-Object { $_ -and $_.IP })) { $VerdictOf[[string]$Row.IP] = [string]$Row.Verdict }
     # audit CreationTime is UTC without a zone: read it as UTC, not as the host's local time
@@ -84,8 +92,11 @@ function Get-CIPPBecAttackerActivity {
     # --- tie records to addresses: tokens and Entra sessions from the sign-ins, mailbox sessions from the records ---
     $Tokens = @{}
     $EntraSessions = @{}
-    foreach ($SignIn in @(@($SignIns) + @($NonInteractiveSignIns) | Where-Object { $_ })) {
-        $IP = & $HostOf $SignIn.IPAddress
+    foreach ($SignIn in @($SignIns) + @($NonInteractiveSignIns)) {
+        if (-not $SignIn) { continue }
+        $Raw = [string]$SignIn.IPAddress
+        $IP = $HostCache[$Raw]
+        if ($null -eq $IP) { $IP = [string](ConvertTo-CIPPBecHostAddress -Address $Raw); $HostCache[$Raw] = $IP }
         if (-not $IP) { continue }
         if ($SignIn.UniqueTokenId) { $Tokens[[string]$SignIn.UniqueTokenId] = $IP }
         if ($SignIn.SessionId) {

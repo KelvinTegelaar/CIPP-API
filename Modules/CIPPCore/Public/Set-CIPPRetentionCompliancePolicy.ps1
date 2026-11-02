@@ -39,51 +39,67 @@ function Set-CIPPRetentionCompliancePolicy {
     $LocationFields = $PolicyAllowedFields | Where-Object { $_ -like '*Location*' }
 
     $PolicyParams = Format-CIPPCompliancePolicyParams -Source $Template -AllowedFields $PolicyAllowedFields -LocationFields $LocationFields
+    # Stored templates carry the policy comment as 'comments'.
+    if (-not $PolicyParams.ContainsKey('Comment') -and -not [string]::IsNullOrWhiteSpace([string]$Template.comments)) {
+        $PolicyParams['Comment'] = [string]$Template.comments
+    }
     $RuleSource = $Template.RuleParams
     $PolicyName = $PolicyParams.Name
+    $ErrorData = $null
+
+    $ExistingPolicies = try { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-RetentionCompliancePolicy' -Compliance -AsApp | Select-Object Name, Guid } catch { @() }
+    $ExistingRules = try { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-RetentionComplianceRule' -Compliance -AsApp | Select-Object Name, Policy } catch { @() }
+    $ExistingPolicy = @($ExistingPolicies).Where({ $_.Name -eq $PolicyName }, 'First')[0]
 
     try {
-        $ExistingPolicies = try { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-RetentionCompliancePolicy' -Compliance -AsApp | Select-Object Name } catch { @() }
-        $ExistingRules = try { New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-RetentionComplianceRule' -Compliance -AsApp | Select-Object Name, Policy } catch { @() }
-
-        $PolicyExists = [bool]($ExistingPolicies | Where-Object { $_.Name -eq $PolicyName })
-
-        if ($PolicyExists) {
+        if ($ExistingPolicy) {
             $SetParams = ConvertTo-CIPPComplianceSetParams -Params $PolicyParams -Identity $PolicyName -AddPrefixFields $LocationFields
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-RetentionCompliancePolicy' -cmdParams $SetParams -Compliance -AsApp -useSystemMailbox $true
-            $PolicyAction = "Updated retention compliance policy '$PolicyName' in $TenantFilter."
+            $PolicyResult = "Updated retention compliance policy '$PolicyName' in $TenantFilter."
         } else {
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-RetentionCompliancePolicy' -cmdParams $PolicyParams -Compliance -AsApp -useSystemMailbox $true
-            $PolicyAction = "Created retention compliance policy '$PolicyName' in $TenantFilter."
+            $PolicyResult = "Created retention compliance policy '$PolicyName' in $TenantFilter."
         }
+    } catch {
+        $ErrorData = Get-CippException -Exception $_
+        $PolicyResult = "Could not $(if ($ExistingPolicy) { 'update' } else { 'create' }) retention compliance policy '$PolicyName' in $($TenantFilter): $($ErrorData.NormalizedError)"
+    }
 
-        if ($RuleSource) {
-            $RuleHash = Format-CIPPCompliancePolicyParams -Source $RuleSource -AllowedFields $RuleAllowedFields
-            $RuleHash['Policy'] = $PolicyName
-            $RuleName = if ($RuleHash.ContainsKey('Name') -and -not [string]::IsNullOrWhiteSpace([string]$RuleHash['Name'])) {
-                $RuleHash['Name']
-            } else {
-                "$PolicyName Rule"
-            }
-            $RuleHash['Name'] = $RuleName
+    # A refused update must not stop an existing rule-less policy from getting its rule.
+    if ($RuleSource -and ($ExistingPolicy -or -not $ErrorData)) {
+        $RuleHash = Format-CIPPCompliancePolicyParams -Source $RuleSource -AllowedFields $RuleAllowedFields
+        $RuleHash['Policy'] = $PolicyName
+        $RuleName = if ($RuleHash.ContainsKey('Name') -and -not [string]::IsNullOrWhiteSpace([string]$RuleHash['Name'])) {
+            $RuleHash['Name']
+        } else {
+            "$PolicyName Rule"
+        }
+        $RuleHash['Name'] = $RuleName
 
-            $RuleExists = [bool]($ExistingRules | Where-Object { $_.Name -eq $RuleName -or $_.Policy -eq $PolicyName })
+        # A policy holds at most one rule, and the rule names its policy by GUID.
+        $ExistingRule = if ($ExistingPolicy) { @($ExistingRules).Where({ $_.Policy -eq $ExistingPolicy.Guid }, 'First')[0] }
 
-            if ($RuleExists) {
-                $SetRuleHash = ConvertTo-CIPPComplianceSetParams -Params $RuleHash -Identity $RuleName
+        try {
+            if ($ExistingRule) {
+                $SetRuleHash = ConvertTo-CIPPComplianceSetParams -Params $RuleHash -Identity $ExistingRule.Name
                 $SetRuleHash.Remove('Policy') | Out-Null
                 $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-RetentionComplianceRule' -cmdParams $SetRuleHash -Compliance -AsApp -useSystemMailbox $true
+                $RuleResult = "Updated rule '$($ExistingRule.Name)'."
             } else {
                 $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-RetentionComplianceRule' -cmdParams $RuleHash -Compliance -AsApp -useSystemMailbox $true
+                $RuleResult = "Created rule '$RuleName'."
             }
+        } catch {
+            $ErrorData = Get-CippException -Exception $_
+            $RuleResult = "Could not deploy its retention rule '$RuleName': $($ErrorData.NormalizedError)"
         }
-
-        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $PolicyAction -sev Info
-        return $PolicyAction
-    } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        $msg = "Could not deploy retention compliance policy '$PolicyName' to $($TenantFilter): $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $msg -sev Error -LogData $ErrorMessage
-        return $msg
     }
+
+    $Result = "$PolicyResult $RuleResult".Trim()
+    if ($ErrorData) {
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorData
+        throw $Result
+    }
+    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
+    return $Result
 }

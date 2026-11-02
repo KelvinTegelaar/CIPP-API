@@ -34,8 +34,7 @@ function Invoke-AddMSPApp {
     $AppTemplatePath = Join-Path $env:CIPPRootPath "AddMSPApp\$RmmName.app.json"
     $AppTemplateJson = Get-Content -LiteralPath $AppTemplatePath -Raw
 
-    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
-    $Tenants = $Request.Body.selectedTenants | Where-Object { $AllowedTenants -contains $_.customerId -or $AllowedTenants -contains 'AllTenants' }
+    $Tenants = Resolve-CippBulkSelectedTenant -Request $Request -SelectedTenants $Request.Body.selectedTenants
     $SuccessCount = 0
     $ErrorCount = 0
     $Results = foreach ($Tenant in $Tenants) {

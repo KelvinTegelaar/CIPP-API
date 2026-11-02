@@ -104,3 +104,30 @@ Describe 'New-CIPPOneDriveShortCut shortcut name' {
         }
     }
 }
+
+Describe 'New-CIPPOneDriveShortCut tenant root site' {
+    BeforeEach {
+        Mock Get-CIPPSPOTenant { [pscustomobject]@{ DisableAddToOneDrive = $false } }
+        Mock Write-LogMessage { }
+        Mock New-GraphPOSTRequest { [pscustomobject]@{ id = 'new1'; name = 'Documents' } }
+        Mock New-GraphGetRequest {
+            if ($uri -match '/drives\?') { return @([pscustomobject]@{ id = 'd1'; name = 'Documents'; webUrl = 'https://contoso.sharepoint.com/Shared%20Documents' }) }
+            if ($uri -match '/drives/d1/root\?') { return [pscustomobject]@{ id = 'item1'; name = 'root' } }
+            if ($uri -match '/drive\?') { return [pscustomobject]@{ SharePointIds = @{ listId = 'l1'; siteId = 's1'; webId = 'w1'; siteUrl = 'https://contoso.sharepoint.com' } } }
+            [pscustomobject]@{ id = 'root1'; displayName = 'Communication site'; webUrl = 'https://contoso.sharepoint.com' }
+        }
+    }
+
+    It 'resolves <Url> by hostname' -ForEach @(
+        @{ Url = 'https://contoso.sharepoint.com' }
+        @{ Url = 'https://contoso.sharepoint.com/Shared%20Documents/Forms/AllItems.aspx' }
+    ) {
+        { New-CIPPOneDriveShortCut -Username 'a@contoso.com' -URL $Url -TenantFilter 'contoso.com' } | Should -Not -Throw
+        Should -Invoke New-GraphGetRequest -Times 1 -ParameterFilter { $uri -like 'https://graph.microsoft.com/beta/sites/contoso.sharepoint.com?*' }
+    }
+
+    It 'shortcuts the root site library named in the URL' {
+        $null = New-CIPPOneDriveShortCut -Username 'a@contoso.com' -URL 'https://contoso.sharepoint.com/Shared%20Documents/Forms/AllItems.aspx' -TenantFilter 'contoso.com'
+        Should -Invoke New-GraphPOSTRequest -Times 1 -ParameterFilter { ($body | ConvertFrom-Json).remoteItem.parentReference.driveId -eq 'd1' }
+    }
+}

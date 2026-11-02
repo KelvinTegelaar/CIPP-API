@@ -74,6 +74,20 @@ Describe 'Start-CIPPOrchestrator on Craft' {
         }
     }
 
+    It 'skips a QueueFunction run before building its batch, so nothing is claimed for a run that never starts' {
+        function Push-ClaimWork { param($Item) $script:Claimed = $true; @{ TenantFilter = 'a.com' } }
+        $script:Claimed = $false
+        [void][Craft.Services.OrchestratorBridge]::ActiveNames.Add('AuditLogProcessV2-a.com')
+        $Run = Invoke-Start ([pscustomobject]@{
+                OrchestratorName = 'AuditLogProcessV2-a.com'; AllowCollision = $false
+                QueueFunction    = [pscustomobject]@{ FunctionName = 'ClaimWork'; Parameters = @{ TenantFilter = 'a.com' } }
+            })
+        $Run.Queued | Should -BeFalse
+        $Run.Result | Should -Be 'Craft-AuditLogProcessV2-a.com-Skipped'
+        $script:Claimed | Should -BeFalse
+        Should -Invoke Write-LogMessage -Times 1 -ParameterFilter { $tenant -eq 'a.com' -and $message -like 'Skipped AuditLogProcessV2-a.com (0 tasks)*' }
+    }
+
     It 'names the parent by its exact run key when Craft stamps one' {
         $global:CraftOperationContext = [pscustomobject]@{ RunName = 'Parent'; RunKey = 'Parent~8de0a1b2c3d4e5f'; Priority = 4 }
         (Invoke-Start ([pscustomobject]@{ OrchestratorName = 'Child'; Batch = @(@{ TenantFilter = 'a.com' }) })).Parent |

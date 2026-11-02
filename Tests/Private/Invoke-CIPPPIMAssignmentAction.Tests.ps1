@@ -80,7 +80,7 @@ Describe 'Invoke-CIPPPIMAssignmentAction' {
 
     It 'refuses on a tenant without Entra ID P2 and posts nothing' {
         Mock Test-CIPPStandardLicense { $false }
-        { Invoke-Convert } | Should -Throw '*not licensed for Entra ID P2*' -ExceptionType ([System.ArgumentException])
+        { Invoke-Convert } | Should -Throw '*not licensed for Privileged Identity Management*' -ExceptionType ([System.ArgumentException])
         Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
     }
 

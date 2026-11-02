@@ -67,15 +67,15 @@ function Invoke-ExecDnsConfig {
                 $Domain = $Domain
                 $Selector = ($Selector).trim() -split '\s*,\s*'
                 $DomainTable = Get-CIPPTable -Table 'Domains'
-                $Filter = "RowKey eq '{0}'" -f $Domain
+                $Filter = "RowKey eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $Domain)
                 $DomainInfo = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
 
-                # AnyTenant: restricted callers may only edit domains for tenants in scope
+                # AnyTenant: restricted callers may only edit domains whose every row is for a tenant in scope
                 $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
-                if ($AllowedTenants -notcontains 'AllTenants' -and -not ($DomainInfo | Select-CippAllowedTenantData -TenantProperty 'TenantGUID', 'TenantId')) {
+                if ($AllowedTenants -notcontains 'AllTenants' -and (@($DomainInfo).Count -eq 0 -or @($DomainInfo | Select-CippAllowedTenantData -TenantProperty 'TenantGUID', 'TenantId').Count -lt @($DomainInfo).Count)) {
                     return ([HttpResponseContext]@{
                             StatusCode = [HttpStatusCode]::Forbidden
-                            Body       = [pscustomobject]@{'Results' = 'Failed. Access to this domain is not allowed' }
+                            Body       = [pscustomobject]@{'Results' = "$Domain belongs to a tenant your roles don't include." }
                         })
                 }
 
@@ -102,15 +102,15 @@ function Invoke-ExecDnsConfig {
                 Write-LogMessage -API $APIName -tenant 'Global' -headers $Headers -message 'Retrieved DNS configuration' -Sev 'Debug'
             }
             'RemoveDomain' {
-                $Filter = "RowKey eq '{0}'" -f $Domain
+                $Filter = "RowKey eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $Domain)
                 $DomainRow = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter -Property PartitionKey, RowKey, TenantGUID, TenantId
 
-                # AnyTenant: restricted callers may only remove domains for tenants in scope
+                # AnyTenant: restricted callers may only remove domains whose every row is for a tenant in scope
                 $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
-                if ($AllowedTenants -notcontains 'AllTenants' -and -not ($DomainRow | Select-CippAllowedTenantData -TenantProperty 'TenantGUID', 'TenantId')) {
+                if ($AllowedTenants -notcontains 'AllTenants' -and (@($DomainRow).Count -eq 0 -or @($DomainRow | Select-CippAllowedTenantData -TenantProperty 'TenantGUID', 'TenantId').Count -lt @($DomainRow).Count)) {
                     return ([HttpResponseContext]@{
                             StatusCode = [HttpStatusCode]::Forbidden
-                            Body       = [pscustomobject]@{'Results' = 'Failed. Access to this domain is not allowed' }
+                            Body       = [pscustomobject]@{'Results' = "$Domain belongs to a tenant your roles don't include." }
                         })
                 }
 

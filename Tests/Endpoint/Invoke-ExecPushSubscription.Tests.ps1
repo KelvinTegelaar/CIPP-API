@@ -26,6 +26,7 @@ BeforeAll {
     function Get-StringHash { param($String) }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
 
     function New-Request {
         param($Body, [string]$User = 'tech@msp.example', [string]$Impersonate)

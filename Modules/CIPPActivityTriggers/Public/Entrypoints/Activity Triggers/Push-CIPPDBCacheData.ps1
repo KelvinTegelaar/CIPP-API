@@ -49,6 +49,14 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Azure AD Premium P2 license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
         }
 
+        $PIMCapable = $false
+        try {
+            $PIMCapable = Test-CIPPStandardLicense -StandardName 'PIMLicenseCheck' -TenantFilter $TenantFilter -Preset PIM -SkipLog
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "PIM license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
+        }
+
         $ExchangeCapable = $false
         try {
             $ExchangeCapable = Test-CIPPStandardLicense -StandardName 'ExchangeLicenseCheck' -TenantFilter $TenantFilter -Preset Exchange -SkipLog
@@ -97,7 +105,7 @@ function Push-CIPPDBCacheData {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Teams license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
         }
 
-        Write-Information "License capabilities for $TenantFilter - Intune: $IntuneCapable, CA: $ConditionalAccessCapable, P2: $AzureADPremiumP2Capable, Exchange: $ExchangeCapable, Compliance: $ComplianceCapable, SharePoint: $SharePointCapable, Teams: $TeamsCapable, MDO: $MdoCapable"
+        Write-Information "License capabilities for $TenantFilter - Intune: $IntuneCapable, CA: $ConditionalAccessCapable, P2: $AzureADPremiumP2Capable, PIM: $PIMCapable, Exchange: $ExchangeCapable, Compliance: $ComplianceCapable, SharePoint: $SharePointCapable, Teams: $TeamsCapable, MDO: $MdoCapable"
 
         # Build grouped collection tasks — one activity per license category instead of one per cache type
         $Tasks = [System.Collections.Generic.List[object]]::new()
@@ -167,6 +175,14 @@ function Push-CIPPDBCacheData {
                     QueueId        = $QueueId
                     QueueName      = "DB Cache ConditionalAccess - $TenantFilter"
                 })
+            # Own activity: the sign-in activity report is slow and must not hold up the CA collection.
+            $Tasks.Add(@{
+                    FunctionName = 'ExecCIPPDBCache'
+                    Name         = 'ServicePrincipalSignInActivities'
+                    TenantFilter = $TenantFilter
+                    QueueId      = $QueueId
+                    QueueName    = "DB Cache ServicePrincipalSignInActivities - $TenantFilter"
+                })
         } else {
             Write-Host "Skipping Conditional Access data collection for $TenantFilter - no required license"
         }
@@ -181,6 +197,18 @@ function Push-CIPPDBCacheData {
                 })
         } else {
             Write-Host "Skipping Azure AD Premium P2 data collection for $TenantFilter - no required license"
+        }
+
+        if ($PIMCapable) {
+            $Tasks.Add(@{
+                    FunctionName   = 'ExecCIPPDBCache'
+                    CollectionType = 'PIM'
+                    TenantFilter   = $TenantFilter
+                    QueueId        = $QueueId
+                    QueueName      = "DB Cache PIM - $TenantFilter"
+                })
+        } else {
+            Write-Host "Skipping PIM data collection for $TenantFilter - no required license"
         }
 
         if ($IntuneCapable) {

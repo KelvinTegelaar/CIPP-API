@@ -37,6 +37,10 @@ function Invoke-ExecBaselineAddStandard {
         if (-not $Definition) { throw "Unknown standard '$Standard'." }
         $Baseline = Get-CIPPBaseline -ID $BaselineId | Select-Object -First 1
         if (-not $Baseline) { throw "Baseline '$BaselineId' was not found." }
+        $OutOfScope = @(Get-CIPPBaselineOutOfScopeAssignment -Assignments $Baseline.assignments)
+        if ($OutOfScope.Count -gt 0) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Forbidden; Body = @{ Results = "Your role can't change this baseline, because it is assigned to tenants outside your access: $($OutOfScope -join ', ')." } })
+        }
         $User = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
 
         $Variables = [PSCustomObject]@{}

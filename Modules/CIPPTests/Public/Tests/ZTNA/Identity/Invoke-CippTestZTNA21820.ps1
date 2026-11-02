@@ -8,6 +8,11 @@ function Invoke-CippTestZTNA21820 {
     $TestId = 'ZTNA21820'
 
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset PIM -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Privileged Identity Management. Required capabilities: AAD_PREMIUM_P2, Entra_Identity_Governance.' -Risk 'Low' -Name 'Activation alert for all privileged role assignments' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'
+            return
+        }
+
         # Get all privileged roles
         $PrivilegedRoles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
 
@@ -32,7 +37,6 @@ function Invoke-CippTestZTNA21820 {
         }
 
         $RolesWithIssues = [System.Collections.Generic.List[object]]::new()
-        $Passed = 'Passed'
 
         foreach ($Role in $PrivilegedRoles) {
             # Template id, not the directoryRole instance id — see the note above.
@@ -48,18 +52,16 @@ function Invoke-CippTestZTNA21820 {
                 continue
             }
 
-            # Find notification rule for requestor end-user assignment
+            # Activation alert sent to admins
             $NotificationRule = $Policy.rules.Where({
-                $_.id -like '*Notification_Requestor_EndUser_Assignment*'
+                $_.id -like '*Notification_Admin_EndUser_Assignment*'
             })
 
             if ($NotificationRule) {
                 $IsDefaultRecipientsEnabled = $NotificationRule.isDefaultRecipientsEnabled
                 $NotificationRecipients = $NotificationRule.notificationRecipients
 
-                # Check if alert is properly configured
-                if ($IsDefaultRecipientsEnabled -eq $true -and ((-not $NotificationRecipients) -or $NotificationRecipients.Count -eq 0)) {
-                    $Passed = 'Failed'
+                if ($IsDefaultRecipientsEnabled -eq $false -and ((-not $NotificationRecipients) -or $NotificationRecipients.Count -eq 0)) {
                     $RolesWithIssues.Add(@{
                             Role                       = $Role
                             IsDefaultRecipientsEnabled = $IsDefaultRecipientsEnabled
@@ -71,6 +73,7 @@ function Invoke-CippTestZTNA21820 {
             }
         }
 
+        $Passed = if ($RolesWithIssues.Count -eq 0) { 'Passed' } else { 'Failed' }
         if ($RolesWithIssues.Count -eq 0) {
             $ResultMarkdown = [System.Text.StringBuilder]::new('Activation alerts are configured for privileged role assignments.')
         } else {
@@ -89,8 +92,10 @@ function Invoke-CippTestZTNA21820 {
 
                 $DefaultRecipientsStatus = if ($RoleIssue.IsDefaultRecipientsEnabled -eq $true) {
                     'Enabled'
-                } else {
+                } elseif ($RoleIssue.IsDefaultRecipientsEnabled -eq $false) {
                     'Disabled'
+                } else {
+                    'N/A'
                 }
                 $Recipients = $RoleIssue.NotificationRecipients
 

@@ -12,9 +12,7 @@
   "impactColour": "danger",
   "addedDate": "2022-06-15",
   "powershellEquivalent": "Update-MgAdminSharePointSetting",
-  "appliesToTest": [
-    "SMB1001_2_8"
-  ],
+  "appliesToTest": [],
   "recommendedBy": [],
   "requiredCapabilities": [
     "SHAREPOINTWAC",

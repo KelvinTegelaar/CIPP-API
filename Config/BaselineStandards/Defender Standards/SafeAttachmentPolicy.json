@@ -17,8 +17,6 @@
   "powershellEquivalent": "Set-SafeAttachmentPolicy or New-SafeAttachmentPolicy",
   "appliesToTest": [
     "CIS_2_1_4",
-    "ORCA158",
-    "ORCA189",
     "ORCA227"
   ],
   "recommendedBy": [

@@ -33,7 +33,7 @@ function Invoke-ExecAddTenant {
         #force a refresh of the authentication info
         $auth = Get-CIPPAuthentication
         # Check if tenant already exists
-        $ExistingTenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$tenantId'"
+        $ExistingTenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $tenantId)'"
 
         if ($tenantId -eq $env:TenantID) {
             # If the tenant is the partner tenant, return an error because you cannot add the partner tenant as direct tenant

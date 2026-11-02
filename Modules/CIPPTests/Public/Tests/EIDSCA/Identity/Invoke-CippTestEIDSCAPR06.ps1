@@ -8,14 +8,17 @@ function Invoke-CippTestEIDSCAPR06 {
     try {
         $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
 
-        if (-not $Settings) {
+        if (-not $Settings -and -not (Get-CIPPDbItem -TenantFilter $Tenant -Type 'Settings' -CountsOnly)) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAPR06' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Password Rule Settings - Lockout threshold' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Password Policy'
             return
         }
 
         $SettingValue = $Settings.values.Where({ $_.name -eq 'LockoutThreshold' }).value
 
-        if ([int]$SettingValue -le 10) {
+        if ($null -eq $SettingValue) {
+            $Status = 'Passed'
+            $Result = 'Smart lockout has not been customised, so the Microsoft default lockout threshold of 10 failed attempts applies'
+        } elseif ([int]$SettingValue -le 10) {
             $Status = 'Passed'
             $Result = "Lockout threshold is set to $SettingValue failed attempts (maximum 10 attempts recommended)"
         } else {

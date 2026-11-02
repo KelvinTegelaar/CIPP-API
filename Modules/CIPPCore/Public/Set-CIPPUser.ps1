@@ -13,24 +13,7 @@ function Set-CIPPUser {
     $RemoveFromGroups = $UserObj.RemoveFromGroups
 
     # Graph cannot change membership on a classic distribution list or a mail-enabled security
-    # group; those have to go through Add-/Remove-DistributionGroupMember. $ResolvedType is what
-    # Graph says the group actually is and always wins. The fields on the autocomplete option are
-    # only a fallback for groups the lookup could not answer for - they are whatever the form held
-    # when the option was built, so they are missing on older saved selections and stale on any
-    # group converted since.
-    # Note the vocabulary of calculatedGroupType: 'security' means a MAIL-ENABLED security group
-    # (Exchange), while a plain security group is 'generic' (Graph).
-    $UseExchangeForGroup = {
-        param($AddedFields, $ResolvedType)
-        if ($ResolvedType) {
-            return $ResolvedType -in @('Distribution List', 'Mail-Enabled Security')
-        }
-        $Calculated = $AddedFields.calculatedGroupType
-        if ($Calculated) {
-            return $Calculated -in @('distributionList', 'security')
-        }
-        return $AddedFields.groupType -in @('Distribution List', 'Mail-Enabled Security', 'distributionList')
-    }
+    # group; those have to go through Add-/Remove-DistributionGroupMember.
 
 
     #Edit the user
@@ -255,7 +238,7 @@ function Set-CIPPUser {
             Write-Host "About to add $($UserObj.userPrincipalName) to $GroupName. Group ID is: $GroupID and type is: $GroupType"
 
             try {
-                if (& $UseExchangeForGroup $_.addedFields $ResolvedGroupTypes[$GroupID]) {
+                if (Test-CIPPGroupIsExchangeBacked -AddedFields $_.addedFields -ResolvedType $ResolvedGroupTypes[$GroupID]) {
                     Write-Host 'Adding to group via Add-DistributionGroupMember'
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
@@ -287,7 +270,7 @@ function Set-CIPPUser {
             Write-Host "About to remove $($UserObj.userPrincipalName) from $GroupName. Group ID is: $GroupID and type is: $GroupType"
 
             try {
-                if (& $UseExchangeForGroup $_.addedFields $ResolvedGroupTypes[$GroupID]) {
+                if (Test-CIPPGroupIsExchangeBacked -AddedFields $_.addedFields -ResolvedType $ResolvedGroupTypes[$GroupID]) {
                     Write-Host 'Removing From group via Remove-DistributionGroupMember'
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Remove-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true

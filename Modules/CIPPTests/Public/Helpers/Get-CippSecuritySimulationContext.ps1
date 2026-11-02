@@ -95,7 +95,9 @@ function Get-CippSecuritySimulationContext {
                 $_.Value.required -eq $true -and $null -eq ($_.Value.default ?? $_.Value.recommended) -and -not ($Reference.secure -and $Reference.secure.PSObject.Properties[$_.Name])
             }).Count -gt 0
 
-        if ($Definition.requiredCapabilities -and -not (Test-CIPPStandardLicense -StandardName $Name -TenantFilter $Tenant -RequiredCapabilities @($Definition.requiredCapabilities | ForEach-Object { $_ }) -SkipLog)) {
+        # Nested requiredCapabilities are AND-ed any-of groups, as in Invoke-CIPPBaselineStandard.
+        $CapabilityGroups = @(if (@($Definition.requiredCapabilities).Where({ $_ -is [System.Array] }).Count -gt 0) { $Definition.requiredCapabilities } else { , @($Definition.requiredCapabilities) })
+        if ($Definition.requiredCapabilities -and $CapabilityGroups.Where({ -not (Test-CIPPStandardLicense -StandardName $Name -TenantFilter $Tenant -RequiredCapabilities @($_) -SkipLog) }, 'First').Count -gt 0) {
             $State.status = 'License missing'
             $State.compliant = $null
         } elseif ($TenantSpecific) {

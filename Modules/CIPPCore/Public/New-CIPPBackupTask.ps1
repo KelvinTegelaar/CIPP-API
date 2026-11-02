@@ -163,7 +163,7 @@ function New-CIPPBackupTask {
         'CippScriptedAlerts' {
             Measure-CippTask -TaskName 'ScriptedAlerts' -EventName 'CIPP.BackupCompleted' -Script {
                 $ScheduledTasks = Get-CIPPTable -TableName 'ScheduledTasks'
-                Get-CIPPAzDataTableEntity @ScheduledTasks | Where-Object { $_.hidden -eq $true -and $_.command -like 'Get-CippAlert*' -and $TenantFilter -in $_.Tenant }
+                Get-CIPPAzDataTableEntity @ScheduledTasks -Filter "PartitionKey eq 'ScheduledTask' and (Hidden eq true or Hidden eq 'True')" | Where-Object { $_.command -like 'Get-CippAlert*' -and $TenantFilter -in $_.Tenant }
             }
         }
     }

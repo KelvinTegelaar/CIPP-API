@@ -106,13 +106,17 @@ function New-CIPPBecEvidencePackage {
             Containment = $Run.Containment
         }
         $BecData | Add-Member -NotePropertyName 'Run' -NotePropertyValue $RunBlock -Force
-        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter
+        $ReportDefaults = try { (Get-CIPPBrandingSettings).reportDefaults } catch { $null }
+        $FullId = [string]$ReportDefaults.bec
+        $SummaryId = [string]$ReportDefaults.becSummary
+        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $FullId
         $DisplayName = @($Run.DisplayName, $Run.UserPrincipalName, $Run.UserId) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1
         $UserData = [pscustomobject]@{ displayName = $DisplayName; userPrincipalName = $Run.UserPrincipalName; id = $Run.UserId }
         $Full = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $TenantName
-        $Files['report-full.pdf'] = ConvertTo-CippReportPdf -Blocks $Full.Blocks -Variables $Full.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'BEC Analysis Report'
-        $Summary = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $TenantName -Variant summary
-        $Files['report-summary.pdf'] = ConvertTo-CippReportPdf -Blocks $Summary.Blocks -Variables $Summary.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'BEC Analysis Report'
+        $Files['report-full.pdf'] = ConvertTo-CippReportPdf -Blocks $Full.Blocks -Variables $Full.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'BEC Analysis Report' -BrandingPresetId $FullId
+        $SummaryName = if ($SummaryId -eq $FullId) { $TenantName } else { Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $SummaryId }
+        $Summary = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $SummaryName -Variant summary
+        $Files['report-summary.pdf'] = ConvertTo-CippReportPdf -Blocks $Summary.Blocks -Variables $Summary.Variables -TenantName $SummaryName -TenantFilter $TenantFilter -ReportName 'BEC Analysis Report' -BrandingPresetId $SummaryId
     } catch {
         Write-Information "BEC evidence: server-side PDF render failed for $CaseId`: $($_.Exception.Message)"
     }

@@ -60,6 +60,7 @@ function Start-AuditLogIngestionV2 {
             if ($PSCmdlet.ShouldProcess($TenantFilter, 'Download + process audit logs')) {
                 Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
                         OrchestratorName = "AuditLogIngestV2-$TenantFilter"
+                        AllowCollision   = $false
                         Batch            = @([PSCustomObject]@{ FunctionName = 'AuditLogDownloadV2'; TenantFilter = $TenantFilter })
                         SkipLog          = $true
                         Priority         = 3
@@ -75,6 +76,7 @@ function Start-AuditLogIngestionV2 {
             if ($PSCmdlet.ShouldProcess($TenantFilter, 'Process pending audit logs')) {
                 Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
                         OrchestratorName = "AuditLogProcessV2-$TenantFilter"
+                        AllowCollision   = $false
                         QueueFunction    = [PSCustomObject]@{ FunctionName = 'AuditLogProcessingBatchV2'; Parameters = @{ TenantFilter = $TenantFilter } }
                         SkipLog          = $true
                         Priority         = 3

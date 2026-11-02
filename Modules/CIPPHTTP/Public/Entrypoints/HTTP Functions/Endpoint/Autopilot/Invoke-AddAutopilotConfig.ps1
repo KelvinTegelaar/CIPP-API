@@ -11,6 +11,14 @@ function Invoke-AddAutopilotConfig {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     $Tenants = $Request.Body.selectedTenants.value
+
+    # Tenant scope: a scoped role must not reach tenants outside its allowed set through selectedTenants.
+    $AllowedTenants = Test-CippAccess -Request $Request -TenantList
+    if ($AllowedTenants -ne 'AllTenants') {
+        $AllowedTenantList = (Get-Tenants -IncludeErrors) | Where-Object { $_.customerId -in $AllowedTenants }
+        $Tenants = $Tenants | Where-Object { $_ -in $AllowedTenantList.defaultDomainName }
+    }
+
     $Profbod = [pscustomobject]$Request.Body
 
     $NameCheck = Test-CIPPAutopilotProfileName -DisplayName $Request.Body.DisplayName

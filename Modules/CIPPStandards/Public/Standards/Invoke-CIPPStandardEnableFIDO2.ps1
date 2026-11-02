@@ -23,9 +23,6 @@ function Invoke-CIPPStandardEnableFIDO2 {
             "EIDSCAAF01"
             "EIDSCAAF02"
             "EIDSCAAF03"
-            "EIDSCAAF04"
-            "EIDSCAAF05"
-            "EIDSCAAF06"
         EXECUTIVETEXT
             Enables support for hardware security keys (like YubiKey) that provide the highest level of authentication security. These physical devices prevent phishing attacks and credential theft, offering superior protection for high-value accounts and sensitive business operations.
         ADDEDCOMPONENT

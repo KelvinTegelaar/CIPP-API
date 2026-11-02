@@ -31,12 +31,14 @@ function Get-CIPPBaselineAntiPhishPolicyState {
 
     $Configured = if ([string]::IsNullOrWhiteSpace("$($Item.Variables.name)")) { 'CIPP Default Anti-Phishing Policy' } else { "$($Item.Variables.name)" }
     $PolicyCandidates = @($Configured, 'CIPP Default Anti-Phishing Policy', 'Default Anti-Phishing Policy')
-    $ExistingPolicy = @($Policies | Where-Object { $PolicyCandidates -contains "$($_.Name)" }) | Select-Object -First 1
+    $ExistingPolicy = @(foreach ($Candidate in $PolicyCandidates) { $Policies.Where({ "$($_.Name)" -eq $Candidate }, 'First') })[0]
     $PolicyName = if ($ExistingPolicy.Name) { "$($ExistingPolicy.Name)" } else { $Configured }
 
     $DesiredRuleName = "$PolicyName Rule"
     $RuleCandidates = @($DesiredRuleName, 'CIPP Default Anti-Phishing Rule', 'CIPP Default Anti-Phishing Policy')
-    $ExistingRule = @($Rules | Where-Object { $RuleCandidates -contains "$($_.Name)" }) | Select-Object -First 1
+    # A rule made in the Defender portal shares the policy's name, so the link is matched first
+    $LinkedRules = $Rules.Where({ "$($_.AntiPhishPolicy)" -eq $PolicyName })
+    $ExistingRule = @($LinkedRules.Where({ $RuleCandidates -contains "$($_.Name)" }); $LinkedRules; $Rules.Where({ $RuleCandidates -contains "$($_.Name)" }))[0]
     $RuleName = if ($ExistingRule.Name) { "$($ExistingRule.Name)" } else { $DesiredRuleName }
 
     $Policy = @($Policies | Where-Object { "$($_.Name)" -eq $PolicyName }) | Select-Object -First 1
@@ -130,19 +132,23 @@ function Get-CIPPBaselineAntiPhishPolicyState {
     # the graded Expected above, so grade and write can never disagree - these fifteen
     # were graded but never written, drifting forever. Blank optional actions/tags are
     # omitted: sending an empty enum errors, and the operator has not expressed intent.
-    $ExtraPolicyParams = [ordered]@{
-        EnableMailboxIntelligence           = $true
-        EnableMailboxIntelligenceProtection = $true
-        EnableTargetedDomainsProtection     = $true
-        EnableTargetedUserProtection        = $true
-        EnableOrganizationDomainsProtection = $true
-        EnableSimilarUsersSafetyTips        = [bool]($V.EnableSimilarUsersSafetyTips -eq $true)
-        EnableSimilarDomainsSafetyTips      = [bool]($V.EnableSimilarDomainsSafetyTips -eq $true)
-        EnableUnusualCharactersSafetyTips   = [bool]($V.EnableUnusualCharactersSafetyTips -eq $true)
-    }
-    if (-not [string]::IsNullOrWhiteSpace("$($V.PhishThresholdLevel)")) { $ExtraPolicyParams['PhishThresholdLevel'] = [int]"$($V.PhishThresholdLevel)" }
-    foreach ($ActionParam in @('MailboxIntelligenceProtectionAction', 'MailboxIntelligenceQuarantineTag', 'TargetedUserProtectionAction', 'TargetedUserQuarantineTag', 'TargetedDomainProtectionAction', 'TargetedDomainQuarantineTag')) {
-        if (-not [string]::IsNullOrWhiteSpace("$($V.$ActionParam)")) { $ExtraPolicyParams[$ActionParam] = "$($V.$ActionParam)" }
+    # Exchange rejects these on a tenant without Defender for Office 365.
+    $ExtraPolicyParams = [ordered]@{}
+    if ($MDOLicensed) {
+        $ExtraPolicyParams = [ordered]@{
+            EnableMailboxIntelligence           = $true
+            EnableMailboxIntelligenceProtection = $true
+            EnableTargetedDomainsProtection     = $true
+            EnableTargetedUserProtection        = $true
+            EnableOrganizationDomainsProtection = $true
+            EnableSimilarUsersSafetyTips        = [bool]($V.EnableSimilarUsersSafetyTips -eq $true)
+            EnableSimilarDomainsSafetyTips      = [bool]($V.EnableSimilarDomainsSafetyTips -eq $true)
+            EnableUnusualCharactersSafetyTips   = [bool]($V.EnableUnusualCharactersSafetyTips -eq $true)
+        }
+        if (-not [string]::IsNullOrWhiteSpace("$($V.PhishThresholdLevel)")) { $ExtraPolicyParams['PhishThresholdLevel'] = [int]"$($V.PhishThresholdLevel)" }
+        foreach ($ActionParam in @('MailboxIntelligenceProtectionAction', 'MailboxIntelligenceQuarantineTag', 'TargetedUserProtectionAction', 'TargetedUserQuarantineTag', 'TargetedDomainProtectionAction', 'TargetedDomainQuarantineTag')) {
+            if (-not [string]::IsNullOrWhiteSpace("$($V.$ActionParam)")) { $ExtraPolicyParams[$ActionParam] = "$($V.$ActionParam)" }
+        }
     }
     $Current | Add-Member -NotePropertyName 'extraPolicyParams' -NotePropertyValue ([PSCustomObject]$ExtraPolicyParams)
 

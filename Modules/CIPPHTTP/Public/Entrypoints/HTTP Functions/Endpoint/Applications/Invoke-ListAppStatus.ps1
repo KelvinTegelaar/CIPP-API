@@ -17,7 +17,7 @@ Function Invoke-ListAppStatus {
 {"select":["DeviceName","UserPrincipalName","Platform","AppVersion","InstallState","InstallStateDetail","LastModifiedDateTime","DeviceId","ErrorCode","UserName","UserId","ApplicationId","AssignmentFilterIdsList","AppInstallState","AppInstallStateDetails","HexErrorCode"],"skip":0,"top":999,"filter":"(ApplicationId eq '$Appfilter')","orderBy":[]}
 "@
     try {
-        $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/reports/getDeviceInstallStatusReport' -tenantid $TenantFilter -body $body
+        $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/reports/retrieveDeviceAppInstallationStatusReport' -tenantid $TenantFilter -body $body
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

@@ -38,7 +38,7 @@ function Invoke-RemoveTenantCapabilitiesCache {
         $Table = Get-CippTable -tablename 'CacheCapabilities'
 
         # Find the cache entry for this tenant
-        $Filter = "PartitionKey eq 'Capabilities' and RowKey eq '$DefaultDomainName'"
+        $Filter = "PartitionKey eq 'Capabilities' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $DefaultDomainName)'"
         $CacheEntry = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
 
         if ($CacheEntry) {

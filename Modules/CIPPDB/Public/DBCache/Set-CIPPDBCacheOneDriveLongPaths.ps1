@@ -41,7 +41,7 @@ function Set-CIPPDBCacheOneDriveLongPaths {
         # Default sync root: C:\Users\{upnLocal}\OneDrive - {org}\ — org segment once per tenant; UPN local-part added per site.
         $InferredLocalRootFixedLength = ('C:\Users\').Length + ("\OneDrive - $OrgDisplayName\").Length
 
-        $RawSites = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/sites/getAllSites?`$filter=isPersonalSite eq true&`$select=id,webUrl,displayName,sharepointIds&`$top=999" -tenantid $TenantFilter -asapp $true)
+        $RawSites = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/sites/getAllSites?`$filter=isPersonalSite eq true&`$select=id,webUrl,displayName,sharepointIds,isPersonalSite&`$top=999" -tenantid $TenantFilter -asapp $true)
         $SeenSiteIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         $Sites = foreach ($Site in $RawSites) {
             $GraphSiteId = [string]$Site.id

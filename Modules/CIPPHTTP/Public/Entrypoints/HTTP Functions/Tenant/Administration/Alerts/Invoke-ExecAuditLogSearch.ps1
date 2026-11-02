@@ -28,7 +28,7 @@ function Invoke-ExecAuditLogSearch {
                 return
             }
 
-            $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Search' and RowKey eq '$SearchId' and Tenant eq '$TenantFilter'"
+            $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Search' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $SearchId)' and Tenant eq '$(ConvertTo-CIPPODataFilterValue -Value $TenantFilter)'"
             if (!$Existing) {
                 $Search = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/security/auditLog/queries/$SearchId" -AsApp $true -TenantId $TenantFilter
                 Write-Information ($Search | ConvertTo-Json -Depth 10)

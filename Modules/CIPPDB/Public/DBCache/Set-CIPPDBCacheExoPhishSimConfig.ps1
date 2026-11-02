@@ -41,9 +41,9 @@ function Set-CIPPDBCacheExoPhishSimConfig {
         $PhishSimRules = @($BulkResults.'Get-ExoPhishSimOverrideRule' | Where-Object { $_ })
         $PhishSimUrlAllowItems = @($BulkResults.'Get-TenantAllowBlockListItems' | Where-Object { $_ })
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoPhishSimOverridePolicy' -Data $PhishSimPolicies -AddCount
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoPhishSimOverrideRule' -Data $PhishSimRules -AddCount
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoPhishSimUrlAllowItems' -Data $PhishSimUrlAllowItems -AddCount
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoPhishSimOverridePolicy' -Data $PhishSimPolicies -AddCount -ClearOnEmpty
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoPhishSimOverrideRule' -Data $PhishSimRules -AddCount -ClearOnEmpty
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoPhishSimUrlAllowItems' -Data $PhishSimUrlAllowItems -AddCount -ClearOnEmpty
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached Phishing Simulation configuration: $($PhishSimPolicies.Count) policies, $($PhishSimRules.Count) rules, $($PhishSimUrlAllowItems.Count) URL allow items" -sev Debug
 

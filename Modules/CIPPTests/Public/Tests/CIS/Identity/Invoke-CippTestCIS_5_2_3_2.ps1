@@ -6,6 +6,11 @@ function Invoke-CippTestCIS_5_2_3_2 {
     param($Tenant)
 
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName 'CIS_5_2_3_2' -TenantFilter $Tenant -Preset Entra -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_2_3_2' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for custom banned password lists. Required capabilities: AAD_PREMIUM, AAD_PREMIUM_P2.' -Risk 'Medium' -Name 'Custom banned passwords lists are used' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authentication'
+            return
+        }
+
         $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
 
         if (-not $Settings) {

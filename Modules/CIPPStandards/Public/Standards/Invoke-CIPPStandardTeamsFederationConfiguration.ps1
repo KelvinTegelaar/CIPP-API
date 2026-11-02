@@ -13,6 +13,7 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
         CAT
             Teams Standards
         TAG
+            "CIS_8_2_2"
         EXECUTIVETEXT
             Configures how the organization federates with external organizations for Teams communication, controlling whether employees can communicate with specific external domains or all external organizations. This setting enables secure inter-organizational collaboration while maintaining control over external communications.
         ADDEDCOMPONENT

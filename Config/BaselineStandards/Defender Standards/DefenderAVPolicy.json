@@ -416,5 +416,8 @@
     "remediationHigh": "%RemediationHigh%",
     "remediationSevere": "%RemediationSevere%",
     "assignTo": "%AssignTo%"
-  }
+  },
+  "driftManagedNames": [
+    "Default AV Policy"
+  ]
 }

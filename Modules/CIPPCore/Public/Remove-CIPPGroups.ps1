@@ -70,11 +70,11 @@ function Remove-CIPPGroups {
                 $Results.Add("Skipping removal of $Username from group '$GroupName' because it has assigned licenses. This group will be handled during the license removal step.")
                 Write-LogMessage -headers $Headers -API $APIName -message "Skipping removal of $Username from group '$GroupName' because it has assigned licenses. This group will be handled during the license removal step." -sev 'Info' -tenant $TenantFilter
             } elseif ($IsDynamic) {
-                $Results.Add("Error: Could not remove $Username from group '$GroupName' because it is a Dynamic Group.")
-                Write-LogMessage -headers $Headers -API $APIName -message "Could not remove $Username from group '$GroupName' because it is a Dynamic Group." -sev 'Warning' -tenant $TenantFilter
+                $Results.Add("Skipped removing $Username from group '$GroupName' because it is a Dynamic Group. Its membership rule will remove the user.")
+                Write-LogMessage -headers $Headers -API $APIName -message "Skipped removing $Username from group '$GroupName' because it is a Dynamic Group." -sev 'Info' -tenant $TenantFilter
             } elseif ($GroupInfo.onPremisesSyncEnabled) {
-                $Results.Add("Error: Could not remove $Username from group '$GroupName' because it is synced with Active Directory.")
-                Write-LogMessage -headers $Headers -API $APIName -message "Could not remove $Username from group '$GroupName' because it is synced with Active Directory." -sev 'Warning' -tenant $TenantFilter
+                $Results.Add("Skipped removing $Username from group '$GroupName' because it is synced with Active Directory. Remove the membership on-premises.")
+                Write-LogMessage -headers $Headers -API $APIName -message "Skipped removing $Username from group '$GroupName' because it is synced with Active Directory." -sev 'Info' -tenant $TenantFilter
             } else {
                 if ($IsM365Group -or (-not $IsMailEnabled)) {
                     # Use Graph API for M365 Groups and Security Groups
@@ -130,7 +130,7 @@ function Remove-CIPPGroups {
                 $GraphError = $RawGraphRequest | Where-Object { $_.id -eq $GraphLog.id -and $_.status -notmatch '^2[0-9]+' }
                 if ($GraphError) {
                     $Message = Get-NormalizedError -message $GraphError.body.error
-                    $Results.Add("Could not remove $Username from group '$($GraphLog.groupName)': $Message. This is likely because it's a Dynamic Group or synced with Active Directory")
+                    $Results.Add("Failed to remove $Username from group '$($GraphLog.groupName)': $Message")
                     Write-LogMessage -headers $Headers -API $APIName -message "Could not remove $Username from group '$($GraphLog.groupName)': $Message" -Sev 'Error' -tenant $TenantFilter
                 } else {
                     $Results.Add("Successfully removed $Username from group '$($GraphLog.groupName)'")
@@ -154,7 +154,7 @@ function Remove-CIPPGroups {
                     $Results.Add("Successfully removed $Username from group $($ExoResult.Operation.groupName)")
                     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoResult.Operation.message -Sev 'Info'
                 } else {
-                    $Results.Add("Could not remove $Username from $($ExoResult.Operation.groupName): $($ExoResult.ErrorMessage)")
+                    $Results.Add("Failed to remove $Username from $($ExoResult.Operation.groupName): $($ExoResult.ErrorMessage)")
                     Write-LogMessage -headers $Headers -API $APIName -message "Could not remove $Username from $($ExoResult.Operation.groupName): $($ExoResult.ErrorMessage)" -Sev 'Error' -tenant $TenantFilter
                 }
             }

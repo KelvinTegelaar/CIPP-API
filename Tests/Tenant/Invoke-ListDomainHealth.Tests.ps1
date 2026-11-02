@@ -33,6 +33,7 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
 
     . $FunctionPath
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
 
     function New-DkimRequest {
         param($Selector)
@@ -57,7 +58,7 @@ Describe 'Invoke-ListDomainHealth - saving custom DKIM selectors' {
         }
         Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { $script:Saved = $Entity }
         Mock -CommandName Set-DnsResolver -MockWith { }
-        Mock -CommandName Test-CIPPAccess -MockWith { @('AllTenants') }
+        Mock -CommandName Test-CIPPAccess -MockWith { , @('AllTenants') }
         Mock -CommandName Read-DkimRecord -MockWith { [pscustomobject]@{ Domain = $Domain; Selectors = @($Selectors) } }
         Mock -CommandName Write-LogMessage -MockWith { }
     }
@@ -65,7 +66,7 @@ Describe 'Invoke-ListDomainHealth - saving custom DKIM selectors' {
     It 'saves the selectors when the caller holds Tenant.DomainAnalyser.ReadWrite' {
         # superadmin resolves to every permission; a custom role resolves to exactly what it grants.
         # Either way the endpoint only sees the permission list, never the role name.
-        Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { @('Tenant.DomainAnalyser.Read', 'Tenant.DomainAnalyser.ReadWrite') }
+        Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { , @('Tenant.DomainAnalyser.Read', 'Tenant.DomainAnalyser.ReadWrite') }
 
         $Response = Invoke-ListDomainHealth -Request (New-DkimRequest -Selector 'custom1, custom2') -TriggerMetadata $null
 
@@ -78,7 +79,7 @@ Describe 'Invoke-ListDomainHealth - saving custom DKIM selectors' {
 
     It 'creates a ManualEntry row for an unknown domain when the caller may write' {
         $script:DomainRow = $null
-        Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { @('Tenant.DomainAnalyser.ReadWrite') }
+        Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { , @('Tenant.DomainAnalyser.ReadWrite') }
 
         $null = Invoke-ListDomainHealth -Request (New-DkimRequest -Selector 'custom1') -TriggerMetadata $null
 
@@ -91,7 +92,7 @@ Describe 'Invoke-ListDomainHealth - saving custom DKIM selectors' {
     }
 
     It 'still runs the lookup but saves nothing for a read-only caller' {
-        Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { @('Tenant.DomainAnalyser.Read') }
+        Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { , @('Tenant.DomainAnalyser.Read') }
 
         $Response = Invoke-ListDomainHealth -Request (New-DkimRequest -Selector 'custom1') -TriggerMetadata $null
 
@@ -102,7 +103,7 @@ Describe 'Invoke-ListDomainHealth - saving custom DKIM selectors' {
     }
 
     It 'saves nothing when the caller holds no permissions at all' {
-        Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { @() }
+        Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { , @() }
 
         $null = Invoke-ListDomainHealth -Request (New-DkimRequest -Selector 'custom1') -TriggerMetadata $null
 
@@ -110,8 +111,8 @@ Describe 'Invoke-ListDomainHealth - saving custom DKIM selectors' {
     }
 
     It 'does not let a tenant-restricted writer persist selectors onto an out-of-scope row' {
-        Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { @('Tenant.DomainAnalyser.ReadWrite') }
-        Mock -CommandName Test-CIPPAccess -MockWith { @('tenant-2') }
+        Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { , @('Tenant.DomainAnalyser.ReadWrite') }
+        Mock -CommandName Test-CIPPAccess -MockWith { , @('tenant-2') }
         Mock -CommandName Select-CippAllowedTenantData -MockWith { }
 
         $null = Invoke-ListDomainHealth -Request (New-DkimRequest -Selector 'custom1') -TriggerMetadata $null
@@ -120,7 +121,7 @@ Describe 'Invoke-ListDomainHealth - saving custom DKIM selectors' {
     }
 
     It 'falls back to the stored selectors when none are supplied, without writing' {
-        Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { @('Tenant.DomainAnalyser.ReadWrite') }
+        Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { , @('Tenant.DomainAnalyser.ReadWrite') }
 
         $null = Invoke-ListDomainHealth -Request (New-DkimRequest) -TriggerMetadata $null
 

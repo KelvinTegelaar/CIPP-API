@@ -175,7 +175,7 @@ function New-CIPPRestoreTask {
                             } catch {
                                 # If PwPush fails, use plain password
                             }
-                            Write-LogMessage -message "Restored $($UPN) from backup by creating a new object with temporary password. Password: $displayPassword" -Sev 'info' -tenant $TenantFilter
+                            Write-LogMessage -message "Restored $($UPN) from backup by creating a new object with a temporary password." -Sev 'info' -tenant $TenantFilter
                             $restorationStats['Users'].success++
                             $RestoreData.Add("The user did not exist. Restored $($UPN) from backup with temporary password: $displayPassword")
                         }
@@ -202,7 +202,7 @@ function New-CIPPRestoreTask {
                             } catch {
                                 # If PwPush fails, use plain password
                             }
-                            Write-LogMessage -message "Restored $($UPN) from backup with temporary password. Password: $displayPassword" -Sev 'info'
+                            Write-LogMessage -message "Restored $($UPN) from backup with a temporary password." -Sev 'info' -tenant $TenantFilter
                             $restorationStats['Users'].success++
                             $RestoreData.Add("Restored $($UPN) from backup with temporary password: $displayPassword")
                         }

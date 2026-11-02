@@ -13,6 +13,22 @@ Describe 'Set-CIPPMobileDevice' {
         Set-CIPPMobileDevice -UserId 'user@contoso.com' -DeviceId 'dev-1' -Quarantine 'true' -TenantFilter 'contoso.com' | Should -Be 'Blocked Active Sync Device for user@contoso.com'
     }
 
+    It 'takes an allowed device off the block list in the same change' {
+        Mock New-ExoRequest { }
+        $null = Set-CIPPMobileDevice -UserId 'user@contoso.com' -DeviceId 'dev-1' -Quarantine 'false' -TenantFilter 'contoso.com'
+        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
+            $cmdParams.ActiveSyncAllowedDeviceIDs.add -eq 'dev-1' -and $cmdParams.ActiveSyncBlockedDeviceIDs.remove -eq 'dev-1'
+        }
+    }
+
+    It 'takes a blocked device off the allow list in the same change' {
+        Mock New-ExoRequest { }
+        $null = Set-CIPPMobileDevice -UserId 'user@contoso.com' -DeviceId 'dev-1' -Quarantine 'true' -TenantFilter 'contoso.com'
+        Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter {
+            $cmdParams.ActiveSyncBlockedDeviceIDs.add -eq 'dev-1' -and $cmdParams.ActiveSyncAllowedDeviceIDs.remove -eq 'dev-1'
+        }
+    }
+
     It 'throws the failure message instead of returning it: <Name>' -ForEach @(
         @{ Name = 'block'; Params = @{ Quarantine = 'true' }; Message = 'Failed to Block Active Sync Device for user@contoso.com: denied' }
         @{ Name = 'allow'; Params = @{ Quarantine = 'false' }; Message = 'Failed to Allow Active Sync Device for user@contoso.com: denied' }

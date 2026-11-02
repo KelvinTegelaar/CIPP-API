@@ -16,12 +16,14 @@ BeforeAll {
         }
     }
     function Add-CippTestResult { param($TenantFilter, $TestId, $TestType, $Status, $ResultMarkdown, $Risk, $Name, $UserImpact, $ImplementationEffort, $Category) $script:Result = @{ Status = $Status; Markdown = "$ResultMarkdown" } }
+    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) $script:Licensed }
     function Write-LogMessage { }
     function Get-CippException { param($Exception) @{ NormalizedError = $Exception.Exception.Message } }
 }
 
 Describe 'ZTNA21816 Global Administrator via group' {
     BeforeEach {
+        $script:Licensed = $true
         $script:Users = @(
             [pscustomobject]@{ id = 'u1'; displayName = 'User 1'; userPrincipalName = 'u1@contoso.com'; onPremisesSyncEnabled = $null }
             [pscustomobject]@{ id = 'u2'; displayName = 'User 2'; userPrincipalName = 'u2@contoso.com'; onPremisesSyncEnabled = $null }
@@ -56,5 +58,21 @@ Describe 'ZTNA21816 Global Administrator via group' {
         Invoke-CippTestZTNA21816 -Tenant 'contoso.com'
         $script:Result.Markdown | Should -Match 'PIM usage cannot be confirmed'
         $script:Result.Status | Should -Be 'Failed'
+    }
+
+    It 'reports Unlicensed when the tenant has no PIM licence' {
+        $script:Licensed = $false
+        Invoke-CippTestZTNA21816 -Tenant 'contoso.com'
+        $script:Result.Status | Should -Be 'Unlicensed'
+    }
+
+    It 'does not list a service principal as a group' {
+        $script:GAMembers = @()
+        Mock Get-CippDbRole { @([pscustomobject]@{ roleTemplateId = 'r1';displayName = 'Compliance Administrator' }) }
+        Mock Get-CippDbRoleMembers { @([pscustomobject]@{ '@odata.type' = '#microsoft.graph.servicePrincipal'; id = 'sp1'; displayName = 'CIPP-SAM' }) } -ParameterFilter { $RoleTemplateId -eq 'r1' }
+        Mock Get-CippDbRoleMembers { }
+        Invoke-CippTestZTNA21816 -Tenant 'contoso.com'
+        $script:Result.Markdown | Should -Not -Match 'CIPP-SAM'
+        $script:Result.Markdown | Should -Match '\| Non-PIM privileged groups \| 0 \|'
     }
 }

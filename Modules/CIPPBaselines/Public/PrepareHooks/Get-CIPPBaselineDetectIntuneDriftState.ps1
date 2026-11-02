@@ -5,7 +5,8 @@ function Get-CIPPBaselineDetectIntuneDriftState {
     .DESCRIPTION
         Builds the MANAGED set - the display names of every Intune template any baseline
         applies to this tenant (across ALL baselines, resolved through the same work-item
-        resolver the engine runs on) - and compares it against the tenant's live policy
+        resolver the engine runs on), plus the policies other standards declare in their
+        definition's driftManagedNames - and compares it against the tenant's live policy
         caches. Every live policy whose name matches no managed template is drift: one
         label-keyed diff per policy, so operators accept or deny-delete each rogue policy
         individually through the per-path triage.
@@ -41,6 +42,15 @@ function Get-CIPPBaselineDetectIntuneDriftState {
             if (-not "$Candidate") { continue }
             $Resolved = $(try { Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text "$Candidate" } catch { "$Candidate" })
             $null = $ManagedNames.Add("$Resolved")
+        }
+    }
+    foreach ($WorkItem in $WorkItems) {
+        if ($WorkItem.BaseName -eq 'IntuneTemplate') { continue }
+        foreach ($Declared in @((Get-CIPPBaselineDefinition -Name $WorkItem.BaseName).driftManagedNames)) {
+            $Name = if ("$Declared" -match '^%([A-Za-z0-9_]+)%$') { "$(& $Unwrap $WorkItem.Variables.($Matches[1]))" } else { "$Declared" }
+            if (-not $Name) { continue }
+            $null = $ManagedNames.Add($Name)
+            $null = $ManagedNames.Add("$(try { Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Name } catch { $Name })")
         }
     }
 

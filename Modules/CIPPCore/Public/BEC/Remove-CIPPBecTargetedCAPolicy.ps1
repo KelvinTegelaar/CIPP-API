@@ -33,7 +33,7 @@ function Remove-CIPPBecTargetedCAPolicy {
     if ($PolicyId) {
         $Ids = @($PolicyId)
     } else {
-        $Ids = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies?$select=id,description&$top=999' -tenantid $TenantFilter -AsApp $true | Where-Object { [string]$_.description -like "*ManagedBy=CIPP-BEC;Target=$UserId*" } | ForEach-Object { $_.id })
+        $Ids = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies?$select=id,displayName,conditions&$top=999' -tenantid $TenantFilter -AsApp $true | Where-Object { [string]$_.displayName -like 'CIPP BEC containment - *' -and @($_.conditions.users.includeUsers) -contains $UserId } | ForEach-Object { $_.id })
         if ($Ids.Count -eq 0) {
             $Message = "No CIPP BEC containment policy exists for user $UserId"
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'

@@ -15,6 +15,8 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
         TAG
             "CIS M365 5.0 (2.1.5)"
             "NIST CSF 2.0 (DE.CM-09)"
+            "ORCA158"
+            "ORCA234"
         ADDEDCOMPONENT
             {"type":"switch","label":"Allow people to click through Protected View even if Safe Documents identified the file as malicious","name":"standards.AtpPolicyForO365.AllowSafeDocsOpen","defaultValue":false,"required":false}
         IMPACT

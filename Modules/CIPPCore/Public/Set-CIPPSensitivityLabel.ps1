@@ -69,6 +69,10 @@ function Set-CIPPSensitivityLabel {
         $LabelParams.Remove('Priority')
     }
 
+    # Label groups read back as ContentType 'None', which New-/Set-Label reject; New-Label takes -IsLabelGroup instead.
+    $IsLabelGroup = "$($LabelParams['ContentType'])" -eq 'None'
+    if ($IsLabelGroup) { $LabelParams.Remove('ContentType') }
+
     try {
         # A custom label color travels as the 'color' advanced setting. Validate the hex format up front
         # so a bad value fails with a clear message instead of an opaque compliance-endpoint error.
@@ -137,6 +141,7 @@ function Set-CIPPSensitivityLabel {
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Label' -cmdParams $SetParams -Compliance -useSystemMailbox $true
             $LabelAction = "Updated sensitivity label '$LabelName' in $TenantFilter."
         } else {
+            if ($IsLabelGroup) { $LabelParams['IsLabelGroup'] = $true }
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-Label' -cmdParams $LabelParams -Compliance -useSystemMailbox $true
             $LabelAction = "Created sensitivity label '$LabelName' in $TenantFilter."
         }

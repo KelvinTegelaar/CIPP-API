@@ -16,8 +16,7 @@
   "powershellEquivalent": "Update-MgBetaPolicyAuthorizationPolicy",
   "appliesToTest": [
     "CIS_5_1_3_1",
-    "SMB1001_2_8",
-    "ZTNA21868"
+    "SMB1001_2_8"
   ],
   "recommendedBy": [],
   "requiredCapabilities": [],

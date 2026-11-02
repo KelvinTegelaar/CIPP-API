@@ -45,72 +45,86 @@ function Get-CIPPBecSignInBaseline {
     $Select = 'createdDateTime,ipAddress,autonomousSystemNumber,location,status,conditionalAccessStatus,appDisplayName,resourceDisplayName'
     $Errors = [System.Collections.Generic.List[string]]::new()
     $Incomplete = $false
-    $Rows = [System.Collections.Generic.List[object]]::new()
-    if ($FromAuditLog) {
-        $AuditParams = @{ TenantFilter = $TenantFilter; StartDate = $StartDate; EndDate = $EndDate; UserIds = @(@($UserPrincipalName, $UserId) | Where-Object { $_ }); RecordType = 'AzureActiveDirectoryStsLogon' }
-        if ($UserPrincipalName) { $AuditParams.Anchor = $UserPrincipalName }
-        $Audit = Search-CIPPBecAuditLog @AuditParams
-        if (-not $Audit.Complete) { $Incomplete = $true }
-        $Logons = @(foreach ($Record in @($Audit.Records)) {
-                $AD = $Record.AuditData
-                # the audit log writes UTC without a zone
-                $When = [string]$AD.CreationTime
-                if ($When -and $When -notmatch '(Z|[+-]\d\d:\d\d)$') { $When = "$($When)Z" }
-                [pscustomobject]@{ ipAddress = [string]$AD.ClientIP; createdDateTime = $When; conditionalAccessStatus = 'success'; status = [pscustomobject]@{ errorCode = $(if ($AD.Operation -eq 'UserLoggedIn') { 0 } else { 1 }) }; location = $null }
-            })
-        $Geo = @{}
-        $LogonIPs = @($Logons | ForEach-Object { ConvertTo-CIPPBecHostAddress -Address $_.ipAddress } | Where-Object { $_ } | Select-Object -Unique)
-        if ($LogonIPs.Count -gt 0) {
-            try { $Geo = Get-CIPPGeoIPLocationBatch -IPs $LogonIPs } catch { $Errors.Add("baseline locations: $($_.Exception.Message)") }
-        }
-        foreach ($Logon in $Logons) {
-            $Place = $Geo[(ConvertTo-CIPPBecHostAddress -Address $Logon.ipAddress)]
-            if ($Place) { $Logon.location = [pscustomobject]@{ countryOrRegion = $Place.CountryOrRegion; city = $Place.City } }
-            $Rows.Add([pscustomobject]@{ Kind = 'Interactive'; SignIn = $Logon })
-        }
-    }
-    $Kinds = [ordered]@{ Interactive = "userId eq '$SafeId'"; NonInteractive = "userId eq '$SafeId' and signInEventTypes/any(t: t eq 'nonInteractiveUser')" }
-    foreach ($Id in @(if (-not $FromAuditLog) { $Kinds.Keys })) {
-        try {
-            $Found = Search-CIPPBecSignIn -TenantFilter $TenantFilter -Filter $Kinds[$Id] -StartDate $StartDate -EndDate $EndDate -Select $Select
-        } catch {
-            $Errors.Add("$Id sign-ins: $($_.Exception.Message)")
-            continue
-        }
-        if ($Found.Incomplete) { $Incomplete = $true }
-        foreach ($SignIn in $Found.Rows) { $Rows.Add([pscustomobject]@{ Kind = $Id; SignIn = $SignIn }) }
-    }
-
+    $Total = 0
     $ByIP = @{}
     $ByAsn = @{}
     $ByLocation = @{}
     $Successful = 0
-    foreach ($Row in $Rows) {
-        $SignIn = $Row.SignIn
-        $Ok = $SignIn.conditionalAccessStatus -in @('success', 'notApplied') -and $SignIn.status.errorCode -eq 0
-        if (-not $Ok) { continue }
-        $IP = ConvertTo-CIPPBecHostAddress -Address ([string]$SignIn.ipAddress)
-        if (-not $IP) { continue }
-        $Successful++
-        $When = try { ([datetime]$SignIn.createdDateTime).ToUniversalTime() } catch { $null }
-        $Country = [string]$SignIn.location.countryOrRegion
-        $City = [string]$SignIn.location.city
-        $Asn = [string]$SignIn.autonomousSystemNumber
-        if (-not $ByIP.ContainsKey($IP)) {
-            $ByIP[$IP] = [pscustomobject]@{ IP = $IP; SignIns = 0; Interactive = 0; NonInteractive = 0; Days = [System.Collections.Generic.HashSet[string]]::new(); FirstSeen = $null; LastSeen = $null; Asns = @{}; Places = @{}; Apps = [System.Collections.Generic.HashSet[string]]::new() }
+    # sign-ins repeat a handful of addresses, so each raw address is normalised once
+    $HostOf = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::Ordinal)
+    $Kinds = [ordered]@{ Interactive = "userId eq '$SafeId'"; NonInteractive = "userId eq '$SafeId' and signInEventTypes/any(t: t eq 'nonInteractiveUser')" }
+    # dot-sourced so the counters are this function's own, and fed straight from the stream
+    $Fold = { process {
+            $SignIn = $_
+            $Total++
+            $Ok = $SignIn.conditionalAccessStatus -in @('success', 'notApplied') -and $SignIn.status.errorCode -eq 0
+            if (-not $Ok) { return }
+            $Raw = [string]$SignIn.ipAddress
+            $IP = $HostOf[$Raw]
+            if ($null -eq $IP) { $IP = [string](ConvertTo-CIPPBecHostAddress -Address $Raw); $HostOf[$Raw] = $IP }
+            if (-not $IP) { return }
+            $Successful++
+            $When = try { ([datetime]$SignIn.createdDateTime).ToUniversalTime() } catch { $null }
+            $Country = [string]$SignIn.location.countryOrRegion
+            $City = [string]$SignIn.location.city
+            $Asn = [string]$SignIn.autonomousSystemNumber
+            if (-not $ByIP.ContainsKey($IP)) {
+                $ByIP[$IP] = [pscustomobject]@{ IP = $IP; SignIns = 0; Interactive = 0; NonInteractive = 0; Days = [System.Collections.Generic.HashSet[string]]::new(); FirstSeen = $null; LastSeen = $null; Asns = @{}; Places = @{}; Apps = [System.Collections.Generic.HashSet[string]]::new() }
+            }
+            $Entry = $ByIP[$IP]
+            $Entry.SignIns++
+            if ($Interactive) { $Entry.Interactive++ } else { $Entry.NonInteractive++ }
+            if ($When) {
+                $null = $Entry.Days.Add($When.ToString('yyyy-MM-dd'))
+                if (-not $Entry.FirstSeen -or $When -lt $Entry.FirstSeen) { $Entry.FirstSeen = $When }
+                if (-not $Entry.LastSeen -or $When -gt $Entry.LastSeen) { $Entry.LastSeen = $When }
+            }
+            if ($Asn) { $Entry.Asns[$Asn] = [int]($Entry.Asns[$Asn] ?? 0) + 1; $ByAsn[$Asn] = [int]($ByAsn[$Asn] ?? 0) + 1 }
+            $Place = "$Country|$City"
+            if ($Country -or $City) { $Entry.Places[$Place] = [int]($Entry.Places[$Place] ?? 0) + 1; $ByLocation[$Place] = [int]($ByLocation[$Place] ?? 0) + 1 }
+            foreach ($App in @($SignIn.appDisplayName, $SignIn.resourceDisplayName)) { if ($App) { $null = $Entry.Apps.Add([string]$App) } }
+        } }
+    # each source is folded as soon as it is read, so only one set of rows is held at a time
+    foreach ($Id in @(if ($FromAuditLog) { 'AuditLog' } else { $Kinds.Keys })) {
+        if ($Id -eq 'AuditLog') {
+            $Interactive = $true
+            $AuditParams = @{ TenantFilter = $TenantFilter; StartDate = $StartDate; EndDate = $EndDate; UserIds = @(@($UserPrincipalName, $UserId) | Where-Object { $_ }); RecordType = 'AzureActiveDirectoryStsLogon' }
+            if ($UserPrincipalName) { $AuditParams.Anchor = $UserPrincipalName }
+            $Audit = Search-CIPPBecAuditLog @AuditParams
+            if (-not $Audit.Complete) { $Incomplete = $true }
+            $SignIns = @(foreach ($Record in @($Audit.Records)) {
+                    $AD = $Record.AuditData
+                    # the audit log writes UTC without a zone
+                    $When = [string]$AD.CreationTime
+                    if ($When -and $When -notmatch '(Z|[+-]\d\d:\d\d)$') { $When = "$($When)Z" }
+                    [pscustomobject]@{ ipAddress = [string]$AD.ClientIP; createdDateTime = $When; conditionalAccessStatus = 'success'; status = [pscustomobject]@{ errorCode = $(if ($AD.Operation -eq 'UserLoggedIn') { 0 } else { 1 }) }; location = $null }
+                })
+            $Audit = $null
+            $LogonIPs = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+            foreach ($Logon in $SignIns) {
+                $Raw = [string]$Logon.ipAddress
+                $IP = $HostOf[$Raw]
+                if ($null -eq $IP) { $IP = [string](ConvertTo-CIPPBecHostAddress -Address $Raw); $HostOf[$Raw] = $IP }
+                if ($IP) { $null = $LogonIPs.Add($IP) }
+            }
+            $Geo = @{}
+            if ($LogonIPs.Count -gt 0) {
+                try { $Geo = Get-CIPPGeoIPLocationBatch -IPs @($LogonIPs) } catch { $Errors.Add("baseline locations: $($_.Exception.Message)") }
+            }
+            foreach ($Logon in $SignIns) {
+                $Place = $Geo[$HostOf[[string]$Logon.ipAddress]]
+                if ($Place) { $Logon.location = [pscustomobject]@{ countryOrRegion = $Place.CountryOrRegion; city = $Place.City } }
+            }
+            $SignIns | . $Fold
+            $SignIns = $null
+        } else {
+            $Interactive = $Id -eq 'Interactive'
+            try {
+                Search-CIPPBecSignIn -TenantFilter $TenantFilter -Filter $Kinds[$Id] -StartDate $StartDate -EndDate $EndDate -Select $Select -Stream | . $Fold
+            } catch {
+                $Errors.Add("$Id sign-ins: $($_.Exception.Message)")
+            }
         }
-        $Entry = $ByIP[$IP]
-        $Entry.SignIns++
-        if ($Row.Kind -eq 'Interactive') { $Entry.Interactive++ } else { $Entry.NonInteractive++ }
-        if ($When) {
-            $null = $Entry.Days.Add($When.ToString('yyyy-MM-dd'))
-            if (-not $Entry.FirstSeen -or $When -lt $Entry.FirstSeen) { $Entry.FirstSeen = $When }
-            if (-not $Entry.LastSeen -or $When -gt $Entry.LastSeen) { $Entry.LastSeen = $When }
-        }
-        if ($Asn) { $Entry.Asns[$Asn] = [int]($Entry.Asns[$Asn] ?? 0) + 1; $ByAsn[$Asn] = [int]($ByAsn[$Asn] ?? 0) + 1 }
-        $Place = "$Country|$City"
-        if ($Country -or $City) { $Entry.Places[$Place] = [int]($Entry.Places[$Place] ?? 0) + 1; $ByLocation[$Place] = [int]($ByLocation[$Place] ?? 0) + 1 }
-        foreach ($App in @($SignIn.appDisplayName, $SignIn.resourceDisplayName)) { if ($App) { $null = $Entry.Apps.Add([string]$App) } }
     }
 
     $Share = { param($Count) if ($Successful -gt 0) { [math]::Round($Count / $Successful, 4) } else { 0 } }
@@ -118,7 +132,7 @@ function Get-CIPPBecSignInBaseline {
     $SignInProfile = [pscustomobject]@{
         From       = $From
         To         = $To
-        SignIns    = $Rows.Count
+        SignIns    = $Total
         Successful = $Successful
         IPs        = @($ByIP.Values | Sort-Object -Property SignIns -Descending | ForEach-Object {
                 $Place = [string](& $Top $_.Places)

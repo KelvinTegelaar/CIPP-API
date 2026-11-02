@@ -60,7 +60,7 @@ function Invoke-ExecPushSubscription {
             }
             'Unsubscribe' {
                 $RowKey = [string]$Request.Body.RowKey
-                $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$Username' and RowKey eq '$RowKey'"
+                $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Username)' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $RowKey)'"
                 if (!$Existing) {
                     return ([HttpResponseContext]@{
                             StatusCode = [HttpStatusCode]::NotFound

@@ -87,6 +87,16 @@ Describe 'Invoke-CIPPBecContainment' {
         Should -Invoke Set-CIPPBecReport -Times 1 -ParameterFilter { $CaseId -eq 'BEC-1' -and @($Properties.Containment).Count -eq 1 -and @($Properties.Containment)[0].Actions -contains 'RevokeSessions' }
     }
 
+    It 'records the protocol settings and device block list as they were before it changed them' {
+        Mock New-ExoRequest { [pscustomobject]@{ IMAPEnabled = $true; EWSEnabled = $false; ActiveSyncBlockedDeviceIDs = @('dev-old') } } -ParameterFilter { $cmdlet -eq 'Get-CASMailbox' }
+        $null = Invoke-CIPPBecContainment -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -Actions @('BlockProtocols', 'BlockMobileDevices') -Parameters @{ Protocols = @('IMAP', 'EWS') } -RunResults $script:Run -CaseId 'BEC-1'
+        Should -Invoke Set-CIPPBecReport -Times 1 -ParameterFilter {
+            $Before = @($Properties.Containment)[0].Before
+            $Before.BlockProtocols.IMAPEnabled -eq $true -and $Before.BlockProtocols.EWSEnabled -eq $false -and $Before.BlockProtocols.Count -eq 2 -and
+            (@($Before.BlockMobileDevices.ActiveSyncBlockedDeviceIDs) -join ',') -eq 'dev-old'
+        }
+    }
+
     It 'touches no progress row without a DeploymentId' {
         Mock Set-CIPPAsyncDeploymentStep { }
         Mock Set-CIPPAsyncDeploymentStatus { }
@@ -181,7 +191,7 @@ Describe 'Invoke-CIPPBecContainment' {
     It 'resolves the user object id when a Graph action needs it and none was supplied' {
         $null = Invoke-CIPPBecContainment -TenantFilter 'contoso.com' -UserPrincipalName 'victim@contoso.com' -Actions @('TargetedCAPolicy') -Parameters @{ CAPolicy = @{ State = 'reportOnly'; Controls = 'mfaAndCompliantDevice'; ExpiresHours = 4 } }
         Should -Invoke New-GraphGetRequest -Times 1
-        Should -Invoke New-CIPPBecTargetedCAPolicy -Times 1 -ParameterFilter { $UserId -eq 'user-guid' -and $State -eq 'enabledForReportingButNotEnabled' -and $Controls -eq 'mfaAndCompliantDevice' -and $ExpiresHours -eq 4 }
+        Should -Invoke New-CIPPBecTargetedCAPolicy -Times 1 -ParameterFilter { $UserId -eq 'user-guid' -and $State -eq 'enabledForReportingButNotEnforced' -and $Controls -eq 'mfaAndCompliantDevice' -and $ExpiresHours -eq 4 }
     }
 
     It 'disables the run''s catalog-matched applications and deletes in-window devices through the platform helpers' {

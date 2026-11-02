@@ -26,9 +26,11 @@ function Set-CIPPBecRunState {
         if ($Rows.Count -gt 0) { $null = Remove-CIPPAzDataTableEntity @Table -Entity $Rows -Force }
         return
     }
+    $Data = [CIPP.CippJson]::ToJson($Values, 20)
+    if ($null -eq $Data) { throw "BEC run state $Section holds a value that cannot be written as JSON" }
     Add-CIPPAzDataTableEntity @Table -Entity @{
         PartitionKey = $CaseId
         RowKey       = $Section
-        Data         = [string](ConvertTo-Json -InputObject $Values -Depth 20 -Compress)
+        Data         = $Data
     } -Force
 }

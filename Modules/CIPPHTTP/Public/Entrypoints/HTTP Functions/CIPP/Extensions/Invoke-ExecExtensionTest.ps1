@@ -5,7 +5,7 @@ Function Invoke-ExecExtensionTest {
     .ROLE
         CIPP.Extension.Read
     .DESCRIPTION
-        Tests the stored credentials for a configured third-party integration and reports whether CIPP can connect. extensionName selects which one: HaloPSA, Gradient, NinjaOne, PWPush, Hudu, Sherweb, HIBP or GitHub.
+        Tests the stored credentials for a configured third-party integration and reports whether CIPP can connect. extensionName selects which one: HaloPSA, Syncro, Gradient, NinjaOne, PWPush, Hudu, Sherweb, HIBP or GitHub.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -22,6 +22,27 @@ Function Invoke-ExecExtensionTest {
                 } else {
                     $StatusCode = [HttpStatusCode]::InternalServerError
                     $Results = [pscustomobject]@{'Results' = 'Failed to connect to HaloPSA, check your API credentials and try again.' }
+                }
+            }
+            'Syncro' {
+                # /me answers with the API key's own user and permissions, so the test can say
+                # up front whether that user may read customers and write tickets - the two
+                # things the integration needs - instead of failing on the first alert.
+                $Me = Invoke-SyncroRequest -Configuration $Configuration.Syncro -Endpoint '/me'
+                if ($Me.user_name -or $Me.user_email) {
+                    $Missing = [System.Collections.Generic.List[string]]::new()
+                    if ($Me.permissions.customer -and -not $Me.permissions.customer.read) { $Missing.Add('read customers') }
+                    if ($Me.permissions.ticket -and -not $Me.permissions.ticket.write) { $Missing.Add('create tickets') }
+                    $Who = if ($Me.user_name) { $Me.user_name } else { $Me.user_email }
+                    if ($Missing.Count -gt 0) {
+                        $StatusCode = [HttpStatusCode]::InternalServerError
+                        $Results = [pscustomobject]@{'Results' = "Connected to Syncro as $Who, but that user cannot $($Missing -join ' or '). Use an API key from a user with customer read and ticket write permissions." }
+                    } else {
+                        $Results = [pscustomobject]@{'Results' = "Successfully Connected to Syncro as $Who ($($Me.subdomain).syncromsp.com)" }
+                    }
+                } else {
+                    $StatusCode = [HttpStatusCode]::InternalServerError
+                    $Results = [pscustomobject]@{'Results' = 'Failed to connect to Syncro, check your subdomain and API key and try again.' }
                 }
             }
             'Gradient' {

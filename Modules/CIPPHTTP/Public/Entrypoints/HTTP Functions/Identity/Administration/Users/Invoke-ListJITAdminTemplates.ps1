@@ -42,6 +42,12 @@ function Invoke-ListJITAdminTemplates {
         }
     }
 
+    # Templates for all tenants stay visible to everyone; a tenant's own templates only to callers with that tenant.
+    $Templates = @(
+        @($Templates).Where({ $_.tenantFilter -eq 'AllTenants' })
+        @($Templates).Where({ $_.tenantFilter -ne 'AllTenants' }) | Select-CippAllowedTenantData -TenantProperty 'tenantFilter'
+    )
+
     # Filter by tenant if TenantFilter is provided
     if ($TenantFilter) {
         if ($TenantFilter -eq 'AllTenants') {

@@ -15,9 +15,6 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
         TAG
             "CIS M365 5.0 (7.2.9)"
             "CISA (MS.SPO.1.5v1)"
-            "ZTNA21803"
-            "ZTNA21804"
-            "ZTNA21858"
         EXECUTIVETEXT
             Automatically expires external user access to SharePoint sites and OneDrive after a specified period, reducing security risks from forgotten or unnecessary guest accounts. This ensures external access is regularly reviewed and maintained only when actively needed.
         ADDEDCOMPONENT

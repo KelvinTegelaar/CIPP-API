@@ -22,29 +22,20 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             "mdo_phishthresholdlevel"
             "CIS M365 5.0 (2.1.7)"
             "NIST CSF 2.0 (DE.CM-09)"
-            "ORCA104"
             "ORCA115"
             "ORCA180"
             "ORCA220"
             "ORCA221"
             "ORCA222"
             "ORCA223"
-            "ORCA228"
-            "ORCA229"
             "ORCA230"
-            "ORCA233"
-            "ORCA234"
-            "ORCA235"
-            "ORCA239"
-            "ORCA242"
-            "ORCA243"
-            "ORCA244"
-            "ZTNA21784"
-            "ZTNA21817"
-            "ZTNA21819"
-            "CISAMSEXO111"
-            "CISAMSEXO112"
-            "CISAMSEXO113"
+            "ORCA111"
+            "ORCA112"
+            "ORCA116"
+            "ORCA119"
+            "ORCA123"
+            "ORCA224"
+            "ORCA241"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.AntiPhishPolicy.name","label":"Policy Name","required":true,"defaultValue":"CIPP Default Anti-Phishing Policy"}
             {"type":"number","label":"Phishing email threshold. (Default 1)","name":"standards.AntiPhishPolicy.PhishThresholdLevel","defaultValue":1,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":4,"message":"Maximum value is 4"}}}
@@ -87,6 +78,10 @@ function Invoke-CIPPStandardAntiPhishPolicy {
         return $true
     } #we're done.
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AntiPhishPolicy'
+
+    foreach ($Field in @('AuthenticationFailAction', 'SpoofQuarantineTag', 'MailboxIntelligenceProtectionAction', 'MailboxIntelligenceQuarantineTag', 'TargetedUserProtectionAction', 'TargetedUserQuarantineTag', 'TargetedDomainProtectionAction', 'TargetedDomainQuarantineTag')) {
+        if ($null -ne $Settings.$Field.value) { $Settings.$Field = $Settings.$Field.value }
+    }
 
     $TenantCapabilities = Get-CIPPTenantCapabilities -TenantFilter $Tenant
     $MDOLicensed = $TenantCapabilities.ATP_ENTERPRISE -eq $true

@@ -52,7 +52,11 @@ function Invoke-CIPPStandardRetentionCompliancePolicyTemplate {
 
     if ($Settings.remediate -eq $true) {
         foreach ($Template in @($Templates)) {
-            $null = Set-CIPPRetentionCompliancePolicy -TenantFilter $Tenant -Template $Template -APIName 'Standards'
+            try {
+                $null = Set-CIPPRetentionCompliancePolicy -TenantFilter $Tenant -Template $Template -APIName 'Standards'
+            } catch {
+                Write-Information $_.Exception.Message
+            }
         }
     }
 

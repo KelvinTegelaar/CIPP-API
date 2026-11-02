@@ -44,7 +44,18 @@ function Invoke-ExecApiClient {
             $ExistingClientForAuth = $null
             $AuthClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
             if ($AuthClientId) {
-                $ExistingClientForAuth = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($AuthClientId)'"
+                # Rows are keyed by Graph's canonical lowercase appId. Normalise and validate the ClientId
+                # so a case-variant value cannot miss the lookup and skip the role-grant check while the
+                # write path still resolves the real (canonical) row.
+                try {
+                    $AuthClientId = ConvertTo-CIPPODataFilterValue -Value ([string]$AuthClientId).ToLowerInvariant() -Type Guid
+                } catch {
+                    Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked API client update with invalid ClientId: $AuthClientId" -Sev 'Warning'
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    $Body = @(@{ resultText = 'Invalid ClientId.'; state = 'error' })
+                    break
+                }
+                $ExistingClientForAuth = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $AuthClientId)'"
                 if ($ExistingClientForAuth) {
                     $RolesToAuthorize.Add([string]$ExistingClientForAuth.Role)
                 }
@@ -135,7 +146,7 @@ function Invoke-ExecApiClient {
                     $Results.Add($AddedText)
                 }
             } else {
-                $ExistingClient = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'"
+                $ExistingClient = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $ClientId)'"
                 if ($ExistingClient) {
                     $Client = $ExistingClient
                     $Client.Role = [string]$Request.Body.Role.value
@@ -235,7 +246,7 @@ function Invoke-ExecApiClient {
         'SaveToAzure' {
             $TenantId = $env:TenantID
             $FunctionAppName = $env:WEBSITE_SITE_NAME
-            $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
+            $AllClients = Get-CIPPAzDataTableEntity @Table | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) -and "$($_.Enabled)" -eq 'True' }
             $ClientIds = $AllClients.RowKey
             # MCPAllowed can round-trip from table storage as a bool or a string; compare on string form.
             $ProtectedAppIds = Get-CippProtectedAppId
@@ -292,7 +303,7 @@ function Invoke-ExecApiClient {
             }
         }
         'ResetSecret' {
-            $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.ClientId)'"
+            $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Request.Body.ClientId)'"
             if (!$Client) {
                 $StatusCode = [HttpStatusCode]::NotFound
                 $Results = @{
@@ -339,7 +350,7 @@ function Invoke-ExecApiClient {
             $Body = @($Results)
         }
         'RepairUri' {
-            $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.ClientId)'"
+            $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Request.Body.ClientId)'"
             if (!$Client) {
                 $StatusCode = [HttpStatusCode]::NotFound
                 $Results = @{
@@ -379,7 +390,7 @@ function Invoke-ExecApiClient {
                 if ($Request.Body.ClientId) {
                     $ClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
                     # Block deleting a client whose role outranks the caller (tamper/DoS).
-                    $ExistingClientForAuth = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'"
+                    $ExistingClientForAuth = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $ClientId)'"
                     if ($ExistingClientForAuth) {
                         $RoleGrant = Test-CippApiClientRoleGrant -Request $Request -Role ([string]$ExistingClientForAuth.Role)
                         if (-not $RoleGrant.Allowed) {
@@ -401,7 +412,7 @@ function Invoke-ExecApiClient {
                         }
                     }
                     Write-Information "Deleting API Client: $ClientId from CIPP"
-                    $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'" -Property RowKey, PartitionKey
+                    $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $ClientId)'" -Property RowKey, PartitionKey
                     Remove-CIPPAzDataTableEntity @Table -Entity $Client -Force
                     Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Deleted API client $ClientId" -Sev 'Info'
                     $Body = @{ Results = "API client $ClientId deleted" }
@@ -517,7 +528,7 @@ function Invoke-ExecApiClient {
             # Only ever patch an app registration that is a CIPP-managed, MCP-enabled API client -
             # never an arbitrary appId, which would let a caller rewrite the redirect URIs of any app
             # in the tenant via CIPP's app-only Graph rights.
-            $ManagedClient = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$TargetClientId'"
+            $ManagedClient = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TargetClientId)'"
             if (-not $ManagedClient.RowKey -or "$($ManagedClient.MCPAllowed)" -ne 'True' -or $TargetClientId -in (Get-CippProtectedAppId)) {
                 Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked MCP redirect URI update for $TargetClientId : not an MCP-enabled CIPP API client." -Sev 'Warning'
                 $StatusCode = [HttpStatusCode]::NotFound

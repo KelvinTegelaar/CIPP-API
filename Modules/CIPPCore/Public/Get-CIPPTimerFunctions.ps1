@@ -5,6 +5,33 @@ function Get-CIPPTimerFunctions {
         [switch]$ListAllTasks
     )
 
+    if ($env:CIPPNG -eq 'true') {
+        # Craft fires the timers and owns the CIPPTimers rows (App:Scheduler:StateTable), so this only reads them
+        $Table = Get-CIPPTable -TableName 'CIPPTimers'
+        $State = @{}
+        foreach ($Row in (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Timer'")) {
+            $State[$Row.RowKey] = $Row
+        }
+        $Timers = Get-Content -Raw -Path (Join-Path $env:CIPPRootPath 'Config\CIPPTimers.json') | ConvertFrom-Json
+        foreach ($Timer in ($Timers | Sort-Object -Property Priority)) {
+            $Row = $State[$Timer.Id]
+            [PSCustomObject]@{
+                Id             = $Timer.Id
+                Priority       = $Timer.Priority
+                Command        = $Timer.Command
+                Description    = $Timer.Description
+                Parameters     = $Timer.Parameters ?? @{}
+                Cron           = $Timer.Cron
+                Timezone       = $Row.Timezone
+                JitterMinutes  = [int]($Timer.JitterMinutes ?? 0)
+                JitterDelay    = if ($null -ne $Row.JitterSeconds) { [TimeSpan]::FromSeconds($Row.JitterSeconds).ToString('hh\:mm\:ss') }
+                NextOccurrence = $Row.NextFire
+                LastOccurrence = $Row.LastFired
+            }
+        }
+        return
+    }
+
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
 

@@ -23,7 +23,7 @@ function Get-NinjaOneFieldMapping {
             [PSCustomObject]@{
                 Title       = 'NinjaOne Device Custom Field Mapping'
                 FieldType   = 'Device'
-                Description = 'Use the table below to map your Device Field to the correct NinjaOne Field'
+                Description = 'Use the table below to map your Device Field to the correct NinjaOne Field. Credential fields (LAPS, BitLocker) are created automatically when their sync switches are on; to map your own, use Secure fields with API permission Write Only.'
             }
         )
 
@@ -69,6 +69,36 @@ function Get-NinjaOneFieldMapping {
                 FieldLabel = 'Intune Non-Compliant Settings - Field Used to List the Compliance Policy Settings a Device Fails'
                 FieldType  = 'Device'
                 Type       = @('TEXT_MULTILINE', 'TEXT')
+            },
+            [PSCustomObject]@{
+                FieldName  = 'LAPSAccount'
+                FieldLabel = 'Windows LAPS Account'
+                FieldType  = 'Device'
+                Type       = 'TEXT'
+            },
+            [PSCustomObject]@{
+                FieldName  = 'LAPSPassword'
+                FieldLabel = 'Windows LAPS Password'
+                FieldType  = 'Device'
+                Type       = 'TEXT_ENCRYPTED'
+            },
+            [PSCustomObject]@{
+                FieldName  = 'LAPSBackupDate'
+                FieldLabel = 'Windows LAPS Backup Date'
+                FieldType  = 'Device'
+                Type       = 'TEXT'
+            },
+            [PSCustomObject]@{
+                FieldName  = 'BitLockerKeyIds'
+                FieldLabel = 'BitLocker Key IDs'
+                FieldType  = 'Device'
+                Type       = @('TEXT_MULTILINE', 'TEXT')
+            },
+            [PSCustomObject]@{
+                FieldName  = 'BitLockerRecoveryKeys'
+                FieldLabel = 'BitLocker Recovery Keys'
+                FieldType  = 'Device'
+                Type       = 'TEXT_ENCRYPTED'
             }
         )
 
@@ -94,11 +124,11 @@ function Get-NinjaOneFieldMapping {
 
         $NinjaCustomFieldsNodeRaw = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/device-custom-fields?scopes=node" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -Depth 100
 
-        [System.Collections.Generic.List[object]]$NinjaCustomFieldsNode = $NinjaCustomFieldsNodeRaw | Where-Object { $_.apiPermission -eq 'READ_WRITE' -and $_.type -in $CIPPFields.Type } | Select-Object @{n = 'name'; e = { $_.label } }, @{n = 'value'; e = { $_.name } }, type, @{n = 'FieldType'; e = { 'Device' } }
+        [System.Collections.Generic.List[object]]$NinjaCustomFieldsNode = $NinjaCustomFieldsNodeRaw | Where-Object { $_.apiPermission -in 'READ_WRITE', 'WRITE_ONLY' -and $_.type -in $CIPPFields.Type } | Select-Object @{n = 'name'; e = { $_.label } }, @{n = 'value'; e = { $_.name } }, type, @{n = 'FieldType'; e = { 'Device' } }
 
         $NinjaCustomFieldsOrgRaw = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/device-custom-fields?scopes=organization" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -Depth 100
 
-        [System.Collections.Generic.List[object]]$NinjaCustomFieldsOrg = $NinjaCustomFieldsOrgRaw | Where-Object { $_.apiPermission -eq 'READ_WRITE' -and $_.type -in $CIPPFields.Type } | Select-Object @{n = 'name'; e = { $_.label } }, @{n = 'value'; e = { $_.name } }, type, @{n = 'FieldType'; e = { 'Organization' } }
+        [System.Collections.Generic.List[object]]$NinjaCustomFieldsOrg = $NinjaCustomFieldsOrgRaw | Where-Object { $_.apiPermission -in 'READ_WRITE', 'WRITE_ONLY' -and $_.type -in $CIPPFields.Type } | Select-Object @{n = 'name'; e = { $_.label } }, @{n = 'value'; e = { $_.name } }, type, @{n = 'FieldType'; e = { 'Organization' } }
 
         if ($Null -eq $NinjaCustomFieldsNode) {
             [System.Collections.Generic.List[object]]$NinjaCustomFieldsNode = @()
@@ -112,6 +142,18 @@ function Get-NinjaOneFieldMapping {
         Write-Information "Get-NinjaOneFieldMapping: failed to retrieve NinjaOne custom fields: $($_.Exception.Message)"
         [System.Collections.Generic.List[object]]$NinjaCustomFieldsNode = @()
         [System.Collections.Generic.List[object]]$NinjaCustomFieldsOrg = @()
+    }
+
+    # Write-only fields are absent from the NinjaOne listing, so mapped ones are kept as options or the page would drop them.
+    # The page only offers options whose type matches the CIPP field, so each takes the type of the field it is mapped to.
+    $Listed = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($Field in $NinjaCustomFieldsOrg) { [void]$Listed.Add([string]$Field.value) }
+    foreach ($Field in $NinjaCustomFieldsNode) { [void]$Listed.Add([string]$Field.value) }
+    foreach ($Mapping in @($Mappings)) {
+        if (-not [string]::IsNullOrEmpty($Mapping.IntegrationId) -and $Listed.Add([string]$Mapping.IntegrationId)) {
+            $CippField = $CIPPFields | Where-Object { $_.FieldName -eq $Mapping.RowKey } | Select-Object -First 1
+            $NinjaCustomFieldsNode.Add([PSCustomObject]@{ name = $Mapping.IntegrationName; value = $Mapping.IntegrationId; type = [string]@($CippField.Type)[0]; FieldType = 'Device' })
+        }
     }
 
     $MappingObj = [PSCustomObject]@{

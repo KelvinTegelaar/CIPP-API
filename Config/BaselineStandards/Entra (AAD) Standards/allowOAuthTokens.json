@@ -13,10 +13,7 @@
   "impactColour": "info",
   "addedDate": "2022-12-18",
   "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
-  "appliesToTest": [
-    "EIDSCAAT01",
-    "EIDSCAAT02"
-  ],
+  "appliesToTest": [],
   "recommendedBy": [],
   "requiredCapabilities": [],
   "secureScoreImpact": 0,

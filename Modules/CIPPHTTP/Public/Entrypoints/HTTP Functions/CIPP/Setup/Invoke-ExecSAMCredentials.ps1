@@ -185,7 +185,7 @@ function Invoke-ExecSAMCredentials {
                     $Remaining = @($State.KeyCredentials | Where-Object { $_.keyId -ne $KeyId })
                     New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/v1.0/applications/$($State.AppObjectId)" -Body (ConvertTo-Json -Compress -Depth 10 -InputObject @{ keyCredentials = $Remaining }) -NoAuthCheck $true -AsApp $true -ErrorAction Stop
                 }
-                $Flag = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'SAMCredential' and RowKey eq '$KeyId'"
+                $Flag = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'SAMCredential' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $KeyId)'"
                 if ($Flag) { Remove-AzDataTableEntity @ConfigTable -Entity $Flag -Force }
                 $Identifier = if ($Credential.thumbprint) { "thumbprint $($Credential.thumbprint)" } else { "keyId $KeyId" }
                 $Actor = 'CIPP'
@@ -235,7 +235,7 @@ function Invoke-ExecSAMCredentials {
             }
             try {
                 # Provenance of CIPP-created credentials survives; only the admin label is cleared.
-                $Flag = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'SAMCredential' and RowKey eq '$KeyId'"
+                $Flag = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'SAMCredential' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $KeyId)'"
                 if ($Flag.Source) {
                     $null = Add-CIPPAzDataTableEntity @ConfigTable -Entity @{ PartitionKey = 'SAMCredential'; RowKey = $KeyId; Source = [string]$Flag.Source; Actor = [string]$Flag.Actor; CreatedBy = [string]$Flag.CreatedBy; CreatedAt = [string]$Flag.CreatedAt } -Force
                 } elseif ($Flag) {

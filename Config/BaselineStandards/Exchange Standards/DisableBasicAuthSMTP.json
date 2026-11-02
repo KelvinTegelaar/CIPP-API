@@ -15,8 +15,7 @@
   "powershellEquivalent": "Set-TransportConfig -SmtpClientAuthenticationDisabled $true",
   "appliesToTest": [
     "CISAMSEXO51",
-    "CIS_6_5_4",
-    "ZTNA21799"
+    "CIS_6_5_4"
   ],
   "recommendedBy": [
     "CIS",

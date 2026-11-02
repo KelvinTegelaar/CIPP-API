@@ -23,6 +23,8 @@ BeforeAll {
     # didn't pass -LocalChanges at all, distinguishing "not passed" from "passed $false".
     function New-CIPPBaseline { param($Baseline, $User, $Source, $SHA, $SourcePath, $LocalChanges) }
     function Push-CIPPBaselineToRepo { param($GUID, $FullName, $Message) }
+    function Get-CIPPBaseline { param($ID) }
+    function Get-CIPPBaselineOutOfScopeAssignment { param($Assignments) }
 
     . $FunctionPath
 

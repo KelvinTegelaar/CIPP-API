@@ -95,7 +95,7 @@ function Invoke-ListTests {
             # Fall back to database if not found in JSON files
             if (-not $ReportFound) {
                 $ReportTable = Get-CippTable -tablename 'CippReportTemplates'
-                $Filter = "PartitionKey eq 'Report' and RowKey eq '{0}'" -f $ReportId
+                $Filter = "PartitionKey eq 'Report' and RowKey eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $ReportId)
                 $ReportTemplate = Get-CIPPAzDataTableEntity @ReportTable -Filter $Filter
 
                 if ($ReportTemplate) {

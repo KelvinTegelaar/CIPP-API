@@ -11,7 +11,9 @@ function Get-DefenderTvmRaw {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$TenantId,
-        [switch]$Stream
+        [switch]$Stream,
+        # Only these fields are materialised on each record; the rest of the ~1 KB wire record is never built.
+        [string[]]$Property
     )
 
     try {
@@ -32,7 +34,7 @@ function Get-DefenderTvmRaw {
                 try {
                     while ($null -ne ($Line = $Reader.ReadLine())) {
                         if (-not $Line) { continue }
-                        $Record = $Line | ConvertFrom-Json
+                        $Record = if ($Property) { [CIPP.CippJson]::ConvertFromJson($Line, $Property) } else { $Line | ConvertFrom-Json }
                         if ($Stream) { $Record } else { $Buffer.Add($Record) }
                     }
                 } finally {

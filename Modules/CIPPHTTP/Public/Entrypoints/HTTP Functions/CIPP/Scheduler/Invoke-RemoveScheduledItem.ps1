@@ -43,7 +43,7 @@ function Invoke-RemoveScheduledItem {
         Remove-CIPPAzDataTableEntity -Force @Table -Entity $task
 
         $DetailTable = Get-CIPPTable -TableName 'ScheduledTaskDetails'
-        $Details = Get-CIPPAzDataTableEntity @DetailTable -Filter "PartitionKey eq '$($RowKey)'" -Property RowKey, PartitionKey, ETag
+        $Details = Get-CIPPAzDataTableEntity @DetailTable -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $RowKey)'" -Property RowKey, PartitionKey, ETag
 
         if ($Details) {
             Remove-CIPPAzDataTableEntity -Force @DetailTable -Entity $Details

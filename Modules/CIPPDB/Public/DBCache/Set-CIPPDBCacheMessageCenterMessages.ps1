@@ -22,7 +22,7 @@ function Set-CIPPDBCacheMessageCenterMessages {
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MessageCenterMessages' -Data @($Messages) -AddCount -ClearOnEmpty
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached message center posts successfully' -sev Debug
     } catch {
-        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache message center posts: $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache message center posts: $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
         throw
     }
 }

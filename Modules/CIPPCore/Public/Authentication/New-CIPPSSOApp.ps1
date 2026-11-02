@@ -132,9 +132,9 @@ function New-CIPPSSOApp {
         }
     }
 
-    # Handle app management policy exemption (same pattern as SAM setup)
+    # Own policy, never the CIPP-SAM one: in certificate mode that policy blocks secrets and must stay that way.
     try {
-        $PolicyStatus = Update-AppManagementPolicy -ApplicationId $AppClientId
+        $PolicyStatus = Update-AppManagementPolicy -ApplicationId $AppClientId -PolicyName 'CIPP SSO and API Exemption Policy'
         Write-Information "[SSO-App] Policy exemption: $($PolicyStatus.PolicyAction)"
     } catch {
         Write-Warning "[SSO-App] App management policy update failed (secret creation may still work): $($_.Exception.Message)"

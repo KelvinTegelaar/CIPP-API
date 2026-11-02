@@ -163,6 +163,17 @@ function Start-TableCleanup {
             }
         }
         @{
+            # Scripted alert run history, one partition per UTC day. The range leaves the 'LastRun' markers alone.
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
+            TableName      = 'AlertRunHistory'
+            DataTableProps = @{
+                Filter   = "PartitionKey lt '$((Get-Date).AddDays(-30).ToUniversalTime().ToString('yyyyMMdd'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
             # Audit records processing never drained, including pre-partition tenant rows.
             FunctionName   = 'TableCleanupTask'
             Type           = 'CleanupRule'
@@ -176,7 +187,7 @@ function Start-TableCleanup {
         @{
             FunctionName = 'TableCleanupTask'
             Type         = 'DeleteTable'
-            Tables       = @('knownlocationdb', 'CacheExtensionSync', 'ExtensionSync', 'cachebpav2', 'CacheWebhookStats', 'FailedAuditLogDownloads')
+            Tables       = @('knownlocationdb', 'CacheExtensionSync', 'ExtensionSync', 'cachebpav2', 'CacheWebhookStats', 'FailedAuditLogDownloads', 'cachealertsandincidents', 'cachembxrules')
         }
     )
 

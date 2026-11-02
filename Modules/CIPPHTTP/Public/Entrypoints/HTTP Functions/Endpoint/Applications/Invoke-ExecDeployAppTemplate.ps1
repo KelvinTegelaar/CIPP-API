@@ -18,7 +18,7 @@ function Invoke-ExecDeployAppTemplate {
         }
 
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'AppTemplate' and RowKey eq '$TemplateId'"
+        $Filter = "PartitionKey eq 'AppTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TemplateId)'"
         $TemplateEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         if (!$TemplateEntity) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::NotFound; Body = @{ Results = @('Failed to deploy app template: Template not found') } })

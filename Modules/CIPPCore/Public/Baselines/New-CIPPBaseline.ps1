@@ -47,7 +47,7 @@ function New-CIPPBaseline {
             [PSCustomObject]@{
                 name       = $_.name
                 logic      = $_.logic ?? 'and'
-                conditions = @($_.conditions)
+                conditions = @($_.conditions | Where-Object { $_.type })
             }
         })
     $RolloutTable = Get-CippTable -tablename 'BaselineRollouts'
@@ -60,9 +60,11 @@ function New-CIPPBaseline {
     # The editor round-trips the tenant selector's own option objects ({label, value,
     # type}) verbatim via assignedTo/excludedTo; the flat excludedTenants values keep
     # the exclusion logic simple. Raw string values are accepted everywhere too.
+    $TenantLookup = Get-CIPPTenantLookup
     $ExcludedValues = @($Baseline.excludedTenants | ForEach-Object {
-            if ($null -eq $_) { } elseif ($_ -is [string]) { $_ } else { "$($_.value)" }
-        } | Where-Object { $_ })
+            $Value = if ($null -eq $_) { } elseif ($_ -is [string]) { $_ } else { "$($_.value)" }
+            if ($Value) { $TenantLookup[$Value].customerId ?? $Value }
+        })
     $RolloutEntity = @{
         PartitionKey    = 'rollout'
         RowKey          = "$GUID"
@@ -120,7 +122,8 @@ function New-CIPPBaseline {
             if ($Group) {
                 @{ scope = 'group'; scopeId = "$($Group.Id)"; scopeName = "$($Group.Name)"; segment = "group_$($Group.Id)" }
             } else {
-                @{ scope = 'tenant'; scopeId = $Value; scopeName = $Value; segment = "tenant_$Value" }
+                $TenantId = $TenantLookup[$Value].customerId ?? $Value
+                @{ scope = 'tenant'; scopeId = $TenantId; scopeName = $TenantLookup[$Value].defaultDomainName ?? $Value; segment = "tenant_$TenantId" }
             }
         }
     }
@@ -169,10 +172,47 @@ function New-CIPPBaseline {
             $Instances.Add($(if ($Config -is [string]) { $Config } else { $Config.instance ?? $Config.standard }))
         }
     }
+    # Package members resolve as '<Member>#p<package suffix>-<template>' (Expand-CIPPBaselineTemplatePackage).
+    $PackagePrefixes = @($Instances | ForEach-Object { if ($_ -match '#(.+)$') { "#p$($Matches[1])-" } else { '#ppkg-' } })
     $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
-    $Orphans = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "TemplateId eq '$SafeGuid'" | Where-Object { $Instances -notcontains $_.StandardName })
+    $Orphans = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "TemplateId eq '$SafeGuid'" | Where-Object {
+            $Name = "$($_.StandardName)"
+            $Instances -notcontains $Name -and -not ($PackagePrefixes | Where-Object { $Name.Contains($_) })
+        })
     if ($Orphans) {
         Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $Orphans
+    }
+
+    # Tenant progress is stored as a stage number. When stages were removed, reordered or inserted, keep each
+    # tenant only as far as the leading stages it had already reached, so it never gains a stage it has not met.
+    $SourceStages = @($Baseline.stages | ForEach-Object { $_.sourceStage })
+    if ($ExistingRollout -and @($SourceStages.Where({ $_ })).Count -gt 0) {
+        $StateTable = Get-CippTable -tablename 'BaselineRolloutState'
+        $States = @(Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeGuid'")
+        $StateTable.Force = $true
+        foreach ($State in $States) {
+            $OldStage = [int]($State.currentStage ?? 1)
+            $NewStage = 0
+            foreach ($Source in $SourceStages) {
+                if (-not $Source -or [int]$Source -gt $OldStage) { break }
+                $NewStage++
+            }
+            $NewStage = [Math]::Max($NewStage, 1)
+            $SameStage = [int]$SourceStages[$NewStage - 1] -eq $OldStage
+            if ($NewStage -eq $OldStage -and $SameStage) { continue }
+            Add-CIPPAzDataTableEntity @StateTable -Entity @{
+                PartitionKey    = "$GUID"
+                RowKey          = "$($State.RowKey)"
+                currentStage    = $NewStage
+                enteredStageAt  = $(if ($SameStage) { $State.enteredStageAt } else { $Now })
+                firstDeployedAt = $State.firstDeployedAt ?? $State.enteredStageAt ?? $Now
+            }
+            if ($SameStage) { continue }
+            $TenantDomain = $TenantLookup["$($State.RowKey)"].defaultDomainName ?? "$($State.RowKey)"
+            $StageName = $Baseline.stages[$NewStage - 1].name
+            $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantDomain -Standard $Baseline.templateName -Mode 'stage' -TriggeredBy $User -Outcome 'Stage Moved Back' -Detail "Moved back to stage $NewStage ($StageName) - its previous stage was removed or reordered"
+            Write-LogMessage -API 'Baselines' -tenant $TenantDomain -message "Moved $TenantDomain back to stage $NewStage ($StageName) of baseline $($Baseline.templateName) after its stages changed." -Sev 'Info'
+        }
     }
 
     @{ GUID = $GUID; DeltaCount = $DeltaCount }

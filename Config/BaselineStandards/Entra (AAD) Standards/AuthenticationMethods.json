@@ -6,7 +6,7 @@
   "impact": "High Impact",
   "helpText": "Manages the enabled state, group targeting and per-method settings of every authentication method the baseline configures. Methods left unconfigured are never touched.",
   "executiveText": "Standardizes which sign-in methods are available and to whom - enabling phishing-resistant methods and retiring weak ones consistently across the fleet.",
-  "docsDescription": "Grades each configured method: enabled state, include targeting (a named group or all users), and method-specific settings - Microsoft Authenticator feature states, Temporary Access Pass lifetimes, QR code settings, Email OTP external access and exclusions. The graded value is one list naming every drift. Remediation writes only the drifted methods through the shared authentication policy helper.",
+  "docsDescription": "Grades each configured method: enabled state, include targeting (a named group or all users), an optional exclude group, and method-specific settings - Microsoft Authenticator feature states, Temporary Access Pass lifetimes, QR code settings and Email OTP external access. The graded value is one list naming every drift. Remediation writes only the drifted methods through the shared authentication policy helper.",
   "impactColour": "error",
   "addedDate": "2026-08-16",
   "powershellEquivalent": "Set-CIPPAuthenticationPolicy",
@@ -270,8 +270,53 @@
       "omitWhenBlank": true,
       "type": "textField"
     },
+    "MicrosoftAuthenticatorExcludeGroup": {
+      "label": "Microsoft Authenticator: exclude group",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "FIDO2ExcludeGroup": {
+      "label": "FIDO2 Security Keys: exclude group",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "TAPExcludeGroup": {
+      "label": "Temporary Access Pass: exclude group",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "SoftwareOathExcludeGroup": {
+      "label": "Software OATH Tokens: exclude group",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "HardwareOathExcludeGroup": {
+      "label": "Hardware OATH Tokens: exclude group",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "SMSExcludeGroup": {
+      "label": "SMS: exclude group",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "VoiceExcludeGroup": {
+      "label": "Voice Call: exclude group",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
     "EmailExcludeGroup": {
       "label": "Email OTP: exclude group",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "x509CertificateExcludeGroup": {
+      "label": "Certificate-Based Authentication: exclude group",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "QRCodePinExcludeGroup": {
+      "label": "QR Code Pin: exclude group",
       "omitWhenBlank": true,
       "type": "textField"
     },

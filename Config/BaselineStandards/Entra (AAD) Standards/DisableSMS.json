@@ -20,10 +20,7 @@
   "appliesToTest": [
     "CIS_5_2_3_5",
     "EIDSCAAS04",
-    "SMB1001_2_5",
-    "SMB1001_2_5_L4",
-    "SMB1001_2_6",
-    "SMB1001_2_9"
+    "SMB1001_2_5_L4"
   ],
   "recommendedBy": [
     "CIPP"

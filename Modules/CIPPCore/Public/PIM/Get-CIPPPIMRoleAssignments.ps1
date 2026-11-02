@@ -11,7 +11,7 @@ function Get-CIPPPIMRoleAssignments {
           - roleEligibilitySchedules (v1.0, $expand=principal): ELIGIBLE assignments.
         Both need -AsApp: RoleManagement.*.Directory is an application permission.
 
-        Tenants without Entra ID P2 have no PIM API; there the unified roleManagement/directory/
+        Tenants without Entra ID P2 or ID Governance have no PIM API; there the unified roleManagement/directory/
         roleAssignments list is used and every row is Permanent/Direct (PIMCapable = $false).
 
         AssignmentType values:
@@ -203,7 +203,7 @@ function Get-CIPPPIMRoleAssignments {
             Add-InstanceRows -Instances $Instances -PIMCapable $true
             Add-EligibilityRows -Schedules $Eligibilities
         } else {
-            # No PIM data cached (non-P2 tenant or PIM never onboarded): every assignment is
+            # No PIM data cached (no PIM licence or PIM never onboarded): every assignment is
             # permanent and direct. The RoleAssignments cache covers custom roles and AU scopes;
             # directoryRoles members (built-in roles at directory scope) are the older fallback.
             $CachedAssignments = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'RoleAssignments')
@@ -223,7 +223,7 @@ function Get-CIPPPIMRoleAssignments {
             }
         }
     } else {
-        $PIMCapable = [bool](Test-CIPPStandardLicense -StandardName 'PIMRoleAssignments' -TenantFilter $TenantFilter -Preset EntraP2 -SkipLog)
+        $PIMCapable = [bool](Test-CIPPStandardLicense -StandardName 'PIMRoleAssignments' -TenantFilter $TenantFilter -Preset PIM -SkipLog)
 
         $Filters = [System.Collections.Generic.List[string]]::new()
         if ($PrincipalId) { $Filters.Add("principalId eq '$PrincipalId'") }

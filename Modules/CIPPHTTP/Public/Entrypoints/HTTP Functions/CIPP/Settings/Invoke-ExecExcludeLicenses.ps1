@@ -47,7 +47,7 @@ function Invoke-ExecExcludeLicenses {
             }
             'SetShowInDropdown' {
                 $ShowInDropdown = $Request.Body.ShowInDropdown -eq $true
-                $Filter = "RowKey eq '{0}' and PartitionKey eq 'License'" -f $GUID
+                $Filter = "RowKey eq '{0}' and PartitionKey eq 'License'" -f (ConvertTo-CIPPODataFilterValue -Value $GUID)
                 $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
                 if (!$Entity) { throw "Excluded license not found: $GUID" }
                 if (!$DisplayName) { $DisplayName = $Entity.Product_Display_Name }
@@ -64,7 +64,7 @@ function Invoke-ExecExcludeLicenses {
 
             }
             'RemoveExclusion' {
-                $Filter = "RowKey eq '{0}' and PartitionKey eq 'License'" -f $GUID
+                $Filter = "RowKey eq '{0}' and PartitionKey eq 'License'" -f (ConvertTo-CIPPODataFilterValue -Value $GUID)
                 $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
                 Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entity
                 $Result = "Success. Removed $DisplayName($GUID) from the excluded licenses list."

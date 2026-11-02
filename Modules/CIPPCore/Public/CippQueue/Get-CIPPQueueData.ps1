@@ -3,8 +3,10 @@ function Get-CIPPQueueData {
 
     $QueueId = $Request.Query.QueueId ?? $QueueId
     $Reference = $Request.Query.Reference ?? $Reference
-    # Whoever may read a queue may follow it live; without a request caller this does nothing.
-    if ($QueueId) { Add-CIPPRealtimeWatch -JobId $QueueId -Run }
+    # Whoever may read a queue may follow it live; without a request caller this does nothing. Live events carry
+    # the unfiltered run, so a tenant-restricted caller polls the status Select-CippAllowedQueueData narrows instead.
+    $Restricted = $script:CippAllowedTenantsStorage -and $null -ne $script:CippAllowedTenantsStorage.Value
+    if ($QueueId -and -not $Restricted) { Add-CIPPRealtimeWatch -JobId $QueueId -Run }
 
     if ($env:CIPPNG -eq 'true') {
         # Craft rolls a queue's chained and child runs (same QueueId suffix) up into one status, so a tracker

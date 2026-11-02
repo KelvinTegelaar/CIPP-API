@@ -87,7 +87,7 @@ function Invoke-ExecGraphExplorerPreset {
             Add-CIPPAzDataTableEntity @Table -Entity $Preset -Force
             $Success = $true
         } else {
-            $Entity = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$Id'"
+            $Entity = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Id)'"
             if ($Entity.Owner -eq $Username ) {
                 if ($Action -eq 'Delete') {
                     Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entity

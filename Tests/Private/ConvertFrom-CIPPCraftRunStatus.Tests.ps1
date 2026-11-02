@@ -16,6 +16,7 @@ Describe 'ConvertFrom-CIPPCraftRunStatus' {
 
         $Entry.PartitionKey | Should -Be 'CippQueue'
         $Entry.RowKey | Should -Be 'GraphRequestOrchestrator-f761aa95-044c-4b22-8cb4-fb7938aceb95'
+        $Entry.QueueId | Should -Be 'f761aa95-044c-4b22-8cb4-fb7938aceb95'
         $Entry.Name | Should -Be 'Users (All Tenants)'
         $Entry.Link | Should -Be '/identity/administration/users'
         $Entry.Reference | Should -Be 'AllTenants-725f6f8c'
@@ -39,12 +40,22 @@ Describe 'ConvertFrom-CIPPCraftRunStatus' {
         @($Entry.Tasks.Status) | Should -Be @('Completed', 'Failed')
     }
 
+    It 'carries how much work from other queues waits ahead of it' {
+        $Waiting = [pscustomobject]@{ runName = 'Orch-2'; status = 'Queued'; total = 10; ahead = 340; runsAhead = 3; tasks = @() }
+
+        $Entry = ConvertFrom-CIPPCraftRunStatus -Run $Waiting
+
+        $Entry.QueuedAhead | Should -Be 340
+        $Entry.RunsAhead | Should -Be 3
+    }
+
     It 'falls back to the run name when no label was registered' {
         $Bare = [pscustomobject]@{ runName = 'Orch-1'; reference = 'Orch-1'; status = 'Queued'; total = 0; tasks = @() }
 
         $Entry = ConvertFrom-CIPPCraftRunStatus -Run $Bare
 
         $Entry.Name | Should -Be 'Orch-1'
+        $Entry.QueueId | Should -Be 'Orch-1'
         $Entry.PercentComplete | Should -Be 0
         @($Entry.Tasks).Count | Should -Be 0
     }

@@ -49,7 +49,7 @@ function Invoke-ExecAppPermissionTemplate {
         'Delete' {
             try {
                 $TemplateId = $Request.Body.TemplateId
-                $Template = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Templates' and RowKey eq '$TemplateId'")
+                $Template = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Templates' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TemplateId)'")
                 $TemplateName = $Template.TemplateName
 
                 if ($TemplateId) {
@@ -76,7 +76,7 @@ function Invoke-ExecAppPermissionTemplate {
             $filter = "PartitionKey eq 'Templates'"
             if ($Request.Query.TemplateId) {
                 $templateId = $Request.Query.TemplateId
-                $filter = "PartitionKey eq 'Templates' and RowKey eq '$templateId'"
+                $filter = "PartitionKey eq 'Templates' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $templateId)'"
             }
 
             $Body = Get-CIPPAzDataTableEntity @Table -Filter $filter | ForEach-Object {

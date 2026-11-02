@@ -16,7 +16,41 @@ BeforeAll {
         if ($null -eq $script:SavedConfig) { throw 'Configuration must be saved before scheduling.' }
         $script:ScheduleCalls += @{ Reschedule = $Reschedule.IsPresent; NextSync = $NextSync; Extensions = $Extensions }
     }
+    function Initialize-NinjaOneCredentialField { param($Configuration) $script:InitCalls.Add($Configuration) }
     . "$PSScriptRoot/../../Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/CIPP/Extensions/Invoke-ExecExtensionsConfig.ps1"
+}
+
+Describe 'NinjaOne credential fields on save' {
+    BeforeEach {
+        $script:SavedConfig = $null
+        $script:ScheduleCalls = @()
+        $script:InitCalls = [System.Collections.Generic.List[object]]::new()
+        $request = @{
+            Params  = @{ CIPPEndpoint = 'ExecExtensionsConfig' }
+            Headers = @{ 'x-ms-original-url' = 'http://localhost:4280/api/ExecExtensionsConfig' }
+            Body    = [PSCustomObject]@{ NinjaOne = [PSCustomObject]@{ Enabled = $true; Instance = 'eu.ninjarmm.com'; APIKey = 'SentToKeyVault'; IncludeLAPS = $true; IncludeBitLocker = $false } }
+        }
+    }
+    It 'creates or adopts the credential fields from the saved configuration when a switch is on' {
+        $response = Invoke-ExecExtensionsConfig -Request $request
+        $response.Body.Results | Should -BeLike 'Successfully saved*'
+        $script:InitCalls.Count | Should -Be 1
+        $script:InitCalls[0].IncludeLAPS | Should -BeTrue
+        $script:InitCalls[0].APIKey | Should -Be 'SentToKeyVault'
+        $script:InitCalls[0].Instance | Should -Be 'eu.ninjarmm.com'
+    }
+    It 'leaves the fields alone when both switches are off' {
+        $request.Body.NinjaOne.IncludeLAPS = $false
+        $null = Invoke-ExecExtensionsConfig -Request $request
+        $script:InitCalls.Count | Should -Be 0
+    }
+    It 'still saves and reports when NinjaOne cannot be reached' {
+        Mock Initialize-NinjaOneCredentialField { throw 'token refused' }
+        $response = Invoke-ExecExtensionsConfig -Request $request
+        $response.StatusCode | Should -Be 200
+        $response.Body.Results | Should -BeLike 'Successfully saved*token refused*'
+        $script:SavedConfig.NinjaOne.IncludeLAPS | Should -BeTrue
+    }
 }
 
 Describe 'Extension configuration save ordering' {

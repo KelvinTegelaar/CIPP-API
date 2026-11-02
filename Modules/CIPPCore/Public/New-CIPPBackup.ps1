@@ -58,6 +58,9 @@ function New-CIPPBackup {
                         'TenantProperties'
                         'TenantGroups'
                         'TenantGroupMembers'
+                        'BaselineRollouts'
+                        'Baselines'
+                        'BaselineRolloutState'
                     )
                     $CSVfile = foreach ($CSVTable in $BackupTables) {
                         $Table = Get-CippTable -tablename $CSVTable

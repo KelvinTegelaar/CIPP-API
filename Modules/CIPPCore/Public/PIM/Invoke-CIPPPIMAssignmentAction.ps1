@@ -94,9 +94,9 @@ function Invoke-CIPPPIMAssignmentAction {
     if ([string]::IsNullOrWhiteSpace($DirectoryScopeId)) { $DirectoryScopeId = '/' }
     if ([string]::IsNullOrWhiteSpace($Justification)) { $Justification = 'Changed via CIPP' }
 
-    $PIMCapable = [bool](Test-CIPPStandardLicense -StandardName 'PIMRoleAssignment' -TenantFilter $TenantFilter -Preset EntraP2 -SkipLog)
+    $PIMCapable = [bool](Test-CIPPStandardLicense -StandardName 'PIMRoleAssignment' -TenantFilter $TenantFilter -Preset PIM -SkipLog)
     if (-not $PIMCapable) {
-        throw [System.ArgumentException]::new("Tenant $TenantFilter is not licensed for Entra ID P2 / Privileged Identity Management, so PIM assignment changes are not available. Assignments can still be removed from the PIM page.")
+        throw [System.ArgumentException]::new("Tenant $TenantFilter is not licensed for Privileged Identity Management (Entra ID P2 or ID Governance), so PIM assignment changes are not available. Assignments can still be removed from the PIM page.")
     }
 
     # Current state for this principal (cheap: filtered at Graph) and the role's policy caps.

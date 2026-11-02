@@ -85,8 +85,8 @@ function Remove-CIPPGroupOwnerships {
             $GroupName = $Group.displayName ?? $Group.id
 
             if ($Group.onPremisesSyncEnabled) {
-                $Results.Add("Error: Could not change the owners of group '$GroupName' because it is synced with Active Directory.")
-                Write-LogMessage -headers $Headers -API $APIName -message "Could not change the owners of group '$GroupName' for $Username because it is synced with Active Directory." -Sev 'Warning' -tenant $TenantFilter
+                $Results.Add("Skipped changing the owners of group '$GroupName' because it is synced with Active Directory. Change the owners on-premises.")
+                Write-LogMessage -headers $Headers -API $APIName -message "Skipped changing the owners of group '$GroupName' for $Username because it is synced with Active Directory." -Sev 'Info' -tenant $TenantFilter
                 continue
             }
 

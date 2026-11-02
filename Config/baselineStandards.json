@@ -902,7 +902,7 @@
     "cat": "Entra (AAD) Standards",
     "tag": [],
     "helpText": "Manages the enabled state, group targeting and per-method settings of every authentication method the baseline configures. Methods left unconfigured are never touched.",
-    "docsDescription": "Grades each configured method: enabled state, include targeting (a named group or all users), and method-specific settings - Microsoft Authenticator feature states, Temporary Access Pass lifetimes, QR code settings, Email OTP external access and exclusions. The graded value is one list naming every drift. Remediation writes only the drifted methods through the shared authentication policy helper.",
+    "docsDescription": "Grades each configured method: enabled state, include targeting (a named group or all users), an optional exclude group, and method-specific settings - Microsoft Authenticator feature states, Temporary Access Pass lifetimes, QR code settings and Email OTP external access. The graded value is one list naming every drift. Remediation writes only the drifted methods through the shared authentication policy helper.",
     "executiveText": "Standardizes which sign-in methods are available and to whom - enabling phishing-resistant methods and retiring weak ones consistently across the fleet.",
     "label": "Configure Authentication Methods",
     "impact": "High Impact",
@@ -1183,8 +1183,62 @@
         "type": "textField"
       },
       {
+        "name": "standards.AuthenticationMethods.MicrosoftAuthenticatorExcludeGroup",
+        "label": "Microsoft Authenticator: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.FIDO2ExcludeGroup",
+        "label": "FIDO2 Security Keys: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.TAPExcludeGroup",
+        "label": "Temporary Access Pass: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.SoftwareOathExcludeGroup",
+        "label": "Software OATH Tokens: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.HardwareOathExcludeGroup",
+        "label": "Hardware OATH Tokens: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.SMSExcludeGroup",
+        "label": "SMS: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.VoiceExcludeGroup",
+        "label": "Voice Call: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
         "name": "standards.AuthenticationMethods.EmailExcludeGroup",
         "label": "Email OTP: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.x509CertificateExcludeGroup",
+        "label": "Certificate-Based Authentication: exclude group",
+        "omitWhenBlank": true,
+        "type": "textField"
+      },
+      {
+        "name": "standards.AuthenticationMethods.QRCodePinExcludeGroup",
+        "label": "QR Code Pin: exclude group",
         "omitWhenBlank": true,
         "type": "textField"
       },
@@ -4462,6 +4516,48 @@
     ]
   },
   {
+    "name": "standards.DisableInactiveApps",
+    "cat": "Entra (AAD) Standards",
+    "tag": [],
+    "helpText": "Finds enterprise apps with no sign-in for a set number of days (minimum 30), including apps never used since they were added. Microsoft apps and CIPP are skipped. Exclude external MFA (e.g. Cisco Duo) and GSA traffic forwarding apps. Use in Report mode only; auto-remediation is not recommended. Requires Entra ID P1.",
+    "docsDescription": "Reports enterprise apps with no sign-in for the configured number of days (minimum 30), from the Entra sign-in activity report (Entra ID P1); remediate mode disables them. Apps never signed in count once older than the same window. Microsoft-owned apps, managed identities, CIPP's own app and apps re-enabled in the last 7 days are skipped. Exclusions match display name, app ID or object ID and accept custom variables. Exclude external MFA apps (e.g. Cisco Duo) and GSA traffic forwarding apps (GSA-...), which can show no sign-ins while in use. Recommended in Report mode only, not auto-remediate.",
+    "executiveText": "Identifies third-party and custom apps that are no longer used, so dormant apps with broad permissions can be reviewed and removed before they are abused.",
+    "label": "Disable enterprise applications that have not signed in for a number of days",
+    "impact": "High Impact",
+    "impactColour": "danger",
+    "addedDate": "2026-10-28",
+    "powershellEquivalent": "Get-MgBetaReportServicePrincipalSignInActivity & Update-MgServicePrincipal -AccountEnabled:$false",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "AAD_PREMIUM",
+      "AAD_PREMIUM_P2"
+    ],
+    "addedComponent": [
+      {
+        "name": "standards.DisableInactiveApps.days",
+        "type": "number",
+        "label": "Days without a sign-in (minimum 30)",
+        "helperText": "Also applies to apps that have never signed in, counted from when they were added.",
+        "required": true,
+        "default": 180,
+        "validators": {
+          "min": {
+            "value": 30,
+            "message": "Minimum value is 30"
+          }
+        }
+      },
+      {
+        "name": "standards.DisableInactiveApps.excludedApps",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "omitWhenBlank": true,
+        "label": "Excluded apps (display name, app ID or %variable%)"
+      }
+    ]
+  },
+  {
     "name": "standards.DisableInactiveUsers",
     "cat": "Entra (AAD) Standards",
     "tag": [
@@ -5797,6 +5893,43 @@
         "label": "Exclude groups by display name keyword",
         "omitWhenBlank": true,
         "default": ""
+      }
+    ]
+  },
+  {
+    "name": "standards.EnrollmentRestrictionTemplate",
+    "cat": "Templates",
+    "tag": [],
+    "helpText": "Deploy enrollment (device type) restrictions for specific groups from CIPP templates, with their platform settings and group assignment. An existing restriction with the same name and platform is updated.",
+    "docsDescription": "Deploy an enrollment (device type) restriction from a CIPP template. Grades whether every object the platform needs exists (two for Android), the platform settings, and the assignment as all users or the set of groups matching the template's group names. Priority is applied when the restriction is created and is not graded afterwards. Remediation creates or patches the restriction through Set-CIPPEnrollmentRestriction.",
+    "executiveText": "Applies the same rules about which devices staff can enrol, such as allowing personal Android phones only through a work profile or blocking personal iPhones, to the right groups in every tenant.",
+    "label": "Enrollment Restriction Template",
+    "impact": "High Impact",
+    "impactColour": "danger",
+    "addedDate": "2026-10-29",
+    "powershellEquivalent": "Graph: POST or PATCH deviceManagement/deviceEnrollmentConfigurations, then setPriority and assign",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "INTUNE_A",
+      "MDM_Services",
+      "EMS",
+      "SCCM",
+      "MICROSOFTINTUNEPLAN1"
+    ],
+    "multiple": true,
+    "addedComponent": [
+      {
+        "name": "standards.EnrollmentRestrictionTemplate.enrollmentRestrictionTemplate",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Select Enrollment Restriction Template",
+        "required": true,
+        "api": {
+          "url": "/api/ListEnrollmentRestrictionTemplates",
+          "labelField": "displayName",
+          "valueField": "GUID",
+          "queryKey": "ListEnrollmentRestrictionTemplates"
+        }
       }
     ]
   },
@@ -7821,7 +7954,7 @@
     "name": "standards.MessageEncryption",
     "cat": "Exchange Standards",
     "tag": [],
-    "helpText": "Enables Microsoft Purview Message Encryption by turning on Azure RMS licensing for Exchange Online, and turns on simplified client access so the Encrypt button appears in Outlook on the web and the new Outlook. The optional settings default to \"Do not change\", which leaves the tenant's current value alone and out of the drift check. Branding is configured in the Set Encrypted Message Branding (OME) standard.",
+    "helpText": "Requires Azure Rights Management (Business Premium, E3/E5, A1-A5, G3/G5 or an Azure Information Protection P1 add-on); tenants without it are skipped as unlicensed. Enables Microsoft Purview Message Encryption by turning on Azure RMS licensing for Exchange Online, and turns on simplified client access so the Encrypt button appears in Outlook on the web and the new Outlook. The optional settings default to \"Do not change\", which leaves the tenant's current value alone and out of the drift check. Branding is configured in the Set Encrypted Message Branding (OME) standard.",
     "docsDescription": "Grades AzureRMSLicensingEnabled and SimplifiedClientAccessEnabled as true, plus EnablePdfEncryption, DecryptAttachmentForEncryptOnly, SimplifiedClientAccessDoNotForwardDisabled, SimplifiedClientAccessEncryptOnlyDisabled and TransportDecryptionSetting when the baseline picks a value. Remediation sends the graded values in one Set-IRMConfiguration call.",
     "executiveText": "Turns on the built-in encryption that lets staff send protected email to anyone, including recipients outside the organization. Uses licensing the organization already owns, removing the need for a separate secure-email product.",
     "label": "Enable Purview Message Encryption",
@@ -7831,11 +7964,17 @@
     "powershellEquivalent": "Set-IRMConfiguration -AzureRMSLicensingEnabled $true -SimplifiedClientAccessEnabled $true",
     "recommendedBy": [],
     "requiredCapabilities": [
-      "EXCHANGE_S_STANDARD",
-      "EXCHANGE_S_ENTERPRISE",
-      "EXCHANGE_S_STANDARD_GOV",
-      "EXCHANGE_S_ENTERPRISE_GOV",
-      "EXCHANGE_LITE"
+      [
+        "EXCHANGE_S_STANDARD",
+        "EXCHANGE_S_ENTERPRISE",
+        "EXCHANGE_S_STANDARD_GOV",
+        "EXCHANGE_S_ENTERPRISE_GOV",
+        "EXCHANGE_LITE"
+      ],
+      [
+        "RMS_S_ENTERPRISE",
+        "RMS_S_ENTERPRISE_GOV"
+      ]
     ],
     "addedComponent": [
       {
@@ -10017,8 +10156,8 @@
     "name": "standards.SetDefaultMailboxFont",
     "cat": "Exchange Standards",
     "tag": [],
-    "helpText": "Sets the default compose font name, size and colour for all user and shared mailboxes. Font size is the 1-7 scale Exchange stores, not a point size. Applies to Outlook on the web and new Outlook only - classic Outlook for Windows/Mac uses its own local font settings and is not affected.",
-    "docsDescription": "Loops through all UserMailbox and SharedMailbox recipients and sets the Outlook on the web default compose font using `Set-MailboxMessageConfiguration`. The font is read from the MailboxMessageConfiguration cache, refreshed when older than 3 hours, and mailboxes already matching the configured font are skipped, so steady-state runs make no writes. Mailboxes whose message configuration cannot be read are reported as drift. Font size is the integer 1-7 scale Exchange stores rather than a point size: 3 is the Exchange default and corresponds to 12pt. Note that these settings apply to Outlook on the web and the new Outlook client only; classic Outlook for Windows and Mac read their compose font from local client settings. See [Microsoft's documentation.](https://learn.microsoft.com/powershell/module/exchangepowershell/set-mailboxmessageconfiguration)",
+    "helpText": "Sets the default compose font name, size and colour for all user and shared mailboxes. Font size is either the legacy 1-7 scale Exchange stores (3 is 12pt) or a point size from 8 to 72. Applies to Outlook on the web and new Outlook only - classic Outlook for Windows/Mac uses its own local font settings and is not affected.",
+    "docsDescription": "Loops through all UserMailbox and SharedMailbox recipients and sets the Outlook on the web default compose font using `Set-MailboxMessageConfiguration`. The font is read from the MailboxMessageConfiguration cache, refreshed when older than 3 hours, and mailboxes already matching the configured font are skipped, so steady-state runs make no writes. Mailboxes whose message configuration cannot be read are reported as drift. Font size accepts the legacy integer 1-7 scale (3 is the Exchange default and corresponds to 12pt) or a point size from 8 to 72; Outlook on the web renders values above 7 as that point size, so 11 gives 11pt. Note that these settings apply to Outlook on the web and the new Outlook client only; classic Outlook for Windows and Mac read their compose font from local client settings. See [Microsoft's documentation.](https://learn.microsoft.com/powershell/module/exchangepowershell/set-mailboxmessageconfiguration)",
     "executiveText": "Applies a consistent default font, size and colour to outgoing email so that messages from across the organisation look uniform and on-brand. This affects the web and new Outlook clients; users can still change the font on an individual message.",
     "label": "Set default mailbox font, size and colour",
     "impact": "Low Impact",
@@ -10093,17 +10232,17 @@
         "name": "standards.SetDefaultMailboxFont.DefaultFontSize",
         "type": "number",
         "required": true,
-        "label": "Default font size (1-7)",
+        "label": "Default font size (1-7 scale or 8-72 pt)",
         "default": 3,
-        "helperText": "Exchange stores a 1-7 size scale, not a point size. 3 is the Exchange default and corresponds to 12pt; lower is smaller, higher is larger.",
+        "helperText": "1-7 is the legacy Exchange scale where 3 is the default and corresponds to 12pt. Values from 8 to 72 are treated as point sizes, so 11 gives 11pt.",
         "validators": {
           "min": {
             "value": 1,
             "message": "Minimum value is 1"
           },
           "max": {
-            "value": 7,
-            "message": "Maximum value is 7"
+            "value": 72,
+            "message": "Maximum value is 72"
           }
         }
       },
@@ -11531,13 +11670,13 @@
       "meeting_externalrequestcontrol_v1",
       "meeting_pstnusersbypasslobby_v1"
     ],
-    "helpText": "Defines the CIS recommended global meeting policy for Teams. This includes AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl, ExternalBotAccessMode",
+    "helpText": "Defines the CIS recommended global meeting policy for Teams. This includes AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl, AllowParticipantGiveRequestControl, ExternalBotAccessMode, AllowTranscription",
     "executiveText": "Establishes security-focused default settings for Teams meetings, controlling who can join meetings, present content, and participate in chats. These policies balance collaboration needs with security requirements, ensuring meetings remain productive while protecting against unauthorized access and disruption.",
     "label": "Define Global Meeting Policy for Teams",
     "impact": "Low Impact",
     "impactColour": "info",
     "addedDate": "2024-11-12",
-    "powershellEquivalent": "Set-CsTeamsMeetingPolicy -AllowAnonymousUsersToJoinMeeting $false -AllowAnonymousUsersToStartMeeting $false -AutoAdmittedUsers $AutoAdmittedUsers -AllowPSTNUsersToBypassLobby $false -MeetingChatEnabledType EnabledExceptAnonymous -DesignatedPresenterRoleMode $DesignatedPresenterRoleMode -AllowExternalParticipantGiveRequestControl $false -AllowParticipantGiveRequestControl $false -ExternalBotAccessMode $ExternalBotAccessMode",
+    "powershellEquivalent": "Set-CsTeamsMeetingPolicy -AllowAnonymousUsersToJoinMeeting $false -AllowAnonymousUsersToStartMeeting $false -AutoAdmittedUsers $AutoAdmittedUsers -AllowPSTNUsersToBypassLobby $false -MeetingChatEnabledType EnabledExceptAnonymous -DesignatedPresenterRoleMode $DesignatedPresenterRoleMode -AllowExternalParticipantGiveRequestControl $false -AllowParticipantGiveRequestControl $false -ExternalBotAccessMode $ExternalBotAccessMode -AllowTranscription $AllowTranscription",
     "recommendedBy": [
       "CIS"
     ],
@@ -11707,6 +11846,28 @@
         ],
         "default": "",
         "recommended": false
+      },
+      {
+        "name": "standards.TeamsGlobalMeetingPolicy.AllowTranscription",
+        "type": "autoComplete",
+        "label": "Meeting transcription",
+        "helperText": "Leave blank to keep the tenant's current value.",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Keep the tenant's current value",
+            "value": ""
+          },
+          {
+            "label": "On",
+            "value": true
+          },
+          {
+            "label": "Off",
+            "value": false
+          }
+        ],
+        "default": ""
       },
       {
         "name": "standards.TeamsGlobalMeetingPolicy.ExternalBotAccessMode",
