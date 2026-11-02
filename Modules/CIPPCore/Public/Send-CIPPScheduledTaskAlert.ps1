@@ -339,21 +339,27 @@ function Send-CIPPScheduledTaskAlert {
                             }
                         }
 
-                        # Device-targeted tasks (device actions, LAPS and recovery key retrieval) carry
-                        # the Intune managed device id as GUID or DeviceId, sometimes with a serial or name.
+                        # Device-targeted tasks carry the Intune managed device id (GUID/DeviceId, or
+                        # DeviceFilter on New-CIPPDeviceAction) or the Entra device id (Device on the LAPS
+                        # and recovery key commands), sometimes with a serial or name.
                         $DeviceIntuneId = $null
-                        foreach ($DeviceKey in @('GUID', 'DeviceId', 'ManagedDeviceId', 'DeviceID')) {
+                        $DeviceEntraId = $null
+                        foreach ($DeviceKey in @('GUID', 'DeviceId', 'ManagedDeviceId', 'DeviceID', 'DeviceFilter', 'Device')) {
                             $DeviceValue = $TaskParameters.$DeviceKey
                             if ($DeviceValue -isnot [string] -and $null -ne $DeviceValue.value -and $DeviceValue.value -is [string]) { $DeviceValue = $DeviceValue.value }
-                            if ($DeviceValue -is [string] -and $DeviceValue -match $GuidPattern) { $DeviceIntuneId = $DeviceValue; break }
+                            if ($DeviceValue -is [string] -and $DeviceValue -match $GuidPattern) {
+                                if ($DeviceKey -eq 'Device') { $DeviceEntraId = $DeviceValue } else { $DeviceIntuneId = $DeviceValue }
+                                break
+                            }
                         }
                         $DeviceSerial = @('SerialNumber', 'serialNumber') | ForEach-Object { $TaskParameters.$_ } | Where-Object { $_ -is [string] -and -not [string]::IsNullOrWhiteSpace($_) -and $_ -notmatch '%' } | Select-Object -First 1
                         $DeviceName = @('DeviceName', 'deviceName') | ForEach-Object { $TaskParameters.$_ } | Where-Object { $_ -is [string] -and -not [string]::IsNullOrWhiteSpace($_) -and $_ -notmatch '%' } | Select-Object -First 1
-                        if ($DeviceIntuneId -or $DeviceSerial) {
+                        if ($DeviceIntuneId -or $DeviceEntraId -or $DeviceSerial) {
                             $TaskAffectedDevice = [pscustomobject]@{
-                                IntuneId     = $DeviceIntuneId
-                                SerialNumber = $DeviceSerial
-                                DisplayName  = $DeviceName
+                                IntuneId      = $DeviceIntuneId
+                                EntraDeviceId = $DeviceEntraId
+                                SerialNumber  = $DeviceSerial
+                                DisplayName   = $DeviceName
                             }
                         }
 

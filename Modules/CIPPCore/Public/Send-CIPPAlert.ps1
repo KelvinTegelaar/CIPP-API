@@ -17,7 +17,7 @@ function Send-CIPPAlert {
         $RowKey = [string][guid]::NewGuid(),
         $Attachments,
         $AffectedUser,
-        # Device the alert is about: IntuneId and/or SerialNumber, DisplayName. PSA extensions that
+        # Device the alert is about: IntuneId and/or EntraDeviceId and/or SerialNumber, DisplayName. PSA extensions that
         # can attach a device use it; the others ignore it.
         $AffectedDevice,
         $PsaTicketPriority,
