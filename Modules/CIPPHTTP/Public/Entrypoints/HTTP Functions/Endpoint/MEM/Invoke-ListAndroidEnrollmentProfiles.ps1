@@ -44,7 +44,7 @@ function Invoke-ListAndroidEnrollmentProfiles {
     } catch {
         $StatusCode = [HttpStatusCode]::InternalServerError
         $ErrorMessage = Get-CippException -Exception $_
-        $Results = "Failed to list Android enrollment profiles: $($ErrorMessage.NormalizedMessage)"
+        $Results = "Failed to list Android enrollment profiles: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev Error -LogData $ErrorMessage
     }
 

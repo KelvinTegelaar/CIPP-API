@@ -12,11 +12,27 @@ function Invoke-AddUserBulk {
     # Interact with body parameters or the body of the request.
     $TenantFilter = $Request.Body.tenantFilter
 
+    # Bulk user creation is single-tenant only. Without this guard an 'AllTenants' (or otherwise
+    # unresolvable) tenantFilter makes New-GraphBulkRequest return $null non-terminating, so the
+    # results loop runs zero times and the endpoint reports success while creating nothing.
+    if (-not $TenantFilter -or $TenantFilter -eq 'AllTenants' -or -not (Get-Tenants -TenantFilter $TenantFilter)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{
+                    Results = @{
+                        resultText = 'Bulk user creation is single-tenant only. Select a specific tenant before creating users.'
+                        state      = 'error'
+                    }
+                }
+            })
+    }
+
     $BulkUsers = $Request.Body.BulkUser
     $AssignedLicenses = $Request.Body.licenses
     $UsageLocation = $Request.Body.usageLocation
 
     if (!$BulkUsers) {
+        $StatusCode = [HttpStatusCode]::BadRequest
         $Body = @{
             Results = @{
                 resultText = 'No users specified to import'
@@ -114,6 +130,11 @@ function Invoke-AddUserBulk {
             $BulkResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests $BulkRequests
             Write-Warning "We have $($BulkResults.Count) results"
             #Write-Information ($BulkResults | ConvertTo-Json -Depth 10)
+            $LicenseRequests = [System.Collections.Generic.List[object]]::new()
+            if ($AssignedLicenses) {
+                $GuidPattern = '([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})'
+                $LicenseSkus = $AssignedLicenses.value ?? $AssignedLicenses | Where-Object { $_ -match $GuidPattern }
+            }
             foreach ($BulkResult in $BulkResults) {
                 if ($BulkResult.status -ne 201) {
                     Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($TenantFilter) -message "Failed to create user $($BulkResult.id). Error:$($BulkResult.body.error.message)" -Sev 'Error'
@@ -124,16 +145,40 @@ function Invoke-AddUserBulk {
                 } else {
                     $Message = $Messages.Where({ $_.id -eq $BulkResult.id })
                     if ($AssignedLicenses) {
-                        $GuidPattern = '([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})'
-                        $LicenseSkus = $AssignedLicenses.value ?? $AssignedLicenses | Where-Object { $_ -match $GuidPattern }
-                        Set-CIPPUserLicense -UserId $BulkResult.id -AddLicenses $LicenseSkus -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
+                        $LicenseRequests.Add([PSCustomObject]@{
+                                UserId            = $BulkResult.id
+                                UserPrincipalName = $BulkResult.id
+                                AddLicenses       = @($LicenseSkus)
+                                RemoveLicenses    = @()
+                                IsReplace         = $false
+                            })
                     }
+                    Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Message.resultText -Sev 'Info'
                     $Results.Add(@{
                             resultText = $Message.resultText
                             state      = 'success'
                             copyField  = $Message.copyField
                             username   = $BulkResult.body.userPrincipalName
                         })
+                }
+            }
+            if ($LicenseRequests.Count -gt 0) {
+                try {
+                    $LicenseResults = Set-CIPPUserLicense -LicenseRequests $LicenseRequests -TenantFilter $TenantFilter -APIName $APIName -Headers $Request.Headers
+                    foreach ($LicenseResult in @($LicenseResults).Where({ $_.state -eq 'error' })) {
+                        $Results.Add(@{
+                                resultText = $LicenseResult.resultText
+                                state      = 'error'
+                            })
+                    }
+                } catch {
+                    $ErrorMessage = Get-CippException -Exception $_
+                    foreach ($LicenseRequest in $LicenseRequests) {
+                        $Results.Add(@{
+                                resultText = "Failed to assign licenses for user $($LicenseRequest.UserId): $($ErrorMessage.NormalizedError)"
+                                state      = 'error'
+                            })
+                    }
                 }
             }
         } else {
@@ -145,10 +190,11 @@ function Invoke-AddUserBulk {
         $Body = @{
             Results = @($Results)
         }
+        $StatusCode = Get-CippBulkStatusCode -Total @($Results).Count -Failed @($Results.Where({ $_.state -eq 'error' })).Count
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode ?? [HttpStatusCode]::OK
             Body       = $Body
         })
 

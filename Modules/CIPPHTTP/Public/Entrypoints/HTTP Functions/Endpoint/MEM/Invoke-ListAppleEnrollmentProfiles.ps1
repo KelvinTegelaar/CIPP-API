@@ -18,19 +18,22 @@ function Invoke-ListAppleEnrollmentProfiles {
         $DepOnboardingSettings = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/depOnboardingSettings' -tenantid $TenantFilter)
         $Tokens = foreach ($DepSetting in $DepOnboardingSettings) {
             $Token = $DepSetting | Select-Object *
-            $Token | Add-Member -NotePropertyName 'daysUntilExpiration' -NotePropertyValue $(
-                if ($Token.tokenExpirationDateTime) {
-                    [math]::Floor(([datetime]$Token.tokenExpirationDateTime - [datetime]::UtcNow).TotalDays)
-                } else {
-                    $null
-                }
-            ) -Force
-            $Token | Add-Member -NotePropertyName 'isExpired' -NotePropertyValue $(
-                if ($Token.tokenExpirationDateTime) { ([datetime]$Token.tokenExpirationDateTime) -lt [datetime]::UtcNow } else { $false }
-            ) -Force
+            $Token | Add-Member -NotePropertyMembers ([ordered]@{
+                    daysUntilExpiration = $(
+                        if ($Token.tokenExpirationDateTime) {
+                            [math]::Floor(([datetime]$Token.tokenExpirationDateTime - [datetime]::UtcNow).TotalDays)
+                        } else {
+                            $null
+                        }
+                    )
+                    isExpired           = $(
+                        if ($Token.tokenExpirationDateTime) { ([datetime]$Token.tokenExpirationDateTime) -lt [datetime]::UtcNow } else { $false }
+                    )
+                }) -Force
             $Token
         }
 
+        $Failed = 0
         $Profiles = foreach ($DepSetting in $DepOnboardingSettings) {
             if ([string]::IsNullOrWhiteSpace($DepSetting.id)) { continue }
 
@@ -47,22 +50,26 @@ function Invoke-ListAppleEnrollmentProfiles {
                     }
 
                     $ProfileObject = $EnrollmentProfile | Select-Object *
-                    $ProfileObject | Add-Member -NotePropertyName 'platform' -NotePropertyValue $Platform -Force
-                    $ProfileObject | Add-Member -NotePropertyName 'profileType' -NotePropertyValue 'apple' -Force
-                    $ProfileObject | Add-Member -NotePropertyName 'tokenId' -NotePropertyValue $DepSetting.id -Force
-                    $ProfileObject | Add-Member -NotePropertyName 'tokenName' -NotePropertyValue $DepSetting.tokenName -Force
-                    $ProfileObject | Add-Member -NotePropertyName 'appleIdentifier' -NotePropertyValue $DepSetting.appleIdentifier -Force
-                    $ProfileObject | Add-Member -NotePropertyName 'tokenExpirationDateTime' -NotePropertyValue $DepSetting.tokenExpirationDateTime -Force
-                    $ProfileObject | Add-Member -NotePropertyName 'tokenType' -NotePropertyValue $DepSetting.tokenType -Force
+                    $ProfileObject | Add-Member -NotePropertyMembers ([ordered]@{
+                            platform                = $Platform
+                            profileType             = 'apple'
+                            tokenId                 = $DepSetting.id
+                            tokenName               = $DepSetting.tokenName
+                            appleIdentifier         = $DepSetting.appleIdentifier
+                            tokenExpirationDateTime = $DepSetting.tokenExpirationDateTime
+                            tokenType               = $DepSetting.tokenType
+                        }) -Force
                     $ProfileObject
                 }
             } catch {
+                $Failed++
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to list Apple ADE profiles for token $($DepSetting.tokenName)" -Sev Warning -LogData $ErrorMessage
             }
         }
 
-        $StatusCode = [HttpStatusCode]::OK
+        # Tokens still listed, so a failed profile lookup is partial data
+        $StatusCode = $Failed ? [HttpStatusCode]::MultiStatus : [HttpStatusCode]::OK
         $Body = @{
             Results = @{
                 Tokens   = @($Tokens)
@@ -72,7 +79,7 @@ function Invoke-ListAppleEnrollmentProfiles {
     } catch {
         $StatusCode = [HttpStatusCode]::InternalServerError
         $ErrorMessage = Get-CippException -Exception $_
-        $Body = @{ Results = "Failed to list Apple ADE enrollment profiles: $($ErrorMessage.NormalizedMessage)" }
+        $Body = @{ Results = "Failed to list Apple ADE enrollment profiles: $($ErrorMessage.NormalizedError)" }
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Body.Results -Sev Error -LogData $ErrorMessage
     }
 

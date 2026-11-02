@@ -1,0 +1,81 @@
+{
+  "name": "DisableGuestDirectory",
+  "label": "Restrict guest user access to directory objects",
+  "cat": "Global Standards",
+  "tag": [
+    "CIS M365 7.0.0 (5.1.6.2)",
+    "CISA (MS.AAD.5.1v1)",
+    "EIDSCA.AP14",
+    "EIDSCA.ST08",
+    "EIDSCA.ST09",
+    "NIST CSF 2.0 (PR.AA-05)",
+    "SMB1001 (2.8)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Disables Guest access to enumerate directory objects. This prevents guest users from seeing other users or guests in the directory.",
+  "executiveText": "Restricts external guest users from viewing the company's employee directory and organizational structure, protecting sensitive information about staff and internal groups. This security measure prevents unauthorized access to corporate contact information while still allowing necessary collaboration.",
+  "docsDescription": "Sets it so guests can view only their own user profile. Permission to view other users isn't allowed. Also restricts guest users from seeing the membership of groups they're in. See exactly what get locked down in the [Microsoft documentation.](https://learn.microsoft.com/en-us/entra/fundamentals/users-default-permissions)",
+  "impactColour": "info",
+  "addedDate": "2022-05-04",
+  "powershellEquivalent": "Set-AzureADMSAuthorizationPolicy -GuestUserRoleId '2af84b1e-32c8-42b7-82bc-daa82404023b'",
+  "appliesToTest": [
+    "CIS_5_1_6_2",
+    "EIDSCAAP07",
+    "EIDSCAAP14",
+    "EIDSCAST08",
+    "EIDSCAST09",
+    "SMB1001_2_8",
+    "ZTNA21792"
+  ],
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "guestUserRoleId": {
+      "type": "autoComplete",
+      "label": "Guest user access level",
+      "options": [
+        {
+          "label": "Restricted access (guests can only see their own profile)",
+          "value": "2af84b1e-32c8-42b7-82bc-daa82404023b"
+        },
+        {
+          "label": "Limited access (guests can see membership of non-hidden groups)",
+          "value": "10dae51f-b6af-4016-8d66-8c2a99b929b3"
+        },
+        {
+          "label": "Same access as member users",
+          "value": "a0b1b346-4d3e-4e8b-98f8-753987be4970"
+        }
+      ],
+      "default": "2af84b1e-32c8-42b7-82bc-daa82404023b",
+      "recommended": "2af84b1e-32c8-42b7-82bc-daa82404023b"
+    }
+  },
+  "expected": {
+    "guestUserRoleId": "%guestUserRoleId%"
+  },
+  "read": {
+    "cacheType": "AuthorizationPolicy"
+  },
+  "writeTarget": "authorizationPolicy",
+  "writeTargetProperties": {
+    "guestUserRoleId": "%guestUserRoleId%"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "asApp": false,
+        "uri": "policies/authorizationPolicy/authorizationPolicy",
+        "body": {
+          "guestUserRoleId": "%guestUserRoleId%"
+        }
+      }
+    ]
+  }
+}

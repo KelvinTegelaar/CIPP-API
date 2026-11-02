@@ -39,6 +39,7 @@ function New-CIPPStandardsRun {
 
         $InputObject = [PSCustomObject]@{
             OrchestratorName = 'DriftStandardsOrchestrator'
+            AllowCollision   = $false
             Batch            = @($Batch)
             SkipLog          = $true
         }
@@ -46,7 +47,7 @@ function New-CIPPStandardsRun {
         $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
         Write-Information "Started orchestration with ID = '$InstanceId' for drift standards run"
         #$Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId
-        return
+        return $InstanceId
     } else {
         Write-Information 'Classic Standards Run'
 
@@ -80,9 +81,21 @@ function New-CIPPStandardsRun {
 
         Write-Information "Built batch of $($Batch.Count) tenant standards list activities: $($Batch | ConvertTo-Json -Depth 5 -Compress)"
 
+        # The orchestrator name is the run identity, and a second run of the same name is skipped as
+        # "already active" while the caller is still told it started. A fixed 'StandardsList' therefore
+        # drops concurrent manual runs for different tenants/templates. Suffix the name with the run
+        # scope so each tenant/template gets its own run; the full scheduled sweep (allTenants + all
+        # templates) keeps the bare name, since it is a single run with nothing to collide with.
+        $RunScope = @(
+            if ($TenantFilter -and $TenantFilter -ne 'allTenants') { $TenantFilter }
+            if ($TemplateID -and $TemplateID -ne '*') { $TemplateID }
+        ) -join '-'
+        $OrchestratorName = if ($RunScope) { "StandardsList-$RunScope" } else { 'StandardsList' }
+
         # Start orchestrator with distributed batch and post-exec aggregation
         $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'StandardsList'
+            OrchestratorName = $OrchestratorName
+            AllowCollision   = $false
             Batch            = @($Batch)
             PostExecution    = @{
                 FunctionName = 'CIPPStandardsApplyBatch'
@@ -93,5 +106,6 @@ function New-CIPPStandardsRun {
         Write-Information "InputObject: $($InputObject | ConvertTo-Json -Depth 5 -Compress)"
         $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
         Write-Information "Started standards list orchestration with ID = '$InstanceId'"
+        return $InstanceId
     }
 }

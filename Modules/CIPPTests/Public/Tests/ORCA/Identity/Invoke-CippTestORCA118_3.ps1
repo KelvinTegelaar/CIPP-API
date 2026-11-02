@@ -53,7 +53,7 @@ function Invoke-CippTestORCA118_3 {
             $null = $Result.Append("| Policy Name | Own Domains in Allow List |`n")
             $null = $Result.Append("|------------|---------------------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $OwnDomainsInList = $Policy.AllowedSenderDomains | Where-Object { $OwnDomains -contains $_ }
+                $OwnDomainsInList = $Policy.AllowedSenderDomains.Where({ $OwnDomains -contains $_ })
                 $null = $Result.Append("| $($Policy.Identity) | $($OwnDomainsInList -join ', ') |`n")
             }
         }

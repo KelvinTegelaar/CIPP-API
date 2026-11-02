@@ -17,6 +17,22 @@ function Invoke-ListUserMailboxDetails {
     Write-Host "UserID: $UserID"
     Write-Host "UserMail: $UserMail"
 
+    # Archive size and item count are the slow part of the mailbox detail (Get-MailboxStatistics
+    # -Archive). Set-CIPPDBCacheMailboxes already caches both per mailbox, keyed by the Entra object
+    # id, so when the reporting DB has a row for this user we read them from there and drop that
+    # cmdlet from the bulk request; only fall back to the live call when there is no cached row.
+    $CachedMailbox = $null
+    try {
+        $ReportingTable = Get-CIPPTable -TableName 'CippReportingDB'
+        $CachedEntity = Get-CIPPAzDataTableEntity @ReportingTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq 'Mailboxes-$UserID'"
+        if ($CachedEntity.Data) {
+            $CachedMailbox = $CachedEntity.Data | ConvertFrom-Json
+        }
+    } catch {
+        $CachedMailbox = $null
+    }
+    $UseCachedArchiveStats = $null -ne $CachedMailbox
+
     try {
         $Requests = @(
             @{
@@ -24,36 +40,39 @@ function Invoke-ListUserMailboxDetails {
                     CmdletName = 'Get-Mailbox'
                     Parameters = @{ Identity = $UserID }
                 }
-            },
+            }
             @{
                 CmdletInput = @{
                     CmdletName = 'Get-MailboxPermission'
                     Parameters = @{ Identity = $UserID }
                 }
-            },
+            }
             @{
                 CmdletInput = @{
                     CmdletName = 'Get-CASMailbox'
                     Parameters = @{ Identity = $UserID }
                 }
-            },
+            }
             @{
                 CmdletInput = @{
                     CmdletName = 'Get-OrganizationConfig'
                 }
-            },
-            @{
-                CmdletInput = @{
-                    CmdletName = 'Get-MailboxStatistics'
-                    Parameters = @{ Identity = $UserID; Archive = $true }
+            }
+            # Only fetch archive statistics live when the reporting DB has no cached copy.
+            if (-not $UseCachedArchiveStats) {
+                @{
+                    CmdletInput = @{
+                        CmdletName = 'Get-MailboxStatistics'
+                        Parameters = @{ Identity = $UserID; Archive = $true }
+                    }
                 }
-            },
+            }
             @{
                 CmdletInput = @{
                     CmdletName = 'Get-BlockedSenderAddress'
                     Parameters = @{ SenderAddress = $UserMail }
                 }
-            },
+            }
             @{
                 CmdletInput = @{
                     CmdletName = 'Get-RecipientPermission'
@@ -85,17 +104,9 @@ function Invoke-ListUserMailboxDetails {
                 $ArchiveEnabled = $false
             }
 
-            # Check org-level first; if enabled org-wide, report that. Otherwise use mailbox-specific value.
-            if ($OrgConfig.AutoExpandingArchiveEnabled) {
-                $AutoExpandingArchiveEnabled = $true
-                $AutoExpandingArchiveScope = 'Organization'
-            } elseif ($MailboxDetailedRequest.AutoExpandingArchiveEnabled) {
-                $AutoExpandingArchiveEnabled = $true
-                $AutoExpandingArchiveScope = 'Mailbox'
-            } else {
-                $AutoExpandingArchiveEnabled = $false
-                $AutoExpandingArchiveScope = 'None'
-            }
+            $AutoExpandingArchiveState = Get-CIPPAutoExpandingArchiveState -MailboxAutoExpandingArchiveEnabled $MailboxDetailedRequest.AutoExpandingArchiveEnabled -OrgAutoExpandingArchiveEnabled $OrgConfig.AutoExpandingArchiveEnabled
+            $AutoExpandingArchiveEnabled = $AutoExpandingArchiveState.AutoExpandingArchive
+            $AutoExpandingArchiveScope = $AutoExpandingArchiveState.AutoExpandingArchiveScope
         } catch {
             $ArchiveEnabled = $false
             $ArchiveSizeRequest = @{
@@ -193,7 +204,6 @@ function Invoke-ListUserMailboxDetails {
     $ProhibitSendQuotaString = $MailboxDetailedRequest.ProhibitSendQuota -split ' '
     $ProhibitSendReceiveQuotaString = $MailboxDetailedRequest.ProhibitSendReceiveQuota -split ' '
     $TotalItemSizeString = $StatsRequest.TotalItemSize -split ' '
-    $TotalArchiveItemSizeString = (Get-ExoOnlineStringBytes -SizeString $ArchiveSizeRequest.TotalItemSize) / 1GB
 
     $ProhibitSendQuota = try { [math]::Round([float]($ProhibitSendQuotaString[0]), 2) } catch { 0 }
     $ProhibitSendReceiveQuota = try { [math]::Round([float]($ProhibitSendReceiveQuotaString[0]), 2) } catch { 0 }
@@ -202,8 +212,15 @@ function Invoke-ListUserMailboxDetails {
     $TotalItemSize = try { [math]::Round([float]($TotalItemSizeString[0]) / $ItemSizeType, 2) } catch { 0 }
 
     if ($ArchiveEnabled -eq $true) {
-        $TotalArchiveItemSize = try { [math]::Round([float]($TotalArchiveItemSizeString[0]), 2) } catch { 0 }
-        $TotalArchiveItemCount = try { [math]::Round($ArchiveSizeRequest.ItemCount, 2) } catch { 0 }
+        if ($UseCachedArchiveStats) {
+            # The reporting DB stores ArchiveSize as a byte count and ArchiveItemCount as an integer.
+            $TotalArchiveItemSize = try { [math]::Round([float]$CachedMailbox.ArchiveSize / 1GB, 2) } catch { 0 }
+            $TotalArchiveItemCount = try { [math]::Round([float]$CachedMailbox.ArchiveItemCount, 2) } catch { 0 }
+        } else {
+            $TotalArchiveItemSizeString = (Get-ExoOnlineStringBytes -SizeString $ArchiveSizeRequest.TotalItemSize) / 1GB
+            $TotalArchiveItemSize = try { [math]::Round([float]($TotalArchiveItemSizeString[0]), 2) } catch { 0 }
+            $TotalArchiveItemCount = try { [math]::Round($ArchiveSizeRequest.ItemCount, 2) } catch { 0 }
+        }
     }
 
     # Parse InPlaceHolds to determine hold types if available
@@ -241,37 +258,38 @@ function Invoke-ListUserMailboxDetails {
 
     # Build the GraphRequest object
     $GraphRequest = [ordered]@{
-        ForwardAndDeliver        = $MailboxDetailedRequest.DeliverToMailboxAndForward
-        ForwardingAddress        = $ForwardingAddress
-        LitigationHold           = $MailboxDetailedRequest.LitigationHoldEnabled
-        RetentionHold            = $MailboxDetailedRequest.RetentionHoldEnabled
-        ComplianceTagHold        = $MailboxDetailedRequest.ComplianceTagHoldApplied
-        InPlaceHold              = $InPlaceHold
-        EDiscoveryHold           = $EDiscoveryHold
-        PurviewRetentionHold     = $PurviewRetentionHold
-        ExcludedFromOrgWideHold  = $ExcludedFromOrgWideHold
-        HiddenFromAddressLists   = $MailboxDetailedRequest.HiddenFromAddressListsEnabled
-        EWSEnabled               = $CASRequest.EwsEnabled
-        MailboxMAPIEnabled       = $CASRequest.MAPIEnabled
-        MailboxOWAEnabled        = $CASRequest.OWAEnabled
-        MailboxImapEnabled       = $CASRequest.ImapEnabled
-        MailboxPopEnabled        = $CASRequest.PopEnabled
-        MailboxActiveSyncEnabled = $CASRequest.ActiveSyncEnabled
-        Permissions              = @($ParsedPerms)
-        ProhibitSendQuota        = $ProhibitSendQuota
-        ProhibitSendReceiveQuota = $ProhibitSendReceiveQuota
-        ItemCount                = [math]::Round($StatsRequest.ItemCount, 2)
-        TotalItemSize            = $TotalItemSize
-        TotalArchiveItemSize     = $TotalArchiveItemSize
-        TotalArchiveItemCount    = $TotalArchiveItemCount
-        BlockedForSpam           = $BlockedForSpam
-        ArchiveMailBox           = $ArchiveEnabled
-        AutoExpandingArchive     = $AutoExpandingArchiveEnabled
-        AutoExpandingArchiveScope = $AutoExpandingArchiveScope
-        RecipientTypeDetails     = $MailboxDetailedRequest.RecipientTypeDetails
-        Mailbox                  = $MailboxDetailedRequest
-        RetentionPolicy          = $MailboxDetailedRequest.RetentionPolicy
-        MailboxActionsData       = ($MailboxDetailedRequest | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
+        ForwardAndDeliver                = $MailboxDetailedRequest.DeliverToMailboxAndForward
+        ForwardingAddress                = $ForwardingAddress
+        LitigationHold                   = $MailboxDetailedRequest.LitigationHoldEnabled
+        RetentionHold                    = $MailboxDetailedRequest.RetentionHoldEnabled
+        ComplianceTagHold                = $MailboxDetailedRequest.ComplianceTagHoldApplied
+        InPlaceHold                      = $InPlaceHold
+        EDiscoveryHold                   = $EDiscoveryHold
+        PurviewRetentionHold             = $PurviewRetentionHold
+        ExcludedFromOrgWideHold          = $ExcludedFromOrgWideHold
+        HiddenFromAddressLists           = $MailboxDetailedRequest.HiddenFromAddressListsEnabled
+        EWSEnabled                       = $CASRequest.EwsEnabled
+        MailboxMAPIEnabled               = $CASRequest.MAPIEnabled
+        MailboxOWAEnabled                = $CASRequest.OWAEnabled
+        MailboxImapEnabled               = $CASRequest.ImapEnabled
+        MailboxPopEnabled                = $CASRequest.PopEnabled
+        MailboxActiveSyncEnabled         = $CASRequest.ActiveSyncEnabled
+        SmtpClientAuthenticationDisabled = $CASRequest.SmtpClientAuthenticationDisabled
+        Permissions                      = @($ParsedPerms)
+        ProhibitSendQuota                = $ProhibitSendQuota
+        ProhibitSendReceiveQuota         = $ProhibitSendReceiveQuota
+        ItemCount                        = [math]::Round($StatsRequest.ItemCount, 2)
+        TotalItemSize                    = $TotalItemSize
+        TotalArchiveItemSize             = $TotalArchiveItemSize
+        TotalArchiveItemCount            = $TotalArchiveItemCount
+        BlockedForSpam                   = $BlockedForSpam
+        ArchiveMailBox                   = $ArchiveEnabled
+        AutoExpandingArchive             = $AutoExpandingArchiveEnabled
+        AutoExpandingArchiveScope        = $AutoExpandingArchiveScope
+        RecipientTypeDetails             = $MailboxDetailedRequest.RecipientTypeDetails
+        Mailbox                          = $MailboxDetailedRequest
+        RetentionPolicy                  = $MailboxDetailedRequest.RetentionPolicy
+        MailboxActionsData               = ($MailboxDetailedRequest | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
             @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
             @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
             @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
@@ -284,6 +302,7 @@ function Invoke-ListUserMailboxDetails {
             HiddenFromAddressListsEnabled,
             ExternalDirectoryObjectId,
             IsDirSynced,
+            IsExchangeCloudManaged,
             MessageCopyForSendOnBehalfEnabled,
             MessageCopyForSentAsEnabled,
             LitigationHoldEnabled,

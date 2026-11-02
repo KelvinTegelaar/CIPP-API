@@ -14,12 +14,12 @@ function Invoke-CippTestCIS_8_2_1 {
             return
         }
 
-        $E = $External | Select-Object -First 1
-        $F = $Federation | Select-Object -First 1
+        $E = @($External)[0]
+        $F = @($Federation)[0]
 
         $PolicyDisabled = $E.EnableFederationAccess -eq $false
         $TenantDisabled = $F.AllowFederatedUsers -eq $false
-        $TenantAllowList = $F.AllowedDomains -and ($F.AllowedDomains.AllowedDomain -or ($F.AllowedDomains -is [array] -and $F.AllowedDomains.Count -gt 0))
+        $TenantAllowList = $F.AllowedDomains -and ($F.AllowedDomains.AllowList -or $F.AllowedDomains.AllowedDomain -or ($F.AllowedDomains -is [array] -and $F.AllowedDomains.Count -gt 0))
 
         if ($PolicyDisabled -or $TenantDisabled -or $TenantAllowList) {
             $Status = 'Passed'

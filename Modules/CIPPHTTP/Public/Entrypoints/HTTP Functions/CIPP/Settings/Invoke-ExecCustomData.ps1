@@ -8,11 +8,27 @@ function Invoke-ExecCustomData {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+
     $Action = $Request.Query.Action ?? $Request.Body.Action
+    $StatusCode = $null
     $CustomDataTable = Get-CippTable -TableName 'CustomData'
     $CustomDataMappingsTable = Get-CippTable -TableName 'CustomDataMappings'
 
     Write-Information "Executing action '$Action'"
+
+    # AnyTenant: mapping writes re-register per-tenant sync tasks estate-wide, so they
+    # require an unrestricted tenant scope
+    if ($Action -in @('AddEditMapping', 'DeleteMapping')) {
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        if ($AllowedTenants -notcontains 'AllTenants') {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ Results = @(@{ state = 'error'; resultText = 'Editing custom data mappings requires unrestricted tenant access' }) }
+                })
+        }
+    }
 
     switch ($Action) {
         'ListSchemaExtensions' {
@@ -25,6 +41,7 @@ function Invoke-ExecCustomData {
                     Results = @($SchemaExtensions)
                 }
             } catch {
+                $StatusCode ??= [HttpStatusCode]::InternalServerError
                 $Body = @{
                     Results = @(
                         @{
@@ -39,6 +56,7 @@ function Invoke-ExecCustomData {
             try {
                 $SchemaExtension = $Request.Body.schemaExtension
                 if (!$SchemaExtension) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw 'SchemaExtension data is missing in the request body.'
                 }
 
@@ -51,18 +69,23 @@ function Invoke-ExecCustomData {
                 Add-CIPPAzDataTableEntity @CustomDataTable -Entity $Entity -Force
                 $SchemaExtensions = Get-CIPPSchemaExtensions | Where-Object { $_.id -eq $SchemaExtension.id }
 
+                $Result = "Schema extension '$($SchemaExtension.id)' added successfully."
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = "Schema extension '$($SchemaExtension.id)' added successfully."
+                        resultText = $Result
                     }
                 }
             } catch {
+                $StatusCode ??= [HttpStatusCode]::InternalServerError
+                $Result = "Failed to add schema extension: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to add schema extension: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -72,18 +95,21 @@ function Invoke-ExecCustomData {
             try {
                 $SchemaId = $Request.Body.id
                 if (!$SchemaId) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw 'Schema ID is missing in the request body.'
                 }
 
                 # Retrieve the schema extension entity
                 $SchemaEntity = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'SchemaExtension'" | Where-Object { $SchemaId -match $_.RowKey }
                 if (!$SchemaEntity) {
+                    $StatusCode = [HttpStatusCode]::NotFound
                     throw "Schema extension with ID '$SchemaId' not found."
                 }
 
                 # Ensure the schema is in 'InDevelopment' state before deletion
                 $SchemaDefinition = $SchemaEntity.JSON | ConvertFrom-Json
                 if ($SchemaDefinition.status -ne 'InDevelopment') {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw "Schema extension '$SchemaId' cannot be deleted because it is not in 'InDevelopment' state."
                 }
 
@@ -95,20 +121,25 @@ function Invoke-ExecCustomData {
 
 
                 # Delete the schema extension entity
-                Remove-AzDataTableEntity @CustomDataTable -Entity $SchemaEntity
+                Remove-CIPPAzDataTableEntity @CustomDataTable -Entity $SchemaEntity
 
+                $Result = "Schema extension '$SchemaId' deleted successfully."
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = "Schema extension '$SchemaId' deleted successfully."
+                        resultText = $Result
                     }
                 }
             } catch {
+                $StatusCode ??= [HttpStatusCode]::InternalServerError
+                $Result = "Failed to delete schema extension: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to delete schema extension: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -124,15 +155,18 @@ function Invoke-ExecCustomData {
                     type = $Type
                 }
                 if (!$SchemaId) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw 'Schema ID is missing in the request body.'
                 }
                 if (!$Name -or !$Type) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw 'Property data is missing or incomplete in the request body.'
                 }
 
                 # Retrieve the schema extension entity
                 $SchemaEntity = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'SchemaExtension'" | Where-Object { $SchemaId -match $_.RowKey }
                 if (!$SchemaEntity) {
+                    $StatusCode = [HttpStatusCode]::NotFound
                     throw "Schema extension with ID '$SchemaId' not found."
                 }
 
@@ -140,11 +174,13 @@ function Invoke-ExecCustomData {
                 $SchemaDefinition = $SchemaEntity.JSON | ConvertFrom-Json
 
                 if ($SchemaDefinition.status -eq 'Deprecated') {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw "Properties cannot be added to schema extension '$SchemaId' because it is in the 'Deprecated' state."
                 }
 
                 # Check if the property already exists
                 if ($SchemaDefinition.properties | Where-Object { $_.name -eq $NewProperty.name }) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw "Property with name '$($NewProperty.name)' already exists in schema extension '$SchemaId'."
                 }
 
@@ -161,18 +197,23 @@ function Invoke-ExecCustomData {
                 Add-CIPPAzDataTableEntity @CustomDataTable -Entity $SchemaEntity -Force
                 try { $null = Get-CIPPSchemaExtensions } catch {}
 
+                $Result = "Property '$($NewProperty.name)' added to schema extension '$SchemaId' successfully."
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = "Property '$($NewProperty.name)' added to schema extension '$SchemaId' successfully."
+                        resultText = $Result
                     }
                 }
             } catch {
+                $StatusCode ??= [HttpStatusCode]::InternalServerError
+                $Result = "Failed to add property to schema extension: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to add property to schema extension: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -183,15 +224,18 @@ function Invoke-ExecCustomData {
                 $SchemaId = $Request.Body.id
                 $NewStatus = $Request.Body.status
                 if (!$SchemaId) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw 'Schema ID is missing in the request body.'
                 }
                 if (!$NewStatus) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw 'New status is missing in the request body.'
                 }
 
                 # Retrieve the schema extension entity
                 $SchemaEntity = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'SchemaExtension'" | Where-Object { $SchemaId -match $_.RowKey }
                 if (!$SchemaEntity) {
+                    $StatusCode = [HttpStatusCode]::NotFound
                     throw "Schema extension with ID '$SchemaId' not found."
                 }
 
@@ -200,6 +244,7 @@ function Invoke-ExecCustomData {
 
                 # Check if the status is already the same
                 if ($SchemaDefinition.status -eq $NewStatus) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw "Schema extension '$SchemaId' is already in the '$NewStatus' state."
                 }
 
@@ -211,18 +256,23 @@ function Invoke-ExecCustomData {
                 Add-CIPPAzDataTableEntity @CustomDataTable -Entity $SchemaEntity -Force
                 $null = Get-CIPPSchemaExtensions
 
+                $Result = "Schema extension '$SchemaId' status changed to '$NewStatus' successfully."
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = "Schema extension '$SchemaId' status changed to '$NewStatus' successfully."
+                        resultText = $Result
                     }
                 }
             } catch {
+                $StatusCode ??= [HttpStatusCode]::InternalServerError
+                $Result = "Failed to change schema extension status: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to change schema extension status: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -250,6 +300,7 @@ function Invoke-ExecCustomData {
                     Results = @($DirectoryExtensions)
                 }
             } catch {
+                $StatusCode ??= [HttpStatusCode]::InternalServerError
                 $Body = @{
                     Results = @(
                         @{
@@ -268,6 +319,7 @@ function Invoke-ExecCustomData {
                 $IsMultiValued = $Request.Body.isMultiValued -eq $true
 
                 if (!$ExtensionName -or !$DataType -or !$TargetObjects) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw 'Extension name, data type, and target objects are required.'
                 }
 
@@ -283,14 +335,6 @@ function Invoke-ExecCustomData {
 
                 $Response = New-GraphPOSTRequest -Uri $Uri -Body $BodyContent -AsApp $true -NoAuthCheck $true -tenantid $env:TenantID
 
-                $Body = @{
-                    Results = @{
-                        state      = 'success'
-                        resultText = "Directory extension '$ExtensionName' added successfully."
-                        extension  = $Response
-                    }
-                }
-
                 # store the extension in the custom data table
                 $Entity = @{
                     PartitionKey = 'DirectoryExtension'
@@ -298,12 +342,25 @@ function Invoke-ExecCustomData {
                     JSON         = [string](ConvertTo-Json $Response -Compress -Depth 5)
                 }
                 Add-CIPPAzDataTableEntity @CustomDataTable -Entity $Entity -Force
+
+                $Result = "Directory extension '$ExtensionName' added successfully."
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
+                $Body = @{
+                    Results = @{
+                        state      = 'success'
+                        resultText = $Result
+                        extension  = $Response
+                    }
+                }
             } catch {
+                $StatusCode ??= [HttpStatusCode]::InternalServerError
+                $Result = "Failed to add directory extension: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to add directory extension: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -314,6 +371,7 @@ function Invoke-ExecCustomData {
                 $ExtensionName = $Request.Body.name
                 $ExtensionId = $Request.Body.id
                 if (!$ExtensionName) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw 'Extension name is missing in the request body.'
                 }
                 $AppId = $env:ApplicationID # Replace with your application ID
@@ -326,24 +384,29 @@ function Invoke-ExecCustomData {
                     $ExtensionEntity = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'DirectoryExtension' and RowKey eq '$ExtensionName'"
                     # Remove the extension from the custom data table
                     if ($ExtensionEntity) {
-                        Remove-AzDataTableEntity @CustomDataTable -Entity $ExtensionEntity
+                        Remove-CIPPAzDataTableEntity @CustomDataTable -Entity $ExtensionEntity
                     }
                 } catch {
                     Write-Warning "Failed to delete directory extension from custom data table: $($_.Exception.Message)"
                 }
 
+                $Result = "Directory extension '$ExtensionName' deleted successfully."
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = "Directory extension '$ExtensionName' deleted successfully."
+                        resultText = $Result
                     }
                 }
             } catch {
+                $StatusCode ??= [HttpStatusCode]::InternalServerError
+                $Result = "Failed to delete directory extension: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to delete directory extension: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -358,8 +421,22 @@ function Invoke-ExecCustomData {
         }
         'ListMappings' {
             try {
+                # AnyTenant: restricted callers only see mappings for tenants in scope
+                $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+                $Restricted = $AllowedTenants -notcontains 'AllTenants'
+                if ($Restricted) {
+                    $AllowedIdentifiers = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    foreach ($Tenant in (Get-Tenants -IncludeErrors)) {
+                        foreach ($Value in @($Tenant.customerId, $Tenant.defaultDomainName)) {
+                            if ($Value) { [void]$AllowedIdentifiers.Add([string]$Value) }
+                        }
+                    }
+                }
                 $Mappings = Get-CIPPAzDataTableEntity @CustomDataMappingsTable | ForEach-Object {
                     $Mapping = $_.JSON | ConvertFrom-Json -AsHashtable
+                    if ($Restricted -and -not (@($Mapping.tenantFilter.value) | Where-Object { $_ -and $AllowedIdentifiers.Contains([string]$_) })) {
+                        return
+                    }
 
                     Write-Information ($Mapping | ConvertTo-Json -Depth 5)
                     [PSCustomObject]@{
@@ -376,6 +453,7 @@ function Invoke-ExecCustomData {
                     Results = @($Mappings)
                 }
             } catch {
+                $StatusCode ??= [HttpStatusCode]::InternalServerError
                 $Body = @{
                     Results = @(
                         @{
@@ -390,6 +468,7 @@ function Invoke-ExecCustomData {
             try {
                 $Mapping = $Request.Body.Mapping
                 if (!$Mapping) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw 'Mapping data is missing in the request body.'
                 }
                 $MappingId = $Request.Body.id ?? [Guid]::NewGuid().ToString()
@@ -402,18 +481,23 @@ function Invoke-ExecCustomData {
                 Add-CIPPAzDataTableEntity @CustomDataMappingsTable -Entity $Entity -Force
                 Register-CIPPExtensionScheduledTasks
 
+                $Result = 'Mapping saved successfully.'
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = 'Mapping saved successfully.'
+                        resultText = $Result
                     }
                 }
             } catch {
+                $StatusCode ??= [HttpStatusCode]::InternalServerError
+                $Result = "Failed to add mapping: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to add mapping: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -423,30 +507,37 @@ function Invoke-ExecCustomData {
             try {
                 $MappingId = $Request.Body.id
                 if (!$MappingId) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw 'Mapping ID is missing in the request body.'
                 }
 
                 # Retrieve the mapping entity
                 $MappingEntity = Get-CIPPAzDataTableEntity @CustomDataMappingsTable -Filter "PartitionKey eq 'Mapping' and RowKey eq '$MappingId'"
                 if (!$MappingEntity) {
+                    $StatusCode = [HttpStatusCode]::NotFound
                     throw "Mapping with ID '$MappingId' not found."
                 }
 
                 # Delete the mapping entity
-                Remove-AzDataTableEntity @CustomDataMappingsTable -Entity $MappingEntity
+                Remove-CIPPAzDataTableEntity @CustomDataMappingsTable -Entity $MappingEntity
                 Register-CIPPExtensionScheduledTasks
+                $Result = 'Mapping deleted successfully.'
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = 'Mapping deleted successfully.'
+                        resultText = $Result
                     }
                 }
             } catch {
+                $StatusCode ??= [HttpStatusCode]::InternalServerError
+                $Result = "Failed to delete mapping: $($_.Exception.Message)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
                 $Body = @{
                     Results = @(
                         @{
                             state      = 'error'
-                            resultText = "Failed to delete mapping: $($_.Exception.Message)"
+                            resultText = $Result
                         }
                     )
                 }
@@ -456,12 +547,14 @@ function Invoke-ExecCustomData {
             try {
                 $MappingId = $Request.Query.id
                 if (!$MappingId) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     throw 'Mapping ID is missing in the request query.'
                 }
 
                 # Retrieve the mapping entity
                 $MappingEntity = Get-CIPPAzDataTableEntity @CustomDataMappingsTable -Filter "PartitionKey eq 'Mapping' and RowKey eq '$MappingId'"
                 if (!$MappingEntity) {
+                    $StatusCode = [HttpStatusCode]::NotFound
                     throw "Mapping with ID '$MappingId' not found."
                 }
 
@@ -470,6 +563,7 @@ function Invoke-ExecCustomData {
                     Results = $Mapping
                 }
             } catch {
+                $StatusCode ??= [HttpStatusCode]::InternalServerError
                 $Body = @{
                     Results = @(
                         @{
@@ -482,6 +576,7 @@ function Invoke-ExecCustomData {
         }
 
         default {
+            $StatusCode = [HttpStatusCode]::BadRequest
             $Body = @{
                 Results = @(
                     @{
@@ -494,7 +589,7 @@ function Invoke-ExecCustomData {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode ?? [HttpStatusCode]::OK
             Body       = $Body
         })
 }

@@ -45,14 +45,16 @@ Function Invoke-AddStandardsDeploy {
         Write-LogMessage -headers $Request.Headers -tenant $tenant -API 'Standards' -message 'Successfully added standards deployment' -Sev 'Info'
 
         $body = [pscustomobject]@{'Results' = 'Successfully added standards deployment' }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         Write-LogMessage -headers $Request.Headers -API 'Standards' -message "Standards API failed. Error:$($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed to add standard: $($_.Exception.Message)" }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 

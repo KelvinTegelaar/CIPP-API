@@ -8,15 +8,24 @@ function Invoke-ExecExtensionClearHIBPKey {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint ?? 'ExtensionClearHIBPKey'
+    $Headers = $Request.Headers
+
+    $StatusCode = [HttpStatusCode]::OK
     $Results = try {
         Remove-ExtensionAPIKey -Extension 'HIBP' | Out-Null
-        'Successfully cleared the HIBP API key.'
+        $Result = 'Successfully cleared the HIBP API key.'
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Cleared API key for extension 'HIBP'" -Sev 'Info'
+        $Result
     } catch {
-        "Failed to clear the HIBP API key"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Failed to clear API key for extension 'HIBP': $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
+        'Failed to clear the HIBP API key'
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @{'Results' = $Results }
         })
 }

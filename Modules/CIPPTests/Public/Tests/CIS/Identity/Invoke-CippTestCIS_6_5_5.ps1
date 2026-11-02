@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_6_5_5 {
             return
         }
 
-        $Cfg = $Org | Select-Object -First 1
+        $Cfg = @($Org)[0]
 
         if ($Cfg.RejectDirectSend -eq $true) {
             $Status = 'Passed'

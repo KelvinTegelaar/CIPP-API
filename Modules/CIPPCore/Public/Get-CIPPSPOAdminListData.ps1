@@ -1,0 +1,245 @@
+function Get-CIPPSPOAdminListData {
+    <#
+    .SYNOPSIS
+    Page SPO.Tenant/RenderAdminListData (admin aggregated site catalog).
+
+    .DESCRIPTION
+    Calls the undocumented SharePoint admin RenderAdminListData endpoint used by Active sites.
+    Builds ViewXml from structured parameters by default, or accepts a raw -ViewXml escape hatch.
+    Returns flat admin list Row objects (all pages). Does not join Graph or map browser DTOs.
+
+    Dotted numeric props (e.g. StorageUsed.) are an RLD quirk; -NormalizeRows copies them to
+    undotted names when present, coerces StorageUsed / NumOfFiles / StorageQuota to int64,
+    and adds StorageQuotaBytes. A numeric dotted StorageQuota. explicitly supplies bytes;
+    infer legacy MB versus bytes only from valid, non-overlapping SharePoint quota ranges.
+
+    .PARAMETER TenantFilter
+    Tenant to query.
+
+    .PARAMETER Type
+    Catalog kind: SharePoint (Active sites filters; default) or OneDrive (personal sites).
+    Structured -Type OneDrive is not implemented yet and throws; use -ViewXml to probe.
+
+    .PARAMETER ViewXml
+    Raw ViewXml. When set, structured ViewXml parameters are ignored.
+
+    .PARAMETER ListName
+    Optional RenderAdminListData listName (sibling of parameters). Omit for the Active sites default.
+    Unlicensed OneDrive management uses DO_NOT_DELETE_SPLIST_TENANTADMIN_ALL_SITES_AGGREGATED_SITECOLLECTIONS.
+
+    .PARAMETER AdminUrl
+    Optional SharePoint admin URL; resolved via Get-SharePointAdminLink when omitted.
+
+    .PARAMETER DatesInUtc
+    Passed to RenderAdminListData parameters.
+
+    .PARAMETER MaxPages
+    Abort if paging exceeds this many pages.
+
+    .PARAMETER NormalizeRows
+    Copy StorageUsed. / NumOfFiles. / etc. onto undotted property names, parse numerics, and
+    derive StorageQuotaBytes.
+
+    .FUNCTIONALITY
+    Internal
+    #>
+    [CmdletBinding(DefaultParameterSetName = 'Structured')]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$TenantFilter,
+
+        [ValidateSet('SharePoint', 'OneDrive')]
+        [string]$Type = 'SharePoint',
+
+        [Parameter(ParameterSetName = 'ViewXml', Mandatory = $true)]
+        [string]$ViewXml,
+
+        [Parameter(ParameterSetName = 'Structured')]
+        [string[]]$ViewFields,
+
+        [Parameter(ParameterSetName = 'Structured')]
+        [int[]]$SiteFlags,
+
+        [Parameter(ParameterSetName = 'Structured')]
+        [bool]$ExcludeDeleted = $true,
+
+        [Parameter(ParameterSetName = 'Structured')]
+        [AllowNull()]
+        [object]$ExcludeState = 0,
+
+        [Parameter(ParameterSetName = 'Structured')]
+        [string[]]$ExcludeTemplates,
+
+        [Parameter(ParameterSetName = 'Structured')]
+        [string[]]$IncludeTemplates,
+
+        [Parameter(ParameterSetName = 'Structured')]
+        [string]$OrderBy = 'Title',
+
+        [Parameter(ParameterSetName = 'Structured')]
+        [bool]$OrderAscending = $true,
+
+        [Parameter(ParameterSetName = 'Structured')]
+        [ValidateRange(1, 5000)]
+        [int]$RowLimit = 200,
+
+        [Parameter(ParameterSetName = 'Structured')]
+        [string]$ExtraWhereXml,
+
+        [string]$ListName,
+
+        [string]$AdminUrl,
+
+        [bool]$DatesInUtc = $true,
+
+        [ValidateRange(1, 5000)]
+        [int]$MaxPages = 500,
+
+        [bool]$NormalizeRows = $true
+    )
+
+    # OneDrive catalog ViewXml is not locked yet. Raw -ViewXml still works for discovery.
+    if ($Type -eq 'OneDrive' -and $PSCmdlet.ParameterSetName -ne 'ViewXml') {
+        throw 'Get-CIPPSPOAdminListData -Type OneDrive is not implemented yet. Pass -ViewXml to query personal sites, or use -Type SharePoint.'
+    }
+
+    if ([string]::IsNullOrWhiteSpace($AdminUrl)) {
+        $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
+        $AdminUrl = $SharePointInfo.AdminUrl
+    }
+    $AdminUrl = $AdminUrl.TrimEnd('/')
+
+    if ($PSCmdlet.ParameterSetName -eq 'Structured') {
+        $BuildParams = @{
+            ExcludeDeleted  = $ExcludeDeleted
+            ExcludeState    = $ExcludeState
+            OrderBy         = $OrderBy
+            OrderAscending  = $OrderAscending
+            RowLimit        = $RowLimit
+        }
+        if ($PSBoundParameters.ContainsKey('ViewFields')) { $BuildParams['ViewFields'] = $ViewFields }
+        if ($PSBoundParameters.ContainsKey('SiteFlags')) { $BuildParams['SiteFlags'] = $SiteFlags }
+        if ($PSBoundParameters.ContainsKey('ExcludeTemplates')) { $BuildParams['ExcludeTemplates'] = $ExcludeTemplates }
+        if ($PSBoundParameters.ContainsKey('IncludeTemplates')) { $BuildParams['IncludeTemplates'] = $IncludeTemplates }
+        if ($PSBoundParameters.ContainsKey('ExtraWhereXml')) { $BuildParams['ExtraWhereXml'] = $ExtraWhereXml }
+        $ViewXml = New-CIPPSPOAdminListViewXml @BuildParams
+    }
+
+    if ([string]::IsNullOrWhiteSpace($ViewXml)) {
+        throw 'ViewXml is required (pass -ViewXml or use structured ViewFields/filter parameters).'
+    }
+
+    $AllRows = [System.Collections.Generic.List[object]]::new()
+    $Paging = $null
+    $PageGuard = 0
+
+    do {
+        $PageGuard++
+        if ($PageGuard -gt $MaxPages) {
+            throw "RenderAdminListData exceeded $MaxPages pages; aborting."
+        }
+
+        $Parameters = @{
+            ViewXml    = $ViewXml
+            DatesInUtc = $DatesInUtc
+        }
+        if (-not [string]::IsNullOrWhiteSpace($Paging)) {
+            $Parameters['Paging'] = $Paging
+        }
+        $BodyObj = @{ parameters = $Parameters }
+        if (-not [string]::IsNullOrWhiteSpace($ListName)) {
+            $BodyObj['listName'] = $ListName
+        }
+
+        $Page = New-GraphPOSTRequest -scope "$AdminUrl/.default" -tenantid $TenantFilter -uri "$AdminUrl/_api/SPO.Tenant/RenderAdminListData" -type 'POST' -body (ConvertTo-Json -Depth 8 -Compress -InputObject $BodyObj) -contentType 'application/json' -AddedHeaders @{ Accept = 'application/json;odata=verbose' } -AsApp $true -UseCertificate
+
+        if ($Page -is [string]) {
+            $Page = $Page | ConvertFrom-Json
+        }
+        if ($Page.d) {
+            if ($Page.d.RenderAdminListData -is [string]) {
+                $Page = $Page.d.RenderAdminListData | ConvertFrom-Json
+            } elseif ($Page.d.RenderAdminListData) {
+                $Page = $Page.d.RenderAdminListData
+            } elseif ($Page.d.Row -or $Page.d.NextHref) {
+                $Page = $Page.d
+            }
+        } elseif ($Page.RenderAdminListData -is [string]) {
+            $Page = $Page.RenderAdminListData | ConvertFrom-Json
+        } elseif ($Page.RenderAdminListData) {
+            $Page = $Page.RenderAdminListData
+        }
+
+        foreach ($Row in @($Page.Row)) {
+            if ($null -eq $Row) { continue }
+            if ($NormalizeRows) {
+                # Per row: Add-Member throws internally while binding, and each Properties.Name scan walks every property
+                $Props = $Row.PSObject.Properties
+                foreach ($Prop in @($Props)) {
+                    $Name = [string]$Prop.Name
+                    if ($Name.EndsWith('.') -and $Name.Length -gt 1) {
+                        $Plain = $Name.TrimEnd('.')
+                        if ($null -eq $Props[$Plain]) { $Props.Add([psnoteproperty]::new($Plain, $Prop.Value)) }
+                    }
+                }
+                foreach ($Field in @('StorageUsed', 'NumOfFiles', 'StorageQuota')) {
+                    if ($null -ne $Props[$Field]) {
+                        $Value = $Row.$Field
+                        $Coerced = ConvertTo-SPOAdminListInt64 -Raw $Value
+                        if ($null -ne $Coerced -or ($Value -is [string] -and -not [string]::IsNullOrWhiteSpace($Value))) {
+                            $Props.Remove($Field)
+                            $Props.Add([psnoteproperty]::new($Field, $Coerced))
+                        }
+                    }
+                }
+                if ($null -ne $Props['StorageQuota']) {
+                    $QuotaValue = $Row.StorageQuota
+                    if ($null -ne $QuotaValue -and $QuotaValue -gt 0) {
+                        # The dotted SPO admin value is a byte count (even for quotas under 1 TB).
+                        # Do not guess its unit from magnitude: that can multiply a small
+                        # byte-valued quota by 1 MB and produce petabytes of false capacity.
+                        $DottedQuotaBytes = if ($null -ne $Props['StorageQuota.']) {
+                            ConvertTo-SPOAdminListInt64 -Raw $Row.'StorageQuota.'
+                        } else {
+                            $null
+                        }
+                        if ($null -ne $DottedQuotaBytes) {
+                            $QuotaBytes = $DottedQuotaBytes
+                        } elseif ($null -ne $Props['StorageQuota.']) {
+                            $QuotaBytes = $null
+                        } else {
+                            # Older RLD responses may omit StorageQuota. altogether. Known
+                            # site quotas include 500 MiB App Catalogs and 1000 MiB team sites,
+                            # below the usual 1 GiB manual quota limit. The supported MB and
+                            # byte ranges remain disjoint even with these real-world values.
+                            # MB: 500 to 26,214,400; bytes: 500 MiB to 25 TiB.
+                            $MaxQuotaMB = [int64](25TB / 1MB)
+                            if ($QuotaValue -ge 500MB -and $QuotaValue -le 25TB) {
+                                $QuotaBytes = $QuotaValue
+                            } elseif ($QuotaValue -ge 500 -and $QuotaValue -le $MaxQuotaMB) {
+                                $QuotaBytes = [int64]($QuotaValue * 1MB)
+                            } else {
+                                # Unknown ranges must not be guessed from magnitude.
+                                $QuotaBytes = $null
+                            }
+                        }
+                        $Props.Remove('StorageQuotaBytes')
+                        $Props.Add([psnoteproperty]::new('StorageQuotaBytes', $QuotaBytes))
+                    }
+                }
+            }
+            [void]$AllRows.Add($Row)
+        }
+
+        $NextHref = [string]$Page.NextHref
+        if ([string]::IsNullOrWhiteSpace($NextHref)) {
+            $Paging = $null
+        } elseif ($NextHref.Contains('?')) {
+            $Paging = $NextHref.Split('?', 2)[1]
+        } else {
+            $Paging = $NextHref.TrimStart('?')
+        }
+    } while (-not [string]::IsNullOrWhiteSpace($Paging))
+
+    return @($AllRows)
+}

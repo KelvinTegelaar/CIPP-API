@@ -48,6 +48,8 @@ function Invoke-CIPPStandardDisableQRCodePin {
             try {
                 Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'QRCodePin' -Enabled $false
             } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable QR Code Pin authentication method. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         }
     }
@@ -72,6 +74,5 @@ function Invoke-CIPPStandardDisableQRCodePin {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableQRCodePin' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableQRCodePin' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

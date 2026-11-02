@@ -17,7 +17,7 @@ function Invoke-CippTestZTNA21866 {
         }
 
         # Filter for unaddressed recommendations (active or postponed status)
-        $UnaddressedRecommendations = $Recommendations | Where-Object { $_.status -in @('active', 'postponed') }
+        $UnaddressedRecommendations = $Recommendations.Where({ $_.status -in @('active', 'postponed') })
 
         $Passed = if ($UnaddressedRecommendations.Count -eq 0) { 'Passed' } else { 'Failed' }
 

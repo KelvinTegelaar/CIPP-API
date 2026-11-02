@@ -92,40 +92,23 @@ $ManagementLinksData = @(
 
         Get-NinjaOneLinks -Title 'M365 Admin Links' -Data $ManagementLinksData
 #>
-
-    [System.Collections.Generic.List[String]]$OutputHTML = @()
-
-    $OutputHTML.add('<div class="card flex-grow-1">')
-
-    if ($Title) {
-        $OutputHTML.add('<div class="card-title-box"><div class="card-title">' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + '</div>')
-
-        if ($TitleLink) {
-            $OutputHTML.add('<div class="card-link-box"><a href="' + $TitleLink + '" target="_blank" class="card-link"><i class="fas fa-arrow-up-right-from-square"></i></a></div>')
-        }
-
-        $OutputHTML.add('</div>')
-    }
-
-    $OutputHTML.add('<div class="card-body">')
-    $OutputHTML.add('<ul class="row unstyled">')
-
     $CSSCols = Get-NinjaOneCSSCol -SmallCols $SmallCols -MedCols $MedCols -LargeCols $LargeCols -XLCols $XLCols
-
-   
-    foreach ($Item in $Data) {
-
-
-        $OutputHTML.add(@"
+    -join @(
+        '<div class="card flex-grow-1">'
+        if ($Title) {
+            '<div class="card-title-box"><div class="card-title">' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + '</div>'
+            if ($TitleLink) { '<div class="card-link-box"><a href="' + $TitleLink + '" target="_blank" class="card-link"><i class="fas fa-arrow-up-right-from-square"></i></a></div>' }
+            '</div>'
+        }
+        '<div class="card-body">'
+        '<ul class="row unstyled">'
+        foreach ($Item in $Data) {
+            @"
         <li class="$CSSCols"><a href="$($Item.Link)" target="_blank">$(if ($Item.Icon){"<span><i class=`"$($Item.Icon)`"></i>&nbsp;&nbsp;</span>"})<span style="text-align: center;">$($Item.Name)</span></a></li>
-"@)
-
-    }
-
-    $OutputHTML.add('</ul></div></div>')
-
-    return $OutputHTML -join ''
-
+"@
+        }
+        '</ul></div></div>'
+    )
 }
 
 
@@ -198,28 +181,17 @@ function Get-NinjaOneCard($Title, $Body, [string]$Icon, [string]$TitleLink, [Str
 
     Get-NinjaOneCard -Title "Tenant Details" -Data $Info
     #>
-
-    [System.Collections.Generic.List[String]]$OutputHTML = @()
-
-    $OutputHTML.add('<div class="card flex-grow-1' + $(if ($classes) { ' ' + $classes }) + '" >')
-
-    if ($Title) {
-        $OutputHTML.add('<div class="card-title-box"><div class="card-title" >' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + '</div>')
-
-        if ($TitleLink) {
-            $OutputHTML.add('<div class="card-link-box"><a href="' + $TitleLink + '" target="_blank" class="card-link" ><i class="fas fa-arrow-up-right-from-square" style="color: #337ab7;"></i></a></div>')
+    -join @(
+        '<div class="card flex-grow-1' + $(if ($classes) { ' ' + $classes }) + '" >'
+        if ($Title) {
+            '<div class="card-title-box"><div class="card-title" >' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + '</div>'
+            if ($TitleLink) { '<div class="card-link-box"><a href="' + $TitleLink + '" target="_blank" class="card-link" ><i class="fas fa-arrow-up-right-from-square" style="color: #337ab7;"></i></a></div>' }
+            '</div>'
         }
-
-        $OutputHTML.add('</div>')
-    }
-
-    $OutputHTML.add('<div class="card-body" >')
-    $OutputHTML.add('<p class="card-text" >' + $Body + '</p>')
-       
-    $OutputHTML.add('</div></div>')
-
-    return $OutputHTML -join ''
-    
+        '<div class="card-body" >'
+        '<p class="card-text" >' + $Body + '</p>'
+        '</div></div>'
+    )
 }
 
 function Get-NinjaOneInfoCard($Title, $Data, [string]$Icon, [string]$TitleLink) {
@@ -235,14 +207,7 @@ function Get-NinjaOneInfoCard($Title, $Data, [string]$Icon, [string]$TitleLink) 
 
     Get-NinjaOneInfoCard -Title "Tenant Details" -Data $TenantDetailsItems
     #>
-
-    [System.Collections.Generic.List[String]]$ItemsHTML = @()
-
-    foreach ($Item in $Data.PSObject.Properties) {
-        $ItemsHTML.add('<p ><b >' + $Item.Name + '</b><br />' + $Item.Value + '</p>')
-    }
-
-    return Get-NinjaOneCard -Title $Title -Body ($ItemsHTML -join '') -Icon $Icon -TitleLink $TitleLink
-       
+    $Body = -join @(foreach ($Item in $Data.PSObject.Properties) { '<p ><b >' + $Item.Name + '</b><br />' + $Item.Value + '</p>' })
+    return Get-NinjaOneCard -Title $Title -Body $Body -Icon $Icon -TitleLink $TitleLink
 }
 

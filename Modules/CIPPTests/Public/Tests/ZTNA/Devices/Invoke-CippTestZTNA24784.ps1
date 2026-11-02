@@ -13,29 +13,29 @@ function Invoke-CippTestZTNA24784 {
             return
         }
 
-        $MdmMacOSSensePolicies = $ConfigPolicies | Where-Object {
+        $MdmMacOSSensePolicies = $ConfigPolicies.Where({
             $_.platforms -like '*macOS*' -and
             $_.technologies -like '*mdm*' -and
             $_.technologies -like '*microsoftSense*'
-        }
+        })
 
         if (-not $MdmMacOSSensePolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24784' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No macOS Defender policies found' -Risk 'High' -Name 'Defender Antivirus policies protect macOS devices from malware' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 
-        $AVPolicies = $MdmMacOSSensePolicies | Where-Object {
+        $AVPolicies = $MdmMacOSSensePolicies.Where({
             $_.templateReference.templateFamily -eq 'endpointSecurityAntivirus'
-        }
+        })
 
         if (-not $AVPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24784' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Defender Antivirus policies for macOS found' -Risk 'High' -Name 'Defender Antivirus policies protect macOS devices from malware' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 
-        $AssignedPolicies = $AVPolicies | Where-Object {
+        $AssignedPolicies = $AVPolicies.Where({
             $_.assignments -and $_.assignments.Count -gt 0
-        }
+        })
 
         if ($AssignedPolicies) {
             $Status = 'Passed'

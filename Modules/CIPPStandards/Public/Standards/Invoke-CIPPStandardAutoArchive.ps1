@@ -94,7 +94,6 @@ function Invoke-CIPPStandardAutoArchive {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'AutoArchive' -FieldValue $CorrectState -StoreAs bool -Tenant $Tenant
 
         if ($CorrectState) {
             $FieldValue = $true

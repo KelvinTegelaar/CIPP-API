@@ -1,0 +1,71 @@
+{
+  "name": "OneDriveSharingCapability",
+  "label": "Set Sharing Level for OneDrive",
+  "cat": "SharePoint Standards",
+  "tag": [
+    "CIS M365 7.0.0 (7.2.4)"
+  ],
+  "impact": "High Impact",
+  "helpText": "Sets the external sharing level for OneDrive independently of SharePoint. OneDrive can be more restrictive than SharePoint but never more permissive, so set the SharePoint level (the 'Set Sharing Level for OneDrive and SharePoint' standard) at least as open as this one. CIS recommends 'Only people in your organization'.",
+  "executiveText": "Limits how far employees can share files from their personal OneDrive, which has less oversight than SharePoint sites. Restricting OneDrive sharing pushes external collaboration to SharePoint where site owners and tighter controls apply.",
+  "docsDescription": "Sets the tenant OneDrive sharing capability (Set-SPOTenant -OneDriveSharingCapability), which SharePoint CSOM exposes as ODBSharingCapability. Numeric CSOM values: 0 Disabled, 1 ExternalUserSharingOnly, 2 ExternalUserAndGuestSharing, 3 ExistingExternalUserSharingOnly.",
+  "impactColour": "danger",
+  "addedDate": "2026-10-10",
+  "powershellEquivalent": "Set-SPOTenant -OneDriveSharingCapability Disabled",
+  "appliesToTest": [
+    "CIS_7_2_4"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "sharingCapability": {
+      "type": "autoComplete",
+      "label": "OneDrive sharing level",
+      "required": true,
+      "default": 0,
+      "recommended": 0,
+      "options": [
+        {
+          "label": "Only people in your organization. No external sharing is allowed.",
+          "value": 0
+        },
+        {
+          "label": "New and existing guests. Guests must sign in or provide a verification code.",
+          "value": 1
+        },
+        {
+          "label": "Anyone. Links that do not require sign-in.",
+          "value": 2
+        },
+        {
+          "label": "Existing guests only (those already in the directory).",
+          "value": 3
+        }
+      ]
+    }
+  },
+  "expected": {
+    "ODBSharingCapability": "%sharingCapability%"
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "writeTarget": "spoTenant",
+  "remediate": {
+    "executor": "SPOTenant",
+    "properties": {
+      "ODBSharingCapability": "%sharingCapability%"
+    }
+  }
+}

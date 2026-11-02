@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_2_4_2 {
             return
         }
 
-        $Strict = $Preset | Where-Object { $_.Identity -like '*Strict Preset Security Policy*' -and $_.State -eq 'Enabled' }
+        $Strict = $Preset.Where({ $_.Identity -like '*Strict Preset Security Policy*' -and $_.State -eq 'Enabled' })
 
         if ($Strict) {
             $Status = 'Passed'

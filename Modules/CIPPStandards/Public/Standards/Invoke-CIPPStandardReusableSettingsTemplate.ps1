@@ -41,6 +41,18 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
             return $null
         }
 
+        # Dictionaries first: a Hashtable is IEnumerable, but foreach over one yields the hashtable
+        # itself, so the array branch below would recurse on identical input until the depth blows.
+        if ($InputObject -is [System.Collections.IDictionary]) {
+            $CleanMap = [ordered]@{}
+            foreach ($Key in @($InputObject.Keys)) {
+                if ($null -ne $InputObject[$Key]) {
+                    $CleanMap[$Key] = Remove-CIPPNullProperties -InputObject $InputObject[$Key]
+                }
+            }
+            return [pscustomobject]$CleanMap
+        }
+
         if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
             $CleanArray = [System.Collections.Generic.List[object]]::new()
             foreach ($item in $InputObject) {
@@ -65,15 +77,16 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
     $TestResult = Test-CIPPStandardLicense -StandardName 'ReusableSettingsTemplate_general' -TenantFilter $Tenant -Preset Intune
     if ($TestResult -eq $false) {
         $settings.TemplateList | ForEach-Object {
-            $MissingLicenseMessage = "This tenant is missing one or more required licenses for this standard: $($RequiredCapabilities -join ', ')."
-            Set-CIPPStandardsCompareField -FieldName "standards.ReusableSettingsTemplate.$($_.value)" -FieldValue $MissingLicenseMessage -Tenant $Tenant
+            $MissingLicenseMessage = 'License Missing: This tenant is missing the required Intune license for this standard.'
+            Set-CIPPStandardsCompareField -FieldName "standards.ReusableSettingsTemplate.$($_.value)" -FieldValue $MissingLicenseMessage -LicenseAvailable $false -TenantFilter $Tenant
         }
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Exiting as the correct license is not present for this standard. Missing: $($RequiredCapabilities -join ', ')" -sev 'Warning'
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Exiting as the correct license is not present for this standard.' -sev 'Warning'
         return $true
     }
 
     $Table = Get-CippTable -tablename 'templates'
-    $ExistingReusableSettings = New-GraphGETRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/reusablePolicySettings?$top=999' -tenantid $Tenant
+    # The list endpoint omits settingInstance unless explicitly selected, which would make every compare fail
+    $ExistingReusableSettings = New-GraphGETRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/reusablePolicySettings?$top=999&$select=id,displayName,description,settingDefinitionId,settingInstance,version' -tenantid $Tenant
 
     # Align with other template standards by resolving all selected templates upfront
     $SelectedTemplateIds = @($Settings.TemplateList.value)
@@ -83,17 +96,42 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
     }
 
     $AllTemplateEntities = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'IntuneReusableSettingTemplate'"
-    $TemplateEntities = $AllTemplateEntities |
-        Where-Object { ($_.RowKey -in $SelectedTemplateIds) -and (-not [string]::IsNullOrWhiteSpace($_.JSON)) } |
-        ForEach-Object { $_.JSON } |
-        ConvertFrom-Json -ErrorAction SilentlyContinue
-    if (-not $TemplateEntities) {
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to resolve reusable settings templates: $($SelectedTemplateIds -join ', ')" -sev 'Error'
-        return $true
+    $EntityByRowKey = @{}
+    foreach ($Entity in @($AllTemplateEntities)) {
+        if ($Entity.RowKey) { $EntityByRowKey[[string]$Entity.RowKey] = $Entity }
     }
 
-    $CompareList = foreach ($TemplateEntity in $TemplateEntities) {
+    # Iterate the selected ids, not the rows that resolved. Alignment emits a key for every id in
+    # TemplateList, and a key with no compare row reports NOT FOUND and can never be cleared.
+    $CompareList = foreach ($TemplateId in $SelectedTemplateIds) {
         $Compare = $null
+        $Entity = $EntityByRowKey[[string]$TemplateId]
+        $TemplateEntity = if ($Entity -and -not [string]::IsNullOrWhiteSpace($Entity.JSON)) {
+            $Entity.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+        } else {
+            $null
+        }
+
+        if (-not $TemplateEntity) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to resolve reusable settings template $TemplateId." -sev 'Error'
+            [pscustomobject]@{
+                MatchFailed = $true
+                displayname = $TemplateId
+                compare     = [pscustomobject]@{
+                    MatchFailed = $true
+                    Difference  = 'The selected reusable settings template no longer exists in CIPP.'
+                }
+                rawJSON     = $null
+                remediate   = $Settings.remediate
+                alert       = $Settings.alert
+                report      = $Settings.report
+                templateId  = $TemplateId
+                existingId  = $null
+                Unresolved  = $true
+            }
+            continue
+        }
+
         $displayName = $TemplateEntity.DisplayName ?? $TemplateEntity.Name
         $RawJSON = $TemplateEntity.RawJSON ?? $TemplateEntity.JSON
         $BodyObject = $RawJSON | ConvertFrom-Json -ErrorAction SilentlyContinue
@@ -125,13 +163,17 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
             remediate   = $Settings.remediate
             alert       = $Settings.alert
             report      = $Settings.report
-            templateId  = $TemplateEntity.GUID
+            # The id the picker sent (the RowKey), never the GUID inside the stored JSON -
+            # alignment keys off TemplateList.value.
+            templateId  = $TemplateId
             existingId  = $Existing.id
+            Unresolved  = $false
         }
     }
 
     if ($true -in $Settings.remediate) {
-        foreach ($Template in $CompareList | Where-Object -Property remediate -EQ $true) {
+        # Unresolved templates carry no body, so the create branch below would POST a null one.
+        foreach ($Template in $CompareList | Where-Object { $_.remediate -eq $true -and -not $_.Unresolved }) {
             $Body = $Template.rawJSON
 
             if ($Template.existingId) {
@@ -169,8 +211,15 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
     if ($true -in $Settings.report) {
         foreach ($Template in $CompareList | Where-Object { $_.report -eq $true -or $_.remediate -eq $true }) {
             $id = $Template.templateId
-            $state = $Template.compare ? $Template.compare : $true
-            Set-CIPPStandardsCompareField -FieldName "standards.ReusableSettingsTemplate.$id" -FieldValue $state -TenantFilter $Tenant
+            $CurrentValue = @{
+                displayName = $Template.displayname
+                isCompliant = if ($Template.compare) { $false } else { $true }
+            }
+            $ExpectedValue = @{
+                displayName = $Template.displayname
+                isCompliant = $true
+            }
+            Set-CIPPStandardsCompareField -FieldName "standards.ReusableSettingsTemplate.$id" -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
         }
     }
 }

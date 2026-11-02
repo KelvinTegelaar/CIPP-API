@@ -81,14 +81,23 @@ function Get-GraphRequestList {
         [boolean]$AsApp = $false,
         [string]$Caller = 'Get-GraphRequestList',
         [switch]$UseBatchExpand,
-        [switch]$RawJsonArray
+        [switch]$RawJsonArray,
+        [int]$MaxPageBytes
     )
 
     $SingleTenantThreshold = 8000
+    $PagedAllTenants = $false
     Write-Information "Tenant: $TenantFilter"
     $TableName = ('cache{0}' -f ($Endpoint -replace '[^A-Za-z0-9]'))[0..62] -join ''
     $Endpoint = $Endpoint -replace '^/', ''
     $DisplayName = ($Endpoint -split '/')[0]
+
+    # @odata.count is only returned when the request carries $count=true, so a CountOnly caller
+    # that did not also pass $count got a response with no count and CountOnly returned $null.
+    # Add it here (ConsistencyLevel:eventual is set via ComplexFilter on the count request below).
+    if ($CountOnly.IsPresent -and -not $Parameters.ContainsKey('$count')) {
+        $Parameters['$count'] = 'true'
+    }
 
     if ($QueueNameOverride) {
         $QueueName = $QueueNameOverride
@@ -135,6 +144,10 @@ function Get-GraphRequestList {
         }
     }
     $GraphQuery.Query = $ParamCollection.ToString()
+    Test-CIPPGraphEndpointBlocked -Uri $GraphQuery.ToString() -Expand $BatchExpandQuery -Throw
+    if ($nextLink -match '^https://') {
+        Test-CIPPGraphEndpointBlocked -Uri $nextLink -Throw
+    }
     $PartitionKey = Get-StringHash -String (@($Endpoint, $ParamCollection.ToString(), 'v2') -join '-')
 
     # Perform $count check before caching
@@ -178,6 +191,7 @@ function Get-GraphRequestList {
             }
             $GraphQuery.Query = $ParamCollection.ToString()
             $GraphRequest.uri = $GraphQuery.ToString()
+            Test-CIPPGraphEndpointBlocked -Uri $GraphRequest.uri -Throw
         }
 
         if ($Parameters.'$count' -and -not $ManualPagination.IsPresent) {
@@ -210,7 +224,28 @@ function Get-GraphRequestList {
                     $Filter = "PartitionKey eq '{0}' and (RowKey eq '{1}' or OriginalEntityId eq '{1}') and Timestamp ge datetime'{2}'" -f $PartitionKey, $TenantFilter, $Timestamp
                 }
                 $Tenants = Get-Tenants -IncludeErrors
-                $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.OriginalEntityId -in $Tenants.defaultDomainName -or $_.RowKey -in $Tenants.defaultDomainName }
+                # Paged AllTenants serve: key scan here, bounded blob fetches in the serve branch.
+                $PagedAllTenants = $TenantFilter -eq 'AllTenants' -and $ManualPagination.IsPresent -and $RawJsonArray.IsPresent
+                if ($PagedAllTenants) {
+                    # Keys only, and none of the split-entity markers: projecting a subset of them
+                    # (e.g. OriginalEntityId alone) makes reassembly fail and drops split tenants.
+                    $KeyRows = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
+                    # Physical rows per tenant ('-part<n>' rows fold into their head); sizes the spans below.
+                    $PagedTenantRowCounts = [System.Collections.Generic.Dictionary[string, int]]::new([StringComparer]::Ordinal)
+                    foreach ($KeyRow in @($KeyRows)) {
+                        $TenantKey = [string]$KeyRow.RowKey -replace '-part\d+$', ''
+                        if ($TenantKey) {
+                            $PagedTenantRowCounts[$TenantKey] = 1 + $(if ($PagedTenantRowCounts.ContainsKey($TenantKey)) { $PagedTenantRowCounts[$TenantKey] } else { 0 })
+                        }
+                    }
+                    # Ordinal, to match the resume comparison below (a culture sort re-served tenants).
+                    $PagedTenantPlan = [string[]]@($PagedTenantRowCounts.Keys | Where-Object { $_ -in $Tenants.defaultDomainName })
+                    [System.Array]::Sort($PagedTenantPlan, [System.Collections.IComparer][StringComparer]::Ordinal)
+                    # $Rows gates queue-vs-serve below; an empty plan queues like an empty fetch.
+                    $Rows = $PagedTenantPlan
+                } else {
+                    $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.OriginalEntityId -in $Tenants.defaultDomainName -or $_.RowKey -in $Tenants.defaultDomainName }
+                }
                 $Type = 'Cache'
                 Write-Information "Table: $TableName | PK: $PartitionKey | Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
                 $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
@@ -352,7 +387,17 @@ function Get-GraphRequestList {
 
                     if (!$QueueThresholdExceeded) {
                         #nextLink should ONLY be used in direct calls with manual pagination. It should not be used in queueing
-                        if ($ManualPagination.IsPresent -and $nextLink -match '^https://.+') { $GraphRequest.uri = $nextLink }
+                        if ($ManualPagination.IsPresent -and $nextLink -match '^https://.+') {
+                            try {
+                                $ParsedNextLink = [System.Uri]$nextLink
+                                if ($ParsedNextLink.Host -ne 'graph.microsoft.com') {
+                                    throw "Invalid nextLink host: $($ParsedNextLink.Host)"
+                                }
+                            } catch {
+                                throw "Invalid nextLink URL: $nextLink"
+                            }
+                            $GraphRequest.uri = $nextLink
+                        }
 
                         $GraphRequestResults = New-GraphGetRequest @GraphRequest -Caller $Caller -ErrorAction Stop
                         $GraphRequestResults = $GraphRequestResults | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
@@ -426,6 +471,76 @@ function Get-GraphRequestList {
         }
     } else {
         if ($RawJsonArray.IsPresent) {
+            if ($PagedAllTenants) {
+                # One page of whole tenant blobs, ended by the byte budget alone (never a tenant
+                # count); tenants are fetched in RowKey-range spans so split blobs reassemble.
+                $MaxPageChars = if ($MaxPageBytes -gt 0) { [Math]::Min([Math]::Max($MaxPageBytes, 262144), 8388608) } else { 4000000 }
+                # Rows are <= ~1MB each, so a row cap bounds a span's worst-case fetch.
+                $SpanRowCap = 40
+                $StartAfter = if ($nextLink) { $nextLink } else { $null }
+
+                $Remaining = [System.Collections.Generic.List[string]]::new()
+                foreach ($TenantKey in $PagedTenantPlan) {
+                    if (-not $StartAfter -or [string]::CompareOrdinal($TenantKey, $StartAfter) -gt 0) { $Remaining.Add($TenantKey) }
+                }
+
+                $JsonParts = [System.Collections.Generic.List[string]]::new()
+                $Chars = 0
+                $Queries = 0
+                $LastEmitted = $null
+                $BudgetReached = $false
+                $Index = 0
+                while ($Index -lt $Remaining.Count -and -not $BudgetReached) {
+                    # Build the next span: consecutive plan tenants until the row cap fills.
+                    $SpanStart = $Index
+                    $SpanRows = 0
+                    $SpanSet = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+                    while ($Index -lt $Remaining.Count) {
+                        $Candidate = $Remaining[$Index]
+                        $CandidateRows = $PagedTenantRowCounts[$Candidate]
+                        if ($SpanSet.Count -gt 0 -and ($SpanRows + $CandidateRows) -gt $SpanRowCap) { break }
+                        $null = $SpanSet.Add($Candidate)
+                        $SpanRows += $CandidateRows
+                        $Index++
+                    }
+                    $SpanFirst = ConvertTo-CIPPODataFilterValue -Value $Remaining[$SpanStart] -Type String
+                    $SpanLast = ConvertTo-CIPPODataFilterValue -Value $Remaining[$Index - 1] -Type String
+                    # le '<last>~' keeps the last tenant's '-partN' rows in range; non-member rows
+                    # the range also catches are dropped below.
+                    $SpanFilter = "PartitionKey eq '{0}' and RowKey ge '{1}' and RowKey le '{2}~' and Timestamp ge datetime'{3}'" -f $PartitionKey, $SpanFirst, $SpanLast, $Timestamp
+                    # Budget is enforced per whole tenant; the rest of a span past it is discarded
+                    # and re-fetched by the next page.
+                    $SpanData = [System.Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
+                    foreach ($Row in @(Get-CIPPAzDataTableEntity @Table -Filter $SpanFilter)) {
+                        if ($SpanSet.Contains([string]$Row.RowKey)) { $SpanData[[string]$Row.RowKey] = $Row }
+                    }
+                    # Emit in plan order: the store's row order is not ordinal (Azurite), and the token resumes by plan order.
+                    for ($SpanIndex = $SpanStart; $SpanIndex -lt $Index -and -not $BudgetReached; $SpanIndex++) {
+                        $LastEmitted = $Remaining[$SpanIndex]
+                        $Row = $null
+                        if (-not $SpanData.TryGetValue($LastEmitted, [ref]$Row)) { continue }
+                        if ($Row.Data) {
+                            $d = $Row.Data.Trim()
+                            if ($d.Length -gt 2 -and $d[0] -eq '[' -and $d[-1] -eq ']') {
+                                $JsonParts.Add($d.Substring(1, $d.Length - 2))
+                                $Chars += $d.Length
+                            } elseif ($d.Length -gt 0 -and $d -ne '[]') {
+                                $JsonParts.Add($d)
+                                $Chars += $d.Length
+                            }
+                        }
+                        if ($Chars -ge $MaxPageChars) { $BudgetReached = $true }
+                    }
+                    $Queries++
+                }
+                # A drained plan is complete even if the last tenant landed on the budget.
+                $MoreRemain = $BudgetReached -and $null -ne $LastEmitted -and [string]::CompareOrdinal($LastEmitted, $Remaining[$Remaining.Count - 1]) -lt 0
+                Write-Information "Paged AllTenants cache serve: $Queries spans, $Chars chars, last: $LastEmitted, more: $MoreRemain"
+                return [PSCustomObject]@{
+                    CippPagedJson = '[' + ($JsonParts -join ',') + ']'
+                    CippNextLink  = if ($MoreRemain) { $LastEmitted } else { $null }
+                }
+            }
             # Fast path: concatenate raw JSON strings without deserialization. This is much faster and uses less memory when no post-processing is needed, especially for large datasets.
             $JsonParts = [System.Collections.Generic.List[string]]::new()
             foreach ($Row in $Rows) {

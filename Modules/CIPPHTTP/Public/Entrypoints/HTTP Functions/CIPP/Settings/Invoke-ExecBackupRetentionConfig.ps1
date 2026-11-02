@@ -1,7 +1,7 @@
 function Invoke-ExecBackupRetentionConfig {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint, AnyTenant
     .ROLE
         CIPP.AppSettings.ReadWrite
     #>
@@ -10,6 +10,14 @@ function Invoke-ExecBackupRetentionConfig {
     $Table = Get-CIPPTable -TableName Config
     $Filter = "PartitionKey eq 'BackupRetention' and RowKey eq 'Settings'"
 
+    if (-not $Request.Query.List -and ($Request.Body.RetentionDays -as [int]) -lt 7) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{'Results' = 'Failed to set configuration: Retention days must be at least 7 days' }
+            })
+    }
+
+    $StatusCode = [HttpStatusCode]::OK
     $results = try {
         if ($Request.Query.List) {
             $RetentionSettings = Get-CIPPAzDataTableEntity @Table -Filter $Filter
@@ -26,11 +34,6 @@ function Invoke-ExecBackupRetentionConfig {
         } else {
             $RetentionDays = [int]$Request.Body.RetentionDays
 
-            # Validate minimum value
-            if ($RetentionDays -lt 7) {
-                throw 'Retention days must be at least 7 days'
-            }
-
             $RetentionConfig = @{
                 'RetentionDays' = $RetentionDays
                 'PartitionKey'  = 'BackupRetention'
@@ -44,13 +47,14 @@ function Invoke-ExecBackupRetentionConfig {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -message "Failed to set backup retention configuration: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
         "Failed to set configuration: $($ErrorMessage.NormalizedError)"
     }
 
     $body = [pscustomobject]@{'Results' = $Results }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 }

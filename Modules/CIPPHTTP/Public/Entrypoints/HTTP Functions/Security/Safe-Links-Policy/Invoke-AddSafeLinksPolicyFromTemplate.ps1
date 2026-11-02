@@ -27,7 +27,10 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
         $Templates = $RequestBody.TemplateList | ForEach-Object { $_.value }
 
         if (-not $Templates -or $Templates.Count -eq 0) {
-            throw "No templates provided in TemplateList"
+            return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body = @{ Results = 'No templates provided in TemplateList' }
+            })
         }
 
         # Helper function to process array fields with cleaner logic
@@ -194,12 +197,14 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
         }
 
         # Process each tenant and template combination
+        $Failed = 0
         $Results = foreach ($TenantFilter in $SelectedTenants) {
             foreach ($Template in $Templates) {
                 try {
                     New-SafeLinksPolicyFromTemplate -TenantFilter $TenantFilter -Template $Template
                 }
                 catch {
+                    $Failed++
                     $ErrorMessage = Get-CippException -Exception $_
                     $ErrorDetail = "Failed to deploy template '$($Template.TemplateName)' to tenant $TenantFilter. Error: $($ErrorMessage.NormalizedError)"
                     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ErrorDetail -Sev 'Error'
@@ -208,7 +213,7 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
             }
         }
 
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total (@($SelectedTenants).Count * @($Templates).Count) -Failed $Failed
     }
     catch {
         $ErrorMessage = Get-CippException -Exception $_

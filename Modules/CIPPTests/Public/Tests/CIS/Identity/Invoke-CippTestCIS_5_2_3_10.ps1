@@ -13,8 +13,8 @@ function Invoke-CippTestCIS_5_2_3_10 {
             return
         }
 
-        $Cfg = $AMP | Select-Object -First 1
-        $Authenticator = $Cfg.authenticationMethodConfigurations | Where-Object { $_.id -eq 'MicrosoftAuthenticator' } | Select-Object -First 1
+        $Cfg = @($AMP)[0]
+        $Authenticator = $Cfg.authenticationMethodConfigurations.Where({ $_.id -eq 'MicrosoftAuthenticator' }, 'First')[0]
 
         if (-not $Authenticator) {
             $Status = 'Failed'

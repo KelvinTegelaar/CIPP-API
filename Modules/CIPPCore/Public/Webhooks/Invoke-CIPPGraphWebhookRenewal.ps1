@@ -20,7 +20,7 @@ function Invoke-CippGraphWebhookRenewal {
                 $TenantFilter = $UpdateSub.PartitionKey
                 if ($Tenants.defaultDomainName -notcontains $TenantFilter -and $Tenants.customerId -notcontains $TenantFilter) {
                     Write-LogMessage -API 'Renew_Graph_Subscriptions' -message "Removing Subscription Renewal for $($UpdateSub.SubscriptionID) as tenant $TenantFilter is not in the tenant list." -sev 'Warning' -tenant $TenantFilter
-                    Remove-AzDataTableEntity -Force @WebhookTable -Entity $UpdateSub
+                    Remove-CIPPAzDataTableEntity -Force @WebhookTable -Entity $UpdateSub
                     continue
                 }
 
@@ -45,7 +45,7 @@ function Invoke-CippGraphWebhookRenewal {
                     $CreateResult = New-CIPPGraphSubscription -TenantFilter $TenantFilter -TypeofSubscription $TypeofSubscription -BaseURL $BaseURL -Resource $Resource -EventType $EventType -Headers 'GraphSubscriptionRenewal' -Recreate
 
                     if ($CreateResult -match 'Created Webhook subscription for') {
-                        Remove-AzDataTableEntity -Force @WebhookTable -Entity $UpdateSub
+                        Remove-CIPPAzDataTableEntity -Force @WebhookTable -Entity $UpdateSub
                     }
                 }
             } catch {

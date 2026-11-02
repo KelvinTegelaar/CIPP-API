@@ -13,12 +13,12 @@ function Invoke-CippTestCIS_5_2_2_12 {
             return
         }
 
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.authenticationFlows -and
             $_.conditions.authenticationFlows.transferMethods -match 'deviceCodeFlow' -and
             $_.grantControls.builtInControls -contains 'block'
-        }
+        })
 
         if ($Matching) {
             $Status = 'Passed'

@@ -21,9 +21,9 @@ function Get-CIPPAlertSecDefaultsUpsell {
                     Action         = $SecDefaults.securityDefaultsUpsell.action
                     Tenant         = $TenantFilter
                 }
-                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
             }
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         } catch {}
 
     } catch {

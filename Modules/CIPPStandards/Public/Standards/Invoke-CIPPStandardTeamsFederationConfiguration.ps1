@@ -17,6 +17,7 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
             Configures how the organization federates with external organizations for Teams communication, controlling whether employees can communicate with specific external domains or all external organizations. This setting enables secure inter-organizational collaboration while maintaining control over external communications.
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsFederationConfiguration.AllowTeamsConsumer","label":"Allow users to communicate with other organizations"}
+            {"type":"switch","name":"standards.TeamsFederationConfiguration.AllowTeamsConsumerInbound","label":"Allow unmanaged Teams users to initiate contact","condition":{"field":"standards.TeamsFederationConfiguration.AllowTeamsConsumer","compareType":"is","compareValue":true}}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsFederationConfiguration.DomainControl","label":"Communication Mode","options":[{"label":"Allow all external domains","value":"AllowAllExternal"},{"label":"Block all external domains","value":"BlockAllExternal"},{"label":"Allow specific external domains","value":"AllowSpecificExternal"},{"label":"Block specific external domains","value":"BlockSpecificExternal"}]}
             {"type":"textField","name":"standards.TeamsFederationConfiguration.DomainList","label":"Domains, Comma separated","required":false,"condition":{"field":"standards.TeamsFederationConfiguration.DomainControl.value","compareType":"isOneOf","compareValue":["AllowSpecificExternal","BlockSpecificExternal"]}}
         IMPACT
@@ -46,49 +47,53 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
     } #we're done.
 
     try {
-        $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTenantFederationConfiguration' -CmdParams @{Identity = 'Global' } |
-            Select-Object *
+        $CurrentState = New-TeamsRequestV2 -TenantFilter $Tenant -Type 'TenantFederationConfiguration' -Action Get -Identity 'Global'
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the TeamsFederationConfiguration state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    $AllowAllKnownDomains = New-CsEdgeAllowAllKnownDomains
+    # ConfigAPI (TenantFederationSettings) domain payload shapes are GET-symmetric:
+    #   Allow all external      -> AllowedDomains = @{}                       (empty OBJECT = AllowAllKnownDomains)
+    #   Allow specific external -> AllowedDomains = @{ AllowedDomain = @(@{ Domain = 'x' }) }
+    #   Block specific external -> AllowedDomains = @{} + BlockedDomains = @(@{ Domain = 'x' })
+    # NEVER send an empty ARRAY (or an AllowList envelope) for AllowedDomains: the ConfigAPI
+    # coerces it into an explicit EMPTY allow list ({"AllowedDomain":[]}) - federation with
+    # nobody - while the write reports success and the next read looks aligned. That flipped
+    # whole fleets to "Block all external domains" (CyberDrain/CIPP#364).
     $DomainControl = $Settings.DomainControl.value ?? $Settings.DomainControl
+    # An untoggled switch is absent from the settings; default it to $false so we never send null to the ConfigApi
+    $AllowTeamsConsumer = $Settings.AllowTeamsConsumer ?? $false
+    $AllowTeamsConsumerInbound = $Settings.AllowTeamsConsumerInbound ?? $false
     $AllowedDomainsAsAList = @()
+    $BlockedDomains = @()
     switch ($DomainControl) {
         'AllowAllExternal' {
             $AllowFederatedUsers = $true
-            $AllowedDomains = $AllowAllKnownDomains
-            $AllowedDomainsAsAList = @()
-            $BlockedDomains = @()
+            $AllowedDomainsPayload = @{}
+            $ExpectedAllowAllKnown = $true
         }
         'BlockAllExternal' {
             $AllowFederatedUsers = $false
-            $AllowedDomains = $AllowAllKnownDomains
-            $AllowedDomainsAsAList = @()
-            $BlockedDomains = @()
+            $AllowedDomainsPayload = @{}
+            $ExpectedAllowAllKnown = $true
         }
         'AllowSpecificExternal' {
             $AllowFederatedUsers = $true
-            $AllowedDomains = $null
-            $BlockedDomains = @()
             if ($null -ne $Settings.DomainList) {
                 $AllowedDomainsAsAList = @($Settings.DomainList).Split(',').Trim() | Sort-Object
-            } else {
-                $AllowedDomainsAsAList = @()
             }
+            $AllowedDomainsPayload = @{ AllowedDomain = @($AllowedDomainsAsAList | ForEach-Object { @{ Domain = $_ } }) }
+            $ExpectedAllowAllKnown = $false
         }
         'BlockSpecificExternal' {
             $AllowFederatedUsers = $true
-            $AllowedDomains = $AllowAllKnownDomains
-            $AllowedDomainsAsAList = @()
             if ($null -ne $Settings.DomainList) {
                 $BlockedDomains = @($Settings.DomainList).Split(',').Trim() | Sort-Object
-            } else {
-                $BlockedDomains = @()
             }
+            $AllowedDomainsPayload = @{}
+            $ExpectedAllowAllKnown = $true
         }
         default {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Federation Configuration: Invalid $DomainControl parameter" -sev Error
@@ -96,62 +101,25 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
         }
     }
 
-    # Parse current state based on DomainControl mode
-    $CurrentAllowedDomains = $CurrentState.AllowedDomains
-    $CurrentBlockedDomains = $CurrentState.BlockedDomains
-    $IsCurrentAllowAllKnownDomains = $false
+    # Parse current state (ConfigAPI TenantFederationSettings GET shape): allow-all reads as
+    # AllowedDomains = {} with NO AllowedDomain member; an explicit allow list nests items
+    # (plain strings or {Domain} objects) under AllowedDomains.AllowedDomain. An allow list
+    # that is PRESENT but EMPTY ({"AllowedDomain":[]}) is NOT allow-all - it federates with
+    # nobody (the #364 breakage state) - so key off the member's presence, not the item count,
+    # or broken tenants read as compliant forever.
+    $CurrentAllowedDomains = @()
+    $ad = $CurrentState.AllowedDomains
+    $HasExplicitAllowList = [bool]($ad -and ($ad.PSObject.Properties.Name -contains 'AllowedDomain'))
+    if ($HasExplicitAllowList -and $ad.AllowedDomain) {
+        $CurrentAllowedDomains = @($ad.AllowedDomain | ForEach-Object { if ($_ -is [string]) { $_ } elseif ($_.Domain) { $_.Domain } else { "$_" } }) | Sort-Object
+    }
+    $IsCurrentAllowAllKnownDomains = -not $HasExplicitAllowList
+    $CurrentBlockedDomains = @()
+    if ($CurrentState.BlockedDomains) {
+        $CurrentBlockedDomains = @($CurrentState.BlockedDomains | ForEach-Object { if ($_ -is [string]) { $_ } elseif ($_.Domain) { $_.Domain } else { "$_" } }) | Sort-Object
+    }
     $AllowedDomainsMatches = $false
     $BlockedDomainsMatches = $false
-
-    # Check if current allowed domains is AllowAllKnownDomains, and parse specific domains if not
-    if ($CurrentAllowedDomains) {
-        if ($CurrentAllowedDomains.GetType().Name -eq 'PSObject') {
-            $properties = Get-Member -InputObject $CurrentAllowedDomains -MemberType Properties, NoteProperty
-            if (($null -ne $CurrentAllowedDomains.AllowAllKnownDomains) -or
-                (Get-Member -InputObject $CurrentAllowedDomains -Name 'AllowAllKnownDomains') -or
-                (!$properties -or $properties.Count -eq 0)) {
-                $IsCurrentAllowAllKnownDomains = $true
-                Write-Information "Current AllowedDomains is AllowAllKnownDomains"
-            } else {
-                # Parse specific allowed domains list
-                if ($null -ne $CurrentAllowedDomains.AllowedDomain -or (Get-Member -InputObject $CurrentAllowedDomains -Name 'AllowedDomain')) {
-                    $CurrentAllowedDomains = @($CurrentAllowedDomains.AllowedDomain | ForEach-Object { $_.Domain }) | Sort-Object
-                    Write-Information "Current AllowedDomains (extracted): $($CurrentAllowedDomains -join ', ')"
-                } elseif ($null -ne $CurrentAllowedDomains.Domain -or (Get-Member -InputObject $CurrentAllowedDomains -Name 'Domain')) {
-                    $CurrentAllowedDomains = @($CurrentAllowedDomains.Domain) | Sort-Object
-                    Write-Information "Current AllowedDomains (via Domain property): $($CurrentAllowedDomains -join ', ')"
-                } else {
-                    $CurrentAllowedDomains = @()
-                }
-            }
-        } elseif ($CurrentAllowedDomains.GetType().Name -eq 'Deserialized.Microsoft.Rtc.Management.WritableConfig.Settings.Edge.AllowAllKnownDomains') {
-            $IsCurrentAllowAllKnownDomains = $true
-            Write-Information "Current AllowedDomains is AllowAllKnownDomains (Deserialized type)"
-        }
-    } else {
-        $CurrentAllowedDomains = @()
-    }
-
-    # Parse blocked domains upfront (always extract Domain property if present)
-    if ($CurrentBlockedDomains -is [System.Collections.IEnumerable] -and $CurrentBlockedDomains -isnot [string]) {
-        $blockedDomainsArray = @($CurrentBlockedDomains)
-        if ($blockedDomainsArray.Count -gt 0) {
-            $firstElement = $blockedDomainsArray[0]
-            $hasDomainProperty = ($null -ne $firstElement.Domain) -or (Get-Member -InputObject $firstElement -Name 'Domain' -MemberType Properties, NoteProperty)
-
-            if ($hasDomainProperty) {
-                $CurrentBlockedDomains = @($blockedDomainsArray | ForEach-Object { $_.Domain }) | Sort-Object
-                Write-Information "Current BlockedDomains (extracted): $($CurrentBlockedDomains -join ', ')"
-            } else {
-                $CurrentBlockedDomains = @($blockedDomainsArray) | Sort-Object
-                Write-Information "Current BlockedDomains (plain strings): $($CurrentBlockedDomains -join ', ')"
-            }
-        } else {
-            $CurrentBlockedDomains = @()
-        }
-    } else {
-        $CurrentBlockedDomains = @()
-    }
 
     # Mode-specific validation
     switch ($DomainControl) {
@@ -165,19 +133,22 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
             $BlockedDomainsMatches = $true
         }
         'AllowSpecificExternal' {
-            $AllowedDomainsMatches = -not (Compare-Object -ReferenceObject $AllowedDomainsAsAList -DifferenceObject $CurrentAllowedDomains)
+            # Both lists are already Sort-Object'd; compare as joined strings. Avoids Compare-Object,
+            # whose parameter binder coerces an empty array @() to $null and then throws.
+            $AllowedDomainsMatches = (@($AllowedDomainsAsAList) -join ',') -eq (@($CurrentAllowedDomains) -join ',')
             $BlockedDomainsMatches = (!$CurrentBlockedDomains -or @($CurrentBlockedDomains).Count -eq 0)
         }
         'BlockSpecificExternal' {
             # Allowed should be AllowAllKnownDomains, blocked domains already parsed above
             $AllowedDomainsMatches = $IsCurrentAllowAllKnownDomains
-            $BlockedDomainsMatches = -not (Compare-Object -ReferenceObject $BlockedDomains -DifferenceObject $CurrentBlockedDomains)
+            $BlockedDomainsMatches = (@($BlockedDomains) -join ',') -eq (@($CurrentBlockedDomains) -join ',')
         }
     }
 
     $ExpectedBlockedDomains = $BlockedDomains ?? @()
 
-    $StateIsCorrect = ($CurrentState.AllowTeamsConsumer -eq $Settings.AllowTeamsConsumer) -and
+    $StateIsCorrect = ($CurrentState.AllowTeamsConsumer -eq $AllowTeamsConsumer) -and
+    ($CurrentState.AllowTeamsConsumerInbound -eq $AllowTeamsConsumerInbound) -and
     ($CurrentState.AllowFederatedUsers -eq $AllowFederatedUsers) -and
     $AllowedDomainsMatches -and
     $BlockedDomainsMatches
@@ -187,20 +158,17 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Federation Configuration already set.' -sev Info
         } else {
             $cmdParams = @{
-                Identity            = 'Global'
-                AllowTeamsConsumer  = $Settings.AllowTeamsConsumer
-                AllowFederatedUsers = $AllowFederatedUsers
-                BlockedDomains      = $BlockedDomains
-            }
-
-            if ($AllowedDomainsAsAList -and $AllowedDomainsAsAList.Count -gt 0) {
-                $cmdParams.AllowedDomainsAsAList = $AllowedDomainsAsAList
-            } else {
-                $cmdParams.AllowedDomains = $AllowedDomains
+                Identity                  = 'Global'
+                AllowTeamsConsumer        = $AllowTeamsConsumer
+                AllowTeamsConsumerInbound = $AllowTeamsConsumerInbound
+                AllowFederatedUsers       = $AllowFederatedUsers
+                AllowedDomains            = $AllowedDomainsPayload
+                BlockedDomains            = @($BlockedDomains | ForEach-Object { @{ Domain = $_ } })
             }
 
             try {
-                New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsTenantFederationConfiguration' -CmdParams $cmdParams
+                # -NoRead: send bare props exactly like ACMS (no Key envelope) for the federation write
+                $null = New-TeamsRequestV2 -TenantFilter $Tenant -Type 'TenantFederationConfiguration' -Action Set -Parameters $cmdParams -NoRead
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Federation Configuration Policy' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -219,7 +187,6 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'FederationConfiguration' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         $CurrentAllowedDomainsForReport = if ($IsCurrentAllowAllKnownDomains) {
             'AllowAllKnownDomains'
@@ -232,7 +199,7 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
         # Normalize expected allowed domains for reporting
         $ExpectedAllowedDomainsForReport = if ($AllowedDomainsAsAList -and $AllowedDomainsAsAList.Count -gt 0) {
             $AllowedDomainsAsAList
-        } elseif ($AllowedDomains) {
+        } elseif ($ExpectedAllowAllKnown) {
             'AllowAllKnownDomains'
         } else {
             @()
@@ -252,15 +219,17 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
         }
 
         $CurrentValue = @{
-            AllowTeamsConsumer  = $CurrentState.AllowTeamsConsumer
-            AllowFederatedUsers = $CurrentState.AllowFederatedUsers
+            AllowTeamsConsumer         = $CurrentState.AllowTeamsConsumer
+            AllowTeamsConsumerInbound = $CurrentState.AllowTeamsConsumerInbound
+            AllowFederatedUsers       = $CurrentState.AllowFederatedUsers
             AllowedDomains      = $CurrentAllowedDomainsForReport
             BlockedDomains      = $CurrentBlockedDomainsForReport
         }
         $ExpectedValue = @{
-            AllowTeamsConsumer  = $Settings.AllowTeamsConsumer
-            AllowFederatedUsers = $AllowFederatedUsers
-            AllowedDomains      = $ExpectedAllowedDomainsForReport
+            AllowTeamsConsumer         = $AllowTeamsConsumer
+            AllowTeamsConsumerInbound = $AllowTeamsConsumerInbound
+            AllowFederatedUsers       = $AllowFederatedUsers
+            AllowedDomains            = $ExpectedAllowedDomainsForReport
             BlockedDomains      = $ExpectedBlockedDomainsForReport
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsFederationConfiguration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant

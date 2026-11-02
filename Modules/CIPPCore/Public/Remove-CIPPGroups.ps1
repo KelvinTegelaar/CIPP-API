@@ -90,21 +90,27 @@ function Remove-CIPPGroups {
                         })
                 } elseif ($IsMailEnabled) {
                     # Use Exchange Online for Distribution Lists
+                    # OperationGuid ties this request to its result; see Resolve-CippExoBulkResult.
+                    # Every entry here shares the same target (the user being offboarded), so target
+                    # alone cannot tell one group's removal from another's.
+                    $OperationGuid = [Guid]::NewGuid().ToString()
                     $Params = @{
                         Identity                        = $GroupName
                         Member                          = $UserID
                         BypassSecurityGroupManagerCheck = $true
                     }
                     $ExoBulkRequests.Add(@{
-                            CmdletInput = @{
+                            CmdletInput   = @{
                                 CmdletName = 'Remove-DistributionGroupMember'
                                 Parameters = $Params
                             }
+                            OperationGuid = $OperationGuid
                         })
                     $ExoLogs.Add(@{
-                            message   = "Removed $Username from $GroupName"
-                            target    = $UserID
-                            groupName = $GroupName
+                            message       = "Removed $Username from $GroupName"
+                            target        = $UserID
+                            groupName     = $GroupName
+                            OperationGuid = $OperationGuid
                         })
                 }
             }
@@ -141,21 +147,15 @@ function Remove-CIPPGroups {
     if ($ExoBulkRequests.Count -gt 0) {
         try {
             $RawExoRequest = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($ExoBulkRequests)
-            $LastError = $RawExoRequest | Select-Object -Last 1
+            $ExoResults = Resolve-CippExoBulkResult -Response $RawExoRequest -Operations $ExoLogs
 
-            foreach ($ExoError in $LastError.error) {
-                $Results.Add("Error - $ExoError")
-                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoError -Sev 'Error'
-            }
-
-            foreach ($ExoLog in $ExoLogs) {
-                $ExoError = $LastError | Where-Object { $ExoLog.target -in $_.target -and $_.error }
-                if (!$LastError -or ($LastError.error -and $LastError.target -notcontains $ExoLog.target)) {
-                    $Results.Add("Successfully removed $Username from group $($ExoLog.groupName)")
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoLog.message -Sev 'Info'
+            foreach ($ExoResult in $ExoResults) {
+                if ($ExoResult.Success) {
+                    $Results.Add("Successfully removed $Username from group $($ExoResult.Operation.groupName)")
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoResult.Operation.message -Sev 'Info'
                 } else {
-                    $Results.Add("Could not remove $Username from $($ExoLog.groupName). This is likely because its a Dynamic Group or synched with active directory")
-                    Write-LogMessage -headers $Headers -API $APIName -message "Could not remove $Username from $($ExoLog.groupName)" -Sev 'Error' -tenant $TenantFilter
+                    $Results.Add("Could not remove $Username from $($ExoResult.Operation.groupName): $($ExoResult.ErrorMessage)")
+                    Write-LogMessage -headers $Headers -API $APIName -message "Could not remove $Username from $($ExoResult.Operation.groupName): $($ExoResult.ErrorMessage)" -Sev 'Error' -tenant $TenantFilter
                 }
             }
         } catch {

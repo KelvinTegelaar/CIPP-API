@@ -36,16 +36,32 @@ function Invoke-CIPPStandardDisableSharedMailbox {
 
     param($Tenant, $Settings)
 
+    # Separate catches so a cold user cache and an Exchange failure read differently.
     try {
-        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
-        $UserList = $AllUsers | Where-Object {
-            $_.accountEnabled -eq $true -and
-            $_.onPremisesSyncEnabled -ne $true
-        }
-        $SharedMailboxList = (New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($Tenant)/Mailbox" -Tenantid $Tenant -scope ExchangeOnline | Where-Object { $_.RecipientTypeDetails -eq 'SharedMailbox' -or $_.RecipientTypeDetails -eq 'SchedulingMailbox' -and $_.UserPrincipalName -in $UserList.UserPrincipalName })
+        $AllUsers = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users')
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableSharedMailbox state for $Tenant. Error: $ErrorMessage" -Sev Error
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableSharedMailbox state for $Tenant, could not read the cached user list. Error: $ErrorMessage" -Sev Error
+        return
+    }
+
+    if ($AllUsers.Count -eq 0) {
+        # No user cache means enabled and disabled look alike; reporting nothing beats reporting everything.
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableSharedMailbox state for $Tenant, the cached user list is empty. Run a user data collection for this tenant first." -Sev Warning
+        return
+    }
+
+    $UserList = $AllUsers | Where-Object {
+        $_.accountEnabled -eq $true -and
+        $_.onPremisesSyncEnabled -ne $true
+    }
+
+    try {
+        $SharedMailboxList = @(New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ Filter = "RecipientTypeDetails -eq 'SharedMailbox' -or RecipientTypeDetails -eq 'SchedulingMailbox'" } -Select 'UserPrincipalName,DisplayName,RecipientTypeDetails,ExternalDirectoryObjectId' |
+                Where-Object { $_.ExternalDirectoryObjectId -in $UserList.id })
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableSharedMailbox state for $Tenant, could not list mailboxes from Exchange. Error: $ErrorMessage" -Sev Error
         return
     }
 
@@ -57,7 +73,7 @@ function Invoke-CIPPStandardDisableSharedMailbox {
                 @{
                     id        = $int++
                     method    = 'PATCH'
-                    url       = "users/$($Mailbox.ObjectKey)"
+                    url       = "users/$($Mailbox.ExternalDirectoryObjectId)"
                     body      = @{ accountEnabled = $false }
                     'headers' = @{
                         'Content-Type' = 'application/json'
@@ -65,6 +81,7 @@ function Invoke-CIPPStandardDisableSharedMailbox {
                 }
             }
 
+            $DisabledKeys = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
             try {
                 $BulkResults = New-GraphBulkRequest -tenantid $Tenant -Requests @($BulkRequests)
 
@@ -73,13 +90,17 @@ function Invoke-CIPPStandardDisableSharedMailbox {
                     $Mailbox = $SharedMailboxList[$i]
 
                     if ($result.status -eq 200 -or $result.status -eq 204) {
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for shared mailbox $($Mailbox.DisplayName) ($($Mailbox.ObjectKey)) disabled." -sev Info
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Entra account for shared mailbox $($Mailbox.DisplayName) ($($Mailbox.ExternalDirectoryObjectId)) disabled." -sev Info
+                        $null = $DisabledKeys.Add("$($Mailbox.ExternalDirectoryObjectId)")
                         $UpdateDB = $true
                     } else {
                         $errorMsg = if ($result.body.error.message) { $result.body.error.message } else { "Unknown error (Status: $($result.status))" }
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Entra account for shared mailbox $($Mailbox.DisplayName) ($($Mailbox.ObjectKey)): $errorMsg" -sev Error
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Entra account for shared mailbox $($Mailbox.DisplayName) ($($Mailbox.ExternalDirectoryObjectId)): $errorMsg" -sev Error
                     }
                 }
+
+                # Report what is left after remediation, not what was found.
+                $SharedMailboxList = @($SharedMailboxList | Where-Object { -not $DisabledKeys.Contains("$($_.ExternalDirectoryObjectId)") })
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to process bulk disable shared mailboxes request: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
@@ -119,6 +140,5 @@ function Invoke-CIPPStandardDisableSharedMailbox {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableSharedMailbox' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'DisableSharedMailbox' -FieldValue $SharedMailboxList -StoreAs json -Tenant $Tenant
     }
 }

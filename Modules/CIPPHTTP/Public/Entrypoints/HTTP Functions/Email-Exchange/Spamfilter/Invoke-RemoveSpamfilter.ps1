@@ -11,7 +11,7 @@ Function Invoke-RemoveSpamfilter {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
-    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Query.tenantFilter
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $Name = $Request.Query.name ?? $Request.Body.name
 
 
@@ -30,7 +30,7 @@ Function Invoke-RemoveSpamfilter {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to delete Spam filter rule $($Name) - $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

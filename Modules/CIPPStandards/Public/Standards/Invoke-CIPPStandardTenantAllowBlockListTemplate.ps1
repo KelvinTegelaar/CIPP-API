@@ -44,8 +44,8 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
     $Table = Get-CippTable -tablename 'templates'
     $TemplateId = $Settings.TenantAllowBlockListTemplate.value
 
-    $ResolvedTemplates = @(foreach ($_ in @($TemplateId)) {
-            $TemplateId = $_
+    $ResolvedTemplates = @(foreach ($Id in @($TemplateId)) {
+            $TemplateId = $Id
             $Filter = "PartitionKey eq 'TenantAllowBlockListTemplate' and RowKey eq '$TemplateId'"
             $TemplateEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
@@ -160,7 +160,6 @@ function Invoke-CIPPStandardTenantAllowBlockListTemplate {
             }) -join '; '
             $CurrentValue = ($MissingByTemplate | ForEach-Object { "$($_.TemplateName) [$($_.ListType)/$($_.Action)] - Missing: $($_.MissingEntries -join ', ')" }) -join '; '
         }
-        Add-CIPPBPAField -FieldName 'TenantAllowBlockListTemplate' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.TenantAllowBlockListTemplate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
     }
 }

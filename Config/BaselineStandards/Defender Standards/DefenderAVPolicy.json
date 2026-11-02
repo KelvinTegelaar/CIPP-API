@@ -1,0 +1,420 @@
+{
+  "name": "DefenderAVPolicy",
+  "label": "Defender Antivirus Policy",
+  "cat": "Defender Standards",
+  "tag": [
+    "scid_2012",
+    "scid_2016",
+    "scid_91",
+    "scid_92",
+    "scid_89",
+    "scid_2011"
+  ],
+  "impact": "High Impact",
+  "helpText": "Deploys and enforces a Microsoft Defender Antivirus configuration policy via Intune. Controls scanning behaviour, real-time protection, cloud protection, network protection, signature updates, CPU priority, and threat remediation actions.",
+  "executiveText": "Ensures every company device runs a consistent, hardened antivirus configuration, protecting against malware while balancing performance.",
+  "docsDescription": "Grades the fixed-name 'Default AV Policy' settings catalog policy field by field from the cached settingInstance tree. The four threat remediation actions and the four choice settings (network protection, cloud block level, on-access protection, sample consent) grade only when configured, because the recreate omits blank ones; blank integer fields grade the write-side defaults (50/8/0). Remediation deletes the drifted policy and recreates it through the Set-CIPPDefenderAVPolicy helper - settings catalog policies replace whole, never patch.",
+  "impactColour": "error",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph API - deviceManagement/configurationPolicies",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 50,
+  "compare": "subset",
+  "variables": {
+    "ScanArchives": {
+      "type": "switch",
+      "label": "Archive Scanning",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AllowBehavior": {
+      "type": "switch",
+      "label": "Behavior Monitoring",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AllowCloudProtection": {
+      "type": "switch",
+      "label": "Cloud Protection",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AllowEmailScanning": {
+      "type": "switch",
+      "label": "Email Scanning",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "AllowFullScanNetwork": {
+      "type": "switch",
+      "label": "Full Scan on Network Drives",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "AllowFullScanRemovable": {
+      "type": "switch",
+      "label": "Full Scan on Removable Drives",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AllowScriptScan": {
+      "type": "switch",
+      "label": "Script Scanning",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AllowDownloadable": {
+      "type": "switch",
+      "label": "Downloads Scanning (IOAV Protection)",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AllowRealTime": {
+      "type": "switch",
+      "label": "Real-time Monitoring",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AllowNetwork": {
+      "type": "switch",
+      "label": "Network Files Scanning",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "AllowUI": {
+      "type": "switch",
+      "label": "User UI Access",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "CheckSigs": {
+      "type": "switch",
+      "label": "Check Signatures Before Scan",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "DisableCatchupFullScan": {
+      "type": "switch",
+      "label": "Disable Catchup Full Scan",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "DisableCatchupQuickScan": {
+      "type": "switch",
+      "label": "Disable Catchup Quick Scan",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "LowCPU": {
+      "type": "switch",
+      "label": "Low CPU Priority",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "MeteredConnectionUpdates": {
+      "type": "switch",
+      "label": "Metered Connection Updates",
+      "omitWhenBlank": true,
+      "default": false
+    },
+    "DisableLocalAdminMerge": {
+      "type": "switch",
+      "label": "Disable Local Admin Merge",
+      "omitWhenBlank": true,
+      "default": true
+    },
+    "AvgCPULoadFactor": {
+      "type": "number",
+      "label": "Avg CPU Load Factor (%) (0-100, default 50)",
+      "omitWhenBlank": true
+    },
+    "SignatureUpdateInterval": {
+      "type": "number",
+      "label": "Signature Update Interval (hours) (0-24, default 8)",
+      "omitWhenBlank": true
+    },
+    "CloudExtendedTimeout": {
+      "type": "number",
+      "label": "Cloud Extended Timeout (seconds) (0-50, default 0)",
+      "omitWhenBlank": true
+    },
+    "AllowOnAccessProtection": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Allow On Access Protection",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "0",
+          "label": "Not Allowed"
+        },
+        {
+          "value": "1",
+          "label": "Allowed (Default)"
+        }
+      ]
+    },
+    "SubmitSamplesConsent": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Submit Samples Consent",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "0",
+          "label": "Always prompt"
+        },
+        {
+          "value": "1",
+          "label": "Send safe samples automatically (Default)"
+        },
+        {
+          "value": "2",
+          "label": "Never send"
+        },
+        {
+          "value": "3",
+          "label": "Send all samples automatically"
+        }
+      ]
+    },
+    "EnableNetworkProtection": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Network Protection",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "0",
+          "label": "Disabled (Default)"
+        },
+        {
+          "value": "1",
+          "label": "Block mode"
+        },
+        {
+          "value": "2",
+          "label": "Audit mode"
+        }
+      ]
+    },
+    "CloudBlockLevel": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Cloud Block Level",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "0",
+          "label": "Default"
+        },
+        {
+          "value": "2",
+          "label": "High"
+        },
+        {
+          "value": "4",
+          "label": "High Plus"
+        },
+        {
+          "value": "6",
+          "label": "Zero Tolerance"
+        }
+      ]
+    },
+    "RemediationLow": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Threat Remediation - Low Severity",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "clean",
+          "label": "Clean"
+        },
+        {
+          "value": "quarantine",
+          "label": "Quarantine"
+        },
+        {
+          "value": "remove",
+          "label": "Remove"
+        },
+        {
+          "value": "allow",
+          "label": "Allow"
+        },
+        {
+          "value": "userDefined",
+          "label": "User Defined"
+        },
+        {
+          "value": "block",
+          "label": "Block"
+        }
+      ]
+    },
+    "RemediationModerate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Threat Remediation - Moderate Severity",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "clean",
+          "label": "Clean"
+        },
+        {
+          "value": "quarantine",
+          "label": "Quarantine"
+        },
+        {
+          "value": "remove",
+          "label": "Remove"
+        },
+        {
+          "value": "allow",
+          "label": "Allow"
+        },
+        {
+          "value": "userDefined",
+          "label": "User Defined"
+        },
+        {
+          "value": "block",
+          "label": "Block"
+        }
+      ]
+    },
+    "RemediationHigh": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Threat Remediation - High Severity",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "clean",
+          "label": "Clean"
+        },
+        {
+          "value": "quarantine",
+          "label": "Quarantine"
+        },
+        {
+          "value": "remove",
+          "label": "Remove"
+        },
+        {
+          "value": "allow",
+          "label": "Allow"
+        },
+        {
+          "value": "userDefined",
+          "label": "User Defined"
+        },
+        {
+          "value": "block",
+          "label": "Block"
+        }
+      ]
+    },
+    "RemediationSevere": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Threat Remediation - Severe",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "clean",
+          "label": "Clean"
+        },
+        {
+          "value": "quarantine",
+          "label": "Quarantine"
+        },
+        {
+          "value": "remove",
+          "label": "Remove"
+        },
+        {
+          "value": "allow",
+          "label": "Allow"
+        },
+        {
+          "value": "userDefined",
+          "label": "User Defined"
+        },
+        {
+          "value": "block",
+          "label": "Block"
+        }
+      ]
+    },
+    "AssignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Policy Assignment",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "none",
+          "label": "Do not assign"
+        },
+        {
+          "value": "allLicensedUsers",
+          "label": "All users"
+        },
+        {
+          "value": "AllDevices",
+          "label": "All devices"
+        },
+        {
+          "value": "AllDevicesAndUsers",
+          "label": "All users and devices"
+        }
+      ]
+    }
+  },
+  "read": {
+    "cacheType": "IntuneConfigurationPolicies"
+  },
+  "prepare": "Get-CIPPBaselineDefenderAVPolicyState",
+  "remediate": {
+    "executor": "DefenderAVPolicy",
+    "scanArchives": "%ScanArchives%",
+    "allowBehavior": "%AllowBehavior%",
+    "allowCloudProtection": "%AllowCloudProtection%",
+    "allowEmailScanning": "%AllowEmailScanning%",
+    "allowFullScanNetwork": "%AllowFullScanNetwork%",
+    "allowFullScanRemovable": "%AllowFullScanRemovable%",
+    "allowScriptScan": "%AllowScriptScan%",
+    "allowDownloadable": "%AllowDownloadable%",
+    "allowRealTime": "%AllowRealTime%",
+    "allowNetwork": "%AllowNetwork%",
+    "allowUI": "%AllowUI%",
+    "checkSigs": "%CheckSigs%",
+    "disableCatchupFullScan": "%DisableCatchupFullScan%",
+    "disableCatchupQuickScan": "%DisableCatchupQuickScan%",
+    "lowCPU": "%LowCPU%",
+    "meteredConnectionUpdates": "%MeteredConnectionUpdates%",
+    "disableLocalAdminMerge": "%DisableLocalAdminMerge%",
+    "avgCPULoadFactor": "%AvgCPULoadFactor%",
+    "signatureUpdateInterval": "%SignatureUpdateInterval%",
+    "cloudExtendedTimeout": "%CloudExtendedTimeout%",
+    "allowOnAccessProtection": "%AllowOnAccessProtection%",
+    "submitSamplesConsent": "%SubmitSamplesConsent%",
+    "enableNetworkProtection": "%EnableNetworkProtection%",
+    "cloudBlockLevel": "%CloudBlockLevel%",
+    "remediationLow": "%RemediationLow%",
+    "remediationModerate": "%RemediationModerate%",
+    "remediationHigh": "%RemediationHigh%",
+    "remediationSevere": "%RemediationSevere%",
+    "assignTo": "%AssignTo%"
+  }
+}

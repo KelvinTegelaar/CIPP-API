@@ -15,8 +15,8 @@ function Invoke-ListIntuneReusableSettings {
 
     $TenantFilter = $Request.Query.tenantFilter
     $SettingId = $Request.Query.ID
-    $UseReportDB = $Request.Query.UseReportDB
-
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     if (-not $TenantFilter) {
         return ([HttpResponseContext]@{
             StatusCode = [System.Net.HttpStatusCode]::BadRequest
@@ -25,8 +25,18 @@ function Invoke-ListIntuneReusableSettings {
     }
 
     try {
-        if (-not $SettingId -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+        if (-not $SettingId -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB)) {
             try {
+                # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
+                if ($Request.Query.manualPagination -eq $true) {
+                    # Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.
+                    $PageSize = $Request.Query.PageSize -as [int]
+                    return ([HttpResponseContext]@{
+                            StatusCode = [System.Net.HttpStatusCode]::OK
+                            # Continuation token from the previous page's Metadata.nextLink; opaque to callers.
+                            Body       = Get-CIPPReportPage -TenantFilter $TenantFilter -Type 'IntuneReusableSettings' -PageSize $PageSize -ContinuationToken $Request.Query.nextLink -Report { param($Tenant) Get-CIPPIntuneReusableSettingsReport -TenantFilter $Tenant -ErrorAction Stop }
+                        })
+                }
                 $Settings = Get-CIPPIntuneReusableSettingsReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [System.Net.HttpStatusCode]::OK
             } catch {

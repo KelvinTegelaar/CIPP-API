@@ -5,14 +5,28 @@ function New-CIPPTemplateRun {
         $TenantFilter
     )
     $Table = Get-CippTable -tablename 'templates'
+
+    # Templates created from a tenant are keyed by that tenant in their Source column and matched
+    # on it to update-in-place. The tenant can be addressed by any of its names (default domain,
+    # initial onmicrosoft domain, tenant id), and a second sync task created under a different name
+    # used to see none of the existing templates and create a full duplicate set on every run.
+    # Match on every name the tenant is known by and write the canonical one.
+    $TenantInfo = Get-Tenants -IncludeErrors -TenantFilter $TenantFilter | Select-Object -First 1
+    $SourceAliases = @(@($TenantFilter, $TenantInfo.defaultDomainName, $TenantInfo.initialDomainName, $TenantInfo.customerId) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    $SourceName = if ($TenantInfo.defaultDomainName) { [string]$TenantInfo.defaultDomainName } else { [string]$TenantFilter }
+
     $ExistingTemplates = (Get-CIPPAzDataTableEntity @Table) | ForEach-Object {
         try {
             $data = $_.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue -Depth 100
-            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force -ErrorAction Stop
-            $data | Add-Member -NotePropertyName 'PartitionKey' -NotePropertyValue $_.PartitionKey -Force -ErrorAction Stop
-            $data | Add-Member -NotePropertyName 'SHA' -NotePropertyValue $_.SHA -Force -ErrorAction SilentlyContinue
-            $data | Add-Member -NotePropertyName 'Package' -NotePropertyValue $_.Package -Force -ErrorAction SilentlyContinue
-            $data | Add-Member -NotePropertyName 'Source' -NotePropertyValue $_.Source -Force -ErrorAction SilentlyContinue
+            $data | Add-Member -NotePropertyMembers ([ordered]@{
+                    GUID         = $_.RowKey
+                    PartitionKey = $_.PartitionKey
+                }) -Force -ErrorAction Stop
+            $data | Add-Member -NotePropertyMembers ([ordered]@{
+                    SHA     = $_.SHA
+                    Package = $_.Package
+                    Source  = $_.Source
+                }) -Force -ErrorAction SilentlyContinue
             $data
         } catch {
             return
@@ -64,7 +78,7 @@ function New-CIPPTemplateRun {
 
                 if (!$ExistingTemplate -or $UpdateNeeded) {
                     $Template = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $File.path).content | ConvertFrom-Json
-                    $ImportResult = Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $TemplateSettings.templateRepo.value
+                    $ImportResult = Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $TemplateSettings.templateRepo.value -Path $File.path
                     if ($ImportResult) {
                         Write-Information $ImportResult
                         $ImportResult
@@ -117,7 +131,7 @@ function New-CIPPTemplateRun {
                     foreach ($policy in $policies) {
                         try {
                             $Hash = Get-StringHash -String ($policy | ConvertTo-Json -Depth 100 -Compress)
-                            $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'CATemplate' -and $_.displayName -eq $policy.displayName -and $_.Source -eq $TenantFilter } | Select-Object -First 1
+                            $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'CATemplate' -and $_.displayName -eq $policy.displayName -and $_.Source -in $SourceAliases } | Select-Object -First 1
                             if ($ExistingPolicy -and $ExistingPolicy.SHA -eq $Hash) {
                                 "CA Policy $($policy.displayName) found, SHA matches, skipping template creation"
                                 continue
@@ -127,10 +141,12 @@ function New-CIPPTemplateRun {
 
                             if ($ExistingPolicy -and $ExistingPolicy.PartitionKey -eq 'CATemplate') {
                                 "CA Policy $($policy.displayName) found, updating template"
+                                # Full replace: carry Package across like the Intune branches do.
                                 Add-CIPPAzDataTableEntity @Table -Entity @{
                                     JSON         = "$Template"
                                     RowKey       = $ExistingPolicy.GUID
                                     PartitionKey = 'CATemplate'
+                                    Package      = $ExistingPolicy.Package
                                     GUID         = $ExistingPolicy.GUID
                                     SHA          = $Hash
                                     Source       = $ExistingPolicy.Source
@@ -144,7 +160,7 @@ function New-CIPPTemplateRun {
                                     PartitionKey = 'CATemplate'
                                     GUID         = "$GUID"
                                     SHA          = $Hash
-                                    Source       = $TenantFilter
+                                    Source       = $SourceName
                                 }
                             }
 
@@ -164,6 +180,7 @@ function New-CIPPTemplateRun {
                         'deviceManagement/windowsFeatureUpdateProfiles'
                         'deviceManagement/windowsQualityUpdatePolicies'
                         'deviceManagement/windowsQualityUpdateProfiles'
+                        'deviceManagement/hardwareConfigurations'
                     )
 
                     $Requests = [System.Collections.Generic.List[PSCustomObject]]::new()
@@ -187,7 +204,7 @@ function New-CIPPTemplateRun {
                                     $Hash = Get-StringHash -String ($Policy | ConvertTo-Json -Depth 100 -Compress)
                                     $DisplayName = $Policy.displayName ?? $Policy.name
 
-                                    $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'IntuneTemplate' -and $_.displayName -eq $DisplayName -and $_.Source -eq $TenantFilter } | Select-Object -First 1
+                                    $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'IntuneTemplate' -and $_.displayName -eq $DisplayName -and $_.Source -in $SourceAliases } | Select-Object -First 1
 
                                     Write-Information "Processing Intune Configuration Policy $($DisplayName) - $($ExistingPolicy ? 'Existing template found' : 'No existing template found')"
 
@@ -233,7 +250,7 @@ function New-CIPPTemplateRun {
                                             PartitionKey = 'IntuneTemplate'
                                             GUID         = "$GUID"
                                             SHA          = $Hash
-                                            Source       = $TenantFilter
+                                            Source       = $SourceName
                                         } -Force
                                     }
                                 } catch {
@@ -248,108 +265,118 @@ function New-CIPPTemplateRun {
                 }
                 'intunecompliance' {
                     Write-Information "Create Intune Compliance Policy Templates for $TenantFilter"
-                    New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/deviceCompliancePolicies?$top=999' -tenantid $TenantFilter | ForEach-Object {
-                        $Policy = $_
-                        $Hash = Get-StringHash -String (ConvertTo-Json -Depth 100 -Compress -InputObject $_)
-                        $ExistingPolicy = $ExistingTemplates | Where-Object { $Policy.displayName -eq $_.DisplayName -and $_.Source -eq $TenantFilter } | Select-Object -First 1
-                        if ($ExistingPolicy -and $ExistingPolicy.SHA -eq $Hash) {
-                            "Intune Compliance Policy $($_.DisplayName) found, SHA matches, skipping template creation"
-                            continue
-                        }
+                    $Policies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/deviceCompliancePolicies?$top=999' -tenantid $TenantFilter
+                    foreach ($Policy in $Policies) {
+                        try {
+                            $Hash = Get-StringHash -String (ConvertTo-Json -Depth 100 -Compress -InputObject $Policy)
+                            $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'IntuneTemplate' -and $Policy.displayName -eq $_.DisplayName -and $_.Source -in $SourceAliases } | Select-Object -First 1
+                            if ($ExistingPolicy -and $ExistingPolicy.SHA -eq $Hash) {
+                                "Intune Compliance Policy $($Policy.displayName) found, SHA matches, skipping template creation"
+                                continue
+                            }
 
-                        $Template = New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'deviceCompliancePolicies' -ID $Policy.id
-                        if ($ExistingPolicy -and $ExistingPolicy.PartitionKey -eq 'IntuneTemplate') {
-                            "Intune Compliance Policy $($Template.DisplayName) found, updating template"
-                            $object = [PSCustomObject]@{
-                                Displayname = $Template.DisplayName
-                                Description = $Template.Description
-                                RAWJson     = $Template.TemplateJson
-                                Type        = $Template.Type
-                                GUID        = $ExistingPolicy.GUID
-                            } | ConvertTo-Json -Compress
+                            $Template = New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'deviceCompliancePolicies' -ID $Policy.id
+                            if ($ExistingPolicy -and $ExistingPolicy.PartitionKey -eq 'IntuneTemplate') {
+                                "Intune Compliance Policy $($Template.DisplayName) found, updating template"
+                                $object = [PSCustomObject]@{
+                                    Displayname = $Template.DisplayName
+                                    Description = $Template.Description
+                                    RAWJson     = $Template.TemplateJson
+                                    Type        = $Template.Type
+                                    GUID        = $ExistingPolicy.GUID
+                                } | ConvertTo-Json -Compress
 
-                            Add-CIPPAzDataTableEntity @Table -Entity @{
-                                JSON         = "$object"
-                                RowKey       = $ExistingPolicy.GUID
-                                PartitionKey = 'IntuneTemplate'
-                                Package      = $ExistingPolicy.Package
-                                GUID         = $ExistingPolicy.GUID
-                                SHA          = $Hash
-                                Source       = $ExistingPolicy.Source
-                            } -Force
-                        } else {
-                            "Intune Compliance Policy $($Template.DisplayName) not found in existing templates, creating new template"
-                            $GUID = (New-Guid).GUID
-                            $object = [PSCustomObject]@{
-                                Displayname = $Template.DisplayName
-                                Description = $Template.Description
-                                RAWJson     = $Template.TemplateJson
-                                Type        = $Template.Type
-                                GUID        = $GUID
-                            } | ConvertTo-Json -Compress
+                                Add-CIPPAzDataTableEntity @Table -Entity @{
+                                    JSON         = "$object"
+                                    RowKey       = $ExistingPolicy.GUID
+                                    PartitionKey = 'IntuneTemplate'
+                                    Package      = $ExistingPolicy.Package
+                                    GUID         = $ExistingPolicy.GUID
+                                    SHA          = $Hash
+                                    Source       = $ExistingPolicy.Source
+                                } -Force
+                            } else {
+                                "Intune Compliance Policy $($Template.DisplayName) not found in existing templates, creating new template"
+                                $GUID = (New-Guid).GUID
+                                $object = [PSCustomObject]@{
+                                    Displayname = $Template.DisplayName
+                                    Description = $Template.Description
+                                    RAWJson     = $Template.TemplateJson
+                                    Type        = $Template.Type
+                                    GUID        = $GUID
+                                } | ConvertTo-Json -Compress
 
-                            Add-CIPPAzDataTableEntity @Table -Entity @{
-                                JSON         = "$object"
-                                RowKey       = "$GUID"
-                                PartitionKey = 'IntuneTemplate'
-                                SHA          = $Hash
-                                GUID         = "$GUID"
-                                Source       = $TenantFilter
-                            } -Force
+                                Add-CIPPAzDataTableEntity @Table -Entity @{
+                                    JSON         = "$object"
+                                    RowKey       = "$GUID"
+                                    PartitionKey = 'IntuneTemplate'
+                                    SHA          = $Hash
+                                    GUID         = "$GUID"
+                                    Source       = $SourceName
+                                } -Force
+                            }
+                        } catch {
+                            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                            "Failed to create a template of the Intune Compliance Policy with ID: $($Policy.id). Error: $ErrorMessage"
                         }
                     }
                 }
 
                 'intuneprotection' {
                     Write-Information "Create Intune Protection Policy Templates for $TenantFilter"
-                    New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/managedAppPolicies?$top=999' -tenantid $TenantFilter | ForEach-Object {
-                        $Policy = $_
-                        $Hash = Get-StringHash -String (ConvertTo-Json -Depth 100 -Compress -InputObject $_)
-                        $ExistingPolicy = $ExistingTemplates | Where-Object { $Policy.displayName -eq $_.DisplayName -and $_.Source -eq $TenantFilter } | Select-Object -First 1
-                        if ($ExistingPolicy -and $ExistingPolicy.SHA -eq $Hash) {
-                            "Intune Protection Policy $($_.DisplayName) found, SHA matches, skipping template creation"
-                            continue
-                        }
+                    $Policies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/managedAppPolicies?$top=999' -tenantid $TenantFilter
+                    foreach ($Policy in $Policies) {
+                        try {
+                            $Hash = Get-StringHash -String (ConvertTo-Json -Depth 100 -Compress -InputObject $Policy)
+                            $ExistingPolicy = $ExistingTemplates | Where-Object { $_.PartitionKey -eq 'IntuneTemplate' -and $Policy.displayName -eq $_.DisplayName -and $_.Source -in $SourceAliases } | Select-Object -First 1
+                            if ($ExistingPolicy -and $ExistingPolicy.SHA -eq $Hash) {
+                                "Intune Protection Policy $($Policy.displayName) found, SHA matches, skipping template creation"
+                                continue
+                            }
 
-                        $Template = New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'managedAppPolicies' -ID $Policy.id
-                        if ($ExistingPolicy -and $ExistingPolicy.PartitionKey -eq 'IntuneTemplate') {
-                            "Intune Protection Policy $($Template.DisplayName) found, updating template"
-                            $object = [PSCustomObject]@{
-                                Displayname = $Template.DisplayName
-                                Description = $Template.Description
-                                RAWJson     = $Template.TemplateJson
-                                Type        = $Template.Type
-                                GUID        = $ExistingPolicy.GUID
-                            } | ConvertTo-Json -Compress
+                            $Template = New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'managedAppPolicies' -ID $Policy.id -ODataType $Policy.'@odata.type'
+                            if ($ExistingPolicy -and $ExistingPolicy.PartitionKey -eq 'IntuneTemplate') {
+                                "Intune Protection Policy $($Template.DisplayName) found, updating template"
+                                $object = [PSCustomObject]@{
+                                    Displayname = $Template.DisplayName
+                                    Description = $Template.Description
+                                    RAWJson     = $Template.TemplateJson
+                                    Type        = $Template.Type
+                                    GUID        = $ExistingPolicy.GUID
+                                } | ConvertTo-Json -Compress
 
-                            Add-CIPPAzDataTableEntity @Table -Entity @{
-                                JSON         = "$object"
-                                RowKey       = $ExistingPolicy.GUID
-                                PartitionKey = 'IntuneTemplate'
-                                Package      = $ExistingPolicy.Package
-                                SHA          = $Hash
-                                GUID         = $ExistingPolicy.GUID
-                                Source       = $ExistingPolicy.Source
-                            } -Force
-                        } else {
-                            "Intune Protection Policy $($Template.DisplayName) not found in existing templates, creating new template"
-                            $GUID = (New-Guid).GUID
-                            $object = [PSCustomObject]@{
-                                Displayname = $Template.DisplayName
-                                Description = $Template.Description
-                                RAWJson     = $Template.TemplateJson
-                                Type        = $Template.Type
-                                GUID        = $GUID
-                            } | ConvertTo-Json -Compress
+                                Add-CIPPAzDataTableEntity @Table -Entity @{
+                                    JSON         = "$object"
+                                    RowKey       = $ExistingPolicy.GUID
+                                    PartitionKey = 'IntuneTemplate'
+                                    Package      = $ExistingPolicy.Package
+                                    SHA          = $Hash
+                                    GUID         = $ExistingPolicy.GUID
+                                    Source       = $ExistingPolicy.Source
+                                } -Force
+                            } else {
+                                "Intune Protection Policy $($Template.DisplayName) not found in existing templates, creating new template"
+                                $GUID = (New-Guid).GUID
+                                $object = [PSCustomObject]@{
+                                    Displayname = $Template.DisplayName
+                                    Description = $Template.Description
+                                    RAWJson     = $Template.TemplateJson
+                                    Type        = $Template.Type
+                                    GUID        = $GUID
+                                } | ConvertTo-Json -Compress
 
-                            Add-CIPPAzDataTableEntity @Table -Entity @{
-                                JSON         = "$object"
-                                RowKey       = "$GUID"
-                                PartitionKey = 'IntuneTemplate'
-                                SHA          = $Hash
-                                GUID         = "$GUID"
-                                Source       = $TenantFilter
-                            } -Force
+                                Add-CIPPAzDataTableEntity @Table -Entity @{
+                                    JSON         = "$object"
+                                    RowKey       = "$GUID"
+                                    PartitionKey = 'IntuneTemplate'
+                                    SHA          = $Hash
+                                    GUID         = "$GUID"
+                                    Source       = $SourceName
+                                } -Force
+                            }
+                        } catch {
+                            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                            "Failed to create a template of the Intune Protection Policy with ID: $($Policy.id). Error: $ErrorMessage"
                         }
                     }
                 }

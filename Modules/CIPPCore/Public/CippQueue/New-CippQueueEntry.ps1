@@ -22,6 +22,7 @@ function New-CippQueueEntry {
 
     if ($env:CIPPNG -eq 'true') {
         [Craft.Services.QueueStatusBridge]::RegisterQueueMetadata($QueueEntry.RowKey, $Name, $Link, $Reference)
+        Add-CIPPRealtimeWatch -JobId $QueueEntry.RowKey -Run
         return $QueueEntry
     }
 

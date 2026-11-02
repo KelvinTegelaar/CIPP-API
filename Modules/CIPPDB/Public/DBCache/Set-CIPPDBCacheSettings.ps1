@@ -39,7 +39,7 @@ function Set-CIPPDBCacheSettings {
 
         $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
 
-        $SettingsResponse = $BulkResults | Where-Object { $_.id -eq 'settings' } | Select-Object -First 1
+        $SettingsResponse = $BulkResults.Where({ $_.id -eq 'settings' }, 'First')[0]
         $Settings = @()
         if ($SettingsResponse -and $SettingsResponse.status -eq 200) {
             $Settings = @($SettingsResponse.body.value)
@@ -51,7 +51,7 @@ function Set-CIPPDBCacheSettings {
         $Settings = $null
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching apps and services settings' -sev Debug
-        $AppsAndServicesResponse = $BulkResults | Where-Object { $_.id -eq 'appsAndServices' } | Select-Object -First 1
+        $AppsAndServicesResponse = $BulkResults.Where({ $_.id -eq 'appsAndServices' }, 'First')[0]
         $AppsAndServices = @()
         if ($AppsAndServicesResponse -and $AppsAndServicesResponse.status -eq 200) {
             $AppsAndServices = $AppsAndServicesResponse.body
@@ -66,7 +66,7 @@ function Set-CIPPDBCacheSettings {
         $AppsAndServices = $null
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Forms settings' -sev Debug
-        $FormsSettingsResponse = $BulkResults | Where-Object { $_.id -eq 'formsSettings' } | Select-Object -First 1
+        $FormsSettingsResponse = $BulkResults.Where({ $_.id -eq 'formsSettings' }, 'First')[0]
         $FormsSettings = @()
         if ($FormsSettingsResponse -and $FormsSettingsResponse.status -eq 200) {
             $FormsSettings = $FormsSettingsResponse.body

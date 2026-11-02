@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_6_5_1 {
             return
         }
 
-        $Cfg = $Org | Select-Object -First 1
+        $Cfg = @($Org)[0]
 
         if ($Cfg.OAuth2ClientProfileEnabled -eq $true) {
             $Status = 'Passed'

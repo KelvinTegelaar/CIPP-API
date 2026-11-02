@@ -1,0 +1,203 @@
+{
+  "name": "intuneBrandingProfile",
+  "label": "Set Intune Company Portal branding profile",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the branding profile for the Intune Company Portal app. This is a tenant wide setting and overrules any settings set on the app level. Fields left blank are neither graded nor written - the tenant keeps whatever it has.",
+  "executiveText": "Customizes the Intune Company Portal app with company branding, contact information, and support details, providing employees with a consistent corporate experience when managing their devices. This improves user experience and ensures employees know how to get IT support when needed.",
+  "docsDescription": "Sets the branding profile for the Intune Company Portal app. This is a tenant wide setting and overrules any settings set on the app level.",
+  "impactColour": "info",
+  "addedDate": "2024-06-20",
+  "powershellEquivalent": "Graph API",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "displayName": {
+      "type": "textField",
+      "label": "Organization name",
+      "omitWhenBlank": true,
+      "default": "",
+      "validators": {
+        "maxLength": {
+          "value": 40,
+          "message": "Maximum length is 40 characters"
+        }
+      }
+    },
+    "showLogo": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "Show logo",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Keep the tenant's current value",
+          "value": ""
+        },
+        {
+          "label": "Show logo",
+          "value": true
+        },
+        {
+          "label": "Hide logo",
+          "value": false
+        }
+      ],
+      "default": ""
+    },
+    "showDisplayNameNextToLogo": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "Show organization name next to logo",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Keep the tenant's current value",
+          "value": ""
+        },
+        {
+          "label": "Show organization name",
+          "value": true
+        },
+        {
+          "label": "Hide organization name",
+          "value": false
+        }
+      ],
+      "default": ""
+    },
+    "contactITName": {
+      "type": "textField",
+      "label": "Contact IT name",
+      "omitWhenBlank": true,
+      "default": "",
+      "validators": {
+        "maxLength": {
+          "value": 40,
+          "message": "Maximum length is 40 characters"
+        }
+      }
+    },
+    "contactITPhoneNumber": {
+      "type": "textField",
+      "label": "Contact IT phone number",
+      "omitWhenBlank": true,
+      "default": "",
+      "validators": {
+        "pattern": {
+          "value": "^\\+?(?=(?:[^0-9]*[0-9]){3})[0-9 ()./-]{3,}$",
+          "message": "Must be a phone number, e.g. +31612345678"
+        }
+      }
+    },
+    "contactITEmailAddress": {
+      "type": "textField",
+      "label": "Contact IT email address",
+      "omitWhenBlank": true,
+      "default": "",
+      "validators": {
+        "pattern": {
+          "value": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+          "message": "Must be a valid e-mail address"
+        },
+        "maxLength": {
+          "value": 40,
+          "message": "Maximum length is 40 characters"
+        }
+      }
+    },
+    "contactITNotes": {
+      "type": "textField",
+      "label": "Contact IT notes",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "onlineSupportSiteName": {
+      "type": "textField",
+      "label": "Online support site name",
+      "omitWhenBlank": true,
+      "default": "",
+      "validators": {
+        "maxLength": {
+          "value": 40,
+          "message": "Maximum length is 40 characters"
+        }
+      }
+    },
+    "onlineSupportSiteUrl": {
+      "type": "textField",
+      "label": "Online support site URL",
+      "omitWhenBlank": true,
+      "default": "",
+      "validators": {
+        "pattern": {
+          "value": "^https?://.+$",
+          "message": "Must be a URL starting with http:// or https://"
+        }
+      }
+    },
+    "privacyUrl": {
+      "type": "textField",
+      "label": "Privacy statement URL",
+      "omitWhenBlank": true,
+      "default": "",
+      "validators": {
+        "pattern": {
+          "value": "^https?://.+$",
+          "message": "Must be a URL starting with http:// or https://"
+        }
+      }
+    }
+  },
+  "expected": {
+    "displayName": "%displayName%",
+    "showLogo": "%showLogo%",
+    "showDisplayNameNextToLogo": "%showDisplayNameNextToLogo%",
+    "contactITName": "%contactITName%",
+    "contactITPhoneNumber": "%contactITPhoneNumber%",
+    "contactITEmailAddress": "%contactITEmailAddress%",
+    "contactITNotes": "%contactITNotes%",
+    "onlineSupportSiteName": "%onlineSupportSiteName%",
+    "onlineSupportSiteUrl": "%onlineSupportSiteUrl%",
+    "privacyUrl": "%privacyUrl%"
+  },
+  "read": {
+    "cacheType": "IntuneBrandingProfile",
+    "filter": [
+      {
+        "property": "id",
+        "value": "c3a59481-1bf2-46ce-94b3-66eec07a8d60"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "deviceManagement/intuneBrandingProfiles/c3a59481-1bf2-46ce-94b3-66eec07a8d60",
+        "body": {
+          "displayName": "%displayName%",
+          "showLogo": "%showLogo%",
+          "showDisplayNameNextToLogo": "%showDisplayNameNextToLogo%",
+          "contactITName": "%contactITName%",
+          "contactITPhoneNumber": "%contactITPhoneNumber%",
+          "contactITEmailAddress": "%contactITEmailAddress%",
+          "contactITNotes": "%contactITNotes%",
+          "onlineSupportSiteName": "%onlineSupportSiteName%",
+          "onlineSupportSiteUrl": "%onlineSupportSiteUrl%",
+          "privacyUrl": "%privacyUrl%"
+        }
+      }
+    ]
+  }
+}

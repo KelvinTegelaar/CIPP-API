@@ -19,7 +19,7 @@ function Invoke-CippTestZTNA21773 {
         $SPsWithLongCerts = @()
 
         if ($Apps) {
-            $AppsWithLongCerts = $Apps | Where-Object {
+            $AppsWithLongCerts = $Apps.Where({
                 if ($_.keyCredentials -and $_.keyCredentials.Count -gt 0 -and $_.keyCredentials -ne '[]') {
                     $HasLongCert = $false
                     foreach ($Cred in $_.keyCredentials) {
@@ -35,11 +35,11 @@ function Invoke-CippTestZTNA21773 {
                 } else {
                     $false
                 }
-            }
+            })
         }
 
         if ($ServicePrincipals) {
-            $SPsWithLongCerts = $ServicePrincipals | Where-Object {
+            $SPsWithLongCerts = $ServicePrincipals.Where({
                 if ($_.keyCredentials -and $_.keyCredentials.Count -gt 0 -and $_.keyCredentials -ne '[]') {
                     $HasLongCert = $false
                     foreach ($Cred in $_.keyCredentials) {
@@ -55,7 +55,7 @@ function Invoke-CippTestZTNA21773 {
                 } else {
                     $false
                 }
-            }
+            })
         }
 
         $TotalWithLongCerts = $AppsWithLongCerts.Count + $SPsWithLongCerts.Count

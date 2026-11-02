@@ -81,7 +81,6 @@ function Invoke-CIPPStandardRotateDKIM {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'DKIM' -FieldValue $DKIM -StoreAs json -Tenant $tenant
 
         $CurrentValue = @{
             domainsWith1024BitDKIM = @(@($DKIM.Identity) | Where-Object { $_ })

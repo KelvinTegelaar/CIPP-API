@@ -1,0 +1,84 @@
+{
+  "DisplayName": "CIPP: Enable Onedrive Silent Logon and Known Folder Move",
+  "Description": "This policy enables Onedrive Silent Logon and Known Folder move",
+  "Type": "Admin",
+  "Policy": {
+    "added": [
+      {
+        "definition@odata.bind": "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('81c07ba0-7512-402d-b1f6-00856975cfab')",
+        "enabled": true,
+        "presentationValues": [],
+        "definition": {
+          "id": "81c07ba0-7512-402d-b1f6-00856975cfab",
+          "displayName": "Silently sign in users to the OneDrive sync app with their Windows credentials",
+          "categoryPath": "\\OneDrive",
+          "classType": "machine",
+          "policyType": "admxIngested"
+        }
+      },
+      {
+        "definition@odata.bind": "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('39147fa2-6c5e-437b-8264-19b50b891709')",
+        "enabled": true,
+        "presentationValues": [
+          {
+            "id": "8b0eb5f7-fe48-49e4-94e6-417410f2725d",
+            "presentation@odata.bind": "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('39147fa2-6c5e-437b-8264-19b50b891709')/presentations('fbefbbdf-5382-477c-8b6c-71f4a06e2805')",
+            "value": "00000000-0000-0000-0000-000000000001",
+            "@odata.type": "#microsoft.graph.groupPolicyPresentationValueText",
+            "presentation": {
+              "id": "fbefbbdf-5382-477c-8b6c-71f4a06e2805",
+              "label": "Tenant ID:",
+              "@odata.type": "#microsoft.graph.groupPolicyPresentationTextBox",
+              "index": 0
+            }
+          },
+          {
+            "id": "0844a341-7076-4bb2-b1a0-11271ef9639d",
+            "presentation@odata.bind": "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('39147fa2-6c5e-437b-8264-19b50b891709')/presentations('35c82072-a93b-4022-be14-8684c2f6fcc2')",
+            "value": "0",
+            "@odata.type": "#microsoft.graph.groupPolicyPresentationValueText",
+            "presentation": {
+              "id": "35c82072-a93b-4022-be14-8684c2f6fcc2",
+              "label": "Show notification to users after folders have been redirected:",
+              "@odata.type": "#microsoft.graph.groupPolicyPresentationDropdownList",
+              "index": 1
+            }
+          }
+        ],
+        "definition": {
+          "id": "39147fa2-6c5e-437b-8264-19b50b891709",
+          "displayName": "Silently move Windows known folders to OneDrive",
+          "categoryPath": "\\OneDrive",
+          "classType": "machine",
+          "policyType": "admxIngested"
+        }
+      },
+      {
+        "definition@odata.bind": "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('9a4db949-29e4-4e31-a129-bf2b88d8fa1b')",
+        "enabled": true,
+        "presentationValues": [],
+        "definition": {
+          "id": "9a4db949-29e4-4e31-a129-bf2b88d8fa1b",
+          "displayName": "Disable the tutorial that appears at the end of OneDrive Setup",
+          "categoryPath": "\\OneDrive",
+          "classType": "user",
+          "policyType": "admxIngested"
+        }
+      },
+      {
+        "definition@odata.bind": "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('61b07a01-7e60-4127-b086-f6b32458a5c5')",
+        "enabled": true,
+        "presentationValues": [],
+        "definition": {
+          "id": "61b07a01-7e60-4127-b086-f6b32458a5c5",
+          "displayName": "Use OneDrive Files On-Demand",
+          "categoryPath": "\\OneDrive",
+          "classType": "machine",
+          "policyType": "admxIngested"
+        }
+      }
+    ],
+    "updated": [],
+    "deletedIds": []
+  }
+}

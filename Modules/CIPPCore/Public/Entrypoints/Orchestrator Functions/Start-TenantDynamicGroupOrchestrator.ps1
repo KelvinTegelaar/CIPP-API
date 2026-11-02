@@ -27,6 +27,7 @@ function Start-TenantDynamicGroupOrchestrator {
             $TenantBatch = $TenantGroups | Select-Object Name, Id, @{n = 'FunctionName'; exp = { 'UpdateDynamicTenantGroup' } }, @{n = 'QueueId'; exp = { $Queue.RowKey } }
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'UpdateDynamicTenantGroups'
+                AllowCollision   = $GroupId -ne 'All'
                 Batch            = @($TenantBatch)
                 SkipLog          = $true
             }

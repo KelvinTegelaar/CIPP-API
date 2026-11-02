@@ -15,16 +15,19 @@ function Invoke-ListMailQuarantineMessage {
 
     try {
         $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Export-QuarantineMessage' -cmdParams @{ 'Identity' = $Identity }
+        # This is one of the few places CIPP hands message content to an operator; record who pulled what.
+        Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -tenant $TenantFilter -message "Exported the raw EML of quarantined message $Identity" -Sev 'Info'
         $EmlBase64 = $GraphRequest.Eml
         $EmlContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($EmlBase64))
         $Body = @{
-            'Identity' = $Identity
-            'Message'  = $EmlContent
+            'Identity'  = $Identity
+            'Message'   = $EmlContent
+            'EmlBase64' = $EmlBase64
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = $ErrorMessage
     }
 

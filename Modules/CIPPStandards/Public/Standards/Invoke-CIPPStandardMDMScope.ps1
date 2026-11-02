@@ -45,7 +45,7 @@ function Invoke-CIPPStandardMDMScope {
     } #we're done.
 
     try {
-        $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mobileDeviceManagementPolicies/0000000a-0000-0000-c000-000000000000?$expand=includedGroups' -tenantid $Tenant
+        $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mobileDeviceManagementPolicies/0000000a-0000-0000-c000-000000000000?$select=termsOfUseUrl,discoveryUrl,complianceUrl,appliesTo&$expand=includedGroups($select=id,displayName)' -tenantid $Tenant
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the MDM Scope state for $Tenant. Error: $ErrorMessage" -Sev Error
@@ -157,7 +157,6 @@ function Invoke-CIPPStandardMDMScope {
             customGroup = $Settings.customGroup ?? ''
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MDMScope' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'MDMScope' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 
 }

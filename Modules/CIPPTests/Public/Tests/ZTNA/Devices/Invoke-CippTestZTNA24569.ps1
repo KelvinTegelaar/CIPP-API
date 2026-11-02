@@ -16,12 +16,12 @@ function Invoke-CippTestZTNA24569 {
             return
         }
 
-        $MacOSEndpointProtectionPolicies = @($DeviceConfigs | Where-Object {
+        $MacOSEndpointProtectionPolicies = @($DeviceConfigs.Where({
                 $_.'@odata.type' -eq '#microsoft.graph.macOSEndpointProtectionConfiguration'
-            })
+            }))
 
-        $FileVaultEnabledPolicies = @($MacOSEndpointProtectionPolicies | Where-Object { $_.fileVaultEnabled -eq $true })
-        $AssignedFileVaultPolicies = @($FileVaultEnabledPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $FileVaultEnabledPolicies = @($MacOSEndpointProtectionPolicies.Where({ $_.fileVaultEnabled -eq $true }))
+        $AssignedFileVaultPolicies = @($FileVaultEnabledPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
         $Passed = $AssignedFileVaultPolicies.Count -gt 0
 
         if ($Passed) {

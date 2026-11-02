@@ -30,7 +30,7 @@ function Invoke-EditTransportRule {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantFilter -message "Failed setting transport rule $($Identity) to $($State). Error:$($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Result = $ErrorMessage.NormalizedError
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

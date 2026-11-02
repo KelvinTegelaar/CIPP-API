@@ -26,21 +26,32 @@ function Invoke-ExecStandardsRun {
         $_.guid -like $TemplateId
     }
 
+    # [bool] over an array (or the string 'false') is always $true, which flipped wildcard runs to manual-only.
+    $RunManually = @($Templates).Count -eq 1 -and ("$(@($Templates)[0].runManually)" -eq 'True')
+
     # Call the wrapper - it handles queuing internally via Start-CIPPOrchestrator
     try {
-        $null = New-CIPPStandardsRun -TenantFilter $TenantFilter -TemplateID $TemplateId -runManually ([bool]$Templates.runManually) -Force
-        $Results = "Successfully started Standards Run for tenant: $TenantFilter"
+        $InstanceId = New-CIPPStandardsRun -TenantFilter $TenantFilter -TemplateID $TemplateId -runManually $RunManually -Force
+        $TemplateName = if ($TemplateId -eq '*') { 'All' } else { "$($Templates.templateName) ($($Templates.GUID))" }
+        $RunMode = if ($RunManually) { ' (Manual Only)' } else { '' }
+        $Results = if ("$InstanceId" -like '*-Skipped') {
+            "A Standards Run for tenant: $TenantFilter - Template: $TemplateName is already running, so this request was skipped"
+        } else {
+            "Successfully started Standards Run for tenant: $TenantFilter - Template: $TemplateName$RunMode"
+        }
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Results -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to start standards run for tenant: $TenantFilter. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Results -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $Results = [pscustomobject]@{'Results' = "$Results" }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 

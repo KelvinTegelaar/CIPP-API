@@ -15,7 +15,7 @@ function Invoke-CippTestCIS_1_3_7 {
 
         # appId of "Microsoft 365 on the web" service principal
         $AppId = 'c1f33bc0-bdb4-4248-ba9b-096807ddb43e'
-        $SP = $ServicePrincipals | Where-Object { $_.appId -eq $AppId } | Select-Object -First 1
+        $SP = $ServicePrincipals.Where({ $_.appId -eq $AppId }, 'First')[0]
 
         if (-not $SP) {
             $Status = 'Passed'

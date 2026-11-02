@@ -16,6 +16,10 @@ Function Invoke-AddExConnectorTemplate {
 
     try {
         $GUID = (New-Guid).GUID
+        # Posted from the row action; without a name the template lists blank.
+        if ([string]::IsNullOrWhiteSpace($Request.Body.name)) {
+            throw 'Connector template name is required but was not provided'
+        }
         $Select = if ($Request.Body.cippconnectortype -eq 'outbound') {
             @(
                 'name', 'AllAcceptedDomains', 'CloudServicesMailEnabled', 'Comment', 'Confirm', 'ConnectorSource', 'ConnectorType', 'Enabled', 'IsTransportRuleScoped', 'RecipientDomains', 'RouteAllMessagesViaOnPremises', 'SmartHosts', 'TestMode', 'TlsDomain', 'TlsSettings', 'UseMXRecord'
@@ -30,7 +34,7 @@ Function Invoke-AddExConnectorTemplate {
             $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
             $_ | Select-Object -Property $NonEmptyProperties
         }
-        $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, * | ConvertTo-Json -Depth 10)
+        $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, * -ExcludeProperty Name | ConvertTo-Json -Depth 10)
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{
@@ -40,12 +44,12 @@ Function Invoke-AddExConnectorTemplate {
             PartitionKey = 'ExConnectorTemplate'
         }
         $Result = "Successfully created Connector Template: $($Request.Body.name) with GUID $GUID"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Debug'
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to create Connector Template: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error'
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 

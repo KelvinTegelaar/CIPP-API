@@ -17,9 +17,9 @@ function Invoke-CippTestZTNA24840 {
             return
         }
 
-        $AndroidWifiConfProfiles = @($DeviceConfigs | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.androidDeviceOwnerEnterpriseWiFiConfiguration' })
-        $CompliantAndroidWifiConfProfiles = @($AndroidWifiConfProfiles | Where-Object { $_.wiFiSecurityType -eq 'wpaEnterprise' })
-        $AssignedCompliantProfiles = @($CompliantAndroidWifiConfProfiles | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $AndroidWifiConfProfiles = @($DeviceConfigs.Where({ $_.'@odata.type' -eq '#microsoft.graph.androidDeviceOwnerEnterpriseWiFiConfiguration' }))
+        $CompliantAndroidWifiConfProfiles = @($AndroidWifiConfProfiles.Where({ $_.wiFiSecurityType -eq 'wpaEnterprise' }))
+        $AssignedCompliantProfiles = @($CompliantAndroidWifiConfProfiles.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
         $Passed = $AssignedCompliantProfiles.Count -gt 0
 
         if ($Passed) {

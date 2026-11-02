@@ -138,6 +138,5 @@ function Invoke-CIPPStandardEXOOutboundSpamLimits {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.EXOOutboundSpamLimits' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'OutboundSpamLimitsConfigured' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

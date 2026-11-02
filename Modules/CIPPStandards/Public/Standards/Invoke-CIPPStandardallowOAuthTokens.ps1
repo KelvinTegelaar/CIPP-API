@@ -38,7 +38,7 @@ function Invoke-CIPPStandardallowOAuthTokens {
         $CurrentState = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/softwareOath' -tenantid $Tenant
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the allowOTPTokens state for $Tenant. Error: $ErrorMessage" -Sev Error
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the allowOAuthTokens state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
     $StateIsCorrect = ($CurrentState.state -eq 'enabled')
@@ -52,6 +52,8 @@ function Invoke-CIPPStandardallowOAuthTokens {
             try {
                 Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'softwareOath' -Enabled $true
             } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Software OTP/oAuth tokens. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         }
     }
@@ -66,7 +68,6 @@ function Invoke-CIPPStandardallowOAuthTokens {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'softwareOath' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.allowOAuthTokens' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
     }
 }

@@ -6,14 +6,20 @@ function Invoke-CippTestCIS_2_1_4 {
     param($Tenant)
 
     try {
-        $SA = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoSafeAttachmentPolicies'
 
-        if (-not $SA) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_2_1_4' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'ExoSafeAttachmentPolicies cache not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Safe Attachments policy is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection'
+        if (-not (Test-CIPPStandardLicense -StandardName 'CIS_2_1_4' -TenantFilter $Tenant -Preset DefenderForOffice365 -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_2_1_4' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Microsoft Defender for Office 365 (ATP). Required capabilities: ATP_ENTERPRISE, ATP_ENTERPRISE_GOV, THREAT_INTELLIGENCE, THREAT_INTELLIGENCE_GOV.' -Risk 'High' -Name 'Safe Attachments policy is enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Email Protection'
             return
         }
 
-        $Compliant = $SA | Where-Object { $_.Enable -eq $true -and $_.Action -in @('Block', 'Replace', 'DynamicDelivery') }
+        $SA = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoSafeAttachmentPolicies'
+
+        if (-not $SA) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_2_1_4' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'ExoSafeAttachmentPolicies cache not found. Please refresh the cache for this tenant.' -Name 'Safe Attachments policy is enabled' -UserImpact 'Low' -Risk 'High' -ImplementationEffort 'Low' -Category 'Email Protection'
+            return
+        }
+
+        $Compliant = $SA.Where({ $_.Enable -eq $true -and $_.Action -in @('Block', 'Replace', 'DynamicDelivery') })
 
         if ($Compliant) {
             $Status = 'Passed'

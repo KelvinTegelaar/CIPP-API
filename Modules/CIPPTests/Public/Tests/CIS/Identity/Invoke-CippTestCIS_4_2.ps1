@@ -13,8 +13,8 @@ function Invoke-CippTestCIS_4_2 {
             return
         }
 
-        $DefaultPlatform = $Enrollment | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.deviceEnrollmentPlatformRestrictionsConfiguration' -and $_.priority -eq 0 -or $_.displayName -eq 'All Users' } | Select-Object -First 1
-        if (-not $DefaultPlatform) { $DefaultPlatform = $Enrollment | Where-Object { $_.PSObject.Properties.Name -contains 'androidRestriction' } | Select-Object -First 1 }
+        $DefaultPlatform = $Enrollment.Where({ $_.'@odata.type' -eq '#microsoft.graph.deviceEnrollmentPlatformRestrictionsConfiguration' -and $_.priority -eq 0 -or $_.displayName -eq 'All Users' }, 'First')[0]
+        if (-not $DefaultPlatform) { $DefaultPlatform = $Enrollment.Where({ $_.PSObject.Properties.Name -contains 'androidRestriction' }, 'First')[0] }
 
         if (-not $DefaultPlatform) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_4_2' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Default Device Platform Restriction policy not found in cache.' -Risk 'Medium' -Name 'Device enrollment for personally owned devices is blocked by default' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Device Management'

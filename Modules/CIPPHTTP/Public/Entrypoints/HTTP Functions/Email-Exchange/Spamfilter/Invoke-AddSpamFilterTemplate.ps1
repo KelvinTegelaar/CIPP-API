@@ -23,7 +23,7 @@ Function Invoke-AddSpamFilterTemplate {
                 $_ | Select-Object -Property $NonEmptyProperties
             }
         }
-        $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, @{n = 'comments'; e = { $_.comments } }, * | ConvertTo-Json -Depth 10)
+        $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, @{n = 'comments'; e = { $_.comments } }, * -ExcludeProperty Name, Comments | ConvertTo-Json -Depth 10)
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{
@@ -32,12 +32,12 @@ Function Invoke-AddSpamFilterTemplate {
             PartitionKey = 'SpamfilterTemplate'
         }
         $Result = "Successfully created Spam Filter Template: $($Request.Body.name) with GUID $GUID"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Debug'
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to create Spam Filter Template: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 

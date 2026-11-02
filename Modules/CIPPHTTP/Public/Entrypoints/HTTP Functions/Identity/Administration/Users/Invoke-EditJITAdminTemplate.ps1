@@ -19,12 +19,15 @@ function Invoke-EditJITAdminTemplate {
 
         # Validate required fields
         if ([string]::IsNullOrWhiteSpace($GUID)) {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw 'GUID is required'
         }
         if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw 'tenantFilter is required'
         }
         if ([string]::IsNullOrWhiteSpace($TemplateName)) {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw 'templateName is required'
         }
 
@@ -35,11 +38,12 @@ function Invoke-EditJITAdminTemplate {
 
         # Get the existing template
         $Table = Get-CippTable -tablename 'templates'
-        $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type Guid
+        $SafeGUID = try { ConvertTo-CIPPODataFilterValue -Value $GUID -Type Guid } catch { $FailCode = [HttpStatusCode]::BadRequest; throw }
         $Filter = "PartitionKey eq 'JITAdminTemplate' and RowKey eq '$SafeGUID'"
         $ExistingTemplate = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (!$ExistingTemplate) {
+            $FailCode = [HttpStatusCode]::NotFound
             throw "Template with GUID '$GUID' not found"
         }
 
@@ -58,6 +62,7 @@ function Invoke-EditJITAdminTemplate {
         }
 
         if ($DuplicateName) {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw "A template with name '$TemplateName' already exists for tenant '$TenantFilter'"
         }
 
@@ -85,6 +90,7 @@ function Invoke-EditJITAdminTemplate {
         # Validate user action fields
         $DefaultUserAction = $Request.Body.defaultUserAction
         if ($TenantFilter -eq 'AllTenants' -and $DefaultUserAction -eq 'select') {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw 'defaultUserAction cannot be "select" when tenantFilter is "AllTenants"'
         }
 
@@ -102,6 +108,9 @@ function Invoke-EditJITAdminTemplate {
             defaultNotificationActions  = $Request.Body.defaultNotificationActions
             generateTAPByDefault        = [bool]$Request.Body.generateTAPByDefault
             reasonTemplate              = $Request.Body.reasonTemplate
+            defaultVacationMode         = [bool]$Request.Body.defaultVacationMode
+            defaultVacationCAPolicy     = $Request.Body.defaultVacationCAPolicy
+            defaultVacationExcludeAuditAlerts = [bool]$Request.Body.defaultVacationExcludeAuditAlerts
             createdBy                   = $ExistingData.createdBy
             createdDate                 = $ExistingData.createdDate
             modifiedBy                  = $UserDetails
@@ -166,7 +175,7 @@ function Invoke-EditJITAdminTemplate {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to update JIT Admin Template: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

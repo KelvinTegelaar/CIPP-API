@@ -48,6 +48,7 @@ function Invoke-ExecModifyContactPerms {
 
     $Results = [System.Collections.Generic.List[string]]::new()
     $HasErrors = $false
+    $Failed = 0
 
     # Convert permissions to array format if it's an object with numeric keys
     if ($Permissions -is [PSCustomObject]) {
@@ -87,7 +88,8 @@ function Invoke-ExecModifyContactPerms {
                     UserID                 = $UserId
                     folderName             = $FolderName
                     UserToGetPermissions   = $TargetUser
-                    LoggingName            = $TargetUser
+                    # TargetUser may be a recipient id, so log the display name the caller saw
+                    LoggingName            = $Permission.DisplayName ?? $TargetUser
                     Permissions            = $PermissionLevel
                     SendNotificationToUser = $SendNotificationToUser
                 }
@@ -97,7 +99,7 @@ function Invoke-ExecModifyContactPerms {
 
                 $Results.Add($Result)
             } catch {
-                $HasErrors = $true
+                $Failed++
                 $Results.Add("$($_.Exception.Message)")
             }
         }
@@ -111,7 +113,7 @@ function Invoke-ExecModifyContactPerms {
 
 
     return ([HttpResponseContext]@{
-            StatusCode = if ($HasErrors) { [HttpStatusCode]::InternalServerError } else { [HttpStatusCode]::OK }
+            StatusCode = if ($HasErrors) { [HttpStatusCode]::InternalServerError } else { Get-CippBulkStatusCode -Total $Results.Count -Failed $Failed }
             Body       = @{'Results' = @($Results) }
         })
 }

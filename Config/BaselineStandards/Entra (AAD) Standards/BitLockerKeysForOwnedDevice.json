@@ -1,0 +1,57 @@
+{
+  "name": "BitLockerKeysForOwnedDevice",
+  "label": "Control BitLocker key recovery for owned devices",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CIS M365 7.0.0 (5.1.4.6)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Controls whether standard users can recover BitLocker keys for devices they own.",
+  "executiveText": "Gives administrators centralized control over BitLocker recovery secrets—restrict access to ensure IT-assisted recovery flows, or allow self-service when rapid device unlocks are a priority.",
+  "docsDescription": "Updates the Microsoft Entra authorization policy that controls whether standard users can read BitLocker recovery keys for devices they own. Choose to restrict access for tighter security or allow self-service recovery when operational needs require it.",
+  "impactColour": "info",
+  "addedDate": "2025-10-12",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthorizationPolicy",
+  "appliesToTest": [
+    "CIS_5_1_4_6",
+    "ZTNA21954"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "allowed": {
+      "type": "switch",
+      "label": "Allow users to recover BitLocker keys for their owned devices",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "allowedToReadBitLockerKeysForOwnedDevice": "%allowed%"
+  },
+  "read": {
+    "cacheType": "AuthorizationPolicy",
+    "object": "defaultUserRolePermissions"
+  },
+  "writeTarget": "authorizationPolicy",
+  "writeTargetProperties": {
+    "defaultUserRolePermissions.allowedToReadBitLockerKeysForOwnedDevice": "%allowed%"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "asApp": false,
+        "uri": "policies/authorizationPolicy/authorizationPolicy",
+        "body": {
+          "defaultUserRolePermissions": {
+            "allowedToReadBitLockerKeysForOwnedDevice": "%allowed%"
+          }
+        }
+      }
+    ]
+  }
+}

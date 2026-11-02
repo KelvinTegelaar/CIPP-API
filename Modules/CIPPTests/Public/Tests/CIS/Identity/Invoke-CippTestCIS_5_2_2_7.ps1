@@ -13,11 +13,11 @@ function Invoke-CippTestCIS_5_2_2_7 {
             return
         }
 
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.signInRiskLevels -and
             $_.conditions.signInRiskLevels.Count -gt 0
-        }
+        })
 
         if ($Matching) {
             $Status = 'Passed'

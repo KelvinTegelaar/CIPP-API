@@ -122,7 +122,6 @@ function Invoke-CIPPStandardProfilePhotos {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'ProfilePhotos' -FieldValue $CurrentStatesCorrect -StoreAs bool -Tenant $Tenant
         if ($CurrentStatesCorrect) {
             $FieldValue = $true
         } else {

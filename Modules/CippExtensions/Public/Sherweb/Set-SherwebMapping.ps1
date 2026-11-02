@@ -6,7 +6,7 @@ function Set-SherwebMapping {
         $Request
     )
     Get-CIPPAzDataTableEntity @CIPPMapping -Filter "PartitionKey eq 'SherwebMapping'" | ForEach-Object {
-        Remove-AzDataTableEntity -Force @CIPPMapping -Entity $_
+        Remove-CIPPAzDataTableEntity -Force @CIPPMapping -Entity $_
     }
     foreach ($Mapping in $Request.Body) {
         Write-Host "Adding mapping for $($mapping.IntegrationId)"

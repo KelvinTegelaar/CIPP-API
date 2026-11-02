@@ -1,0 +1,208 @@
+function Invoke-ListCVEManagement {
+    <#
+    .FUNCTIONALITY
+        Entrypoint,AnyTenant
+    .ROLE
+        Endpoint.Security.Read
+    .DESCRIPTION
+        Lists CVEs affecting a tenant's devices, from Defender threat and vulnerability management, along with any exceptions recorded in CIPP. AllTenants and UseReportDB=true read the cached report database instead of Defender directly, because the live path can only query one tenant per request.
+    #>
+
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
+    # AllTenants always uses the reporting database - the live path queries a single tenant's
+    # Defender TVM API and cannot fan out across tenants within one request.
+    if ($UseReportDB -or $TenantFilter -eq 'AllTenants') {
+        try {
+            $GraphRequest = Get-CIPPCVEReport -TenantFilter $TenantFilter -ErrorAction Stop
+            $StatusCode = [HttpStatusCode]::OK
+            $SortedCves = $GraphRequest
+            Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'running cve report' -sev 'info'
+        } catch {
+            Write-Host "Error retrieving CVEs from report database: $($_.Exception.Message)"
+            $StatusCode = [HttpStatusCode]::InternalServerError
+            $GraphRequest = $_.Exception.Message
+            Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'Error retrieving' -sev 'info'
+        }
+    } else {
+        try {
+            Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'retrieving CVEs' -sev 'info'
+
+            # AnyTenant: the live path queries this tenant's Defender TVM; enforce scope
+            $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+            if ($AllowedTenants -notcontains 'AllTenants' -and -not ($TenantFilter -and (Get-Tenants -TenantFilter $TenantFilter))) {
+                throw 'Access to this tenant is not allowed'
+            }
+
+            # Retrieve Exceptions from Exception database. These are resolved before the CVE
+            # fetch so the fetch can be streamed straight into the merge below.
+            $CveExceptionsTable = Get-CIPPTable -TableName 'CveExceptions'
+            $AllExceptions = Get-CIPPAzDataTableEntity @CveExceptionsTable
+            $ExceptionsByCve = @{}
+
+            $TenantList = Get-Tenants | Where-Object defaultDomainName -EQ $TenantFilter
+
+            foreach ($Ex in $AllExceptions) {
+                if ($TenantList.defaultDomainName -contains $Ex.customerId -or $Ex.customerId -eq 'ALL') {
+                    if (-not $ExceptionsByCve.ContainsKey($Ex.cveId)) {
+                        $ExceptionsByCve[$Ex.cveId] = [System.Collections.Generic.List[object]]::new()
+                    }
+
+                    [void]$ExceptionsByCve[$Ex.cveId].Add([PSCustomObject]@{
+                            cveId              = $Ex.cveId
+                            customerId         = $Ex.customerId
+                            exceptionType      = $Ex.exceptionType
+                            exceptionSource    = $Ex.exceptionSource
+                            exceptionComment   = $Ex.exceptionComment
+                            exceptionCreatedBy = $Ex.exceptionCreatedBy
+                            exceptionDate      = $Ex.exceptionReadableDate
+                            exceptionExpiry    = $Ex.exceptionExpiry
+                        })
+                }
+            }
+
+            # Merge all results.
+            #
+            # get-DefenderCVEs is piped rather than assigned. It returns one row per CVE, each
+            # carrying a deviceDetailsJson blob covering every affected device, so for a large
+            # tenant that row set is the biggest object in the request. Assigning it kept every
+            # row and every JSON blob alive alongside $CveMasterTable and $SortedCves for the
+            # rest of the request; folding rows as they arrive lets each one be collected once
+            # it has been merged. This runs on the HTTP worker pool, which shares the
+            # container's managed heap with the background pool, so an OOM here takes
+            # user-facing requests down with it.
+            $CveMasterTable = @{}
+            $RowCount = 0
+
+            get-DefenderCVEs -TenantFilter $TenantFilter | ForEach-Object {
+                $Item = $_
+                $RowCount++
+
+                $CveId = $Item.PartitionKey
+
+                if (-not $CveMasterTable.ContainsKey($CveId)) {
+                    $CveMasterTable[$CveId] = @{
+                        cveId                      = $CveId
+                        vulnerabilitySeverityLevel = $Item.vulnerabilitySeverityLevel
+                        exploitabilityLevel        = $Item.exploitabilityLevel
+                        softwareName               = $Item.softwareName
+                        softwareVendor             = $Item.softwareVendor
+                        softwareVersion            = $Item.softwareVersion
+                        lastUpdated                = $Item.lastUpdated
+                        TotalDeviceCount           = 0
+                        AffectedTenantsList        = [System.Collections.Generic.List[object]]::new()
+                        AffectedDevicesList        = [System.Collections.Generic.List[object]]::new()
+                        DiskPathList               = [System.Collections.Generic.List[object]]::new()
+                        RegistryPathList           = [System.Collections.Generic.List[object]]::new()
+                        ExceptionMatchCount        = 0
+                        TotalTenantGroupCount      = 0
+                        ExceptionSources           = [System.Collections.Generic.HashSet[string]]::new()
+                    }
+                }
+
+                $CveGroup = $CveMasterTable[$CveId]
+                $CveGroup.TotalTenantGroupCount++
+
+                [void]$CveGroup.AffectedTenantsList.Add(@{ customerId = $Item.customerId })
+
+                # Unpack the device JSON details from the row
+                if ($Item.deviceDetailsJson) {
+                    $Devices = ConvertFrom-Json $Item.deviceDetailsJson | Sort-Object -Property deviceName -Unique
+                    foreach ($Dev in $Devices) {
+                        [void]$CveGroup.AffectedDevicesList.Add(@{ deviceName = $Dev.deviceName })
+                        if ($Dev.registryPaths) {
+                            [void]$CveGroup.RegistryPathList.Add(@{ deviceName = $Dev.deviceName
+                                    registryPaths                              = $Dev.registryPaths 
+                                })
+                        }
+                        if ($Dev.diskPaths) {
+                            [void]$CveGroup.DiskPathList.Add(@{ deviceName = $Dev.deviceName
+                                    diskPaths                              = $Dev.diskPaths 
+                                })
+                        }
+                        $CveGroup.TotalDeviceCount ++
+                    }
+                }
+            }
+
+            # Counted during the fold rather than off a materialised row set, but the same
+            # guarantee: a tenant with no CVEs returns a bare empty array, not a response body.
+            if ($RowCount -eq 0) {
+                return @()
+            }
+
+            # Combine filtered results
+            $SortedCves = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+            foreach ($CveKey in $CveMasterTable.Keys) {
+                $Target = $CveMasterTable[$CveKey]
+                $ExceptionStatus = 'None'
+                $HasException = $false
+                $Exceptions = @{}
+                $ExceptionType = ''
+                $ExceptionComment = ''
+                $ExceptionCreatedBy = ''
+                $ExceptionDate = ''
+                $ExceptionExpiry = ''
+
+                if ($ExceptionsByCve.ContainsKey($CveKey)) {
+                    $Exceptions = @($ExceptionsByCve[$CveKey])
+                    $HasException = $true
+                    $ExceptionStatus = if ($Exceptions.customerId -contains 'ALL') { 'All' } else { 'Partial' }
+                    $ExceptionType = @{ customerId = $Exceptions.customerId
+                        exceptionType              = $Exceptions.exceptionType 
+                    }
+                    $ExceptionComment = @{ customerId = $Exceptions.customerId
+                        exceptionComment              = $Exceptions.exceptionComment 
+                    }
+                    $ExceptionCreatedBy = @{ customerId = $Exceptions.customerId
+                        exceptionCreatedBy              = $Exceptions.exceptionCreatedBy 
+                    }
+                    $ExceptionDate = @{ customerId = $Exceptions.customerId
+                        exceptionDate              = $Exceptions.exceptionDate 
+                    }
+                    $ExceptionExpiry = @{ customerId = $Exceptions.customerId
+                        exceptionExpiry              = $Exceptions.exceptionExpiry 
+                    }
+                }
+
+                [void]$SortedCves.Add([PSCustomObject]@{
+                        cveId                      = $Target.cveId
+                        vulnerabilitySeverityLevel = $Target.vulnerabilitySeverityLevel
+                        exploitabilityLevel        = $Target.exploitabilityLevel
+                        softwareName               = $Target.softwareName
+                        softwareVendor             = $Target.softwareVendor
+                        softwareVersion            = $Target.softwareVersion
+                        deviceCount                = $Target.TotalDeviceCount
+                        tenantCount                = $Target.TotalTenantGroupCount
+                        registryPaths              = $Target.RegistryPathList
+                        diskPaths                  = $Target.DiskPathList
+                        exceptionStatus            = $ExceptionStatus
+                        hasException               = $HasException
+                        affectedTenants            = $Target.AffectedTenantsList
+                        affectedDevices            = $Target.AffectedDevicesList
+                        exceptionType              = $ExceptionType
+                        exceptionComment           = $ExceptionComment
+                        exceptionCreatedBy         = $ExceptionCreatedBy
+                        exceptionDate              = $ExceptionDate
+                        exceptionExpiry            = $ExceptionExpiry
+                        cacheTimeStamp             = $Target.lastUpdated
+                    })
+                $StatusCode = [HttpStatusCode]::OK
+            }
+
+        } catch {
+            Write-Host "Error retrieving CVEs: $($_.Exception.Message)"
+            $StatusCode = [HttpStatusCode]::InternalServerError
+            $SortedCves = $_.Exception.Message
+        }
+    }
+    return [HttpResponseContext]@{
+        StatusCode = $StatusCode
+        Body       = @($SortedCves | Sort-Object -Property cveId)
+    }
+}

@@ -16,8 +16,8 @@ function Invoke-CippTestZTNA24547 {
             return
         }
 
-        $AndroidPolicies = @($IntunePolicies | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.androidWorkProfileCompliancePolicy' })
-        $AssignedPolicies = @($AndroidPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $AndroidPolicies = @($IntunePolicies.Where({ $_.'@odata.type' -eq '#microsoft.graph.androidWorkProfileCompliancePolicy' }))
+        $AssignedPolicies = @($AndroidPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
 
         $Passed = $AssignedPolicies.Count -gt 0
 

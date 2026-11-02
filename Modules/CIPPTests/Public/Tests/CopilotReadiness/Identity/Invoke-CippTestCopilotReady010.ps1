@@ -12,23 +12,27 @@ function Invoke-CippTestCopilotReady010 {
 
     try {
         $UserRegistrationDetails = Get-CIPPTestData -TenantFilter $Tenant -Type 'UserRegistrationDetails'
-        $AllUsers = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
+        # Plans are streamed: kept for every licensed user they are too large to cache
+        $UsersSeen = $false
+        $LicensedUsers = [System.Collections.Generic.List[object]]::new()
+        Get-CIPPTestData -TenantFilter $Tenant -Type 'Users' -Fields 'userPrincipalName', 'accountEnabled', 'assignedPlans' -Stream | ForEach-Object {
+            $UsersSeen = $true
+            if ($_.userPrincipalName -and $_.accountEnabled -eq $true -and $_.assignedPlans.Where({ $_.capabilityStatus -eq 'Enabled' }, 'First').Count) {
+                $LicensedUsers.Add([pscustomobject]@{ userPrincipalName = $_.userPrincipalName })
+            }
+        }
 
-        if (-not $UserRegistrationDetails -or -not $AllUsers) {
+        if (-not $UserRegistrationDetails -or -not $UsersSeen) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady010' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No MFA registration or user data found in database. Data collection may not yet have run for this tenant.' -Risk 'High' -Name 'All licensed users have MFA registered' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'
             return
         }
 
         # Build lookup by UPN for matching
         $RegLookup = @{}
-        foreach ($Reg in ($UserRegistrationDetails | Where-Object { $_.userPrincipalName })) {
+        foreach ($Reg in ($UserRegistrationDetails.Where({ $_.userPrincipalName }))) {
             $RegLookup[$Reg.userPrincipalName.ToLower()] = $Reg
         }
 
-        $LicensedUsers = @($AllUsers | Where-Object {
-                $_.userPrincipalName -and $_.accountEnabled -eq $true -and
-                ($_.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' })
-            })
 
         if ($LicensedUsers.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady010' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No licensed active users found in the tenant.' -Risk 'High' -Name 'All licensed users have MFA registered' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

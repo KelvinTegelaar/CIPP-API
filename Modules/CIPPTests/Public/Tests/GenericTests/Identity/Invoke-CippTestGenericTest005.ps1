@@ -13,7 +13,7 @@ function Invoke-CippTestGenericTest005 {
             return
         }
 
-        $Admins = @($MFAData | Where-Object { $_.UPN -and $_.IsAdmin -eq $true })
+        $Admins = @($MFAData.Where({ $_.UPN -and $_.IsAdmin -eq $true }))
 
         if ($Admins.Count -eq 0) {
             $Result = [System.Text.StringBuilder]::new("No administrator accounts were found in the MFA state data. This is unusual and may indicate the data needs to be re-synced.")

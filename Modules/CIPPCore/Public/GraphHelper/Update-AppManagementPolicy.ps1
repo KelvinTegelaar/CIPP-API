@@ -16,8 +16,20 @@ function Update-AppManagementPolicy {
     param(
         $TenantFilter = $env:TenantID,
         $ApplicationId = $env:ApplicationID,
-        $headers
+        $headers,
+        # Skip the password-addition exemption (leave secrets blocked, exempt only the SAM certificate).
+        # Defaults on only for the SAM app in certificate mode; other apps still get the password exemption.
+        [bool]$CertificateOnly = ([bool]$env:CertificateAuthMode -and ($ApplicationId -eq $env:ApplicationID)),
+        # Target a service principal instead of an application registration. First-party apps (e.g. the
+        # Azure MFA client) exist only as a service principal in the tenant, so the exemption must be
+        # resolved and assigned via servicePrincipals rather than applications.
+        [switch]$ServicePrincipal,
+        # Apps other than CIPP-SAM get their own policy so the shared CIPP-SAM exemption is never rewritten for them.
+        [string]$PolicyName = 'CIPP Exemption Policy',
+        [switch]$ExemptPasswordLifetime
     )
+
+    $TargetResource = if ($ServicePrincipal) { 'servicePrincipals' } else { 'applications' }
 
     try {
         # Create bulk request to fetch both policies at once
@@ -35,7 +47,7 @@ function Update-AppManagementPolicy {
             @{
                 id     = 'appRegistration'
                 method = 'GET'
-                url    = "applications(appId='$ApplicationId')?`$select=id,appId,displayName"
+                url    = "$TargetResource(appId='$ApplicationId')?`$select=id,appId,displayName"
             }
         )
 
@@ -124,48 +136,120 @@ function Update-AppManagementPolicy {
             $DefaultPolicyBlocksCredentials = ($DefaultPolicy.applicationRestrictions.passwordCredentials | Where-Object { $_.restrictionType -in @('passwordAddition', 'symmetricKeyAddition') -and $_.state -eq 'enabled' }).Count -gt 0
         }
 
-        # If default policy blocks credentials and CIPP app doesn't have an exemption, create/update policy
+        # Determine if default policy restricts key credentials: asymmetricKeyLifetime caps
+        # certificate validity (blocks the 1 year SAM certificate), trustedCertificateAuthority
+        # blocks self-signed certificates entirely
+        $DefaultKeyRestrictions = @()
+        $DefaultPolicyBlocksKeyCredentials = $false
+        if ($DefaultPolicy.applicationRestrictions.keyCredentials) {
+            $DefaultKeyRestrictions = @($DefaultPolicy.applicationRestrictions.keyCredentials | Where-Object { $_.restrictionType -in @('asymmetricKeyLifetime', 'trustedCertificateAuthority') -and $_.state -eq 'enabled' })
+            $DefaultPolicyBlocksKeyCredentials = $DefaultKeyRestrictions.Count -gt 0
+        }
+
+        # Create/update an exemption when the default policy blocks credentials. In certificate mode a
+        # password block is left in force, so only a key-credential block requires an exemption.
+        $DefaultPasswordLifetime = if ($ExemptPasswordLifetime -and -not $CertificateOnly) {
+            $DefaultPolicy.applicationRestrictions.passwordCredentials | Where-Object { $_.restrictionType -eq 'passwordLifetime' -and $_.state -eq 'enabled' } | Select-Object -First 1
+        }
+
         $PolicyAction = $null
-        if ($DefaultPolicyBlocksCredentials -and $CIPPApp) {
-            # Check if a CIPP-SAM Exemption Policy already exists
-            $ExistingExemptionPolicy = $AppPolicies | Where-Object { $_.displayName -eq 'CIPP Exemption Policy' } | Select-Object -First 1
+        $RequiresExemption = $DefaultPolicyBlocksKeyCredentials -or (-not $CertificateOnly -and $DefaultPolicyBlocksCredentials) -or $DefaultPasswordLifetime
+        if ($RequiresExemption -and $CIPPApp) {
+            $AssignedPolicy = $AppPolicies | Where-Object { $_.id -eq $CIPPAppPolicyId }
+            if ($AssignedPolicy -and $PolicyName -ne 'CIPP Exemption Policy' -and $AssignedPolicy.displayName -eq 'CIPP Exemption Policy') {
+                $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/$TargetResource/$($CIPPApp.id)/appManagementPolicies/$CIPPAppPolicyId/`$ref" -type DELETE -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
+                $CIPPAppPolicyId = $null
+                $CIPPAppTargeted = $false
+            }
+
+            $ExistingExemptionPolicy = $AppPolicies | Where-Object { $_.displayName -eq $PolicyName } | Select-Object -First 1
 
             # Check if CIPP app has a policy that allows credentials
             $CIPPHasExemption = $false
             if ($CIPPAppPolicyId) {
                 $CIPPPolicy = $AppPolicies | Where-Object { $_.id -eq $CIPPAppPolicyId }
-                # Check if the policy explicitly allows credentials (no enabled passwordAddition/symmetricKeyAddition restriction)
-                if ($CIPPPolicy.restrictions.passwordCredentials) {
+                # In certificate mode the password block is intentional, so only the key exemption matters.
+                if ($CertificateOnly) {
+                    $CIPPHasExemption = $true
+                } elseif ($CIPPPolicy.restrictions.passwordCredentials) {
                     $CIPPHasExemption = -not ($CIPPPolicy.restrictions.passwordCredentials | Where-Object { $_.restrictionType -in @('passwordAddition', 'symmetricKeyAddition') -and $_.state -eq 'enabled' })
                 } else {
                     # No password restrictions means it allows credentials
                     $CIPPHasExemption = $true
+                }
+                # When the default policy restricts key credentials, the exemption must explicitly
+                # disable those restriction types - otherwise certificate rotation stays blocked
+                if ($CIPPHasExemption -and $DefaultPasswordLifetime) {
+                    $CIPPHasExemption = [bool]($CIPPPolicy.restrictions.passwordCredentials | Where-Object { $_.restrictionType -eq 'passwordLifetime' -and $_.state -eq 'disabled' })
+                }
+                if ($CIPPHasExemption -and $DefaultPolicyBlocksKeyCredentials) {
+                    foreach ($Restriction in $DefaultKeyRestrictions) {
+                        $ExplicitlyDisabled = $CIPPPolicy.restrictions.keyCredentials | Where-Object { $_.restrictionType -eq $Restriction.restrictionType -and $_.state -eq 'disabled' }
+                        if (-not $ExplicitlyDisabled) { $CIPPHasExemption = $false }
+                    }
                 }
             }
 
             if (-not $CIPPHasExemption) {
                 # Need to create or update a policy for CIPP
                 try {
-                    # Define policy structure with disabled restrictions
-                    $PolicyBody = @{
-                        displayName  = 'CIPP Exemption Policy'
-                        description  = 'Allows CIPP app to manage credentials'
-                        isEnabled    = $true
-                        restrictions = @{
-                            passwordCredentials = @(
-                                @{
-                                    restrictionType                     = 'passwordAddition'
-                                    state                               = 'disabled'
-                                    restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
-                                }
-                                @{
-                                    restrictionType                     = 'symmetricKeyAddition'
-                                    state                               = 'disabled'
-                                    restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
-                                }
-                            )
-                            keyCredentials      = @()
+                    # Only exempt the restriction types the default policy actually enforces, so the
+                    # exemption body never carries a restriction Graph would reject as unneeded or malformed.
+                    $Restrictions = @{}
+
+                    # Password restrictions are disabled only for secret installs; certificate mode leaves
+                    # them blocked so secrets stay disallowed.
+                    $PasswordRestrictions = @(
+                        if (-not $CertificateOnly -and $DefaultPolicyBlocksCredentials) {
+                            @{
+                                restrictionType                     = 'passwordAddition'
+                                state                               = 'disabled'
+                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
+                            }
+                            @{
+                                restrictionType                     = 'symmetricKeyAddition'
+                                state                               = 'disabled'
+                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
+                            }
                         }
+                        if ($DefaultPasswordLifetime) {
+                            @{
+                                restrictionType                     = 'passwordLifetime'
+                                state                               = 'disabled'
+                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
+                                maxLifetime                         = $DefaultPasswordLifetime.maxLifetime
+                            }
+                        }
+                    )
+                    if ($PasswordRestrictions) { $Restrictions.passwordCredentials = $PasswordRestrictions }
+
+                    # Key restrictions are disabled so the SAM certificate can register. asymmetricKeyLifetime
+                    # is a lifetime-type restriction; Graph rejects the whole policy body unless it carries a
+                    # valid maxLifetime duration, even when the restriction is disabled. Echo the tenant
+                    # default's value when present, otherwise fall back to a conservative duration.
+                    if ($DefaultPolicyBlocksKeyCredentials) {
+                        $AsymmetricKeyMaxLifetime = ($DefaultKeyRestrictions | Where-Object { $_.restrictionType -eq 'asymmetricKeyLifetime' } | Select-Object -First 1).maxLifetime
+                        if (-not $AsymmetricKeyMaxLifetime) { $AsymmetricKeyMaxLifetime = 'P730D' }
+
+                        $Restrictions.keyCredentials = @(
+                            @{
+                                restrictionType                     = 'asymmetricKeyLifetime'
+                                state                               = 'disabled'
+                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
+                                maxLifetime                         = $AsymmetricKeyMaxLifetime
+                            }
+                            @{
+                                restrictionType                     = 'trustedCertificateAuthority'
+                                state                               = 'disabled'
+                                restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z'
+                            }
+                        )
+                    }
+                    $PolicyBody = @{
+                        displayName  = $PolicyName
+                        description  = if ($CertificateOnly) { 'Allows CIPP app to register certificates (password addition intentionally left blocked)' } else { 'Allows CIPP app to manage credentials' }
+                        isEnabled    = $true
+                        restrictions = $Restrictions
                     }
 
                     if ($CIPPAppPolicyId) {
@@ -177,12 +261,21 @@ function Update-AppManagementPolicy {
                         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/policies/appManagementPolicies/$($ExistingExemptionPolicy.id)" -type PATCH -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
 
                         if ($CIPPApp.id) {
-                            # Assign existing policy to CIPP-SAM application
+                            # Assign existing policy to the target app registration or service principal
                             $AssignBody = @{
                                 '@odata.id' = "https://graph.microsoft.com/beta/policies/appManagementPolicies/$($ExistingExemptionPolicy.id)"
                             }
-                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applications/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
-                            $PolicyAction = "Updated and assigned existing policy $($ExistingExemptionPolicy.id) to CIPP-SAM"
+                            try {
+                                $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/$TargetResource/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
+                                $PolicyAction = "Updated and assigned existing policy $($ExistingExemptionPolicy.id) to CIPP-SAM"
+                            } catch {
+                                # A duplicate reference means the policy is already assigned - that is the desired end state, not a failure.
+                                if ($_.Exception.Message -match 'already exist') {
+                                    $PolicyAction = "Existing policy $($ExistingExemptionPolicy.id) already assigned to CIPP-SAM"
+                                } else {
+                                    throw
+                                }
+                            }
                             $CIPPAppPolicyId = $ExistingExemptionPolicy.id
                             $CIPPAppTargeted = $true
                         } else {
@@ -193,12 +286,21 @@ function Update-AppManagementPolicy {
                         $CreatedPolicy = New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/policies/appManagementPolicies' -type POST -body ($PolicyBody | ConvertTo-Json -Depth 10) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
 
                         if ($CIPPApp.id) {
-                            # Assign policy to CIPP-SAM application using beta endpoint
+                            # Assign policy to the target app registration or service principal using beta endpoint
                             $AssignBody = @{
                                 '@odata.id' = "https://graph.microsoft.com/beta/policies/appManagementPolicies/$($CreatedPolicy.id)"
                             }
-                            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/applications/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
-                            $PolicyAction = "Created new policy $($CreatedPolicy.id) and assigned to CIPP-SAM"
+                            try {
+                                $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/$TargetResource/$($CIPPApp.id)/appManagementPolicies/`$ref" -type POST -body ($AssignBody | ConvertTo-Json) -asapp $true -NoAuthCheck $true -tenantid $TenantFilter -headers $headers
+                                $PolicyAction = "Created new policy $($CreatedPolicy.id) and assigned to CIPP-SAM"
+                            } catch {
+                                # A duplicate reference means the policy is already assigned - that is the desired end state, not a failure.
+                                if ($_.Exception.Message -match 'already exist') {
+                                    $PolicyAction = "Created new policy $($CreatedPolicy.id); already assigned to CIPP-SAM"
+                                } else {
+                                    throw
+                                }
+                            }
                             $CIPPAppPolicyId = $CreatedPolicy.id
                             $CIPPAppTargeted = $true
                         } else {

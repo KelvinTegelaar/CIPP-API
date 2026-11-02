@@ -1,0 +1,304 @@
+{
+  "DisplayName": "CIPP: Default ASR (v2)",
+  "Description": "",
+  "Type": "Catalog",
+  "Policy": {
+    "name": "CIPP: Default ASR (v2)",
+    "description": "",
+    "settings": [
+      {
+        "id": "0",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationGroupSettingCollectionInstance",
+          "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "19600663-e264-4c02-8f55-f2983216d6d7"
+          },
+          "groupSettingCollectionValue": [
+            {
+              "settingValueTemplateReference": null,
+              "children": [
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutionofpotentiallyobfuscatedscripts",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutionofpotentiallyobfuscatedscripts_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockwin32apicallsfromofficemacros",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockwin32apicallsfromofficemacros_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutablefilesrunningunlesstheymeetprevalenceagetrustedlistcriterion",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutablefilesrunningunlesstheymeetprevalenceagetrustedlistcriterion_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficecommunicationappfromcreatingchildprocesses",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficecommunicationappfromcreatingchildprocesses_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockallofficeapplicationsfromcreatingchildprocesses",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockallofficeapplicationsfromcreatingchildprocesses_audit",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockjavascriptorvbscriptfromlaunchingdownloadedexecutablecontent",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockjavascriptorvbscriptfromlaunchingdownloadedexecutablecontent_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockwebshellcreationforservers",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockwebshellcreationforservers_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockuntrustedunsignedprocessesthatrunfromusb",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockuntrustedunsignedprocessesthatrunfromusb_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockadobereaderfromcreatingchildprocesses",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockadobereaderfromcreatingchildprocesses_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockcredentialstealingfromwindowslocalsecurityauthoritysubsystem",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockcredentialstealingfromwindowslocalsecurityauthoritysubsystem_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockabuseofexploitedvulnerablesigneddrivers",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockabuseofexploitedvulnerablesigneddrivers_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockpersistencethroughwmieventsubscription",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockpersistencethroughwmieventsubscription_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockprocesscreationsfrompsexecandwmicommands",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockprocesscreationsfrompsexecandwmicommands_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficeapplicationsfromcreatingexecutablecontent",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficeapplicationsfromcreatingexecutablecontent_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficeapplicationsfrominjectingcodeintootherprocesses",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockofficeapplicationsfrominjectingcodeintootherprocesses_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_useadvancedprotectionagainstransomware",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_useadvancedprotectionagainstransomware_block",
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutablecontentfromemailclientandwebmail",
+                  "settingInstanceTemplateReference": null,
+                  "auditRuleInformation": null,
+                  "choiceSettingValue": {
+                    "settingValueTemplateReference": null,
+                    "value": "device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutablecontentfromemailclientandwebmail_block",
+                    "children": []
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "1",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance",
+          "settingDefinitionId": "device_vendor_msft_policy_config_defender_attacksurfacereductiononlyexclusions",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "0eaea6bb-736e-44ed-a450-b2ef5bea1377"
+          },
+          "simpleSettingCollectionValue": [
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\Program Files\\Communicator\\Communicator.exe"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\ProgramData\\ImmyBot\\"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\Windows\\Temp\\ImmyBot\\3667652e-389e-4739-b49d-e42ffa743e02\\"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\Program Files (x86)\\ImmyBot\\Immybot.Agent.exe"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\Program Files (x86)\\*\\NinjaRMMAgent.exe"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\Users\\*\\AppData\\Local\\Temp\\NewOutlookInstall\\NewOutlookInstaller.exe"
+            }
+          ]
+        }
+      },
+      {
+        "id": "2",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "device_vendor_msft_policy_config_defender_enablecontrolledfolderaccess",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "78c83b32-56c0-445a-932a-872d69af6e49"
+          },
+          "choiceSettingValue": {
+            "value": "device_vendor_msft_policy_config_defender_enablecontrolledfolderaccess_1",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "e57db701-c3c6-4264-ab50-7896cb90dfd6",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "3",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance",
+          "settingDefinitionId": "device_vendor_msft_policy_config_defender_controlledfolderaccessallowedapplications",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "e10f2cf5-121a-4890-af23-d4e91e0fab5f"
+          },
+          "simpleSettingCollectionValue": [
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "C:\\Program Files\\Communicator\\Communicator.exe"
+            }
+          ]
+        }
+      }
+    ],
+    "platforms": "windows10",
+    "technologies": "mdm,microsoftSense",
+    "templateReference": {
+      "templateId": "e8c053d6-9f95-42b1-a7f1-ebfd71c67a4b_1",
+      "templateFamily": "endpointSecurityAttackSurfaceReduction",
+      "templateDisplayName": "Attack Surface Reduction Rules",
+      "templateDisplayVersion": "Version 1"
+    }
+  }
+}

@@ -15,17 +15,17 @@ function Invoke-CippTestZTNA21817 {
 
         $globalAdminRoleId = '62e90394-69f5-4237-9190-012177145e10'
 
-        $globalAdminPolicy = $RoleManagementPolicies | Where-Object {
+        $globalAdminPolicy = $RoleManagementPolicies.Where({
             $_.scopeId -eq '/' -and
             $_.scopeType -eq 'DirectoryRole' -and
             $_.roleDefinitionId -eq $globalAdminRoleId
-        }
+        })
 
         $tableRows = ''
         $result = $false
 
         if ($globalAdminPolicy) {
-            $approvalRule = $globalAdminPolicy.rules | Where-Object { $_.id -like '*Approval_EndUser_Assignment*' }
+            $approvalRule = $globalAdminPolicy.rules.Where({ $_.id -like '*Approval_EndUser_Assignment*' })
 
             if ($approvalRule -and $approvalRule.setting.isApprovalRequired -eq $true) {
                 $approverCount = 0

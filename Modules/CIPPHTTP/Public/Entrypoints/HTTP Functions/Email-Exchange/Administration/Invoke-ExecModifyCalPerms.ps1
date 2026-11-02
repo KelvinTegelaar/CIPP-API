@@ -25,7 +25,6 @@ function Invoke-ExecModifyCalPerms {
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = @{'Results' = @('Username is required') }
             })
-        return
     }
 
     try {
@@ -43,11 +42,11 @@ function Invoke-ExecModifyCalPerms {
                 StatusCode = [HttpStatusCode]::NotFound
                 Body       = @{'Results' = @("Failed to get user ID: $($ErrorMessage.NormalizedError)") }
             })
-        return
     }
 
     $Results = [System.Collections.Generic.List[string]]::new()
     $HasErrors = $false
+    $Failed = 0
 
     # Convert permissions to array format if it's an object with numeric keys
     if ($Permissions -is [PSCustomObject]) {
@@ -87,7 +86,8 @@ function Invoke-ExecModifyCalPerms {
                     UserID                 = $UserId
                     folderName             = $FolderName
                     UserToGetPermissions   = $TargetUser
-                    LoggingName            = $TargetUser
+                    # TargetUser may be a recipient id, so log the display name the caller saw
+                    LoggingName            = $Permission.DisplayName ?? $TargetUser
                     Permissions            = $PermissionLevel
                     CanViewPrivateItems    = $CanViewPrivateItems
                     SendNotificationToUser = $SendNotificationToUser
@@ -98,7 +98,7 @@ function Invoke-ExecModifyCalPerms {
 
                 $Results.Add($Result)
             } catch {
-                $HasErrors = $true
+                $Failed++
                 $Results.Add("$($_.Exception.Message)")
             }
         }
@@ -111,7 +111,7 @@ function Invoke-ExecModifyCalPerms {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = if ($HasErrors) { [HttpStatusCode]::InternalServerError } else { [HttpStatusCode]::OK }
+            StatusCode = if ($HasErrors) { [HttpStatusCode]::InternalServerError } else { Get-CippBulkStatusCode -Total $Results.Count -Failed $Failed }
             Body       = @{'Results' = @($Results) }
         })
 }

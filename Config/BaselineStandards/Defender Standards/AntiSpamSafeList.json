@@ -1,0 +1,60 @@
+{
+  "name": "AntiSpamSafeList",
+  "label": "Set Anti-Spam Connection Filter Safe List",
+  "cat": "Defender Standards",
+  "tag": [
+    "CIS M365 7.0.0 (2.1.13)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Sets the anti-spam connection filter policy option 'safe list' in Defender.",
+  "executiveText": "Enables Microsoft's pre-approved list of trusted email servers to improve email delivery from legitimate sources while maintaining spam protection. This reduces false positives where legitimate emails might be blocked while still protecting against spam and malicious emails.",
+  "docsDescription": "Sets [Microsoft's built-in 'safe list'](https://learn.microsoft.com/en-us/powershell/module/exchange/set-hostedconnectionfilterpolicy?view=exchange-ps#-enablesafelist) in the anti-spam connection filter policy, rather than setting a custom safe/block list of IPs.",
+  "impactColour": "info",
+  "addedDate": "2025-02-15",
+  "powershellEquivalent": "Set-HostedConnectionFilterPolicy \"Default\" -EnableSafeList $true",
+  "appliesToTest": [
+    "CIS_2_1_13"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "enableSafeList": {
+      "type": "switch",
+      "label": "Enable Safe List",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "EnableSafeList": "%enableSafeList%"
+  },
+  "read": {
+    "cacheType": "ExoHostedConnectionFilterPolicy",
+    "filter": [
+      {
+        "property": "Identity",
+        "value": "Default"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-HostedConnectionFilterPolicy",
+        "params": {
+          "Identity": "Default",
+          "EnableSafeList": "%enableSafeList%"
+        }
+      }
+    ]
+  }
+}

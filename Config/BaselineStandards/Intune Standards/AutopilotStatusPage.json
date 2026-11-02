@@ -1,0 +1,89 @@
+{
+  "name": "AutopilotStatusPage",
+  "label": "Enrollment Status Page settings",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Configures the default Enrollment Status Page shown while a device is being set up.",
+  "executiveText": "Controls what employees see while a new device configures itself, including whether they can use the device before setup finishes and what happens if it fails. This sets expectations during onboarding and reduces support calls.",
+  "docsDescription": "Sets the default (priority 0) Windows Enrollment Status Page configuration.",
+  "impactColour": "warning",
+  "addedDate": "2023-12-20",
+  "powershellEquivalent": "Graph API",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "TimeOutInMinutes": {
+      "type": "number",
+      "label": "Timeout in minutes",
+      "required": true,
+      "default": 60
+    },
+    "ErrorMessage": {
+      "type": "textField",
+      "label": "Custom error message",
+      "default": ""
+    },
+    "ShowProgress": {
+      "type": "switch",
+      "label": "Show installation progress",
+      "default": true
+    },
+    "EnableLog": {
+      "type": "switch",
+      "label": "Allow log collection on failure",
+      "default": true
+    },
+    "OBEEOnly": {
+      "type": "switch",
+      "label": "Only show during out-of-box experience (Autopilot only)",
+      "default": true
+    },
+    "BlockDevice": {
+      "type": "switch",
+      "label": "Block device usage during setup",
+      "default": true
+    },
+    "InstallWindowsUpdates": {
+      "type": "switch",
+      "label": "Install Windows quality updates",
+      "default": false
+    },
+    "AllowReset": {
+      "type": "switch",
+      "label": "Allow device reset on failure",
+      "default": false
+    },
+    "AllowFail": {
+      "type": "switch",
+      "label": "Allow device use on failure",
+      "default": false
+    }
+  },
+  "read": {
+    "cacheType": "DeviceEnrollmentConfigurations"
+  },
+  "prepare": "Get-CIPPBaselineAutopilotStatusPageState",
+  "remediate": {
+    "executor": "DeviceEnrollmentConfiguration",
+    "body": {
+      "@odata.type": "#microsoft.graph.windows10EnrollmentCompletionPageConfiguration",
+      "installProgressTimeoutInMinutes": "%TimeOutInMinutes%",
+      "customErrorMessage": "%ErrorMessage%",
+      "showInstallationProgress": "%ShowProgress%",
+      "allowLogCollectionOnInstallFailure": "%EnableLog%",
+      "trackInstallProgressForAutopilotOnly": "%OBEEOnly%",
+      "installQualityUpdates": "%InstallWindowsUpdates%",
+      "allowDeviceResetOnInstallFailure": "%AllowReset%",
+      "allowDeviceUseOnInstallFailure": "%AllowFail%"
+    }
+  }
+}

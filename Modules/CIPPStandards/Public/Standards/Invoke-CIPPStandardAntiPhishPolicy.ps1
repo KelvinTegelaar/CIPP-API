@@ -127,6 +127,13 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     $CurrentState = $ExistingPolicy |
         Select-Object Name, Enabled, PhishThresholdLevel, EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, EnableFirstContactSafetyTips, EnableSimilarUsersSafetyTips, EnableSimilarDomainsSafetyTips, EnableUnusualCharactersSafetyTips, EnableUnauthenticatedSender, EnableViaTag, AuthenticationFailAction, SpoofQuarantineTag, MailboxIntelligenceProtectionAction, MailboxIntelligenceQuarantineTag, TargetedUserProtectionAction, TargetedUserQuarantineTag, TargetedDomainProtectionAction, TargetedDomainQuarantineTag, EnableOrganizationDomainsProtection, EnableTargetedDomainsProtection, EnableTargetedUserProtection
 
+    # Get-AntiPhishPolicy only populates Enabled for the built-in default policy; on a custom policy
+    # the active state lives on its rule's State (see Invoke-ListAntiPhishingFilters). Without this
+    # the compare shows Enabled = null and the policy reads Non-Compliant even while it is active.
+    if ($CurrentState -and $null -ne $ExistingRule.State) {
+        $CurrentState.Enabled = $ExistingRule.State -eq 'Enabled'
+    }
+
     if ($MDOLicensed) {
         $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                           ($CurrentState.Enabled -eq $true) -and
@@ -312,9 +319,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     }
 
     if ($Settings.report -eq $true) {
-        $FieldValue = $StateIsCorrect ? $true : $CurrentState
-        Set-CIPPStandardsCompareField -FieldName 'standards.AntiPhishPolicy' -FieldValue $FieldValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'AntiPhishPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AntiPhishPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
     }
 
 }

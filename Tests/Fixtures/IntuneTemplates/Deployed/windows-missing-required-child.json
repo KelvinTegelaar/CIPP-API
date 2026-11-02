@@ -1,0 +1,27 @@
+{
+  "Built": {
+    "name": "CIPP builder test - windows-missing-required-child",
+    "description": "Built by the CIPP settings catalog builder; safe to delete.",
+    "platforms": "windows10",
+    "technologies": "mdm",
+    "settings": [
+      {
+        "@odata.type": "#microsoft.graph.deviceManagementConfigurationSetting",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist",
+          "choiceSettingValue": {
+            "value": "device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist_1",
+            "children": []
+          }
+        }
+      }
+    ]
+  },
+  "Intune": {
+    "Accepted": false,
+    "Error": "device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist: Selected option device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist_1 with dependent settings  doesnt contain required dependent settings. Required dependent settings are device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist_extensioninstallforcelistdesc"
+  },
+  "Recaptured": null,
+  "ValidatorCode": "MissingRequiredChild"
+}

@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_5_1_2_1 {
             return
         }
 
-        $Enabled = $MFA | Where-Object { $_.PerUserMFAState -in @('Enabled', 'Enforced') }
+        $Enabled = $MFA.Where({ $_.PerUserMFAState -in @('Enabled', 'Enforced') })
 
         if (-not $Enabled -or $Enabled.Count -eq 0) {
             $Status = 'Passed'
@@ -21,7 +21,7 @@ function Invoke-CippTestCIS_5_1_2_1 {
         } else {
             $Status = 'Failed'
             $Result = "$($Enabled.Count) user(s) still have per-user MFA enabled or enforced — migrate them to Conditional Access:`n`n"
-            $Result += ($Enabled | Select-Object -First 25 | ForEach-Object { "- $($_.userPrincipalName) ($($_.PerUserMFAState))" }) -join "`n"
+            $Result += ($Enabled.Where({ $true }, 'First', 25) | ForEach-Object { "- $($_.userPrincipalName) ($($_.PerUserMFAState))" }) -join "`n"
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_1_2_1' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name "'Per-user MFA' is disabled" -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authentication'

@@ -29,7 +29,7 @@ Function Invoke-ListConditionalAccessPolicyChanges {
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Changes = "Failed to request audit logs for policy $($PolicyDisplayName): $($_.Exception.message)"
     }
 

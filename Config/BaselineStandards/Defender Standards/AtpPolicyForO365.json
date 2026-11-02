@@ -1,0 +1,72 @@
+{
+  "name": "AtpPolicyForO365",
+  "label": "Default Atp Policy For O365",
+  "cat": "Defender Standards",
+  "tag": [
+    "CIS M365 7.0.0 (2.1.5)",
+    "NIST CSF 2.0 (DE.CM-09)",
+    "mdo_atpprotection",
+    "mdo_safedocuments"
+  ],
+  "impact": "Low Impact",
+  "helpText": "This creates a Atp policy that enables Defender for Office 365 for SharePoint, OneDrive and Microsoft Teams.",
+  "executiveText": "Extends Defender for Office 365 malware protection to files stored in SharePoint, OneDrive and Microsoft Teams, and enables Safe Documents so files are verified before users can open them.",
+  "impactColour": "info",
+  "addedDate": "2024-03-25",
+  "powershellEquivalent": "Set-AtpPolicyForO365",
+  "appliesToTest": [
+    "CIS_2_1_5",
+    "ORCA225"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    [
+      "SHAREPOINTWAC",
+      "SHAREPOINTSTANDARD",
+      "SHAREPOINTENTERPRISE",
+      "SHAREPOINTENTERPRISE_EDU",
+      "SHAREPOINTENTERPRISE_GOV",
+      "ONEDRIVE_BASIC",
+      "ONEDRIVE_ENTERPRISE"
+    ],
+    [
+      "ATP_ENTERPRISE",
+      "ATP_ENTERPRISE_GOV",
+      "THREAT_INTELLIGENCE",
+      "THREAT_INTELLIGENCE_GOV"
+    ]
+  ],
+  "secureScoreImpact": 10,
+  "compare": "subset",
+  "variables": {
+    "AllowSafeDocsOpen": {
+      "type": "switch",
+      "label": "Allow people to click through Protected View even if Safe Documents identified the file as malicious",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "EnableATPForSPOTeamsODB": true,
+    "EnableSafeDocs": true,
+    "AllowSafeDocsOpen": "%AllowSafeDocsOpen%"
+  },
+  "read": {
+    "cacheType": "ExoAtpPolicyForO365"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-AtpPolicyForO365",
+        "params": {
+          "EnableATPForSPOTeamsODB": true,
+          "EnableSafeDocs": true,
+          "AllowSafeDocsOpen": "%AllowSafeDocsOpen%"
+        }
+      }
+    ]
+  }
+}

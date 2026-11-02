@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_8_1_2 {
             return
         }
 
-        $Cfg = $Client | Select-Object -First 1
+        $Cfg = @($Client)[0]
 
         if ($Cfg.AllowEmailIntoChannel -eq $false) {
             $Status = 'Passed'

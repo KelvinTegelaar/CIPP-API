@@ -32,8 +32,8 @@ function Get-CIPPAlertReportOnlyCA {
                         Tenant      = $TenantFilter
                     }
                 }
-                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

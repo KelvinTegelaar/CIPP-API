@@ -13,8 +13,8 @@ function Invoke-CippTestCIS_5_2_3_7 {
             return
         }
 
-        $Cfg = $AMP | Select-Object -First 1
-        $Email = $Cfg.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Email' } | Select-Object -First 1
+        $Cfg = @($AMP)[0]
+        $Email = $Cfg.authenticationMethodConfigurations.Where({ $_.id -eq 'Email' }, 'First')[0]
 
         if (-not $Email -or $Email.state -eq 'disabled') {
             $Status = 'Passed'

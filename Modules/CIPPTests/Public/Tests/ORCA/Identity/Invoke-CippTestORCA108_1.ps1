@@ -16,10 +16,10 @@ function Invoke-CippTestORCA108_1 {
 
         $FailedDomains = [System.Collections.Generic.List[object]]::new()
         $PassedDomains = [System.Collections.Generic.List[object]]::new()
-        $CustomDomains = $AcceptedDomains | Where-Object { $_.DomainName -notlike '*onmicrosoft.com' }
+        $CustomDomains = $AcceptedDomains.Where({ $_.DomainName -notlike '*onmicrosoft.com' })
 
         foreach ($Domain in $CustomDomains) {
-            $DkimRecord = $DkimConfig | Where-Object { $_.Domain -eq $Domain.DomainName }
+            $DkimRecord = $DkimConfig.Where({ $_.Domain -eq $Domain.DomainName })
 
             if ($DkimRecord -and $DkimRecord.Selector1CNAME -and $DkimRecord.Selector2CNAME) {
                 $PassedDomains.Add($Domain) | Out-Null

@@ -21,7 +21,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
         EXECUTIVETEXT
             Automatically expires external user access to SharePoint sites and OneDrive after a specified period, reducing security risks from forgotten or unnecessary guest accounts. This ensures external access is regularly reviewed and maintained only when actively needed.
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.SPExternalUserExpiration.Days","label":"Days until expiration (Default 60)","defaultValue":60,"validators":{"min":{"value":1,"message":"Minimum value is 1"},"max":{"value":730,"message":"Maximum value is 730"}}}
+            {"type":"number","name":"standards.SPExternalUserExpiration.Days","label":"Days until expiration (Default 60)","defaultValue":60,"validators":{"min":{"value":30,"message":"SharePoint accepts 30 to 730 days - lower values are silently ignored"},"max":{"value":730,"message":"SharePoint accepts 30 to 730 days"}}}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -60,7 +60,10 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
         return
     }
 
-    $StateIsCorrect = ($CurrentState.ExternalUserExpireInDays -eq $Settings.Days) -and
+    # Settings round-trip through JSON as String or Int64; CSOM only accepts Int32 for this property.
+    $Days = [int]$Settings.Days
+
+    $StateIsCorrect = ($CurrentState.ExternalUserExpireInDays -eq $Days) -and
     ($CurrentState.ExternalUserExpirationRequired -eq $true)
 
     if ($Settings.remediate -eq $true) {
@@ -68,7 +71,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint External User Expiration is already enabled.' -Sev Info
         } else {
             $Properties = @{
-                ExternalUserExpireInDays       = $Settings.Days
+                ExternalUserExpireInDays       = $Days
                 ExternalUserExpirationRequired = $true
             }
 
@@ -93,21 +96,14 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'ExternalUserExpiration' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
-        if ($StateIsCorrect) {
-            $FieldValue = $true
-        } else {
-            $FieldValue = $CurrentState
-        }
         $CurrentValue = @{
             ExternalUserExpireInDays       = $CurrentState.ExternalUserExpireInDays
             ExternalUserExpirationRequired = $CurrentState.ExternalUserExpirationRequired
         }
         $ExpectedValue = @{
-            ExternalUserExpireInDays       = $Settings.Days
+            ExternalUserExpireInDays       = $Days
             ExternalUserExpirationRequired = $true
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SPExternalUserExpiration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'standards.SPExternalUserExpiration' -FieldValue $FieldValue -StoreAs bool -Tenant $Tenant
     }
 }

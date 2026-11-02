@@ -1,0 +1,107 @@
+{
+  "name": "TeamsAppPermissionPolicy",
+  "label": "Global app permission policy for Microsoft Teams",
+  "cat": "Teams Standards",
+  "tag": [
+    "CIS M365 7.0.0 (8.4.1)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Sets which class of apps users may install through the Global (Org-wide default) app permission policy: Microsoft apps, third-party apps and custom apps are each either allowed except a block list, or blocked except an allow list. Only the mode is written; the policy's existing allow and block lists are kept. CIS recommends blocking third-party and custom apps by default and approving the apps the organization needs.",
+  "executiveText": "Prevents employees from installing unvetted third-party or custom apps into Teams, where a malicious app can read chats and files. Approved apps are added individually by IT.",
+  "docsDescription": "Writes DefaultCatalogAppsType (Microsoft apps), GlobalCatalogAppsType (third-party apps) and PrivateCatalogAppsType (custom apps) on the Global Teams app permission policy. 'AllowedAppList' with no listed apps blocks the whole class, matching 'Let users install and use available apps by default: Off' in the Teams admin center. Tenants that moved to app centric management manage the same outcome under Teams apps > Manage apps > Org-wide app settings.",
+  "impactColour": "warning",
+  "addedDate": "2026-10-10",
+  "powershellEquivalent": "Set-CsTeamsAppPermissionPolicy -Identity Global -GlobalCatalogAppsType AllowedAppList -PrivateCatalogAppsType AllowedAppList",
+  "appliesToTest": [
+    "CIS_8_4_1"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "DefaultCatalogAppsType": {
+      "type": "autoComplete",
+      "label": "Microsoft apps",
+      "default": "BlockedAppList",
+      "recommended": "BlockedAppList",
+      "options": [
+        {
+          "label": "Allow all apps except the block list",
+          "value": "BlockedAppList"
+        },
+        {
+          "label": "Block all apps except the allow list",
+          "value": "AllowedAppList"
+        }
+      ]
+    },
+    "GlobalCatalogAppsType": {
+      "type": "autoComplete",
+      "label": "Third-party apps",
+      "default": "AllowedAppList",
+      "recommended": "AllowedAppList",
+      "options": [
+        {
+          "label": "Allow all apps except the block list",
+          "value": "BlockedAppList"
+        },
+        {
+          "label": "Block all apps except the allow list",
+          "value": "AllowedAppList"
+        }
+      ]
+    },
+    "PrivateCatalogAppsType": {
+      "type": "autoComplete",
+      "label": "Custom apps",
+      "default": "AllowedAppList",
+      "recommended": "AllowedAppList",
+      "options": [
+        {
+          "label": "Allow all apps except the block list",
+          "value": "BlockedAppList"
+        },
+        {
+          "label": "Block all apps except the allow list",
+          "value": "AllowedAppList"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "DefaultCatalogAppsType": "%DefaultCatalogAppsType%",
+    "GlobalCatalogAppsType": "%GlobalCatalogAppsType%",
+    "PrivateCatalogAppsType": "%PrivateCatalogAppsType%"
+  },
+  "read": {
+    "cacheType": "CsTeamsAppPermissionPolicy",
+    "filter": [
+      {
+        "property": "Identity",
+        "value": "Global"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "TeamsRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-CsTeamsAppPermissionPolicy",
+        "params": {
+          "DefaultCatalogAppsType": "%DefaultCatalogAppsType%",
+          "GlobalCatalogAppsType": "%GlobalCatalogAppsType%",
+          "PrivateCatalogAppsType": "%PrivateCatalogAppsType%"
+        }
+      }
+    ]
+  }
+}

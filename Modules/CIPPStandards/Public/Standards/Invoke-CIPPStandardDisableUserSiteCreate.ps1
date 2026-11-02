@@ -90,7 +90,5 @@ function Invoke-CIPPStandardDisableUserSiteCreate {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableUserSiteCreate' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableUserSiteCreate' -FieldValue $CurrentInfo.isSiteCreationEnabled -StoreAs bool -Tenant $tenant
-        Add-CIPPBPAField -FieldName 'DisableUserSiteCreateUI' -FieldValue $CurrentInfo.isSiteCreationUIEnabled -StoreAs bool -Tenant $tenant
     }
 }

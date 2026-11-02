@@ -1,0 +1,48 @@
+{
+  "name": "PlannerBlockTaskDelete",
+  "label": "Block Planner users from deleting tasks they did not create",
+  "cat": "Teams Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Stops users from deleting Planner tasks that someone else created. Applies to all of a user's plans, and may also stop them from deleting plans. Use the group fields to limit who it applies to.",
+  "executiveText": "Stops employees from deleting Planner tasks they did not create, reducing accidental loss on boards used as shared work queues. Can be limited to a department security group so only those staff are locked down.",
+  "docsDescription": "Sets Planner's per-user policy that blocks deleting tasks created by someone else. The policy covers every plan the user can access (not a single board) and can also block deleting plans. Only enabled member accounts with a Planner license are checked; guests and disabled accounts are skipped. Use include groups to apply it to specific people only, and exclude groups to leave people out. If a named group can't be found, the standard reports an error instead of checking the wrong people. Planner can't list every user's setting at once, so each user is read individually and cached for up to 3 hours; users with no policy yet count as non-compliant. Remediation only changes users who aren't already blocked.",
+  "impactColour": "warning",
+  "addedDate": "2026-09-16",
+  "powershellEquivalent": "Set-PlannerUserPolicy -UserAadIdOrPrincipalName user@domain.com -BlockDeleteTasksNotCreatedBySelf $true",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "PROJECTWORKMANAGEMENT"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "includeGroups": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "omitWhenBlank": true,
+      "label": "Only apply to members of these groups (leave blank for all users)"
+    },
+    "excludeGroups": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "omitWhenBlank": true,
+      "label": "Skip members of these groups (display names)"
+    }
+  },
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "PlannerUserPolicies",
+    "requiredCaches": [
+      "PlannerUserPolicies"
+    ]
+  },
+  "prepare": "Get-CIPPBaselinePlannerBlockTaskDeleteState",
+  "remediate": {
+    "executor": "PlannerBlockTaskDelete"
+  }
+}

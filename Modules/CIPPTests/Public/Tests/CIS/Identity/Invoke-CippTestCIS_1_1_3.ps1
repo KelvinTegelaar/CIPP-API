@@ -14,7 +14,7 @@ function Invoke-CippTestCIS_1_1_3 {
             return
         }
 
-        $GA = $Roles | Where-Object { $_.displayName -eq 'Global Administrator' } | Select-Object -First 1
+        $GA = $Roles.Where({ $_.displayName -eq 'Global Administrator' }, 'First')[0]
         if (-not $GA) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_1_1_3' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'Global Administrator role not found in tenant role definitions.' -Risk 'High' -Name 'Between two and four global admins are designated' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Privileged Access'
             return
@@ -28,8 +28,11 @@ function Invoke-CippTestCIS_1_1_3 {
             }
         }
 
+        # roleDefinitionId carries the role's TEMPLATE id, not the directoryRole instance id, so
+        # comparing it to $GA.id never matched and no PIM-assigned admin was ever counted here —
+        # only the direct members above.
         foreach ($Assignment in @($RoleAssignmentScheduleInstances)) {
-            if ($Assignment.roleDefinitionId -eq $GA.id -and $Assignment.assignmentType -eq 'Assigned' -and $null -eq $Assignment.endDateTime -and $Assignment.principalId) {
+            if ($Assignment.roleDefinitionId -eq $GA.roleTemplateId -and $Assignment.assignmentType -eq 'Assigned' -and $null -eq $Assignment.endDateTime -and $Assignment.principalId) {
                 [void]$GAMembers.Add([string]$Assignment.principalId)
             }
         }

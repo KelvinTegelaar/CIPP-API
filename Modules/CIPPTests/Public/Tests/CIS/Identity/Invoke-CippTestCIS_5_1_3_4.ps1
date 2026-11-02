@@ -14,14 +14,14 @@ function Invoke-CippTestCIS_5_1_3_4 {
         }
 
         # Group.Unified directory settings template
-        $GroupSetting = $Settings | Where-Object { $_.templateId -eq '62375ab9-6b52-47ed-826b-58e47e0e304b' -or $_.displayName -eq 'Group.Unified' } | Select-Object -First 1
+        $GroupSetting = $Settings.Where({ $_.templateId -eq '62375ab9-6b52-47ed-826b-58e47e0e304b' -or $_.displayName -eq 'Group.Unified' }, 'First')[0]
 
         if (-not $GroupSetting) {
             # No Group.Unified settings object means defaults are in effect (EnableGroupCreation = true), which is non-compliant.
             $Status = 'Failed'
             $Result = 'No Group.Unified directory settings object exists, so the default applies (users can create Microsoft 365 groups). Set Users can create Microsoft 365 groups to No.'
         } else {
-            $EnableGroupCreation = ($GroupSetting.values | Where-Object { $_.name -eq 'EnableGroupCreation' }).value
+            $EnableGroupCreation = $(foreach ($Item in $GroupSetting.values) { if ($Item.name -eq 'EnableGroupCreation') { $Item } }).value
 
             if ("$EnableGroupCreation" -eq 'false') {
                 $Status = 'Passed'

@@ -1,0 +1,106 @@
+{
+  "name": "AuthMethodsSettings",
+  "label": "Configure Authentication Methods Policy Settings",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CIS M365 7.0.0 (5.2.3.6)",
+    "EIDSCA.AG01",
+    "EIDSCA.AG02",
+    "EIDSCA.AG03",
+    "SMB1001 (2.8)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Configures the report suspicious activity settings and system credential preferences in the authentication methods policy.",
+  "executiveText": "Configures security settings that allow users to report suspicious login attempts and manages how the system handles authentication credentials. This enhances overall security by enabling early detection of potential security threats and optimizing authentication processes.",
+  "docsDescription": "Controls the authentication methods policy settings for reporting suspicious activity and system credential preferences. These settings help enhance the security of authentication in your organization.",
+  "impactColour": "info",
+  "addedDate": "2025-02-10",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicy",
+  "appliesToTest": [
+    "CIS_5_2_3_6",
+    "EIDSCAAG01",
+    "EIDSCAAG02",
+    "EIDSCAAG03",
+    "SMB1001_2_8",
+    "ZTNA21841"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "reportSuspiciousActivity": {
+      "type": "autoComplete",
+      "label": "Report Suspicious Activity Settings",
+      "options": [
+        {
+          "label": "Microsoft managed",
+          "value": "default"
+        },
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        }
+      ],
+      "default": "enabled",
+      "recommended": "enabled"
+    },
+    "systemCredential": {
+      "type": "autoComplete",
+      "label": "System Credential Preferences",
+      "options": [
+        {
+          "label": "Microsoft managed",
+          "value": "default"
+        },
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        }
+      ],
+      "default": "enabled",
+      "recommended": "enabled"
+    }
+  },
+  "expected": {
+    "reportSuspiciousActivitySettings": {
+      "state": "%reportSuspiciousActivity%"
+    },
+    "systemCredentialPreferences": {
+      "state": "%systemCredential%"
+    }
+  },
+  "read": {
+    "cacheType": "AuthenticationMethodsPolicy"
+  },
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "reportSuspiciousActivitySettings.state": "%reportSuspiciousActivity%",
+    "systemCredentialPreferences.state": "%systemCredential%"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/authenticationMethodsPolicy",
+        "body": {
+          "reportSuspiciousActivitySettings": {
+            "state": "%reportSuspiciousActivity%"
+          },
+          "systemCredentialPreferences": {
+            "state": "%systemCredential%"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -13,6 +13,23 @@ function Invoke-ListDomainHealth {
     $APIName = $Request.Params.CIPPEndpoint
     Import-Module DNSHealth
 
+    # The DNS check to run. Without it there is nothing to dispatch on, so reject rather
+    # than fall through and return an empty body that reads like "no findings".
+    if (-not $Request.Query.Action) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{'Results' = "The 'Action' parameter is required. Valid actions: GetDkimSelectors, ListDomainInfo, ReadAutoDiscover, ReadDkimRecord, ReadDmarcPolicy, ReadMXRecord, ReadNSRecord, ReadSpfRecord, ReadWhoisRecord, TestDNSSEC, TestHttpsCertificate, TestMtaSts." }
+            })
+    }
+
+    # The domain every check resolves against.
+    if (-not $Request.Query.Domain) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [pscustomobject]@{'Results' = "The 'Domain' parameter is required." }
+            })
+    }
+
     try {
         $ConfigTable = Get-CippTable -tablename Config
         $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
@@ -36,8 +53,6 @@ function Invoke-ListDomainHealth {
 
     Set-DnsResolver -Resolver $Resolver
 
-    $UserRoles = Get-CIPPAccessRole -Request $Request
-
     $APIName = $Request.Params.CIPPEndpoint
 
 
@@ -48,6 +63,15 @@ function Invoke-ListDomainHealth {
                 $DomainTable = Get-CIPPTable -Table 'Domains'
                 $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
                 $DomainInfo = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
+
+                # AnyTenant: the Domains row is per-tenant data; hide it from out-of-scope callers.
+                # The DNS checks themselves are public data and stay open.
+                $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+                $Restricted = $AllowedTenants -notcontains 'AllTenants'
+                if ($Restricted) {
+                    $DomainInfo = $DomainInfo | Select-CippAllowedTenantData -TenantProperty 'TenantGUID', 'TenantId'
+                }
+
                 switch ($Request.Query.Action) {
                     'ListDomainInfo' {
                         $Body = $DomainInfo
@@ -81,7 +105,12 @@ function Invoke-ListDomainHealth {
                         if ($Request.Query.Selector) {
                             $DkimQuery.Selectors = ($Request.Query.Selector).trim() -split '\s*,\s*'
 
-                            if ('admin' -in $UserRoles -or 'editor' -in $UserRoles) {
+                            # Saving selectors writes the Domains row, so gate it on the permission the Domain
+                            # Analyser write endpoints already require, not on role names: a role-name check
+                            # skipped superadmin and custom roles that grant the permission (issue #898).
+                            # Restricted callers may only persist selectors onto an in-scope row.
+                            $CanWriteSelectors = @(Get-CippRequestAllowedPermissions) -contains 'Tenant.DomainAnalyser.ReadWrite'
+                            if ($CanWriteSelectors -and (-not $Restricted -or $DomainInfo)) {
                                 $DkimSelectors = [string]($DkimQuery.Selectors | ConvertTo-Json -Compress)
                                 if ($DomainInfo) {
                                     $DomainInfo.DkimSelectors = $DkimSelectors
@@ -144,13 +173,18 @@ function Invoke-ListDomainHealth {
                         }
                         $Body = Read-AutoDiscoverRecord @AutoDiscoverQuery
                     }
+                    default {
+                        $Body = [pscustomobject]@{'Results' = "Unknown Action '$($Request.Query.Action)'." }
+                        $StatusCode = [HttpStatusCode]::BadRequest
+                    }
                 }
             } else {
                 $body = [pscustomobject]@{'Results' = "Domain: $($Request.Query.Domain) is invalid" }
+                $StatusCode = [HttpStatusCode]::BadRequest
             }
         }
     } catch {
-        Write-LogMessage -API $APINAME -tenant $($name) -headers $Request.Headers -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -API $APINAME -headers $Request.Headers -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

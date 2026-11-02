@@ -13,45 +13,45 @@ function Invoke-CippTestZTNA24574 {
             return
         }
 
-        $Win10MdmSensePolicies = $ConfigPolicies | Where-Object {
+        $Win10MdmSensePolicies = $ConfigPolicies.Where({
             $_.platforms -like '*windows10*' -and
             $_.technologies -like '*mdm*' -and
             $_.technologies -like '*microsoftSense*'
-        }
+        })
 
         if (-not $Win10MdmSensePolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24574' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Windows ASR policies found' -Risk 'High' -Name 'Attack Surface Reduction rules are applied to Windows devices to prevent exploitation of vulnerable system components' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Device'
             return
         }
 
-        $ASRPolicies = $Win10MdmSensePolicies | Where-Object {
+        $ASRPolicies = $Win10MdmSensePolicies.Where({
             $settingIds = $_.settings.settingInstance.settingDefinitionId
             $settingIds -contains 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules'
-        }
+        })
 
         if (-not $ASRPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24574' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Attack Surface Reduction policies found' -Risk 'High' -Name 'Attack Surface Reduction rules are applied to Windows devices to prevent exploitation of vulnerable system components' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Device'
             return
         }
 
-        $ObfuscatedScriptPolicies = $ASRPolicies | Where-Object {
+        $ObfuscatedScriptPolicies = $ASRPolicies.Where({
             $children = $_.settings.settingInstance.groupSettingCollectionValue.children
             $settingId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockexecutionofpotentiallyobfuscatedscripts'
-            $matchingSetting = $children | Where-Object { $_.settingDefinitionId -eq $settingId }
+            $matchingSetting = $children.Where({ $_.settingDefinitionId -eq $settingId })
             $value = $matchingSetting.choiceSettingValue.value
             $value -like '*_block' -or $value -like '*_warn'
-        }
+        })
 
-        $Win32MacroPolicies = $ASRPolicies | Where-Object {
+        $Win32MacroPolicies = $ASRPolicies.Where({
             $children = $_.settings.settingInstance.groupSettingCollectionValue.children
             $settingId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockwin32apicallsfromofficemacros'
-            $matchingSetting = $children | Where-Object { $_.settingDefinitionId -eq $settingId }
+            $matchingSetting = $children.Where({ $_.settingDefinitionId -eq $settingId })
             $value = $matchingSetting.choiceSettingValue.value
             $value -like '*_block' -or $value -like '*_warn'
-        }
+        })
 
-        $AssignedObfuscated = $ObfuscatedScriptPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 }
-        $AssignedWin32Macro = $Win32MacroPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 }
+        $AssignedObfuscated = $ObfuscatedScriptPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 })
+        $AssignedWin32Macro = $Win32MacroPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 })
 
         if ($AssignedObfuscated -and $AssignedWin32Macro) {
             $Status = 'Passed'

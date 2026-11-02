@@ -45,8 +45,9 @@ function Test-CIPPStandardLicense {
         Exchange             = @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE',
             'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV',
             'EXCHANGE_LITE')
-        SharePoint           = @('SHAREPOINTWAC', 'SHAREPOINTSTANDARD', 'SHAREPOINTENTERPRISE',
-            'SHAREPOINTENTERPRISE_EDU', 'SHAREPOINTENTERPRISE_GOV',
+        SharePoint           = @('SHAREPOINTWAC', 'SHAREPOINTWAC_EDU',
+            'SHAREPOINTSTANDARD', 'SHAREPOINTSTANDARD_EDU',
+            'SHAREPOINTENTERPRISE', 'SHAREPOINTENTERPRISE_EDU', 'SHAREPOINTENTERPRISE_GOV',
             'ONEDRIVE_BASIC', 'ONEDRIVE_ENTERPRISE')
         Intune               = @('INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1')
         Entra                = @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
@@ -64,41 +65,48 @@ function Test-CIPPStandardLicense {
     }
 
     if ($Preset) {
-        $RequiredCapabilities = @(
-            $RequiredCapabilities
-            foreach ($CapabilityPreset in $Preset) {
-                $Presets[$CapabilityPreset]
-            }
-        ) | Where-Object { $_ } | Select-Object -Unique
+        $Seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+        $RequiredCapabilities = @(foreach ($Capability in @(
+                    $RequiredCapabilities
+                    foreach ($CapabilityPreset in $Preset) {
+                        $Presets[$CapabilityPreset]
+                    }
+                )) { if ($Capability -and $Seen.Add($Capability)) { $Capability } })
     }
 
-    try {
-        $TenantCapabilities = Get-CIPPTenantCapabilities -TenantFilter $TenantFilter
+    # A capabilities lookup that failed moments ago fails the same way; take the error path without throwing again.
+    $KnownFailure = if ($script:CIPPTenantCapabilitiesCache) { $script:CIPPTenantCapabilitiesCache["$TenantFilter"] }
+    $FailureMessage = if ($KnownFailure.Error -and $KnownFailure.Expires -gt [datetime]::UtcNow) { $KnownFailure.Error.Exception.Message }
+    if (-not $FailureMessage) {
+        try {
+            $TenantCapabilities = Get-CIPPTenantCapabilities -TenantFilter $TenantFilter
 
-        $Capabilities = foreach ($Capability in $RequiredCapabilities) {
-            Write-Verbose "Checking capability: $Capability"
-            if ($TenantCapabilities.$Capability -eq $true) {
-                $Capability
+            $Capabilities = foreach ($Capability in $RequiredCapabilities) {
+                Write-Verbose "Checking capability: $Capability"
+                if ($TenantCapabilities.$Capability -eq $true) {
+                    $Capability
+                }
             }
-        }
 
-        if ($Capabilities.Count -le 0) {
-            if (!$SkipLog.IsPresent) {
-                Write-LogMessage -API 'Standards' -tenant $TenantFilter -message "Tenant does not have the required capability to run standard $StandardName`: The tenant needs one of the following service plans: $($RequiredCapabilities -join ',')" -sev Info
-                Set-CIPPStandardsCompareField -FieldName "standards.$StandardName" -LicenseAvailable $false -FieldValue "License Missing: This tenant is not licensed for the following capabilities: $($RequiredCapabilities -join ',')" -Tenant $TenantFilter
-                Write-Verbose "Tenant does not have the required capability to run standard $StandardName - $($RequiredCapabilities -join ','). Exiting"
+            if ($Capabilities.Count -le 0) {
+                if (!$SkipLog.IsPresent) {
+                    Write-LogMessage -API 'Standards' -tenant $TenantFilter -message "Tenant does not have the required capability to run standard $StandardName`: The tenant needs one of the following service plans: $($RequiredCapabilities -join ',')" -sev Info
+                    Set-CIPPStandardsCompareField -FieldName "standards.$StandardName" -LicenseAvailable $false -FieldValue "License Missing: This tenant is not licensed for the following capabilities: $($RequiredCapabilities -join ',')" -Tenant $TenantFilter
+                    Write-Verbose "Tenant does not have the required capability to run standard $StandardName - $($RequiredCapabilities -join ','). Exiting"
+                }
+                return $false
             }
-            return $false
+            Write-Verbose "Tenant has the required capabilities for standard $StandardName"
+            return $true
+        } catch {
+            $FailureMessage = $_.Exception.Message
         }
-        Write-Verbose "Tenant has the required capabilities for standard $StandardName"
-        return $true
-    } catch {
-        if (!$SkipLog.IsPresent) {
-            # Sanitize exception message to prevent JSON parsing issues - remove characters that could interfere with JSON detection
-            $SanitizedMessage = $_.Exception.Message -replace '[{}\[\]]', ''
-            Write-LogMessage -API 'Standards' -tenant $TenantFilter -message "Error checking license capabilities for standard $StandardName`: $SanitizedMessage" -sev Info
-            Set-CIPPStandardsCompareField -FieldName "standards.$StandardName" -FieldValue "License Missing: Error checking license capabilities - $SanitizedMessage" -Tenant $TenantFilter
-        }
-        return $false
     }
+    if (!$SkipLog.IsPresent) {
+        # Sanitize exception message to prevent JSON parsing issues - remove characters that could interfere with JSON detection
+        $SanitizedMessage = $FailureMessage -replace '[{}\[\]]', ''
+        Write-LogMessage -API 'Standards' -tenant $TenantFilter -message "Error checking license capabilities for standard $StandardName`: $SanitizedMessage" -sev Info
+        Set-CIPPStandardsCompareField -FieldName "standards.$StandardName" -FieldValue "License Missing: Error checking license capabilities - $SanitizedMessage" -Tenant $TenantFilter
+    }
+    return $false
 }

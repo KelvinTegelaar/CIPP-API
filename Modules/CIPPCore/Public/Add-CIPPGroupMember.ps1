@@ -1,22 +1,24 @@
 function Add-CIPPGroupMember {
     <#
     .SYNOPSIS
-    Adds one or more members to a specified group in Microsoft Graph.
+    Adds one or more members to a specified group.
 
     .DESCRIPTION
-    This function adds one or more members to a specified group in Microsoft Graph, supporting different group types such as Distribution lists and Mail-Enabled Security groups.
+    Adds directory objects (users, groups, etc.) to a group. Routes through Exchange for
+    distribution lists and mail-enabled security groups, Graph for everything else.
+    Resolves identities via Resolve-CIPPDirectoryId so callers can pass ids or UPNs/mail.
 
     .PARAMETER Headers
     The headers to include in the request, typically containing authentication tokens. This is supplied automatically by the API
 
     .PARAMETER GroupType
-    The type of group to which the member is being added, such as Security, Distribution list or Mail-Enabled Security.
+    Optional fallback type when Graph/Exchange cannot classify the target group.
 
     .PARAMETER GroupId
     The unique identifier of the group to which the member will be added.
 
     .PARAMETER Member
-    An array of members to add to the group.
+    An array of member identifiers (object ids, UPNs, or mail addresses).
 
     .PARAMETER TenantFilter
     The tenant identifier to filter the request.
@@ -34,82 +36,107 @@ function Add-CIPPGroupMember {
         [string]$APIName = 'Add Group Member'
     )
     try {
-        if ($Member -like '*#EXT#*') { $Member = [System.Web.HttpUtility]::UrlEncode($Member) }
         $ODataBindString = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}'
-        $Requests = foreach ($m in $Member) {
-            @{
-                id     = $m
-                url    = "users/$($m)?`$select=id,userPrincipalName"
-                method = 'GET'
+        $Group = Get-CIPPGroupType -GroupId $GroupId -TenantFilter $TenantFilter -FallbackGroupType $GroupType
+        $GroupName = $Group.DisplayName
+        $ResolvedMembers = @(Resolve-CIPPDirectoryId -Identity $Member -TenantFilter $TenantFilter)
+
+        $SuccessfulMembers = [System.Collections.Generic.List[string]]::new()
+        $FailedMembers = [System.Collections.Generic.List[string]]::new()
+
+        foreach ($Entry in $ResolvedMembers) {
+            if (-not $Entry.Resolved -or -not $Entry.Id) {
+                $FailedMembers.Add("$($Entry.Label) (directory object not found)")
             }
         }
-        $Users = New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter
+        $ValidMembers = @($ResolvedMembers | Where-Object { $_.Resolved -and $_.Id })
 
-        if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
+        if ($Group.IsExchangeBacked) {
             $ExoBulkRequests = [System.Collections.Generic.List[object]]::new()
             $ExoLogs = [System.Collections.Generic.List[object]]::new()
 
-            foreach ($User in $Users) {
-                $Params = @{ Identity = $GroupId; Member = $User.body.userPrincipalName; BypassSecurityGroupManagerCheck = $true }
+            foreach ($Entry in $ValidMembers) {
+                $OperationGuid = [Guid]::NewGuid().ToString()
+                $ExoMember = $Entry.ExchangeIdentity ?? $Entry.Id
+                $Params = @{ Identity = $GroupId; Member = $ExoMember; BypassSecurityGroupManagerCheck = $true }
                 $ExoBulkRequests.Add(@{
-                        CmdletInput = @{
+                        CmdletInput   = @{
                             CmdletName = 'Add-DistributionGroupMember'
                             Parameters = $Params
                         }
+                        OperationGuid = $OperationGuid
                     })
                 $ExoLogs.Add(@{
-                        message = "Added member $($User.body.userPrincipalName) to $($GroupId) group"
-                        target  = $User.body.userPrincipalName
+                        message       = "Added member $($Entry.Label) to group $($GroupName)"
+                        target        = $ExoMember
+                        OperationGuid = $OperationGuid
                     })
             }
 
             if ($ExoBulkRequests.Count -gt 0) {
                 $RawExoRequest = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($ExoBulkRequests)
-                $LastError = $RawExoRequest | Select-Object -Last 1
+                $ExoResults = Resolve-CippExoBulkResult -Response $RawExoRequest -Operations $ExoLogs
 
-                foreach ($ExoError in $LastError.error) {
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoError -Sev 'Error'
-                    throw $ExoError
-                }
-
-                foreach ($ExoLog in $ExoLogs) {
-                    $ExoError = $LastError | Where-Object { $ExoLog.target -in $_.target -and $_.error }
-                    if (!$LastError -or ($LastError.error -and $LastError.target -notcontains $ExoLog.target)) {
-                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoLog.message -Sev 'Info'
+                foreach ($ExoResult in $ExoResults) {
+                    $Entry = $ValidMembers | Where-Object {
+                        ($_.ExchangeIdentity ?? $_.Id) -eq $ExoResult.Operation.target
+                    } | Select-Object -First 1
+                    $Label = $Entry.Label ?? $ExoResult.Operation.target
+                    if ($ExoResult.Success) {
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoResult.Operation.message -Sev 'Info'
+                        $SuccessfulMembers.Add($Label)
+                    } else {
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add member $Label to group $($GroupName): $($ExoResult.ErrorMessage)" -Sev 'Error'
+                        $FailedMembers.Add("$Label ($($ExoResult.ErrorMessage))")
                     }
                 }
             }
         } else {
-            # Build one bulk request list; New-GraphBulkRequest handles internal chunking
-            $AddRequests = foreach ($User in $Users) {
+            $AddRequests = foreach ($Entry in $ValidMembers) {
                 @{
-                    id      = $User.body.id
+                    id      = $Entry.Id
                     method  = 'POST'
                     url     = "/groups/$($GroupId)/members/`$ref"
-                    body    = @{ '@odata.id' = ($ODataBindString -f $User.body.id) }
+                    body    = @{ '@odata.id' = ($ODataBindString -f $Entry.Id) }
                     headers = @{ 'Content-Type' = 'application/json' }
                 }
             }
-            $AddResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($AddRequests)
-            $SuccessfulUsers = [system.collections.generic.list[string]]::new()
-            foreach ($Result in $AddResults) {
-                if ($Result.status -lt 200 -or $Result.status -gt 299) {
-                    $FailedUsername = $Users | Where-Object { $_.body.id -eq $Result.id } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty userPrincipalName
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add member $($FailedUsername): $($Result.body.error.message)" -Sev 'Error'
-                } else {
-                    $UserPrincipalName = $Users | Where-Object { $_.body.id -eq $Result.id } | Select-Object -ExpandProperty body | Select-Object -ExpandProperty userPrincipalName
-                    $SuccessfulUsers.Add($UserPrincipalName)
+            if (@($AddRequests).Count -gt 0) {
+                $AddResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($AddRequests)
+                foreach ($Result in $AddResults) {
+                    $Entry = $ValidMembers | Where-Object { $_.Id -eq $Result.id } | Select-Object -First 1
+                    $Label = $Entry.Label ?? $Result.id
+                    if ($Result.status -lt 200 -or $Result.status -gt 299) {
+                        $ErrorText = Get-NormalizedError -message ($Result.body.error.message ?? "Request failed with status $($Result.status)") | Select-Object -First 1
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add member $Label to group $($GroupName): $ErrorText" -Sev 'Error'
+                        $FailedMembers.Add("$Label ($ErrorText)")
+                    } else {
+                        $SuccessfulMembers.Add($Label)
+                    }
                 }
             }
         }
-        $UserList = ($SuccessfulUsers -join ', ')
-        $Results = "Successfully added user $UserList to $($GroupId)."
+        $Messages = [System.Collections.Generic.List[string]]::new()
+        if ($SuccessfulMembers.Count -gt 0) {
+            $Messages.Add("Successfully added $($SuccessfulMembers -join ', ') to group $($GroupName).")
+        }
+        if ($FailedMembers.Count -gt 0) {
+            $Messages.Add("Failed to add $($FailedMembers -join '; ').")
+        }
+        $Results = $Messages -join ' '
+        if ($SuccessfulMembers.Count -eq 0 -and $FailedMembers.Count -gt 0) {
+            throw $Results
+        }
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Info'
         return $Results
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $UserList = if ($Users) { ($Users.body.userPrincipalName -join ', ') } else { ($Member -join ', ') }
-        $Results = "Failed to add user $UserList to $($GroupId) - $($ErrorMessage.NormalizedError)"
+        $MemberList = if ($ResolvedMembers) {
+            ($ResolvedMembers | ForEach-Object { $_.Label ?? $_.Input }) -join ', '
+        } else {
+            ($Member -join ', ')
+        }
+        $Results = "Failed to add $MemberList to group $($GroupName ?? $GroupId) - $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'error' -LogData $ErrorMessage
         throw $Results
     }

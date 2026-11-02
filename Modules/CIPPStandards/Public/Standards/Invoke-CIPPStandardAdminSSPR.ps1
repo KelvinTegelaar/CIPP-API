@@ -107,6 +107,5 @@
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.AdminSSPR' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'AdminSSPR' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

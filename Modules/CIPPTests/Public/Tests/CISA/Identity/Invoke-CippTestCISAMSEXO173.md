@@ -15,7 +15,7 @@ Set-AdminAuditLogConfig -AdminAuditLogEnabled $true
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.17.3](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo173v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.17.3](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo173v1)
 - [Audit log retention policies](https://learn.microsoft.com/purview/audit-log-retention-policies)
 
 <!--- Results --->

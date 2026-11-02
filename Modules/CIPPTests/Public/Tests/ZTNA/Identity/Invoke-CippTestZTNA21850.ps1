@@ -10,7 +10,7 @@ function Invoke-CippTestZTNA21850 {
     try {
         # Get password rule settings from Settings cache
         $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
-        $PasswordRuleSettings = $Settings | Where-Object { $_.displayName -eq 'Password Rule Settings' }
+        $PasswordRuleSettings = foreach ($Setting in $Settings) { if ($Setting.displayName -eq 'Password Rule Settings') { $Setting } }
 
         $PortalLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/PasswordProtection/fromNav/'
 
@@ -18,7 +18,7 @@ function Invoke-CippTestZTNA21850 {
             $Passed = 'Failed'
             $ResultMarkdown = [System.Text.StringBuilder]::new('❌ Password rule settings template not found.')
         } else {
-            $LockoutThresholdSetting = $PasswordRuleSettings.values | Where-Object { $_.name -eq 'LockoutThreshold' }
+            $LockoutThresholdSetting = foreach ($Value in $PasswordRuleSettings.values) { if ($Value.name -eq 'LockoutThreshold') { $Value } }
 
             if ($null -eq $LockoutThresholdSetting) {
                 $Passed = 'Failed'

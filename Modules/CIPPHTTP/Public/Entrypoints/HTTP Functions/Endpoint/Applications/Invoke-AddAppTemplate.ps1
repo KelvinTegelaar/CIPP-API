@@ -23,6 +23,18 @@ function Invoke-AddAppTemplate {
         $AppsList = [System.Collections.Generic.List[hashtable]]::new()
         foreach ($App in @($RawApps)) {
             $ConfigValue = if ($App.config -is [string]) { $App.config } else { $App.config | ConvertTo-Json -Depth 15 -Compress }
+
+            # An IntuneBody with an id was read off Graph. Only Office/Edge can rebuild from one;
+            # CIPP cannot re-upload a customer's .intunewin, so the template could never deploy.
+            $AppType = [string]$App.appType
+            $ParsedConfig = $null
+            try { $ParsedConfig = $ConfigValue | ConvertFrom-Json -Depth 100 -ErrorAction Stop } catch { $ParsedConfig = $null }
+            $IsScriptApp = $AppType -eq 'win32ScriptApp' -and $ParsedConfig.installScript
+            if ($ParsedConfig.IntuneBody.id -and $AppType -notin @('officeApp', 'edgeApp') -and -not $IsScriptApp) {
+                $AppName = if ($App.appName) { [string]$App.appName } else { [string]$ParsedConfig.ApplicationName }
+                throw "'$AppName' is an existing Intune application with uploaded installer content. CIPP application templates are rebuilt from a package or script at deployment, so only Store, Chocolatey, Office, Edge, MSP and Custom (script) applications can be templated."
+            }
+
             $AppsList.Add(@{
                 appType = [string]$App.appType
                 appName = [string]$App.appName
@@ -65,7 +77,7 @@ function Invoke-AddAppTemplate {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Failed to add app template: $($ErrorMessage.NormalizedMessage)"
+        $Result = "Failed to add app template: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

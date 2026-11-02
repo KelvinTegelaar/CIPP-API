@@ -17,12 +17,12 @@ function Get-CippCustomDataAttributes {
         if ($CustomData) {
             if ($Type -eq 'SchemaExtension') {
                 $Name = $CustomData.id
-                foreach ($TargetObject in $CustomData.targetTypes) {
+                foreach ($Target in $CustomData.targetTypes) {
                     foreach ($Property in $CustomData.properties) {
                         [PSCustomObject]@{
                             name          = '{0}.{1}' -f $Name, $Property.name
                             type          = $Type
-                            targetObject  = $TargetObject
+                            targetObject  = $Target
                             dataType      = $Property.type
                             isMultiValued = $false
                         }
@@ -30,11 +30,11 @@ function Get-CippCustomDataAttributes {
                 }
             } elseif ($Type -eq 'DirectoryExtension') {
                 $Name = $CustomDataEntity.RowKey
-                foreach ($TargetObject in $CustomData.targetObjects) {
+                foreach ($Target in $CustomData.targetObjects) {
                     [PSCustomObject]@{
                         name          = $Name
                         type          = $Type
-                        targetObject  = $TargetObject
+                        targetObject  = $Target
                         dataType      = $CustomData.dataType
                         isMultiValued = $CustomData.isMultiValued
                     }

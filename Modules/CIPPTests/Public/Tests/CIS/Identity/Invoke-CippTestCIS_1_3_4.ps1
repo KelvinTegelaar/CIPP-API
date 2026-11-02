@@ -10,7 +10,7 @@ function Invoke-CippTestCIS_1_3_4 {
 
         if (-not $AppsAndServices) {
             $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
-            $AppsAndServices = $Settings | Where-Object { $_.id -eq 'appsAndServices' -or $_.PSObject.Properties.Name -contains 'isOfficeStoreEnabled' } | Select-Object -First 1
+            $AppsAndServices = $Settings.Where({ $_.id -eq 'appsAndServices' -or $_.PSObject.Properties.Name -contains 'isOfficeStoreEnabled' }, 'First')[0]
         }
 
         if (-not $AppsAndServices -or $AppsAndServices.PSObject.Properties.Name -notcontains 'isOfficeStoreEnabled' -or $AppsAndServices.PSObject.Properties.Name -notcontains 'isAppAndServicesTrialEnabled') {

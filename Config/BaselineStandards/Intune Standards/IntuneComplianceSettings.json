@@ -1,0 +1,72 @@
+{
+  "name": "IntuneComplianceSettings",
+  "label": "Set Intune Compliance Settings",
+  "cat": "Intune Standards",
+  "tag": [
+    "CIS M365 7.0.0 (4.1)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Sets the mark devices with no compliance policy assigned as compliance/non compliant and Compliance status validity period.",
+  "executiveText": "Configures how the system treats devices that don't have specific compliance policies and sets how often devices must check in to maintain their compliance status. This ensures proper security oversight of all corporate devices and maintains current compliance information.",
+  "impactColour": "info",
+  "addedDate": "2024-11-12",
+  "powershellEquivalent": "Graph API",
+  "appliesToTest": [
+    "CIS_4_1"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "secureByDefault": {
+      "type": "autoComplete",
+      "label": "Mark devices with no compliance policy as",
+      "required": true,
+      "recommended": true,
+      "options": [
+        {
+          "label": "Compliant",
+          "value": false
+        },
+        {
+          "label": "Non-Compliant",
+          "value": true
+        }
+      ]
+    },
+    "deviceComplianceCheckinThresholdDays": {
+      "type": "number",
+      "label": "Compliance status validity period (days)",
+      "default": 120
+    }
+  },
+  "expected": {
+    "secureByDefault": "%secureByDefault%",
+    "deviceComplianceCheckinThresholdDays": "%deviceComplianceCheckinThresholdDays%"
+  },
+  "read": {
+    "cacheType": "IntuneDeviceManagementSettings"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "deviceManagement",
+        "body": {
+          "settings": {
+            "secureByDefault": "%secureByDefault%",
+            "deviceComplianceCheckinThresholdDays": "%deviceComplianceCheckinThresholdDays%"
+          }
+        }
+      }
+    ]
+  }
+}

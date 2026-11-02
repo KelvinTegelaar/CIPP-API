@@ -13,6 +13,15 @@ Function Invoke-ListUserPhoto {
     $tenantFilter = $Request.Query.tenantFilter
     $userId = $Request.Query.UserID
 
+    # AnyTenant: enforce tenant scope here; Get-Tenants is narrowed to the caller's allowed tenants
+    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    if ($AllowedTenants -notcontains 'AllTenants' -and -not (Get-Tenants -TenantFilter $tenantFilter)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = 'Access to this tenant is not allowed'
+            })
+    }
+
     $URI = "/users/$userId/photo/`$value"
 
     $Requests = @(
@@ -24,6 +33,12 @@ Function Invoke-ListUserPhoto {
     )
 
     $ImageData = New-GraphBulkRequest -Requests $Requests -tenantid $tenantFilter -NoAuthCheck $true
+    if ($ImageData.status -ne 200 -or $ImageData.body -isnot [string]) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::NotFound
+                Body       = 'No photo found for this user'
+            })
+    }
     #convert body from base64 to byte array
     $Body = [Convert]::FromBase64String($ImageData.body)
 

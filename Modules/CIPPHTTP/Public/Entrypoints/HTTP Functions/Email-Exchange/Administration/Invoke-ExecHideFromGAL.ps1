@@ -25,7 +25,7 @@ Function Invoke-ExecHideFromGAL {
 
     } catch {
         $Result = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

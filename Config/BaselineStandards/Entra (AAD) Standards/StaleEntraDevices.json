@@ -1,0 +1,75 @@
+{
+  "name": "StaleEntraDevices",
+  "label": "Cleanup stale Entra devices",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "Essential 8 (1501)",
+    "NIST CSF 2.0 (ID.AM-08)",
+    "NIST CSF 2.0 (PR.PS-03)"
+  ],
+  "impact": "High Impact",
+  "helpText": "Cleans up Entra devices that have not connected/signed in for the specified number of days. Remediation first disables stale enabled devices and, on a later run, deletes stale devices that are already disabled. Hybrid-joined, Intune-managed and Autopilot devices are skipped. Deleting a device permanently removes any BitLocker recovery keys stored on it.",
+  "executiveText": "Automatically identifies and removes inactive devices that haven't connected to company systems for a specified period, reducing security risks from abandoned or lost devices. This maintains a clean device inventory and prevents potential unauthorized access through dormant device registrations.",
+  "docsDescription": "Cleans up Entra devices that have not connected/signed in for the specified number of days. Remediation first disables stale enabled devices once they pass the disable threshold, and later deletes devices that are already disabled once they have been inactive for the disable threshold plus the configured grace delta (deletion age = disable threshold + grace days). The disable-before-delete grace period is further guaranteed by never deleting a device in the same pass it was disabled. Hybrid-joined (on-premises synced), Intune-managed/compliant, and system-managed Autopilot devices are excluded. **Warning:** deleting a device permanently removes any BitLocker recovery keys stored on that device object.",
+  "impactColour": "danger",
+  "addedDate": "2025-01-19",
+  "powershellEquivalent": "Remove-MgDevice, Update-MgDevice or Graph API",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "deviceAgeThreshold": {
+      "type": "number",
+      "label": "Days before stale (disables the device after this many days of inactivity, minimum 30)",
+      "required": true,
+      "default": 90,
+      "validators": {
+        "min": {
+          "value": 30,
+          "message": "Minimum value is 30"
+        }
+      }
+    },
+    "deviceDeleteThreshold": {
+      "type": "number",
+      "label": "Grace days after disable before deletion (0 = never delete). Devices are deleted once inactive for the disable threshold plus this many additional days.",
+      "default": 0,
+      "validators": {
+        "min": {
+          "value": 0,
+          "message": "Minimum value is 0"
+        }
+      }
+    }
+  },
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Devices"
+  },
+  "prepare": "Get-CIPPBaselineStaleEntraDevicesState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "version": "v1.0",
+    "refreshCache": [
+      "Devices"
+    ],
+    "writes": [
+      {
+        "from": "devicesToDisable",
+        "method": "PATCH",
+        "uri": "devices/%id%",
+        "body": {
+          "accountEnabled": false
+        }
+      },
+      {
+        "from": "devicesToDelete",
+        "method": "DELETE",
+        "uri": "devices/%id%"
+      }
+    ]
+  }
+}

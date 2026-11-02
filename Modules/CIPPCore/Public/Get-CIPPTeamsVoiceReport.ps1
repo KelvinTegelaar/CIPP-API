@@ -2,21 +2,23 @@ function Get-CIPPTeamsVoiceReport {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+
+        # Rows already read by the AllTenants path, keyed by cache type
+        [Parameter(DontShow = $true)]
+        [hashtable]$DbItems
     )
 
     try {
         if ($TenantFilter -eq 'AllTenants') {
-            $AnyItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'TeamsVoice'
-            $Tenants = @($AnyItems | Where-Object { $_.RowKey -notlike '*-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
-
-            $TenantList = Get-Tenants -IncludeErrors
-            $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
+            $ItemsByTenant = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'TeamsVoice' -ByTenant
 
             $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
-            foreach ($Tenant in $Tenants) {
+            foreach ($Tenant in @($ItemsByTenant.Keys)) {
+                # Hand each tenant its rows and drop them here so they can be freed once processed
+                $TenantItems = $ItemsByTenant[$Tenant]; $ItemsByTenant[$Tenant] = $null
                 try {
-                    $TenantResults = Get-CIPPTeamsVoiceReport -TenantFilter $Tenant
+                    $TenantResults = Get-CIPPTeamsVoiceReport -TenantFilter $Tenant -DbItems @{ TeamsVoice = $TenantItems }
                     foreach ($Result in $TenantResults) {
                         $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
                         $AllResults.Add($Result)
@@ -28,7 +30,7 @@ function Get-CIPPTeamsVoiceReport {
             return $AllResults
         }
 
-        $Items = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'TeamsVoice' | Where-Object { $_.RowKey -notlike '*-Count' }
+        $Items = $(if ($DbItems) { $DbItems['TeamsVoice'] } else { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'TeamsVoice' }) | Where-Object { $_.RowKey -notlike '*-Count' }
         if (-not $Items) {
             throw "No cached Teams Voice data found for $TenantFilter. Run a cache sync first."
         }

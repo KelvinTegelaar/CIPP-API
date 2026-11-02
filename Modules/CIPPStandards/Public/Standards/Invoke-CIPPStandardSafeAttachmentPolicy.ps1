@@ -194,7 +194,6 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SafeAttachmentPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
 
         $CurrentValue = @{
             name            = $CurrentState.Name

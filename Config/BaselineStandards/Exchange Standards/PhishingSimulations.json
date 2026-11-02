@@ -1,0 +1,70 @@
+{
+  "name": "PhishingSimulations",
+  "label": "Configure Phishing Simulation Overrides",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Configures the phishing simulation override policy, its sender rule, and the advanced-delivery URL allow list for the configured simulation platform.",
+  "executiveText": "Ensures sanctioned phishing simulation campaigns bypass filtering end to end - sender infrastructure, domains and landing URLs - so awareness testing measures user behaviour rather than mail filtering.",
+  "docsDescription": "Grades three legs separately: the override policy exists enabled, the override rule carries the configured sender IP ranges and domains, and the simulation URLs are on the Url advanced-delivery allow list. Lists are additive unless strict ownership is enabled. Remediation writes only the drifted legs, using add/remove deltas on the existing rule.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-PhishSimOverridePolicy, New-ExoPhishSimOverrideRule or New-TenantAllowBlockListItems",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "Domains": {
+      "type": "autoComplete",
+      "required": true,
+      "creatable": true,
+      "label": "Phishing Simulation Domains",
+      "multiple": true
+    },
+    "SenderIpRanges": {
+      "type": "autoComplete",
+      "required": true,
+      "creatable": true,
+      "label": "Phishing Simulation Sender IP Ranges",
+      "multiple": true
+    },
+    "PhishingSimUrls": {
+      "omitWhenBlank": true,
+      "type": "autoComplete",
+      "creatable": true,
+      "label": "Phishing Simulation URLs",
+      "multiple": true
+    },
+    "RemoveExtraUrls": {
+      "default": false,
+      "type": "switch",
+      "label": "Remove entries outside the configured lists"
+    }
+  },
+  "read": {
+    "requiredCaches": [
+      "ExoPhishSimOverridePolicy",
+      "ExoPhishSimOverrideRule",
+      "ExoPhishSimUrlAllowItems"
+    ],
+    "cacheType": "ExoPhishSimConfig"
+  },
+  "prepare": "Get-CIPPBaselinePhishingSimulationsState",
+  "remediate": {
+    "executor": "PhishingSimulations",
+    "domains": "%Domains%",
+    "senderIpRanges": "%SenderIpRanges%"
+  }
+}

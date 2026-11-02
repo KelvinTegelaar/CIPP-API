@@ -1,0 +1,67 @@
+{
+  "name": "GlobalQuarantineSettings",
+  "label": "Set Global Quarantine Notification Settings",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the sender branding on global quarantine notifications: display name, subject, disclaimer, sender address and organization branding. Only configured fields are enforced.",
+  "executiveText": "Brands the quarantine notification emails users receive so they recognize legitimate messages from the organization, reducing the risk of users ignoring or distrusting real quarantine alerts.",
+  "docsDescription": "Grades the global quarantine policy notification branding. Per-language text fields grade as contains - the configured text must be among the per-language values - and remediation writes the text into every configured language. The Microsoft default policy cannot be modified, so remediation creates the custom DefaultGlobalTag when needed. Fields left empty are not graded or written.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-QuarantinePolicy or Set-QuarantinePolicy",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "SenderName": {
+      "omitWhenBlank": true,
+      "type": "textField",
+      "label": "Sender Display Name"
+    },
+    "CustomSubject": {
+      "omitWhenBlank": true,
+      "type": "textField",
+      "label": "Subject"
+    },
+    "CustomDisclaimer": {
+      "omitWhenBlank": true,
+      "type": "textField",
+      "label": "Disclaimer (max 200 characters)"
+    },
+    "FromAddress": {
+      "omitWhenBlank": true,
+      "type": "textField",
+      "label": "Sender Address (must be an internal mailbox)"
+    },
+    "OrganizationBrandingEnabled": {
+      "default": false,
+      "type": "switch",
+      "label": "Use Organization Branding (logo)"
+    }
+  },
+  "read": {
+    "cacheType": "ExoGlobalQuarantinePolicy"
+  },
+  "prepare": "Get-CIPPBaselineGlobalQuarantineSettingsState",
+  "remediate": {
+    "executor": "GlobalQuarantineSettings",
+    "senderName": "%SenderName%",
+    "customSubject": "%CustomSubject%",
+    "customDisclaimer": "%CustomDisclaimer%",
+    "fromAddress": "%FromAddress%",
+    "organizationBrandingEnabled": "%OrganizationBrandingEnabled%"
+  }
+}

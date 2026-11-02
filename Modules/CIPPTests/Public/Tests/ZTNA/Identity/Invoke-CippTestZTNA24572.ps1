@@ -15,12 +15,12 @@ function Invoke-CippTestZTNA24572 {
             return
         }
 
-        $EnrollmentNotifications = @($EnrollmentConfigs | Where-Object {
+        $EnrollmentNotifications = @($EnrollmentConfigs.Where({
                 $_.'@odata.type' -eq '#microsoft.graph.windowsEnrollmentStatusScreenSettings' -or
                 $_.'deviceEnrollmentConfigurationType' -eq 'EnrollmentNotificationsConfiguration'
-            })
+            }))
 
-        $AssignedNotifications = @($EnrollmentNotifications | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $AssignedNotifications = @($EnrollmentNotifications.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
         $Passed = $AssignedNotifications.Count -gt 0
 
         if ($Passed) {

@@ -40,7 +40,7 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
     #>
 
     param ($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'ThirdPartyStorageServicesRestricted' -TenantFilter $Tenant -Preset SharePoint
+    $TestResult = Test-CIPPStandardLicense -StandardName 'RestrictThirdPartyStorageServices' -TenantFilter $Tenant -Preset SharePoint
 
     if ($TestResult -eq $false) {
         return $true
@@ -102,6 +102,5 @@ function Invoke-CIPPStandardRestrictThirdPartyStorageServices {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.RestrictThirdPartyStorageServices' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'ThirdPartyStorageServicesRestricted' -FieldValue ($CurrentState.accountEnabled -eq $false) -StoreAs bool -Tenant $Tenant
     }
 }

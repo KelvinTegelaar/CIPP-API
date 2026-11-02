@@ -94,6 +94,5 @@ function Invoke-CIPPStandardAutoArchiveMailbox {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.AutoArchiveMailbox' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'AutoArchiveMailbox' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
     }
 }

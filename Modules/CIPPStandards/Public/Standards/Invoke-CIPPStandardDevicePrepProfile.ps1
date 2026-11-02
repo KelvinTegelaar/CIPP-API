@@ -21,14 +21,14 @@ function Invoke-CIPPStandardDevicePrepProfile {
             {"type":"textField","name":"standards.DevicePrepProfile.ProfileDescription","label":"Profile Description","required":false}
             {"type":"select","multiple":false,"name":"standards.DevicePrepProfile.DeploymentType","label":"Deployment Type","options":[{"label":"Single user","value":"0"},{"label":"Shared","value":"1"}]}
             {"type":"select","multiple":false,"name":"standards.DevicePrepProfile.JoinType","label":"Join Type","options":[{"label":"Microsoft Entra join","value":"0"},{"label":"Microsoft Entra hybrid join","value":"1"}]}
-            {"type":"select","multiple":false,"name":"standards.DevicePrepProfile.AccountType","label":"Account Type","options":[{"label":"Standard user","value":"0"},{"label":"Administrator","value":"1"}]}
+            {"type":"select","multiple":false,"name":"standards.DevicePrepProfile.AccountType","label":"Account Type","options":[{"label":"Standard user","value":"1"},{"label":"Administrator","value":"0"}]}
             {"type":"number","name":"standards.DevicePrepProfile.Timeout","label":"Timeout (minutes)","defaultValue":60}
             {"type":"textField","name":"standards.DevicePrepProfile.CustomErrorMessage","label":"Custom Error Message","required":false}
             {"type":"switch","name":"standards.DevicePrepProfile.AllowSkip","label":"Allow users to skip setup after failure","defaultValue":false}
             {"type":"switch","name":"standards.DevicePrepProfile.AllowDiagnostics","label":"Allow users to collect diagnostics","defaultValue":false}
             {"type":"textField","name":"standards.DevicePrepProfile.DeviceGroupName","label":"Device Security Group Name (wildcard match)","required":false}
             {"type":"switch","name":"standards.DevicePrepProfile.CreateNewGroup","label":"Create new group if group is not found","defaultValue":false}
-            {"type":"radio","name":"standards.DevicePrepProfile.AssignTo","label":"Policy Assignment","options":[{"label":"Do not assign","value":"none"},{"label":"All devices","value":"AllDevices"},{"label":"All users and devices","value":"AllDevicesAndUsers"}]}
+            {"type":"radio","name":"standards.DevicePrepProfile.AssignTo","label":"Policy Assignment","options":[{"label":"Do not assign","value":"none"},{"label":"All users (Device Preparation profiles deploy to the enrolling user, so device targets do not apply)","value":"AllDevicesAndUsers"}]}
         IMPACT
             High Impact
         ADDEDDATE
@@ -65,12 +65,25 @@ function Invoke-CIPPStandardDevicePrepProfile {
     $DeploymentMode = '0' # Device Prep only supports self-deploying mode
     $DeploymentType = $Settings.DeploymentType.value ?? $Settings.DeploymentType ?? '0'
     $JoinType = $Settings.JoinType.value ?? $Settings.JoinType ?? '0'
-    $AccountType = $Settings.AccountType.value ?? $Settings.AccountType ?? '0'
+    $AccountType = $Settings.AccountType.value ?? $Settings.AccountType ?? '1' # 1 = Standard user, 0 = Administrator
     $Timeout = [int]($Settings.Timeout ?? 60)
     $CustomErrorMessage = $Settings.CustomErrorMessage ?? "Contact your organization`u{2019}s support person for help."
     $AllowSkip = if ($Settings.AllowSkip -eq $true) { '1' } else { '0' }
     $AllowDiagnostics = if ($Settings.AllowDiagnostics -eq $true) { '1' } else { '0' }
     $AssignTo = $Settings.AssignTo.value ?? $Settings.AssignTo ?? 'none'
+
+    # Device Preparation profiles deploy to the enrolling user, so Intune only accepts group
+    # targets for them - the broad virtual targets leave the profile without an effective
+    # assignment. Both the assignment write and the comparison read the targets from here.
+    $AssignmentTarget = Get-CIPPIntuneAssignmentTarget -AssignTo $AssignTo -PolicyType 'DevicePrepProfile'
+    $AssignmentBody = if (@($AssignmentTarget.Targets).Count -gt 0) {
+        @{ assignments = @($AssignmentTarget.Targets | ForEach-Object { @{ target = $_ } }) } | ConvertTo-Json -Compress -Depth 10
+    }
+    if ($AssignmentTarget.Unsupported) {
+        # A target this policy type cannot express is a configuration error the operator has to
+        # fix, and no branch below can act on it - say so whether or not anything else drifted.
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "DevicePrepProfile: $($AssignmentTarget.Unsupported)" -sev Warning
+    }
 
     # Resolve device security group ID
     $DeviceGroupId = ''
@@ -275,7 +288,6 @@ function Invoke-CIPPStandardDevicePrepProfile {
     $SimpleSettingMap = @{
         'enrollment_autopilot_dpp_timeout'                = 'Timeout'
         'enrollment_autopilot_dpp_customerrormessage'     = 'CustomErrorMessage'
-        'enrollment_autopilot_dpp_devicesecuritygroupids' = 'DeviceGroupId'
     }
 
     # Check existing policies
@@ -287,7 +299,8 @@ function Invoke-CIPPStandardDevicePrepProfile {
         return
     }
 
-    $ExistingPolicy = $ExistingPolicies | Where-Object { $_.Name -eq $ProfileName } | Select-Object -First 1
+    # Name alone could match an unrelated Settings Catalog policy, which a drift fix would delete.
+    $ExistingPolicy = $ExistingPolicies | Where-Object { $_.Name -eq $ProfileName -and "$($_.templateReference.templateId)" -like '80d33118-b7b4-40d8-b15f-81be745e053f*' } | Select-Object -First 1
     $PolicyExists = $null -ne $ExistingPolicy
 
     # Parse current settings
@@ -311,6 +324,31 @@ function Invoke-CIPPStandardDevicePrepProfile {
         }
     }
 
+    # Intune enrols devices through the membership target action, not the settings string the
+    # portal displays, so the applied group is read back through the helper rather than parsed
+    # out of the policy body.
+    $MembershipTarget = $null
+    if ($PolicyExists) {
+        $MembershipTarget = Get-CIPPEnrollmentTimeDeviceMembershipTarget -PolicyId $ExistingPolicy.id -TenantFilter $Tenant
+    }
+
+    # Read the assignment state alongside the settings. A profile whose settings match but whose
+    # assignment is missing is half-deployed - nobody gets it - and without this read that state
+    # is invisible, so no run could ever detect or repair it.
+    $AssignmentsMatch = $null
+    $AssignmentDetail = $null
+    if ($PolicyExists -and $AssignTo -ne 'none') {
+        try {
+            $ExistingAssignments = Get-CIPPIntunePolicyAssignments -PolicyId $ExistingPolicy.id -TemplateType 'Catalog' -TenantFilter $Tenant
+            $AssignmentDetail = Compare-CIPPIntuneAssignments -ExistingAssignments $ExistingAssignments -ExpectedAssignTo $AssignTo -PolicyType 'DevicePrepProfile' -TenantFilter $Tenant
+            # Unknown stays $null: a failed lookup is not a deviation.
+            $AssignmentsMatch = if ($AssignmentDetail.Unknown) { $null } else { $AssignmentDetail.Matched }
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "DevicePrepProfile: Failed to read policy assignments: $($ErrorMessage.NormalizedError)" -sev Warning -LogData $ErrorMessage
+        }
+    }
+
     $CurrentValue = [PSCustomObject]@{
         PolicyExists       = $PolicyExists
         DeploymentMode     = [string]($CurrentParsed.DeploymentMode ?? '')
@@ -321,7 +359,6 @@ function Invoke-CIPPStandardDevicePrepProfile {
         CustomErrorMessage = [string]($CurrentParsed.CustomErrorMessage ?? '')
         AllowSkip          = [string]($CurrentParsed.AllowSkip ?? '')
         AllowDiagnostics   = [string]($CurrentParsed.AllowDiagnostics ?? '')
-        DeviceGroupId      = [string]($CurrentParsed.DeviceGroupId ?? '')
     }
 
     $ExpectedValue = [PSCustomObject]@{
@@ -334,33 +371,77 @@ function Invoke-CIPPStandardDevicePrepProfile {
         CustomErrorMessage = $CustomErrorMessage
         AllowSkip          = $AllowSkip
         AllowDiagnostics   = $AllowDiagnostics
-        DeviceGroupId      = $DeviceGroupId
     }
 
-    # Determine compliance
-    $StateIsCorrect = $PolicyExists
+    # An expected group that resolved to nothing - not configured, missing and not creatable, or
+    # a failed lookup - is a deviation nothing in CIPP could clear, so the dimension stays out.
+    $MembershipMatches = $null
+    if ($PolicyExists -and -not [string]::IsNullOrWhiteSpace($DeviceGroupId)) {
+        $MembershipMatches = ([string]$MembershipTarget.GroupId -eq [string]$DeviceGroupId)
+        $CurrentValue | Add-Member -NotePropertyName 'DeviceGroupId' -NotePropertyValue ([string]$MembershipTarget.GroupId)
+        $ExpectedValue | Add-Member -NotePropertyName 'DeviceGroupId' -NotePropertyValue ([string]$DeviceGroupId)
+    }
+
+    # A failed assignment lookup is unknown, not a deviation: leave the dimension out of the
+    # comparison entirely until it can be read, or drift records a deviation no run can clear.
+    if ($AssignTo -ne 'none' -and $null -ne $AssignmentsMatch) {
+        $CurrentValue | Add-Member -NotePropertyName 'isAssigned' -NotePropertyValue $AssignmentsMatch
+        $ExpectedValue | Add-Member -NotePropertyName 'isAssigned' -NotePropertyValue $true
+        if (-not $AssignmentsMatch) {
+            # Carry the actual delta into the report - "assignments differ" alone is unactionable
+            # when the portal looks correct.
+            $AssignmentReason = @($AssignmentDetail.Reasons) -join '; '
+            if ($AssignmentReason) {
+                $CurrentValue | Add-Member -NotePropertyName 'assignmentDifferences' -NotePropertyValue $AssignmentReason
+            }
+        }
+    }
+
+    # Determine compliance. The settings verdict stays separate from the assignment verdict so
+    # remediation can repair a wrong assignment in place instead of recreating the whole profile.
+    $SettingsAreCorrect = $PolicyExists
     if ($PolicyExists) {
         $PropertiesToCompare = @('DeploymentMode', 'DeploymentType', 'JoinType', 'AccountType', 'AllowSkip', 'AllowDiagnostics')
         foreach ($Prop in $PropertiesToCompare) {
             if ([string]$CurrentValue.$Prop -ne [string]$ExpectedValue.$Prop) {
-                $StateIsCorrect = $false
+                $SettingsAreCorrect = $false
                 break
             }
         }
-        if ($StateIsCorrect -and [int]$CurrentValue.Timeout -ne $ExpectedValue.Timeout) { $StateIsCorrect = $false }
-        if ($StateIsCorrect -and $CurrentValue.CustomErrorMessage -ne $ExpectedValue.CustomErrorMessage) { $StateIsCorrect = $false }
-        if ($StateIsCorrect -and $CurrentValue.DeviceGroupId -ne $ExpectedValue.DeviceGroupId) { $StateIsCorrect = $false }
+        if ($SettingsAreCorrect -and [int]$CurrentValue.Timeout -ne $ExpectedValue.Timeout) { $SettingsAreCorrect = $false }
+        if ($SettingsAreCorrect -and $CurrentValue.CustomErrorMessage -ne $ExpectedValue.CustomErrorMessage) { $SettingsAreCorrect = $false }
     }
+    # The membership target stays out of the settings verdict: it is a separate action on the
+    # existing policy, so recreating the profile over it would destroy more than it repairs.
+    $StateIsCorrect = $SettingsAreCorrect -and $AssignmentsMatch -ne $false -and $MembershipMatches -ne $false
 
     # Remediate
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "DevicePrepProfile: Profile '$ProfileName' already correctly configured" -sev Info
+        } elseif ($SettingsAreCorrect) {
+            # Only the assignment differs. Repair it in place - recreating the profile would sever
+            # the enrollment-time device group linkage over a delta the /assign endpoint can fix.
+            try {
+                if ($AssignmentBody -and $AssignmentsMatch -eq $false) {
+                    $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ExistingPolicy.id)')/assign" -tenantid $Tenant -body $AssignmentBody -type POST
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "DevicePrepProfile: Repaired assignment for profile '$ProfileName' ($(@($AssignmentDetail.Reasons) -join '; '))" -sev Info
+                }
+                if ($MembershipMatches -eq $false -and -not [string]::IsNullOrWhiteSpace($DeviceGroupId)) {
+                    $null = Set-CIPPEnrollmentTimeDeviceMembershipTarget -PolicyId $ExistingPolicy.id -GroupId $DeviceGroupId -TenantFilter $Tenant
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "DevicePrepProfile: Applied the enrollment time device membership target for profile '$ProfileName'" -sev Info
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "DevicePrepProfile: Failed to repair assignment for profile '$ProfileName': $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            }
         } else {
             try {
                 # Delete drifted policy before recreating
                 if ($PolicyExists) {
                     $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ExistingPolicy.id)')" -tenantid $Tenant -type DELETE
+                    # The recreated profile gets a new id, so the old marker must not survive it.
+                    Remove-CIPPEnrollmentTimeDeviceMembershipMarker -PolicyId $ExistingPolicy.id -TenantFilter $Tenant
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "DevicePrepProfile: Deleted existing profile '$ProfileName' for recreation" -sev Info
                 }
 
@@ -368,39 +449,13 @@ function Invoke-CIPPStandardDevicePrepProfile {
                 $NewPolicy = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $Tenant -body $Body -type POST
 
                 # Assign the policy if requested
-                if ($AssignTo -ne 'none' -and $NewPolicy.id) {
-                    $AssignBody = switch ($AssignTo) {
-                        'AllDevices' {
-                            @{
-                                assignments = @(
-                                    @{
-                                        target = @{
-                                            '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget'
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                        'AllDevicesAndUsers' {
-                            @{
-                                assignments = @(
-                                    @{
-                                        target = @{
-                                            '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget'
-                                        }
-                                    }
-                                    @{
-                                        target = @{
-                                            '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget'
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    if ($AssignBody) {
-                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($NewPolicy.id)')/assign" -tenantid $Tenant -body ($AssignBody | ConvertTo-Json -Compress -Depth 10) -type POST
-                    }
+                if ($NewPolicy.id -and $AssignmentBody) {
+                    $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($NewPolicy.id)')/assign" -tenantid $Tenant -body $AssignmentBody -type POST
+                }
+
+                # The settings string alone leaves the profile with no group applied.
+                if ($NewPolicy.id -and -not [string]::IsNullOrWhiteSpace($DeviceGroupId)) {
+                    $null = Set-CIPPEnrollmentTimeDeviceMembershipTarget -PolicyId $NewPolicy.id -GroupId $DeviceGroupId -TenantFilter $Tenant
                 }
 
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "DevicePrepProfile: Successfully deployed profile '$ProfileName'" -sev Info
@@ -424,6 +479,5 @@ function Invoke-CIPPStandardDevicePrepProfile {
     # Report
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.DevicePrepProfile' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DevicePrepProfile' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

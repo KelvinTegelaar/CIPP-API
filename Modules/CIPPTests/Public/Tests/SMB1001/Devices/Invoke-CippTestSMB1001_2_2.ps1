@@ -21,7 +21,7 @@ function Invoke-CippTestSMB1001_2_2 {
 
         # 1. Device registration policy: registering users should NOT auto become local admin
         if ($DeviceRegPolicy) {
-            $Cfg = $DeviceRegPolicy | Select-Object -First 1
+            $Cfg = @($DeviceRegPolicy)[0]
             $RegisteringType = $Cfg.azureADJoin.localAdmins.registeringUsers.'@odata.type'
             if ($RegisteringType -ne '#microsoft.graph.noDeviceRegistrationMembership') {
                 $Issues.Add("Registering users are granted local administrator rights ($RegisteringType). Configure deviceRegistrationPolicy to deny.")
@@ -32,12 +32,12 @@ function Invoke-CippTestSMB1001_2_2 {
 
         # 2. LAPS policy deployed and assigned
         if ($ConfigPolicies) {
-            $LapsPolicies = @($ConfigPolicies | Where-Object {
+            $LapsPolicies = @($ConfigPolicies.Where({
                     $_.platforms -like '*windows10*' -and
                     $_.templateReference.templateFamily -eq 'endpointSecurityAccountProtection' -and
                     ($_.settings.settingInstance.settingDefinitionId -contains 'device_vendor_msft_laps_policies_backupdirectory')
-                })
-            $AssignedLaps = @($LapsPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+                }))
+            $AssignedLaps = @($LapsPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
             if ($AssignedLaps.Count -eq 0) {
                 $Issues.Add('No assigned Windows LAPS policy found in Intune. Without LAPS, the local administrator credential is shared/static, contradicting SMB1001 2.2.')
             }

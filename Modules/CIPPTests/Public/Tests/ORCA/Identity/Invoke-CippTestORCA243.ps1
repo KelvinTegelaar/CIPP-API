@@ -14,7 +14,7 @@ function Invoke-CippTestORCA243 {
         }
 
         # Check for non-authoritative domains that would need inbound connectors
-        $NonAuthDomains = $AcceptedDomains | Where-Object { $_.DomainType -in @('InternalRelay', 'ExternalRelay') }
+        $NonAuthDomains = $AcceptedDomains.Where({ $_.DomainType -in @('InternalRelay', 'ExternalRelay') })
 
         if ($NonAuthDomains.Count -eq 0) {
             $Status = 'Passed'

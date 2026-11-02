@@ -27,6 +27,11 @@ function Set-CIPPDBCacheExoProtectionAlert {
         if ($ProtectionAlerts) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoProtectionAlert' -Data $ProtectionAlerts -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($ProtectionAlerts.Count) protection alerts" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoProtectionAlert' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 protection alerts (none found)' -sev Debug
         }
         $ProtectionAlerts = $null
 

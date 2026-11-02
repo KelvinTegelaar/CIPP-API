@@ -1,0 +1,47 @@
+# SAST for PowerShell: PSScriptAnalyzer with SARIF upload to the GitHub Security tab
+# ISO 27001:2022 A.8.28/8.29 evidence — CodeQL does not support PowerShell, so
+# PSScriptAnalyzer is the SAST tool for CIPP-API.
+name: SAST - PSScriptAnalyzer
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  schedule:
+    - cron: "30 5 * * 1" # Weekly, catches newly added rules against unchanged code
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  psscriptanalyzer:
+    if: github.repository_owner == 'KelvinTegelaar'
+    name: Run PSScriptAnalyzer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run PSScriptAnalyzer
+        uses: microsoft/psscriptanalyzer-action@v1.1
+        with:
+          path: .\
+          recurse: true
+          # Security-focused rules; extend with full default ruleset if desired
+          includeRule:
+            '"PSAvoidUsingPlainTextForPassword",
+            "PSAvoidUsingConvertToSecureStringWithPlainText",
+            "PSAvoidUsingUsernameAndPasswordParams",
+            "PSUsePSCredentialType",
+            "PSAvoidUsingInvokeExpression",
+            "PSAvoidGlobalVars",
+            "PSAvoidUsingComputerNameHardcoded",
+            "PSUseDeclaredVarsMoreThanAssignments"'
+          output: results.sarif
+
+      - name: Upload SARIF to Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: results.sarif

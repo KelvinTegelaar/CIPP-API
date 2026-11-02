@@ -32,16 +32,34 @@ function New-CIPPRestoreTask {
         'IntuneProtection'  = @{ success = 0; failed = 0 }
         'AntiSpam'          = @{ success = 0; failed = 0 }
         'AntiPhishing'      = @{ success = 0; failed = 0 }
+        'TeamsPhoneNumbers' = @{ success = 0; failed = 0 }
         'WebhookAlerts'     = @{ success = 0; failed = 0 }
         'ScriptedAlerts'    = @{ success = 0; failed = 0 }
     }
 
-    # Helper function to clean user object for Graph API - removes reference properties, nulls, and empty strings
-    function Clean-GraphObject {
-        param($Object, [switch]$ExcludeId)
-        $excludeProps = @('password', 'passwordProfile', '@odata.type', 'manager', 'memberOf', 'createdOnBehalfOf', 'createdByAppId', 'deletedDateTime', 'authorizationInfo')
+    # Helper function to clean user/group objects for Graph API - removes reference properties,
+    # read-only properties, nulls, and empty strings
+    function ConvertTo-RestorableGraphObject {
+        param($Object, [switch]$ExcludeId, [switch]$ForUpdate)
+        $excludeProps = @('password', 'passwordProfile', '@odata.type', 'manager', 'memberOf', 'createdOnBehalfOf',
+            'createdByAppId', 'deletedDateTime', 'authorizationInfo', 'imAddresses', 'assignedLicenses',
+            'assignedPlans', 'cloudLicensing', 'cloudRealtimeCommunicationInfo',
+            'createdDateTime', 'creationType', 'deviceKeys', 'expirationDateTime', 'externalUserState',
+            'externalUserStateChangeDateTime', 'hasMembersWithLicenseErrors', 'isArchived', 'isFavorite',
+            'isLicenseReconciliationNeeded', 'isManagementRestricted', 'isResourceAccount',
+            'isSubscribedByMail', 'lastPasswordChangeDateTime', 'legalAgeGroupClassification',
+            'licenseAssignmentStates', 'licenseProcessingState', 'mail', 'membershipRuleProcessingStatus',
+            'onPremises*', 'provisionedPlans', 'proxyAddresses', 'refreshTokensValidFromDateTime',
+            'renewedDateTime', 'resourceProvisioningOptions', 'securityIdentifier',
+            'serviceProvisioningErrors', 'signInActivity', 'signInSessionsValidFromDateTime',
+            'uniqueName', 'unseenConversationsCount', 'unseenCount', 'unseenMessagesCount')
+
         if ($ExcludeId) {
             $excludeProps += @('id')
+        }
+        if ($ForUpdate) {
+            # Immutable after creation: allowed in a POST body, rejected on PATCH
+            $excludeProps += @('id', 'isAssignableToRole', 'resourceBehaviorOptions', 'creationOptions')
         }
 
         $cleaned = $Object | Select-Object * -ExcludeProperty $excludeProps
@@ -49,8 +67,10 @@ function New-CIPPRestoreTask {
 
         foreach ($prop in $cleaned.PSObject.Properties) {
             $propValue = $prop.Value
-            # Skip empty strings, nulls, and complex objects (except known-good arrays like businessPhones)
-            if ($propValue -ne '' -and $null -ne $propValue) {
+            # Skip empty strings, nulls, and complex objects (except known-good arrays like businessPhones).
+            # Compare the string case explicitly: '$propValue -ne ''''' coerces '' to $false for booleans,
+            # which silently dropped required $false properties like mailEnabled.
+            if ($null -ne $propValue -and -not ($propValue -is [string] -and $propValue -eq '')) {
                 # Skip complex objects/dictionaries but allow simple arrays
                 if ($propValue -is [System.Collections.IDictionary]) {
                     continue
@@ -127,7 +147,7 @@ function New-CIPPRestoreTask {
                     if ($overwrite) {
                         if ($userObject.id -in $currentUsers.id -or $userObject.userPrincipalName -in $currentUsers.userPrincipalName) {
                             # Patch existing user - clean object to remove reference properties, nulls, and empty strings
-                            $cleanedUser = Clean-GraphObject -Object $userObject
+                            $cleanedUser = ConvertTo-RestorableGraphObject -Object $userObject
                             $patchBody = $cleanedUser | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/users/$($userObject.id)" -tenantid $TenantFilter -body $patchBody -type PATCH
                             Write-LogMessage -message "Restored $($UPN) from backup by patching the existing object." -Sev 'info'
@@ -137,7 +157,7 @@ function New-CIPPRestoreTask {
                             # Create new user - need to add password and clean object
                             $tempPassword = New-passwordString
                             # Remove reference properties that may not exist in target tenant, nulls, and empty strings
-                            $cleanedUser = Clean-GraphObject -Object $userObject -ExcludeId
+                            $cleanedUser = ConvertTo-RestorableGraphObject -Object $userObject -ExcludeId
                             $cleanedUser['passwordProfile'] = @{
                                 'forceChangePasswordNextSignIn' = $true
                                 'password'                      = $tempPassword
@@ -165,7 +185,7 @@ function New-CIPPRestoreTask {
                             # Create new user - need to add password and clean object
                             $tempPassword = New-passwordString
                             # Remove reference properties that may not exist in target tenant, nulls, and empty strings
-                            $cleanedUser = Clean-GraphObject -Object $userObject -ExcludeId
+                            $cleanedUser = ConvertTo-RestorableGraphObject -Object $userObject -ExcludeId
                             $cleanedUser['passwordProfile'] = @{
                                 'forceChangePasswordNextSignIn' = $true
                                 'password'                      = $tempPassword
@@ -202,16 +222,16 @@ function New-CIPPRestoreTask {
             $BackupGroups | ForEach-Object {
 
                 try {
-                    $CleanObj = Clean-GraphObject $_
-                    $JSON = $CleanObj | ConvertTo-Json -Depth 100 -Compress
                     $DisplayName = $_.displayName
                     if ($overwrite) {
                         if ($_.id -in $Groups.id) {
+                            $JSON = ConvertTo-RestorableGraphObject $_ -ForUpdate | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/groups/$($_.id)" -tenantid $TenantFilter -body $JSON -type PATCH
                             Write-LogMessage -message "Restored $DisplayName from backup by patching the existing object." -Sev 'info'
                             $restorationStats['Groups'].success++
                             $RestoreData.Add("The group existed. Restored $DisplayName from backup")
                         } else {
+                            $JSON = ConvertTo-RestorableGraphObject $_ -ExcludeId | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $TenantFilter -body $JSON -type POST
                             Write-LogMessage -message "Restored $DisplayName from backup" -Sev 'info'
                             $restorationStats['Groups'].success++
@@ -220,6 +240,7 @@ function New-CIPPRestoreTask {
                     }
                     if (!$overwrite) {
                         if ($_.id -notin $Groups.id) {
+                            $JSON = ConvertTo-RestorableGraphObject $_ -ExcludeId | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $TenantFilter -body $JSON -type POST
                             Write-LogMessage -message "Restored $DisplayName from backup" -Sev 'info'
                             $restorationStats['Groups'].success++
@@ -654,6 +675,78 @@ function New-CIPPRestoreTask {
                     $RestoreData.Add("Could not restore Anti-phishing rule $($rule.Identity) : $($ErrorMessage.NormalizedError) ")
                     Write-LogMessage -Headers $Headers -API $APINAME -message "Could not restore Anti-phishing rule $($rule.Identity) : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
+            }
+        }
+        'teamsvoice' {
+            Write-Host "Restore Teams phone number assignments for $TenantFilter"
+            $Backup = if ($BackupData.teamsvoice -is [string]) { $BackupData.teamsvoice | ConvertFrom-Json } else { $BackupData.teamsvoice }
+            $BaseUri = 'https://graph.microsoft.com/v1.0/admin/teams/telephoneNumberManagement/numberAssignments'
+            try {
+                $LiveNumbers = New-GraphGetRequest -uri $BaseUri -tenantid $TenantFilter
+                # One POST per number: $batch fails with an IIS 'Request Too Long' page (see Remove-CIPPUserTeamsPhoneDIDs).
+                foreach ($Number in $Backup) {
+                    $PhoneNumber = $Number.telephoneNumber
+                    try {
+                        $Live = $LiveNumbers | Where-Object { $_.telephoneNumber -eq $PhoneNumber } | Select-Object -First 1
+                        # assignmentCategory can only change through unassign + assign (updateNumber does not take it),
+                        # so a same-holder category change falls through to the overwrite move path below.
+                        $CategoryChanged = $Number.assignmentCategory -and $Live.assignmentCategory -and $Live.assignmentCategory -ne $Number.assignmentCategory
+                        if ($Live.assignmentTargetId -eq $Number.assignmentTargetId -and -not ($overwrite -and $CategoryChanged)) {
+                            if ($overwrite -and $Number.locationId -and $Live.locationId -ne $Number.locationId) {
+                                # Same holder, different emergency location: updateNumber is synchronous and only touches the optional attributes.
+                                $UpdateBody = @{ telephoneNumber = $PhoneNumber; locationId = $Number.locationId }
+                                $null = New-GraphPOSTRequest -uri "$BaseUri/updateNumber" -tenantid $TenantFilter -body ($UpdateBody | ConvertTo-Json -Compress) -type POST
+                                $restorationStats['TeamsPhoneNumbers'].success++
+                                Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantFilter -message "Restored emergency location of Teams phone number $PhoneNumber from backup" -Sev 'Info'
+                                $RestoreData.Add("Restored emergency location of Teams phone number $PhoneNumber")
+                            } else {
+                                $RestoreData.Add("Teams phone number $PhoneNumber is already assigned to $($Number.assignmentTargetId)")
+                            }
+                            continue
+                        }
+                        $NumberType = Get-CippTeamsNumberType -NumberType $Number.numberType
+                        if ($Live.assignmentStatus -ne 'unassigned' -and $Live.assignmentTargetId) {
+                            if (-not $overwrite) {
+                                $RestoreData.Add("Teams phone number $PhoneNumber is assigned to $($Live.assignmentTargetId) and overwrite is disabled")
+                                continue
+                            }
+                            $UnassignBody = @{ telephoneNumber = $PhoneNumber; numberType = $NumberType }
+                            $null = New-GraphPOSTRequest -uri "$BaseUri/unassignNumber" -tenantid $TenantFilter -body ($UnassignBody | ConvertTo-Json -Compress) -type POST
+                            # unassignNumber is async (202); assigning before it lands fails because the number is still held.
+                            # ponytail: fixed 30s poll of the full list, follow the 202 Location operation URL once New-GraphPOSTRequest exposes response headers.
+                            $Attempts = 0
+                            do {
+                                Start-Sleep -Seconds 3
+                                $Attempts++
+                                $Current = New-GraphGetRequest -uri $BaseUri -tenantid $TenantFilter | Where-Object { $_.telephoneNumber -eq $PhoneNumber } | Select-Object -First 1
+                            } while ($Current.assignmentStatus -ne 'unassigned' -and $Attempts -lt 10)
+                            if ($Current.assignmentStatus -ne 'unassigned') {
+                                throw "Unassignment of $PhoneNumber from $($Live.assignmentTargetId) did not complete in time, run the restore again"
+                            }
+                        }
+                        $AssignBody = @{
+                            telephoneNumber    = $PhoneNumber
+                            assignmentTargetId = $Number.assignmentTargetId
+                            numberType         = $NumberType
+                        }
+                        if ($Number.assignmentCategory) { $AssignBody.assignmentCategory = $Number.assignmentCategory }
+                        if ($Number.locationId) { $AssignBody.locationId = $Number.locationId }
+                        # assignNumber is asynchronous: 202 Accepted, Enterprise Voice is enabled on the target as a side effect.
+                        $null = New-GraphPOSTRequest -uri "$BaseUri/assignNumber" -tenantid $TenantFilter -body ($AssignBody | ConvertTo-Json -Compress) -type POST
+                        $restorationStats['TeamsPhoneNumbers'].success++
+                        Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantFilter -message "Submitted assignment of Teams phone number $PhoneNumber to $($Number.assignmentTargetId) from backup" -Sev 'Info'
+                        $RestoreData.Add("Submitted assignment of Teams phone number $PhoneNumber to $($Number.assignmentTargetId)")
+                    } catch {
+                        $restorationStats['TeamsPhoneNumbers'].failed++
+                        $ErrorMessage = Get-CippException -Exception $_
+                        Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantFilter -message "Could not restore Teams phone number $PhoneNumber : $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                        $RestoreData.Add("Could not restore Teams phone number $PhoneNumber : $($ErrorMessage.NormalizedError)")
+                    }
+                }
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantFilter -message "Could not restore Teams phone numbers: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                $RestoreData.Add("Could not restore Teams phone numbers: $($ErrorMessage.NormalizedError)")
             }
         }
         'CippWebhookAlerts' {

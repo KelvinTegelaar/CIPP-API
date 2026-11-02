@@ -105,6 +105,35 @@ function New-CIPPAzRestRequest {
         [int]$MaxRetries = 3
     )
 
+    # Confirm the Uri targets a known Azure service host that is consistent with the token audience (ResourceUrl).
+    # This prevents the Managed Identity bearer token from being sent to an arbitrary/attacker-controlled host.
+    # Validated before token acquisition so an invalid service never triggers a token request.
+    $AzureServiceHosts = @{
+        'https://management.azure.com' = @('management.azure.com')
+        'https://vault.azure.net'      = @('*.vault.azure.net')
+        'https://api.loganalytics.io'  = @('api.loganalytics.io')
+        'https://storage.azure.com'    = @('*.blob.core.windows.net', '*.table.core.windows.net', '*.queue.core.windows.net', '*.file.core.windows.net')
+    }
+
+    $UriHost = $Uri.Host
+    $NormalizedResource = $ResourceUrl.TrimEnd('/')
+    $AllowedHosts = $AzureServiceHosts[$NormalizedResource]
+
+    if (-not $AllowedHosts) {
+        $ValidationError = "ResourceUrl '$ResourceUrl' is not a recognized Azure service. Allowed resources: $($AzureServiceHosts.Keys -join ', ')"
+        Write-LogMessage -API 'New-CIPPAzRestRequest' -message $ValidationError -Sev 'Error' -LogData @{ Uri = $Uri.ToString(); ResourceUrl = $ResourceUrl }
+        Write-Error -Message $ValidationError -ErrorAction $ErrorActionPreference
+        return
+    }
+
+    $HostAllowed = $AllowedHosts | Where-Object { $UriHost -eq $_ -or ($_ -like '*.*' -and $UriHost -like $_) }
+    if (-not $HostAllowed) {
+        $ValidationError = "Uri host '$UriHost' is not valid for resource '$ResourceUrl'. Allowed hosts: $($AllowedHosts -join ', ')"
+        Write-LogMessage -API 'New-CIPPAzRestRequest' -message $ValidationError -Sev 'Error' -LogData @{ Uri = $Uri.ToString(); ResourceUrl = $ResourceUrl; UriHost = $UriHost }
+        Write-Error -Message $ValidationError -ErrorAction $ErrorActionPreference
+        return
+    }
+
     # Resolve bearer token: prefer manually-supplied AccessToken, otherwise fetch via Managed Identity
     $Token = $null
     if ($AccessToken) {

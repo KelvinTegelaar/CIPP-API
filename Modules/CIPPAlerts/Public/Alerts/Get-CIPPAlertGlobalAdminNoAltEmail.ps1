@@ -30,8 +30,8 @@ function Get-CIPPAlertGlobalAdminNoAltEmail {
                     Tenant            = $TenantFilter
                 }
             }
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
         Write-LogMessage -message "Failed to check alternate email status for Global Admins: $($_.exception.message)" -API 'Global Admin Alt Email Alerts' -tenant $TenantFilter -sev Error
     }

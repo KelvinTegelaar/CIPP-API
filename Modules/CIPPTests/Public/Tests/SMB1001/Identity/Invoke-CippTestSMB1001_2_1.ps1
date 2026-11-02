@@ -20,16 +20,16 @@ function Invoke-CippTestSMB1001_2_1 {
             return
         }
 
-        $PwdSetting = $Settings | Where-Object {
+        $PwdSetting = $Settings.Where({
             $_.templateId -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' -or $_.displayName -eq 'Password Rule Settings'
-        } | Select-Object -First 1
+        }, 'First')[0]
 
         if (-not $PwdSetting) {
             $Status = 'Failed'
             $Result = 'Entra ID Password Rule Settings not found. Configure a custom banned-password list to satisfy SMB1001 (2.1.vi) — passwords must not appear in previous data breaches.'
         } else {
-            $Enforce = ($PwdSetting.values | Where-Object { $_.name -eq 'EnableBannedPasswordCheck' }).value
-            $Custom = ($PwdSetting.values | Where-Object { $_.name -eq 'BannedPasswordList' }).value
+            $Enforce = $PwdSetting.values.Where({ $_.name -eq 'EnableBannedPasswordCheck' }).value
+            $Custom = $PwdSetting.values.Where({ $_.name -eq 'BannedPasswordList' }).value
 
             if ($Enforce -eq 'True' -and -not [string]::IsNullOrWhiteSpace($Custom)) {
                 $WordCount = ($Custom -split '\t').Count

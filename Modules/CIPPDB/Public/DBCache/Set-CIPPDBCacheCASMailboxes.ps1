@@ -20,8 +20,12 @@ function Set-CIPPDBCacheCASMailboxes {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching CAS mailboxes' -sev Debug
 
         # Stream CAS mailboxes directly to batch processor
-        New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CasMailbox' |
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CASMailbox' -AddCount
+        $SmtpAuthOverrides = [System.Collections.Generic.List[object]]::new()
+        New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CasMailbox' -StreamPages | ForEach-Object { $_.Value } | ForEach-Object {
+            if ($_ -and $_.SmtpClientAuthenticationDisabled -eq $false) { $SmtpAuthOverrides.Add($_) }
+            $_
+        } | Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CASMailbox' -AddCount
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoCASMailboxSmtpAuth' -Data @($SmtpAuthOverrides) -AddCount -ClearOnEmpty
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached CAS mailboxes successfully' -sev Debug
 

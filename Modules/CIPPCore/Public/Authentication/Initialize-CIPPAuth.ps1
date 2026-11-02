@@ -23,7 +23,7 @@ function Initialize-CIPPAuth {
     # -- Entry logging --
     $EasyAuthEnabled = [Craft.Services.AppLifecycleBridge]::IsEasyAuthConfigured()
     $IsDevStorage = ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') -or ($env:NonLocalHostAzurite -eq 'true')
-    $KVName = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+    $KVName = Get-CippKeyVaultName
 
     Write-Information "[Auth-Init] Starting — EasyAuth=$EasyAuthEnabled, DevStorage=$IsDevStorage, KVName='$KVName', DeploymentId='$env:WEBSITE_DEPLOYMENT_ID'"
 
@@ -33,11 +33,19 @@ function Initialize-CIPPAuth {
         Write-Information "[Auth-Init] Credential source available (KV=$($AuthState.HasKeyVault), DevStorage=$IsDevStorage) — attempting SAM load"
         try {
             $Auth = Get-CIPPAuthentication
-            if ($Auth -and $env:ApplicationID -and $env:TenantID) {
+            # Fresh deployments carry the deployment template's placeholder secrets
+            # until the setup wizard writes real ones — treat those as "no
+            # credentials" or the EasyAuth issuer reconciliation below rewrites a
+            # correctly configured issuer to .../tenantId/v2.0 and breaks sign-in.
+            $PlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
+            $HasPlaceholders = ($env:ApplicationID -match $PlaceholderPattern) -or ($env:TenantID -match $PlaceholderPattern)
+            if ($Auth -and $env:ApplicationID -and $env:TenantID -and -not $HasPlaceholders) {
                 $AuthState.HasSAMCredentials = $true
                 $AuthState.NeedsSetup = $false
                 $AuthState.IsConfigured = $true
                 Write-Information "[Auth-Init] SAM credentials loaded (AppID: $($env:ApplicationID), TenantID: $($env:TenantID))"
+            } elseif ($HasPlaceholders) {
+                Write-Information '[Auth-Init] SAM secrets still hold deployment placeholder values — setup wizard has not been completed yet, treating as unconfigured'
             } else {
                 Write-Information '[Auth-Init] SAM credential load returned but env vars not populated — credentials not available yet (expected on fresh deployment)'
             }
@@ -67,11 +75,32 @@ function Initialize-CIPPAuth {
         } catch {
             Write-Information "[Auth-Init] SSO redirect URI patch failed (non-fatal): $_"
         }
+
+        # Admin-consent the SSO app so users aren't prompted at sign-in. Retried every warmup
+        # until it lands, since the service principal isn't always queryable right after the
+        # app registration is created.
+        try {
+            Update-CIPPSSOPreconsent
+        } catch {
+            Write-Information "[Auth-Init] SSO pre-consent failed (non-fatal): $_"
+        }
     }
 
     # 3. Handle EasyAuth configuration based on current state
     if ($EasyAuthEnabled) {
         Write-Information '[Auth-Init] EasyAuth is already configured'
+
+        # A pending SSO reset flag with EasyAuth back up means setup completed (the
+        # Craft setup wizard configures EasyAuth itself and doesn't know about this
+        # flag) - clean it up so a future EasyAuth outage doesn't re-trigger setup.
+        if ($env:CIPP_SSO_RESET -eq 'true') {
+            Write-Information '[Auth-Init] EasyAuth is active but CIPP_SSO_RESET still set — reset completed, cleaning up'
+            try {
+                $null = Remove-CIPPMigrationAppSetting -SettingName 'CIPP_SSO_RESET'
+            } catch {
+                Write-Information "[Auth-Init] CIPP_SSO_RESET cleanup failed (non-fatal): $_"
+            }
+        }
 
         # 3a. If CIPP_SSO_MIGRATION_APPID is set, check if migration is complete
         if ($env:CIPP_SSO_MIGRATION_APPID) {
@@ -145,9 +174,200 @@ function Initialize-CIPPAuth {
                 Write-Information "[Auth-Init] EasyAuth issuer reconciliation failed (non-fatal): $_"
             }
         }
+
+        # 3c. Reconcile EasyAuth policy (UnauthenticatedClientAction, ExcludedPaths) with appsettings configuration
+        if ($AuthState.HasSAMCredentials -and -not $env:CIPP_SSO_MIGRATION_APPID) {
+            try {
+                $PolicyReconciled = [Craft.Services.AppLifecycleBridge]::ReconcileAuthPolicy('CIPP warmup')
+                if ($PolicyReconciled) {
+                    Write-Information '[Auth-Init] EasyAuth policy reconciled from Craft appsettings (drift detected and corrected)'
+                } else {
+                    Write-Information '[Auth-Init] EasyAuth policy matches appsettings — no update needed'
+                }
+            } catch {
+                Write-Information "[Auth-Init] EasyAuth policy reconcile failed (non-fatal): $_"
+            }
+        }
+
+        # 3d. Reconcile API clients — ensure the EasyAuth config matches what the
+        # "Save to Azure" action (Set-CippApiAuth) would produce for the currently
+        # enabled API clients. That means BOTH lists must be checked, not just apps:
+        #   allowedApplications = SSO app + every enabled client
+        #   allowedAudiences    = api://<id> for each of the above, plus the MCP host
+        #                         URIs and bare client IDs for MCP-enabled clients
+        # Config drifts when a client is enabled but "Save to Azure" was never run (or a
+        # prior save partially applied — e.g. apps set but audiences missing), which
+        # silently breaks API authentication for that client.
+        if ($AuthState.HasSAMCredentials -and -not $env:CIPP_SSO_MIGRATION_APPID -and $env:WEBSITE_AUTH_V2_CONFIG_JSON) {
+            try {
+                $ApiClientsTable = Get-CippTable -tablename 'ApiClients'
+                $EnabledClients = @(Get-CIPPAzDataTableEntity @ApiClientsTable -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) })
+
+                if ($EnabledClients.Count -gt 0) {
+                    $EnabledClientIds = @($EnabledClients.RowKey)
+                    # MCPAllowed can round-trip as a bool or string; compare on string form (matches SaveToAzure)
+                    # The MCP reconcile below rewrites redirects and consent, which would break the SSO/SAM app if one was saved as a client
+                    $ProtectedAppIds = Get-CippProtectedAppId
+                    $McpClientIds = @($EnabledClients | Where-Object { "$($_.MCPAllowed)" -eq 'True' -and $_.RowKey -notin $ProtectedAppIds } | ForEach-Object { $_.RowKey })
+
+                    $ApiAuthConfig = $env:WEBSITE_AUTH_V2_CONFIG_JSON | ConvertFrom-Json -ErrorAction Stop
+                    $AADConfig = $ApiAuthConfig.identityProviders.azureActiveDirectory
+
+                    # Desired state — keep in sync with Set-CippApiAuth's CIPPNG branch.
+                    $DesiredApps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    if ($AADConfig.registration.clientId) { [void]$DesiredApps.Add($AADConfig.registration.clientId) }
+                    foreach ($Id in $EnabledClientIds) { if (-not [string]::IsNullOrEmpty($Id)) { [void]$DesiredApps.Add($Id) } }
+
+                    $DesiredAudiences = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    foreach ($Id in $DesiredApps) { [void]$DesiredAudiences.Add("api://$Id") }
+                    if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
+                        [void]$DesiredAudiences.Add("https://$($env:WEBSITE_HOSTNAME)")
+                        [void]$DesiredAudiences.Add("https://$($env:WEBSITE_HOSTNAME)/api/ExecMcp")
+                        foreach ($McpId in $McpClientIds) { if (-not [string]::IsNullOrEmpty($McpId)) { [void]$DesiredAudiences.Add($McpId) } }
+                    }
+
+                    # Current state from the platform-injected config
+                    $CurrentApps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    foreach ($App in @($AADConfig.validation.defaultAuthorizationPolicy.allowedApplications)) { if ($App) { [void]$CurrentApps.Add($App) } }
+                    $CurrentAudiences = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    foreach ($Aud in @($AADConfig.validation.allowedAudiences)) { if ($Aud) { [void]$CurrentAudiences.Add($Aud) } }
+
+                    # Drift when anything the endpoint would set is missing from the live config
+                    $AppsOk = $DesiredApps.IsSubsetOf($CurrentApps)
+                    $AudiencesOk = $DesiredAudiences.IsSubsetOf($CurrentAudiences)
+
+                    if (-not $AppsOk -or -not $AudiencesOk) {
+                        $MissingApps = @($DesiredApps | Where-Object { -not $CurrentApps.Contains($_) })
+                        $MissingAudiences = @($DesiredAudiences | Where-Object { -not $CurrentAudiences.Contains($_) })
+                        Write-Information "[Auth-Init] API client drift detected — missing apps: [$($MissingApps -join ', ')]; missing audiences: [$($MissingAudiences -join ', ')] — reconciling EasyAuth"
+                        Set-CippApiAuth -TenantId $env:TenantID -ClientIds $EnabledClientIds -McpClientIds $McpClientIds
+                        Write-Information '[Auth-Init] EasyAuth allowedApplications + allowedAudiences reconciled with enabled API clients'
+                    } else {
+                        Write-Information "[Auth-Init] EasyAuth already matches $($EnabledClients.Count) enabled API client(s) — no update needed"
+                    }
+
+                    # Ensure offline_access is admin-consented on every MCP-enabled client so Entra
+                    # issues a refresh token — without it, MCP clients (Copilot Studio especially)
+                    # re-authenticate roughly every hour when the access token expires. Set at
+                    # client-creation time by Set-CIPPMCPClientApp, but re-checked here so a client
+                    # created before this existed, or whose service principal had not replicated at
+                    # creation, self-heals on the next warmup. Idempotent and cheap: the grant helper
+                    # no-ops once the scopes are present. Best-effort per client.
+                    # Resolve the dedicated CIPP-MCP resource app so we can also reconcile the
+                    # client -> resource user_impersonation consent (it can fail on the first Save if
+                    # the freshly created resource SP hasn't replicated yet).
+                    $McpResourceObjectId = $null
+                    $McpResourceScopeId = $null
+                    try {
+                        $McpResTable = Get-CippTable -tablename 'CippMcpResource'
+                        $McpResRow = Get-CIPPAzDataTableEntity @McpResTable -Filter "PartitionKey eq 'McpResource' and RowKey eq 'McpResource'"
+                        if (-not [string]::IsNullOrWhiteSpace($McpResRow.ObjectId)) { $McpResourceObjectId = "$($McpResRow.ObjectId)" }
+                        if (-not [string]::IsNullOrWhiteSpace($McpResRow.ScopeId)) { $McpResourceScopeId = "$($McpResRow.ScopeId)" }
+                    } catch {
+                        Write-Information "[Auth-Init] Could not resolve CIPP-MCP resource app for consent reconcile: $_"
+                    }
+                    foreach ($McpId in $McpClientIds) {
+                        if ([string]::IsNullOrEmpty($McpId)) { continue }
+                        try {
+                            $McpConsent = Grant-CippAppGraphConsent -AppId $McpId -Scopes @('openid', 'profile', 'offline_access')
+                            if ($McpConsent.Action -ne 'nochange') {
+                                Write-Information "[Auth-Init] MCP client $McpId offline_access consent: $($McpConsent.Action)"
+                            }
+                            if ($McpResourceObjectId -and $McpResourceScopeId) {
+                                $PreAuthChanged = Set-CippMcpResourcePreAuth -ResourceObjectId $McpResourceObjectId -ClientAppId $McpId -ScopeId $McpResourceScopeId
+                                if ($PreAuthChanged) {
+                                    Write-Information "[Auth-Init] MCP client $McpId pre-authorized on CIPP-MCP resource user_impersonation scope"
+                                }
+                            }
+                        } catch {
+                            Write-Information "[Auth-Init] MCP client $McpId consent reconcile failed (non-fatal): $_"
+                        }
+                    }
+
+                    # Self-heal the split-app MCP wiring. If the dedicated CIPP-MCP resource app has
+                    # never been provisioned, or its stored app registration no longer resolves in
+                    # Entra, re-run Set-CIPPMCPClientApp for each MCPAllowed client — that ensures the
+                    # resource app (New-CIPPMcpResourceApp) and configures the client (callbacks,
+                    # permissions, consent). Gated so a healthy instance does no writes; covers
+                    # instances enabled before the split. Best-effort.
+                    $McpNeedsReconcile = $true
+                    try {
+                        $McpResTable = Get-CippTable -tablename 'CippMcpResource'
+                        $McpResRow = Get-CIPPAzDataTableEntity @McpResTable -Filter "PartitionKey eq 'McpResource' and RowKey eq 'McpResource'"
+                        if (-not [string]::IsNullOrWhiteSpace($McpResRow.AppId)) {
+                            $McpResExists = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($McpResRow.AppId)')?`$select=appId" -NoAuthCheck $true -AsApp $true
+                            $McpNeedsReconcile = -not [bool]$McpResExists.appId
+                        }
+                    } catch {
+                        Write-Information "[Auth-Init] Could not check CIPP-MCP resource state for reconcile (non-fatal): $_"
+                        $McpNeedsReconcile = $false
+                    }
+                    if ($McpNeedsReconcile) {
+                        foreach ($McpId in $McpClientIds) {
+                            if ([string]::IsNullOrEmpty($McpId)) { continue }
+                            try {
+                                $null = Set-CIPPMCPClientApp -AppId $McpId -Headers @{}
+                                Write-Information "[Auth-Init] MCP client $McpId + CIPP-MCP resource reconciled during warmup"
+                            } catch {
+                                Write-Information "[Auth-Init] MCP reconcile failed for client $McpId (non-fatal): $_"
+                            }
+                        }
+                    } else {
+                        Write-Information '[Auth-Init] CIPP-MCP resource app present — no MCP app reconcile needed'
+                    }
+
+                    # Ensure the MCP OAuth scope advertisement (challenge header + discovery docs)
+                    # includes offline_access. These app settings are written by "Save to Azure",
+                    # but a code deploy does NOT regenerate them — an instance that never re-saved
+                    # after offline_access was added would still hand strict discovery clients
+                    # (e.g. Copilot CLI) a scope with no offline_access, so they re-authenticate
+                    # ~hourly. Reconcile on drift only: once offline_access is present this never
+                    # writes (or restarts) again. Values come from the same helper Save to Azure
+                    # uses, so a write here is byte-identical and self-terminating.
+                    if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
+                        try {
+                            $McpScope = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation"
+                            $HeaderTokens = @("$($env:WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES)" -split ' ' | Where-Object { $_ })
+                            $ScopeDrift = ('offline_access' -notin $HeaderTokens) -or ($McpScope -notin $HeaderTokens)
+                            if (-not $ScopeDrift -and $env:CIPPNG) {
+                                foreach ($DocJson in @($env:CRAFT_PRM, $env:CRAFT_PRM_AS)) {
+                                    $Supported = $null
+                                    try { $Supported = @(($DocJson | ConvertFrom-Json -ErrorAction Stop).scopes_supported) } catch { $ScopeDrift = $true; break }
+                                    if ('offline_access' -notin $Supported -or $McpScope -notin $Supported) { $ScopeDrift = $true; break }
+                                }
+                            }
+                            if ($ScopeDrift) {
+                                $McpRg = Get-CIPPFunctionAppResourceGroup -SiteName $env:WEBSITE_SITE_NAME
+                                $McpAppSettings = Get-CippMcpScopeAppSettings -Hostname $env:WEBSITE_HOSTNAME -TenantId $env:TenantID -IsCippNg:([bool]$env:CIPPNG)
+                                $null = Update-CIPPAzFunctionAppSetting -Name $env:WEBSITE_SITE_NAME -ResourceGroupName $McpRg -AppSetting $McpAppSettings
+                                Write-Information '[Auth-Init] MCP OAuth scope advertisement was missing offline_access — reconciled app settings and requesting restart'
+                                Request-CIPPRestart -Reason 'MCP OAuth scope settings reconciled (offline_access) during warmup'
+                            } else {
+                                Write-Information '[Auth-Init] MCP OAuth scope advertisement already includes offline_access — no update needed'
+                            }
+                        } catch {
+                            Write-Information "[Auth-Init] MCP OAuth scope reconcile failed (non-fatal): $_"
+                        }
+                    }
+                }
+            } catch {
+                Write-Information "[Auth-Init] API client reconcile failed (non-fatal): $_"
+            }
+        }
     } elseif ($AuthState.HasSAMCredentials) {
         # EasyAuth NOT configured but we DO have SAM credentials — try to auto-configure
         Write-Information '[Auth-Init] EasyAuth not configured but SAM credentials available — attempting auto-configuration'
+
+        # SSO reset requested from the management portal (it has no access to this
+        # instance's Key Vault, so it can't clear the stored credentials itself).
+        # Skip every auto-configure path and serve the setup wizard; completing the
+        # wizard rewrites the stored credentials and removes this flag.
+        if ($env:CIPP_SSO_RESET -eq 'true') {
+            Write-Information '[Auth-Init] CIPP_SSO_RESET is set — skipping SSO auto-configuration and requesting setup wizard'
+            [Craft.Services.AppLifecycleBridge]::RequestSetupMode('SSO reset requested — setup wizard needed to reconfigure sign-in')
+            $AuthState.NeedsSetup = $true
+            return $AuthState
+        }
 
         if ($env:CIPP_SSO_MIGRATION_APPID) {
             Write-Information "[Auth-Init] CIPP_SSO_MIGRATION_APPID is set ($($env:CIPP_SSO_MIGRATION_APPID)) — configuring implicit auth EasyAuth"

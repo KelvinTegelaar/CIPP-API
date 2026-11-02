@@ -134,12 +134,6 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
 
             Set-CIPPStandardsCompareField -FieldName 'standards.DisableBasicAuthSMTP' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
 
-            if ($CurrentInfo.SmtpClientAuthenticationDisabled -and $SMTPusers.Count -eq 0) {
-                Add-CIPPBPAField -FieldName 'DisableBasicAuthSMTP' -FieldValue $CurrentInfo.SmtpClientAuthenticationDisabled -StoreAs bool -Tenant $tenant
-            } else {
-                $Logs = $LogMessage | Select-Object @{n = 'Message'; e = { $_ } }
-                Add-CIPPBPAField -FieldName 'DisableBasicAuthSMTP' -FieldValue $Logs -StoreAs json -Tenant $tenant
-            }
         }
     }
 }

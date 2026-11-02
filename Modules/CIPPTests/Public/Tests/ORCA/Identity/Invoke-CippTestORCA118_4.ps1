@@ -50,7 +50,7 @@ function Invoke-CippTestORCA118_4 {
             $null = $Result.Append("| Rule Name | Own Domains in Rule |`n")
             $null = $Result.Append("|-----------|-------------------|`n")
             foreach ($Rule in $FailedRules) {
-                $OwnDomainsInRule = $Rule.SenderDomainIs | Where-Object { $OwnDomains -contains $_ }
+                $OwnDomainsInRule = $Rule.SenderDomainIs.Where({ $OwnDomains -contains $_ })
                 $null = $Result.Append("| $($Rule.Name) | $($OwnDomainsInRule -join ', ') |`n")
             }
         }

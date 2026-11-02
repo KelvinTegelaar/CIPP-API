@@ -30,6 +30,11 @@ function Set-CIPPDBCacheOwaMailboxPolicy {
         if ($OwaMailboxPolicies) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OwaMailboxPolicy' -Data $OwaMailboxPolicies -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($OwaMailboxPolicies.Count) OWA Mailbox Policies" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'OwaMailboxPolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 OWA Mailbox Policies (none found)' -sev Debug
         }
         $OwaMailboxPolicies = $null
 

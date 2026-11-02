@@ -50,13 +50,20 @@ Function Invoke-DeployContactTemplates {
                 }
             }
         } else {
-            throw "TemplateList is required and must contain at least one template"
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{Results = 'TemplateList is required and must contain at least one template' }
+                })
         }
 
         if ($ContactTemplates.Count -eq 0) {
-            throw "No valid contact templates found to deploy"
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{Results = 'No valid contact templates found to deploy' }
+                })
         }
 
+        $Failed = 0
         $Results = foreach ($TenantFilter in $SelectedTenants) {
             foreach ($ContactTemplate in $ContactTemplates) {
                 try {
@@ -155,6 +162,7 @@ Function Invoke-DeployContactTemplates {
                     "Successfully deployed contact '$($ContactTemplate.displayName)' to tenant $TenantFilter"
                 }
                 catch {
+                    $Failed++
                     $ErrorMessage = Get-CippException -Exception $_
                     $ErrorDetail = "Failed to deploy contact '$($ContactTemplate.displayName)' to tenant $TenantFilter. Error: $($ErrorMessage.NormalizedError)"
                     Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ErrorDetail -Sev 'Error'
@@ -165,7 +173,7 @@ Function Invoke-DeployContactTemplates {
             }
         }
 
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total ($SelectedTenants.Count * $ContactTemplates.Count) -Failed $Failed
     }
     catch {
         $ErrorMessage = Get-CippException -Exception $_

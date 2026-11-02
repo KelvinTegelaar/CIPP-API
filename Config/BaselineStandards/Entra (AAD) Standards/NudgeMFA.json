@@ -1,0 +1,94 @@
+{
+  "name": "NudgeMFA",
+  "label": "Sets the state for the request to setup Authenticator",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Configures the registration campaign that nudges users to set up the Authenticator app at sign-in, including snooze behaviour and optional group targeting.",
+  "executiveText": "Drives MFA registration to completion by prompting unregistered users at sign-in, with controlled snoozing so adoption happens without hard-blocking work.",
+  "docsDescription": "Grades the registration campaign state, snooze duration, post-snooze enforcement, targeted method and the include/exclude target sets. Blank targeting fields keep the tenant's current targets - the literal AllUsers entry targets everyone explicitly. Remediation goes through the shared registration campaign helper.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Set-CIPPRegistrationCampaign",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "AAD_PREMIUM",
+    "AAD_PREMIUM_P2"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "creatable": false,
+      "options": [
+        {
+          "value": "enabled",
+          "label": "Enabled"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled"
+        },
+        {
+          "value": "default",
+          "label": "Microsoft managed"
+        }
+      ],
+      "required": true,
+      "type": "autoComplete",
+      "label": "Campaign state"
+    },
+    "snoozeDurationInDays": {
+      "label": "Snooze duration in days (0-14)",
+      "type": "number",
+      "default": 1
+    },
+    "enforceRegistrationAfterAllowedSnoozes": {
+      "label": "Enforce registration after allowed snoozes",
+      "type": "switch",
+      "default": true
+    },
+    "targetedAuthenticationMethod": {
+      "creatable": false,
+      "options": [
+        {
+          "value": "microsoftAuthenticator",
+          "label": "Microsoft Authenticator"
+        }
+      ],
+      "omitWhenBlank": true,
+      "type": "autoComplete",
+      "label": "Targeted method"
+    },
+    "includeTargets": {
+      "label": "Include groups, comma separated (blank = keep current; AllUsers = everyone)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "excludeTargets": {
+      "label": "Exclude groups, comma separated (blank = keep current)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    }
+  },
+  "read": {
+    "requiredCaches": [
+      "AuthenticationMethodsPolicy",
+      "Groups"
+    ],
+    "cacheType": "AuthenticationMethodsPolicy"
+  },
+  "prepare": "Get-CIPPBaselineNudgeMFAState",
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "registrationEnforcement.authenticationMethodsRegistrationCampaign.state": "%state%"
+  },
+  "remediate": {
+    "executor": "NudgeMFA"
+  }
+}

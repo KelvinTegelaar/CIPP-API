@@ -4,7 +4,7 @@ function Set-CIPPDBCacheCsTeamsAppPermissionPolicy {
         Caches the Teams App Permission Policy (all policies)
 
     .DESCRIPTION
-        Calls Get-CsTeamsAppPermissionPolicy via New-TeamsRequest and writes
+        Calls Get-CsTeamsAppPermissionPolicy via New-TeamsRequestV2 and writes
         the result into the CippReportingDB under Type
         'CsTeamsAppPermissionPolicy'. Used by CIS test 8.4.1.
 
@@ -24,12 +24,17 @@ function Set-CIPPDBCacheCsTeamsAppPermissionPolicy {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Teams App Permission Policies' -sev Debug
 
-        $AppPermissionPolicies = New-TeamsRequest -TenantFilter $TenantFilter -Cmdlet 'Get-CsTeamsAppPermissionPolicy'
+        $AppPermissionPolicies = New-TeamsRequestV2 -TenantFilter $TenantFilter -Type 'TeamsAppPermissionPolicy' -Action Get -ListAll
 
         if ($AppPermissionPolicies) {
             $Data = @($AppPermissionPolicies)
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsTeamsAppPermissionPolicy' -Data $Data -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Data.Count) Teams App Permission Policies" -sev Debug
+        } else {
+            # The request succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CsTeamsAppPermissionPolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Teams App Permission Policies (none found)' -sev Debug
         }
         $AppPermissionPolicies = $null
 

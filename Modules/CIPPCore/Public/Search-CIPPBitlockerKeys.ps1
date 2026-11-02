@@ -8,7 +8,7 @@ function Search-CIPPBitlockerKeys {
         by cross-referencing the deviceId with Devices or ManagedDevices data.
 
     .PARAMETER TenantFilter
-        Tenant domain or GUID to search. If not specified, searches all tenants.
+        Tenant domains or GUIDs to search. If not specified, searches all tenants.
 
     .PARAMETER KeyId
         Optional BitLocker recovery key ID to search for. If not specified, returns all keys.
@@ -37,7 +37,7 @@ function Search-CIPPBitlockerKeys {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [string]$TenantFilter,
+        [string[]]$TenantFilter,
 
         [Parameter(Mandatory = $false)]
         [string]$KeyId,
@@ -70,8 +70,8 @@ function Search-CIPPBitlockerKeys {
         } elseif ($SearchTerms) {
             $SearchParams.SearchTerms = $SearchTerms
         } else {
-            # If no search criteria, search for a pattern that matches any GUID or just get all
-            $SearchParams.SearchTerms = @('[a-f0-9]{8}-')
+            # Search terms are matched literally; every cached row is a JSON object, so '{' returns all keys
+            $SearchParams.SearchTerms = @('{')
         }
 
         if ($Limit -gt 0) {
@@ -90,65 +90,73 @@ function Search-CIPPBitlockerKeys {
 
         Write-Verbose "Found $($BitlockerResults.Count) BitLocker key(s)"
 
-        # Enrich each result with device information
-        $EnrichedResults = foreach ($Result in $BitlockerResults) {
-            $BitlockerData = $Result.Data
-            $DeviceInfo = $null
+        # Each device type is read once per tenant and indexed by every GUID in its rows, which finds the same
+        # first matching row as Search-CIPPDbData -SearchTerms <deviceId> -Limit 1 without a table read per key
+        $DeviceIndexes = @{}
+        $FindDevice = {
+            param($Tenant, $Type, $Id)
+            if (-not $Tenant) { return }
+            if ($Id -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+                try { return (Search-CIPPDbData -TenantFilter $Tenant -Types $Type -SearchTerms $Id -Limit 1 | Select-Object -First 1).Data } catch { Write-Verbose "Error searching $($Type): $($_.Exception.Message)"; return }
+            }
+            if (-not $DeviceIndexes.ContainsKey($Type)) {
+                $Rows = @(try { Get-CIPPDbItem -TenantFilter $Tenant -Type $Type | Where-Object { $_.RowKey -notlike '*-Count' -and $_.Data } } catch { Write-Verbose "Error searching $($Type): $($_.Exception.Message)" })
+                $DeviceIndexes[$Type] = [CIPP.CippIndex]::Build($Rows, @(foreach ($Row in $Rows) { , ([regex]::Matches($Row.Data, '(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}').Value ?? $null) }))
+            }
+            foreach ($Row in $DeviceIndexes[$Type].Find($Id)) {
+                try { return ($Row.Data | ConvertFrom-Json) } catch { Write-Verbose "Failed to parse JSON for $($Row.RowKey): $($_.Exception.Message)" }
+            }
+        }
 
-            if ($BitlockerData.deviceId) {
-                Write-Verbose "Looking up device info for deviceId: $($BitlockerData.deviceId)"
+        # Enrich one tenant at a time so only that tenant's devices are held, keeping the input order
+        $Results = @($BitlockerResults)
+        $ByTenant = [ordered]@{}
+        for ($i = 0; $i -lt $Results.Count; $i++) {
+            $Tenant = [string]$Results[$i].Tenant
+            if (-not $ByTenant.Contains($Tenant)) { $ByTenant[$Tenant] = [System.Collections.Generic.List[int]]::new() }
+            $ByTenant[$Tenant].Add($i)
+        }
+        $EnrichedResults = [object[]]::new($Results.Count)
+        foreach ($Positions in $ByTenant.Values) {
+            $DeviceIndexes.Clear()
+            foreach ($Position in $Positions) {
+                $Result = $Results[$Position]
+                $BitlockerData = $Result.Data
+                $DeviceInfo = $null
 
-                # Try to find device in Devices collection first
-                try {
-                    $DeviceSearch = Search-CIPPDbData -TenantFilter $Result.Tenant -Types 'Devices' -SearchTerms $BitlockerData.deviceId -Limit 1
-                    if ($DeviceSearch -and $DeviceSearch.Count -gt 0) {
-                        $DeviceInfo = $DeviceSearch[0].Data
-                        Write-Verbose "Found device in Devices collection: $($DeviceInfo.displayName)"
-                    }
-                } catch {
-                    Write-Verbose "Error searching Devices: $($_.Exception.Message)"
+                if ($BitlockerData.deviceId) {
+                    Write-Verbose "Looking up device info for deviceId: $($BitlockerData.deviceId)"
+                    $DeviceInfo = & $FindDevice $Result.Tenant 'Devices' $BitlockerData.deviceId
+                    if (-not $DeviceInfo) { $DeviceInfo = & $FindDevice $Result.Tenant 'ManagedDevices' $BitlockerData.deviceId }
                 }
 
-                # If not found in Devices, try ManagedDevices
-                if (-not $DeviceInfo) {
-                    try {
-                        $DeviceSearch = Search-CIPPDbData -TenantFilter $Result.Tenant -Types 'ManagedDevices' -SearchTerms $BitlockerData.deviceId -Limit 1
-                        if ($DeviceSearch -and $DeviceSearch.Count -gt 0) {
-                            $DeviceInfo = $DeviceSearch[0].Data
-                            Write-Verbose "Found device in ManagedDevices collection: $($DeviceInfo.deviceName)"
-                        }
-                    } catch {
-                        Write-Verbose "Error searching ManagedDevices: $($_.Exception.Message)"
-                    }
+                # Create enriched result
+                $EnrichedData = [PSCustomObject]@{
+                    # BitLocker key information
+                    id              = $BitlockerData.id
+                    createdDateTime = $BitlockerData.createdDateTime
+                    volumeType      = $BitlockerData.volumeType
+                    deviceId        = $BitlockerData.deviceId
+
+                    # Device information (if found)
+                    deviceName      = if ($DeviceInfo) { $DeviceInfo.displayName ?? $DeviceInfo.deviceName } else { $null }
+                    operatingSystem = if ($DeviceInfo) { $DeviceInfo.operatingSystem } else { $null }
+                    osVersion       = if ($DeviceInfo) { $DeviceInfo.operatingSystemVersion ?? $DeviceInfo.osVersion } else { $null }
+                    lastSignIn      = if ($DeviceInfo) { $DeviceInfo.approximateLastSignInDateTime ?? $DeviceInfo.lastSyncDateTime } else { $null }
+                    accountEnabled  = if ($DeviceInfo) { $DeviceInfo.accountEnabled ?? $DeviceInfo.isCompliant } else { $null }
+                    trustType       = if ($DeviceInfo) { $DeviceInfo.trustType ?? $DeviceInfo.joinType } else { $null }
+
+                    # Metadata
+                    deviceFound     = $null -ne $DeviceInfo
                 }
-            }
 
-            # Create enriched result
-            $EnrichedData = [PSCustomObject]@{
-                # BitLocker key information
-                id              = $BitlockerData.id
-                createdDateTime = $BitlockerData.createdDateTime
-                volumeType      = $BitlockerData.volumeType
-                deviceId        = $BitlockerData.deviceId
-
-                # Device information (if found)
-                deviceName      = if ($DeviceInfo) { $DeviceInfo.displayName ?? $DeviceInfo.deviceName } else { $null }
-                operatingSystem = if ($DeviceInfo) { $DeviceInfo.operatingSystem } else { $null }
-                osVersion       = if ($DeviceInfo) { $DeviceInfo.operatingSystemVersion ?? $DeviceInfo.osVersion } else { $null }
-                lastSignIn      = if ($DeviceInfo) { $DeviceInfo.approximateLastSignInDateTime ?? $DeviceInfo.lastSyncDateTime } else { $null }
-                accountEnabled  = if ($DeviceInfo) { $DeviceInfo.accountEnabled ?? $DeviceInfo.isCompliant } else { $null }
-                trustType       = if ($DeviceInfo) { $DeviceInfo.trustType ?? $DeviceInfo.joinType } else { $null }
-
-                # Metadata
-                deviceFound     = $null -ne $DeviceInfo
-            }
-
-            [PSCustomObject]@{
-                Tenant    = $Result.Tenant
-                Type      = $Result.Type
-                RowKey    = $Result.RowKey
-                Data      = $EnrichedData
-                Timestamp = $Result.Timestamp
+                $EnrichedResults[$Position] = [PSCustomObject]@{
+                    Tenant    = $Result.Tenant
+                    Type      = $Result.Type
+                    RowKey    = $Result.RowKey
+                    Data      = $EnrichedData
+                    Timestamp = $Result.Timestamp
+                }
             }
         }
 
@@ -156,7 +164,7 @@ function Search-CIPPBitlockerKeys {
         return $EnrichedResults
 
     } catch {
-        Write-LogMessage -API 'SearchBitlockerKeys' -tenant $TenantFilter -message "Failed to search BitLocker keys: $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'SearchBitlockerKeys' -tenant "$TenantFilter" -message "Failed to search BitLocker keys: $($_.Exception.Message)" -sev Error
         throw
     }
 }

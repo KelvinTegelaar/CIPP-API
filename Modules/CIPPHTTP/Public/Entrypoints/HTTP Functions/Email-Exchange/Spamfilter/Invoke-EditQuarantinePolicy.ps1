@@ -63,8 +63,9 @@ Function Invoke-EditQuarantinePolicy {
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Info
     }
     catch {
+        $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to update Quarantine policy '$($Request.Body.Name)' - $($_)"
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
     }
 

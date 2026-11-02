@@ -16,7 +16,7 @@ function Invoke-CippTestZTNA21863 {
             return
         }
 
-        $UntriagedHighRiskSignIns = $RiskDetections | Where-Object { $_.riskState -eq 'atRisk' -and $_.riskLevel -eq 'high' }
+        $UntriagedHighRiskSignIns = $RiskDetections.Where({ $_.riskState -eq 'atRisk' -and $_.riskLevel -eq 'high' })
 
         $Passed = if ($UntriagedHighRiskSignIns.Count -eq 0) { 'Passed' } else { 'Failed' }
 

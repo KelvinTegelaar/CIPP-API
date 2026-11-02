@@ -3,6 +3,7 @@
   "installCommandLine": "",
   "uninstallCommandLine": "",
   "description": " ",
+  "publisher": "CIPP",
   "developer": " ",
   "owner": " ",
   "informationUrl": " ",
@@ -10,7 +11,6 @@
   "fileName": "automate.intunewin",
   "@odata.type": "#microsoft.graph.win32LobApp",
   "applicableArchitectures": "x86, x64",
-
   "installExperience": {
     "runAsAccount": "system",
     "deviceRestartBehavior": "suppress",
@@ -24,7 +24,7 @@
       "scriptContent": ""
     }
   ],
-  "returncode": [
+  "returnCodes": [
     {
       "returnCode": 0,
       "type": "success",
@@ -32,7 +32,7 @@
     },
     {
       "returnCode": 1707,
-      "type": "Success",
+      "type": "success",
       "@odata.type": "#microsoft.graph.win32LobAppReturnCode"
     },
     {
@@ -51,14 +51,14 @@
       "@odata.type": "#microsoft.graph.win32LobAppReturnCode"
     }
   ],
-  "minimumNumberOfProcessors": "1",
-  "minimumFreeDiskSpaceInMB": "8",
-  "minimumCpuSpeedInMHz": "4",
+  "minimumNumberOfProcessors": 1,
+  "minimumFreeDiskSpaceInMB": 8,
+  "minimumCpuSpeedInMHz": 4,
   "minimumSupportedOperatingSystem": {
     "@odata.type": "microsoft.graph.windowsMinimumOperatingSystem",
     "v10_1607": true
   },
   "notes": "CIPP Uploaded application",
-  "minimumMemoryInMB": "1",
+  "minimumMemoryInMB": 1,
   "setupFilePath": "install.ps1"
 }

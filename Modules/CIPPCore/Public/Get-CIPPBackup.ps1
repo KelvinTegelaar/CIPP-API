@@ -88,8 +88,10 @@ function Get-CIPPBackup {
                         }
                     }
                 }
-                $item | Add-Member -NotePropertyName 'BackupIsBlobLink' -NotePropertyValue $isBlobLink -Force
-                $item | Add-Member -NotePropertyName 'BlobResourcePath' -NotePropertyValue $blobPath -Force
+                $item | Add-Member -NotePropertyMembers ([ordered]@{
+                        BackupIsBlobLink = $isBlobLink
+                        BlobResourcePath = $blobPath
+                    }) -Force
             }
         }
         return $Info

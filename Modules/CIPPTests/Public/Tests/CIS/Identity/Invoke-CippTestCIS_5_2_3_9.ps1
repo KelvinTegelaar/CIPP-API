@@ -13,14 +13,14 @@ function Invoke-CippTestCIS_5_2_3_9 {
             return
         }
 
-        $PwdSetting = $Settings | Where-Object { $_.templateId -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' -or $_.displayName -eq 'Password Rule Settings' } | Select-Object -First 1
+        $PwdSetting = $Settings.Where({ $_.templateId -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' -or $_.displayName -eq 'Password Rule Settings' }, 'First')[0]
 
         if (-not $PwdSetting) {
             # Password Rule Settings object not present: tenant defaults apply (LockoutDurationInSeconds default = 60), which satisfies the recommendation.
             $Status = 'Passed'
             $Result = "Password Rule Settings not configured; the tenant default Lockout duration of 60 seconds applies, which is compliant (at least 60 seconds)."
         } else {
-            $LockoutDuration = ($PwdSetting.values | Where-Object { $_.name -eq 'LockoutDurationInSeconds' }).value
+            $LockoutDuration = $(foreach ($Item in $PwdSetting.values) { if ($Item.name -eq 'LockoutDurationInSeconds') { $Item } }).value
 
             if ([int]$LockoutDuration -ge 60) {
                 $Status = 'Passed'

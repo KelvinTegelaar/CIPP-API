@@ -1,0 +1,56 @@
+{
+  "name": "TenantAllowBlockListTemplate",
+  "label": "Tenant Allow/Block List Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Deploy Tenant Allow/Block List entries from CIPP templates. Entries are only ever added - existing entries are never modified or removed.",
+  "executiveText": "Deploys standardized allow and block list entries for senders, URLs and file hashes, keeping the same threat allowances and blocks in place across tenants.",
+  "docsDescription": "Deploy Tenant Allow/Block List entries from a CIPP template. The standard grades which of the template's entries are missing from the tenant's list and remediation adds only those - entries added by hand are never touched. Entries whose expiration passed read as missing again and are re-added.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-TenantAllowBlockListItems",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "tenantAllowBlockListTemplate",
+  "identity": {
+    "partition": "TenantAllowBlockListTemplate",
+    "nameField": "templateName"
+  },
+  "variables": {
+    "tenantAllowBlockListTemplate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select Tenant Allow/Block List Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListTenantAllowBlockListTemplates",
+        "labelField": "templateName",
+        "valueField": "GUID",
+        "queryKey": "ListTenantAllowBlockListTemplates",
+        "showRefresh": true
+      }
+    }
+  },
+  "read": {
+    "cacheType": "ExoTenantAllowBlockList"
+  },
+  "prepare": "Get-CIPPBaselineTenantAllowBlockListTemplateState",
+  "remediate": {
+    "executor": "TenantAllowBlockListTemplate"
+  }
+}

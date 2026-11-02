@@ -6,11 +6,19 @@ function Invoke-ExecExtensionsConfig {
         CIPP.Extension.ReadWrite
     #>
     [CmdletBinding()]
-    param($Request, $TriggerMetadata)
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Request,
+
+        [Parameter(Mandatory = $false)]
+        [object]$TriggerMetadata
+    )
+    $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
 
     $Body = [PSCustomObject]$Request.Body
+    $StatusCode = [HttpStatusCode]::OK
     $Results = try {
         # Check if NinjaOne URL is set correctly and the instance has at least version 5.6
         if ($Body.NinjaOne.Enabled -eq $true) {
@@ -27,17 +35,22 @@ function Invoke-ExecExtensionsConfig {
             }
         }
 
+        $ScheduleParameters = @{}
         if ($Body.Hudu.NextSync) {
             #parse unixtime for addedtext
-            $Timestamp = [datetime]::UnixEpoch.AddSeconds([int]$Body.Hudu.NextSync).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-            Register-CIPPExtensionScheduledTasks -Reschedule -NextSync $Body.Hudu.NextSync -Extensions 'Hudu'
+            $Timestamp = [datetime]::UnixEpoch.AddSeconds([int]$Body.Hudu.NextSync).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            $ScheduleParameters = @{
+                Reschedule = $true
+                NextSync   = $Body.Hudu.NextSync
+                Extensions = 'Hudu'
+            }
             $AddedText = " Next sync will be at $Timestamp."
             $Body.Hudu.NextSync = ''
         }
 
         $Table = Get-CIPPTable -TableName Extensionsconfig
         foreach ($APIKey in $Body.PSObject.Properties.Name) {
-            Write-Information "Working on $apikey"
+            Write-Information "Working on $APIKey"
             if ($Body.$APIKey.APIKey -eq 'SentToKeyVault' -or $Body.$APIKey.APIKey -eq '') {
                 Write-Information 'Not sending to keyvault. Key previously set or left blank.'
             } else {
@@ -71,18 +84,26 @@ function Invoke-ExecExtensionsConfig {
         }
         Write-Information ($AddObject | ConvertTo-Json -Compress)
         $ConfigTable = Get-CIPPTable -tablename 'Config'
-        Add-AzDataTableEntity @ConfigTable -Entity $AddObject -Force
+        Add-AzDataTableEntity @ConfigTable -Entity $AddObject -Force | Out-Null
 
+        if ($ScheduleParameters.Count -gt 0) {
+            Register-CIPPExtensionScheduledTasks @ScheduleParameters
+        }
         Register-CIPPExtensionScheduledTasks
-        "Successfully saved the extension configuration. $AddedText"
+        $Result = "Successfully saved the extension configuration. $AddedText"
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result.Trim() -Sev 'Info'
+        $Result
     } catch {
-        "Failed to save the extensions configuration: $($_.Exception.message) Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
+        $Result = "Failed to save the extensions configuration: $($_.Exception.message) Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error'
+        $StatusCode = [HttpStatusCode]::InternalServerError
+        $Result
     }
 
 
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @{'Results' = $Results }
         })
 

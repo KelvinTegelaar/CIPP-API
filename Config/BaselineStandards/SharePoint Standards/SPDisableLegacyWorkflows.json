@@ -1,0 +1,41 @@
+{
+  "name": "SPDisableLegacyWorkflows",
+  "label": "Disable Legacy Workflows",
+  "cat": "SharePoint Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Disables the creation of new SharePoint 2010 and 2013 classic workflows and removes the 'Return to classic SharePoint' link on modern SharePoint list and library pages.",
+  "executiveText": "Disables outdated SharePoint workflow features and classic interface options, encouraging use of modern, more secure and efficient collaboration tools. This helps maintain security standards while guiding users toward current, supported functionality.",
+  "impactColour": "info",
+  "addedDate": "2024-07-15",
+  "powershellEquivalent": "Set-SPOTenant -DisableWorkflow2010 $true -DisableWorkflow2013 $true -DisableBackToClassic $true",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "StopNew2010Workflows": true,
+    "StopNew2013Workflows": true,
+    "DisableBackToClassic": true
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "writeTarget": "spoTenant",
+  "remediate": {
+    "executor": "SPOTenant",
+    "properties": {
+      "StopNew2010Workflows": true,
+      "StopNew2013Workflows": true,
+      "DisableBackToClassic": true
+    }
+  }
+}

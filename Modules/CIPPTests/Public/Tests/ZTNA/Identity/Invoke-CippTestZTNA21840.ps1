@@ -16,7 +16,7 @@ function Invoke-CippTestZTNA21840 {
             return
         }
 
-        $Fido2Config = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Fido2' }
+        $Fido2Config = $AuthMethodsPolicy.authenticationMethodConfigurations.Where({ $_.id -eq 'Fido2' })
 
         if (-not $Fido2Config) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Security key attestation is enforced' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'

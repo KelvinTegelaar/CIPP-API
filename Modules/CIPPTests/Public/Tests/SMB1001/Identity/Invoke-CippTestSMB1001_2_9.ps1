@@ -21,25 +21,25 @@ function Invoke-CippTestSMB1001_2_9 {
             return
         }
 
-        $ActiveMembers = @($MFA | Where-Object { $_.AccountEnabled -eq $true -and $_.UserType -ne 'Guest' })
+        $ActiveMembers = @($MFA.Where({ $_.AccountEnabled -eq $true -and $_.UserType -ne 'Guest' }))
 
         if ($ActiveMembers.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No active member accounts found.' -Risk 'High' -Name $Name -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication'
             return
         }
 
-        $Unprotected = @($ActiveMembers | Where-Object {
+        $Unprotected = @($ActiveMembers.Where({
                 $_.CoveredByCA -notlike 'Enforced*' -and
                 $_.CoveredBySD -ne $true -and
                 $_.PerUser -notin @('Enforced', 'Enabled')
-            })
+            }))
 
         if ($Unprotected.Count -eq 0) {
             $Status = 'Passed'
             $Result = "All $($ActiveMembers.Count) active member account(s) accessing data-storing workloads are protected by MFA."
         } else {
             $Status = 'Failed'
-            $TableRows = foreach ($U in ($Unprotected | Select-Object -First 25)) {
+            $TableRows = foreach ($U in ($Unprotected.Where({ $true }, 'First', 25))) {
                 "| $($U.UPN) | $($U.CoveredByCA) | $($U.CoveredBySD) | $($U.PerUser) |"
             }
             $Result = (@(

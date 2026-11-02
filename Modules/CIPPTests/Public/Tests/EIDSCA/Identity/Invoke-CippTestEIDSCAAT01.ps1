@@ -13,7 +13,7 @@ function Invoke-CippTestEIDSCAAT01 {
             return
         }
 
-        $TAPConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'TemporaryAccessPass' }
+        $TAPConfig = $AuthMethodsPolicy.authenticationMethodConfigurations.Where({ $_.id -eq 'TemporaryAccessPass' })
 
         if (-not $TAPConfig) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAT01' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'Temporary Access Pass configuration not found in Authentication Methods Policy.' -Risk 'Medium' -Name 'Temp Access Pass - State' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Authentication Methods'

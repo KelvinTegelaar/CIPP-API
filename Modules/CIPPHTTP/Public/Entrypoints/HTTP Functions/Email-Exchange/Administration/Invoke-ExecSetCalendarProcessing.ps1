@@ -9,7 +9,6 @@ function Invoke-ExecSetCalendarProcessing {
     param($Request, $TriggerMetadata)
 
     $APIName = 'ExecSetCalendarProcessing'
-    Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     try {
         $cmdParams = @{

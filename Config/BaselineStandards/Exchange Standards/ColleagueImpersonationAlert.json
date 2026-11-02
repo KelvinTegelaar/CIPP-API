@@ -1,0 +1,65 @@
+{
+  "name": "ColleagueImpersonationAlert",
+  "label": "Colleague Impersonation Alert Transport Rules",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Creates/updates 5x Exchange Online transport rules (A-E, F-J, K-O, P-T, U-Z) that prepend an HTML disclaimer banner to inbound emails where the sender display name matches a mailbox in the organisation. Accepted tenant domains are exempt automatically; manually configured exemptions on existing rules are preserved.",
+  "executiveText": "Protects staff from display-name impersonation attacks by injecting a visible warning banner on emails that appear to come from a colleague but originate externally.",
+  "docsDescription": "The expected state is DYNAMIC: each rule's header patterns are computed from the tenant's mailbox display names (user+shared, enabled, not keyword-excluded), so the grade is per-rule exists-and-patterns-match. The optional separator adds each user's short name as a second pattern. Remediation merge-writes: configured exempt senders plus the rule's existing ones, accepted-domain exemptions plus the rule's existing ones - manual operator exemptions are never stripped. The disclaimer HTML falls back to an existing rule's when left blank.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-TransportRule / Set-TransportRule",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "disclaimerHtml": {
+      "type": "textField",
+      "label": "Disclaimer HTML - the full HTML for the warning banner",
+      "required": true
+    },
+    "displayNameSeparator": {
+      "type": "textField",
+      "label": "Display name separator - optional, for example |",
+      "omitWhenBlank": true
+    },
+    "excludedMailboxes": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Exclude mailboxes by keyword (e.g. (Leaver))",
+      "omitWhenBlank": true
+    },
+    "additionalExemptSenders": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Additional exempt sender addresses",
+      "omitWhenBlank": true
+    }
+  },
+  "read": {
+    "cacheType": "ExoTransportRules"
+  },
+  "prepare": "Get-CIPPBaselineColleagueImpersonationAlertState",
+  "remediate": {
+    "executor": "ColleagueImpersonationAlert",
+    "disclaimerHtml": "%disclaimerHtml%",
+    "displayNameSeparator": "%displayNameSeparator%",
+    "excludedMailboxes": "%excludedMailboxes%",
+    "additionalExemptSenders": "%additionalExemptSenders%"
+  }
+}

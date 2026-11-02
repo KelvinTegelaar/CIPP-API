@@ -98,6 +98,16 @@ function Start-TableCleanup {
         @{
             FunctionName   = 'TableCleanupTask'
             Type           = 'CleanupRule'
+            TableName      = 'BecRunState'
+            DataTableProps = @{
+                Filter   = "Timestamp lt datetime'$((Get-Date).AddDays(-2).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
             TableName      = 'CippOrchestratorBatch'
             DataTableProps = @{
                 Filter   = "Timestamp lt datetime'$((Get-Date).AddHours(-24).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
@@ -106,15 +116,75 @@ function Start-TableCleanup {
             }
         }
         @{
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
+            TableName      = 'knownlocationdbv2'
+            DataTableProps = @{
+                Filter   = "PartitionKey eq 'ip' and Timestamp lt datetime'$((Get-Date).AddDays(-90).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
+            # Baseline run/audit history: 90-day rolling retention. Active tenant-standard
+            # pairs rewrite rows every 12h run, so recent history always survives; pairs
+            # that stopped resolving age out entirely with their rows.
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
+            TableName      = 'BaselineHistory'
+            DataTableProps = @{
+                Filter   = "Timestamp lt datetime'$((Get-Date).AddDays(-90).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
+            # Live-progress rows of background jobs (SharePoint template deploys, user offboarding).
+            # They matter while the job runs; a month covers looking back at a task page afterwards.
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
+            TableName      = 'CacheAsyncDeployments'
+            DataTableProps = @{
+                Filter   = "Timestamp lt datetime'$((Get-Date).AddDays(-30).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
+            # 5-minute instance health samples and boot markers. Two weeks covers the
+            # diagnostics window (max 14 days) with nothing left over.
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
+            TableName      = 'InstanceHealth'
+            DataTableProps = @{
+                Filter   = "PartitionKey eq 'InstanceHealth' and Timestamp lt datetime'$((Get-Date).AddDays(-14).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
+            # Audit records processing never drained, including pre-partition tenant rows.
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
+            TableName      = 'CacheWebhooks'
+            DataTableProps = @{
+                Filter   = "Timestamp lt datetime'$((Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
             FunctionName = 'TableCleanupTask'
             Type         = 'DeleteTable'
-            Tables       = @('knownlocationdb', 'CacheExtensionSync', 'ExtensionSync')
+            Tables       = @('knownlocationdb', 'CacheExtensionSync', 'ExtensionSync', 'cachebpav2', 'CacheWebhookStats', 'FailedAuditLogDownloads')
         }
     )
 
     $InputObject = @{
         Batch            = @($Batch)
         OrchestratorName = 'TableCleanup'
+        AllowCollision   = $false
+        Priority         = 8
         SkipLog          = $true
     }
 

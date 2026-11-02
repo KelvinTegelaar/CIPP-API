@@ -1,4 +1,4 @@
-Each accepted domain in your organization should be covered by a Safe Attachments policy to ensure all users receive malware protection. Without domain-specific Safe Attachments coverage, users in certain domains may not be protected from malicious files, creating security vulnerabilities that can be exploited to deliver malware to unprotected segments of your organization.
+Each accepted domain in your organization should be covered by a Safe Attachments policy to ensure all users receive malware protection. A domain is considered fully covered only when an enabled Safe Attachments policy rule targets the domain without domain, recipient, or group exclusions. Without domain-specific Safe Attachments coverage, users in certain domains may not be protected from malicious files, creating security vulnerabilities that can be exploited to deliver malware to unprotected segments of your organization.
 
 **Remediation action**
 

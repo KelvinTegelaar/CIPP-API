@@ -1,0 +1,74 @@
+{
+  "name": "EnableExchangeCloudManagement",
+  "label": "Configure Exchange Cloud Management for Remote/On-Premises Mailboxes",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Configures cloud-based management of Exchange attributes for directory-synced users with remote mailboxes in Exchange Online. This allows you to enable or disable management of Exchange attributes directly in the cloud without requiring an on-premises Exchange server.",
+  "executiveText": "Configures cloud-based management of Exchange mailbox attributes for hybrid organizations. When enabled, eliminates the dependency on on-premises Exchange servers for attribute management. This modernizes email administration, reduces infrastructure complexity, and allows direct management of mailbox properties through cloud portals and PowerShell. When disabled, returns management to on-premises Exchange servers.",
+  "docsDescription": "Configures the IsExchangeCloudManaged property for directory-synced mailboxes, allowing Exchange attributes to be managed directly in Exchange Online or reverted to on-premises management. Identity attributes remain managed on-premises via Active Directory.",
+  "impactColour": "info",
+  "addedDate": "2026-03-28",
+  "powershellEquivalent": "Set-Mailbox -Identity user@domain.com -IsExchangeCloudManaged $true or $false",
+  "recommendedBy": [
+    "Microsoft",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "Cloud Management State",
+      "required": true,
+      "options": [
+        {
+          "label": "Cloud Management",
+          "value": true
+        },
+        {
+          "label": "On-Premises Management",
+          "value": false
+        }
+      ],
+      "default": true
+    }
+  },
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Mailboxes",
+    "collectorArgs": {
+      "Types": "None"
+    }
+  },
+  "prepare": "Get-CIPPBaselineEnableExchangeCloudManagementState",
+  "remediate": {
+    "executor": "ExoBulkSweep",
+    "refreshCache": [
+      "Mailboxes"
+    ],
+    "refreshCacheArgs": {
+      "Mailboxes": {
+        "Types": "None"
+      }
+    },
+    "writes": [
+      {
+        "cmdlet": "Set-Mailbox",
+        "params": {
+          "Identity": "%id%",
+          "IsExchangeCloudManaged": "%state%"
+        }
+      }
+    ]
+  }
+}

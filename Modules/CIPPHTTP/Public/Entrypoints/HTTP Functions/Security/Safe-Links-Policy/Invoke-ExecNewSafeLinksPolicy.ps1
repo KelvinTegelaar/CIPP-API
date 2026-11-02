@@ -17,6 +17,16 @@ function Invoke-ExecNewSafeLinksPolicy {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
 
+    # Exchange cmdlets need one tenant. With All Tenants selected the request used to fall through
+    # the authorisation check, skip the cmdlets and still report success, so the policy was never
+    # created anywhere while the logbook said it was.
+    if ([string]::IsNullOrWhiteSpace($TenantFilter) -or $TenantFilter -eq 'AllTenants') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'Select a single tenant before creating a Safe Links policy. Safe Links policies cannot be created with All Tenants selected.' }
+            })
+    }
+
     # Extract policy settings from body
     $PolicyName = $Request.Body.PolicyName
     $EnableSafeLinksForEmail = $Request.Body.EnableSafeLinksForEmail
@@ -60,7 +70,7 @@ function Invoke-ExecNewSafeLinksPolicy {
     }
 
     # Helper function to process array fields
-    function Process-ArrayField {
+    function ConvertTo-FieldArray {
         param (
             [Parameter(Mandatory = $false)]
             $Field
@@ -113,13 +123,13 @@ function Invoke-ExecNewSafeLinksPolicy {
     }
 
     # Process all array fields
-    $SentTo = Process-ArrayField -Field $SentTo
-    $SentToMemberOf = Process-ArrayField -Field $SentToMemberOf
-    $RecipientDomainIs = Process-ArrayField -Field $RecipientDomainIs
-    $ExceptIfSentTo = Process-ArrayField -Field $ExceptIfSentTo
-    $ExceptIfSentToMemberOf = Process-ArrayField -Field $ExceptIfSentToMemberOf
-    $ExceptIfRecipientDomainIs = Process-ArrayField -Field $ExceptIfRecipientDomainIs
-    $DoNotRewriteUrls = Process-ArrayField -Field $DoNotRewriteUrls
+    $SentTo = ConvertTo-FieldArray -Field $SentTo
+    $SentToMemberOf = ConvertTo-FieldArray -Field $SentToMemberOf
+    $RecipientDomainIs = ConvertTo-FieldArray -Field $RecipientDomainIs
+    $ExceptIfSentTo = ConvertTo-FieldArray -Field $ExceptIfSentTo
+    $ExceptIfSentToMemberOf = ConvertTo-FieldArray -Field $ExceptIfSentToMemberOf
+    $ExceptIfRecipientDomainIs = ConvertTo-FieldArray -Field $ExceptIfRecipientDomainIs
+    $DoNotRewriteUrls = ConvertTo-FieldArray -Field $DoNotRewriteUrls
 
     try {
         # Check if policy already exists

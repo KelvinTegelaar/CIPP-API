@@ -141,6 +141,5 @@ function Invoke-CIPPStandardintuneBrandingProfile {
             privacyUrl                = $Settings.privacyUrl
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.intuneBrandingProfile' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'intuneBrandingProfile' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

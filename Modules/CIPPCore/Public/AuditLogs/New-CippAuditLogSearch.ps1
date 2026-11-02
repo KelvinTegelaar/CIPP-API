@@ -163,7 +163,24 @@ function New-CippAuditLogSearch {
                 }
             }
 
-            if (($null -ne $AuditLogError) -and $AuditLogError.Status -eq 'AuditingDisabledTenant') {
+            # The AuditingDisabledTenant status can appear either at the top level or nested
+            # inside error.message as a JSON-encoded string (e.g. when Microsoft wraps it in an
+            # UnknownError envelope), so resolve the status from both locations.
+            $AuditStatus = $AuditLogError.Status
+            if (-not $AuditStatus) {
+                $InnerMessage = $AuditLogError.error.message ?? $AuditLogError.message
+                if ($InnerMessage -is [string]) {
+                    $TrimmedInnerMessage = $InnerMessage.TrimStart()
+                    if ($TrimmedInnerMessage.StartsWith('{') -or $TrimmedInnerMessage.StartsWith('[')) {
+                        $InnerParsed = $InnerMessage | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        if ($InnerParsed) {
+                            $AuditStatus = $InnerParsed.Status
+                        }
+                    }
+                }
+            }
+
+            if (($null -ne $AuditLogError) -and $AuditStatus -eq 'AuditingDisabledTenant') {
                 try {
                     $AuditDisabledTable = Get-CIPPTable -TableName 'AuditLogDisabledTenants'
                     $DisabledEntity = [PSCustomObject]@{
@@ -182,7 +199,7 @@ function New-CippAuditLogSearch {
                 return [PSCustomObject]@{
                     id          = $null
                     displayName = [string]$DisplayName
-                    status      = [string]$AuditLogError.Status
+                    status      = [string]$AuditStatus
                     cippStatus  = [string]'Skipped'
                     message     = [string]'Unified auditing is disabled for this tenant.'
                 }
@@ -252,6 +269,13 @@ function New-CippAuditLogSearch {
             }
             $Table = Get-CIPPTable -TableName 'AuditLogSearches'
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
+
+            # When alert processing is requested, bridge the search into the V2 AuditLogCoverage
+            # ledger so the pipeline downloads + processes it automatically (the V2 pipeline does
+            # not scan the AuditLogSearches table).
+            if ($ProcessLogs.IsPresent) {
+                Add-CippAuditLogCoverageManualEntry -TenantFilter $TenantFilter -SearchId $Query.id -StartTime $StartTime -EndTime $EndTime -SearchStatus $Query.status
+            }
         }
 
         return $Query

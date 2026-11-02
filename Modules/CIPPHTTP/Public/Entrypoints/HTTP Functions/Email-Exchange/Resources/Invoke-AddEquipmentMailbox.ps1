@@ -46,7 +46,7 @@ Function Invoke-AddEquipmentMailbox {
         $Message = "Failed to create equipment mailbox: $($MailboxObject.displayName). Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
         $Results.Add($Message)
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $Body = [pscustomobject]@{ 'Results' = @($Results) }

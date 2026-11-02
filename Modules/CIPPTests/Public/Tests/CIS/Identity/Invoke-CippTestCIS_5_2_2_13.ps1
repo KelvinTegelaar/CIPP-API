@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_5_2_2_13 {
             return
         }
 
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.users.includeUsers -contains 'All' -and
             $_.conditions.applications.includeApplications -contains 'All' -and
@@ -24,7 +24,7 @@ function Invoke-CippTestCIS_5_2_2_13 {
                 ($_.sessionControls.signInFrequency.type -eq 'days' -and $_.sessionControls.signInFrequency.value -le 7) -or
                 ($_.sessionControls.signInFrequency.type -eq 'hours' -and $_.sessionControls.signInFrequency.value -le 168)
             )
-        }
+        })
 
         if ($Matching) {
             $Status = 'Passed'

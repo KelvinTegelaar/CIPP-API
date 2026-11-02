@@ -117,7 +117,6 @@ function Invoke-CIPPStandardsharingDomainRestriction {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'sharingDomainRestriction' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
 
         $CurrentValue = @{
             sharingDomainRestrictionMode = $CurrentState.sharingDomainRestrictionMode

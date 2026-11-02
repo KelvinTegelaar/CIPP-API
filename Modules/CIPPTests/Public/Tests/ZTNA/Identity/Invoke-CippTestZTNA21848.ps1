@@ -10,15 +10,15 @@ function Invoke-CippTestZTNA21848 {
     try {
         # Get password protection settings from Settings cache
         $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
-        $PasswordProtectionSettings = $Settings | Where-Object { $_.templateId -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' }
+        $PasswordProtectionSettings = $Settings.Where({ $_.templateId -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' })
 
         if (-not $PasswordProtectionSettings) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Add organizational terms to the banned password list' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'
             return
         }
 
-        $EnableBannedPasswordCheck = ($PasswordProtectionSettings.values | Where-Object { $_.name -eq 'EnableBannedPasswordCheck' }).value
-        $BannedPasswordList = ($PasswordProtectionSettings.values | Where-Object { $_.name -eq 'BannedPasswordList' }).value
+        $EnableBannedPasswordCheck = $PasswordProtectionSettings.values.Where({ $_.name -eq 'EnableBannedPasswordCheck' }).value
+        $BannedPasswordList = $PasswordProtectionSettings.values.Where({ $_.name -eq 'BannedPasswordList' }).value
 
         if ([string]::IsNullOrEmpty($BannedPasswordList)) {
             $BannedPasswordList = $null

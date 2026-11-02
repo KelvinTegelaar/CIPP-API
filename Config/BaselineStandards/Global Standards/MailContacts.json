@@ -1,0 +1,55 @@
+{
+  "name": "MailContacts",
+  "label": "Set contact e-mails",
+  "cat": "Global Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the organization's notification contacts: technical, security, marketing and general/privacy. Only configured contacts are enforced.",
+  "executiveText": "Keeps Microsoft's service, security and privacy notifications flowing to the right mailboxes instead of a former employee's.",
+  "docsDescription": "Grades only the configured contacts: marketing as contains, security+technical as a set against the technical notification list, and the general contact against the privacy profile. Remediation writes only the configured members.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: PATCH organization",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "GeneralContact": {
+      "type": "textField",
+      "label": "General/privacy contact email",
+      "omitWhenBlank": true
+    },
+    "SecurityContact": {
+      "type": "textField",
+      "label": "Security contact email",
+      "omitWhenBlank": true
+    },
+    "MarketingContact": {
+      "type": "textField",
+      "label": "Marketing contact email",
+      "omitWhenBlank": true
+    },
+    "TechContact": {
+      "type": "textField",
+      "label": "Technical contact email",
+      "omitWhenBlank": true
+    }
+  },
+  "read": {
+    "cacheType": "Organization"
+  },
+  "prepare": "Get-CIPPBaselineMailContactsState",
+  "remediate": {
+    "executor": "MailContacts",
+    "generalContact": "%GeneralContact%",
+    "securityContact": "%SecurityContact%",
+    "marketingContact": "%MarketingContact%",
+    "techContact": "%TechContact%"
+  }
+}

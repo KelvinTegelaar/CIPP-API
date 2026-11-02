@@ -16,7 +16,7 @@ Set-HostedContentFilterPolicy -Identity "Default" -SpamAction Quarantine
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.14.2](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo142v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.14.2](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo142v1)
 - [Configure anti-spam policies](https://learn.microsoft.com/microsoft-365/security/office-365-security/anti-spam-policies-configure)
 
 <!--- Results --->

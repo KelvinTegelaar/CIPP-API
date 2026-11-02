@@ -13,13 +13,13 @@ function Invoke-CippTestCIS_5_2_2_9 {
             return
         }
 
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.grantControls -and (
                 $_.grantControls.builtInControls -contains 'compliantDevice' -or
                 $_.grantControls.builtInControls -contains 'domainJoinedDevice'
             )
-        }
+        })
 
         if ($Matching) {
             $Status = 'Passed'

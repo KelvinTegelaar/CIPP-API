@@ -1,0 +1,61 @@
+{
+  "name": "TransportRuleTemplate",
+  "label": "Transport Rule Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Deploy transport rules to manage email flow. Compares presence by name; an existing rule is only rewritten when overwrite is on.",
+  "executiveText": "Deploys standardized email flow rules that automatically manage how emails are processed, filtered, and routed within the organization. These templates ensure consistent email security policies, compliance requirements, and business rules are applied across all email communications.",
+  "docsDescription": "Deploys a transport rule from a CIPP template. The standard grades whether the rule exists by name - it does not diff rule bodies, matching the classic standard.",
+  "impactColour": "warning",
+  "addedDate": "2023-12-30",
+  "powershellEquivalent": "New-TransportRule or Set-TransportRule",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": true,
+    "warn": true,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "transportRuleTemplate",
+  "identity": {
+    "partition": "TransportTemplate",
+    "nameField": "name"
+  },
+  "variables": {
+    "transportRuleTemplate": {
+      "type": "autoComplete",
+      "label": "Select Transport Rule Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListTransportRulesTemplates?noJson=true",
+        "labelField": "name",
+        "valueField": "GUID",
+        "queryKey": "ListTransportRulesTemplates"
+      }
+    },
+    "overwrite": {
+      "type": "switch",
+      "label": "Overwrite existing transport rules",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "read": {
+    "cacheType": "ExoTransportRules"
+  },
+  "prepare": "Get-CIPPBaselineTransportRuleTemplateState",
+  "remediate": {
+    "executor": "TransportRuleTemplate",
+    "overwrite": "%overwrite%"
+  }
+}

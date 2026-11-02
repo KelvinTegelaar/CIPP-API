@@ -97,11 +97,12 @@ function Get-CIPPOmaSettingDecryptedValue {
                     }
                 } catch {
                     Write-Warning "Error decrypting OMA setting '$($omaSetting.displayName)': $($_.Exception.Message)"
+                    Write-LogMessage -API 'IntunePolicy' -tenant $TenantFilter -message "Could not decrypt OMA-URI setting '$($omaSetting.displayName)' in '$($DeviceConfiguration.displayName)': $(Get-NormalizedError -Message $_.Exception.Message)" -sev Warning
                     # Continue with other settings even if one fails
                 }
             }
             # Also check for the placeholder value PGEvPg== (base64 encoded '<a/>')
-            elseif ($omaSetting.value -eq 'PGEvPg==') {
+            elseif ("$($omaSetting.value)" -eq 'PGEvPg==') {
                 Write-Warning "Found placeholder value (PGEvPg==) for OMA setting '$($omaSetting.displayName)' but no secretReferenceValueId. This setting may not be decryptable."
             }
         }

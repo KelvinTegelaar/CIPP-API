@@ -1,0 +1,32 @@
+{
+  "name": "PhishProtection",
+  "label": "Enable Phishing Protection system via branding CSS",
+  "cat": "Global Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Adds branding to the logon page that only appears if the url is not login.microsoftonline.com. This potentially prevents AITM attacks via EvilNginx, and automatically generates alerts if a clone of your login page is found.",
+  "executiveText": "Adds a hidden canary to the company sign-in page that exposes cloned phishing pages and alerts when one is found, protecting staff credentials from adversary-in-the-middle attacks.",
+  "docsDescription": "Grades whether the default branding localization's custom CSS contains the tenant's clone-detection canary (the clone.cipp.app background-image URL carrying this instance's CIPPURL from the Config table). The branding singleton reads live. Remediation strips a known malformed variant, creates the default localization when missing (Accept-Language 0, tolerating already-exists), and APPENDS the canary to the existing CSS - operator customizations are never overwritten. Report and warn are disabled as in the classic: this standard acts through remediation only.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Portal only",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "AAD_PREMIUM",
+    "AAD_PREMIUM_P2",
+    "OFFICE_BUSINESS"
+  ],
+  "disabledFeatures": {
+    "report": true,
+    "warn": true,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "read": {},
+  "prepare": "Get-CIPPBaselinePhishProtectionState",
+  "remediate": {
+    "executor": "PhishProtection"
+  }
+}

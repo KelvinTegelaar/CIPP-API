@@ -10,25 +10,30 @@ function Invoke-CippTestZTNA21835 {
     try {
         # Get Global Administrator role (template ID: 62e90394-69f5-4237-9190-012177145e10)
         $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
-        $GlobalAdminRole = $Roles | Where-Object { $_.roleTemplateId -eq '62e90394-69f5-4237-9190-012177145e10' }
+        $GlobalAdminRole = $Roles.Where({ $_.roleTemplateId -eq '62e90394-69f5-4237-9190-012177145e10' })
 
         if (-not $GlobalAdminRole) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Emergency access accounts are configured appropriately' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Application management'
             return
         }
 
-        # Get permanent Global Administrator members
-        $PermanentGAMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId '62e90394-69f5-4237-9190-012177145e10' | Where-Object {
-            $_.AssignmentType -eq 'Permanent' -and $_.'@odata.type' -eq '#microsoft.graph.user'
-        }
+        # Get permanent Global Administrator members.
+        # This previously filtered on AssignmentType -eq 'Permanent', a value Get-CippDbRoleMembers
+        # never emits (it returns Active/Eligible/Direct), so the set was always empty and the test
+        # silently reported no permanent GAs on every tenant. Permanence is IsPermanent.
+        $PermanentGAMembers = (Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId '62e90394-69f5-4237-9190-012177145e10').Where({
+            $_.IsPermanent -and $_.'@odata.type' -eq '#microsoft.graph.user'
+        })
 
         # Get Users data to check sync status
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
+        $UserById = [CIPP.CippIndex]::Build($Users, @(foreach ($U in $Users) { , ($($U.id) ?? $null) }))
 
         $EmergencyAccountCandidates = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Member in $PermanentGAMembers) {
-            $User = $Users | Where-Object { $_.id -eq $Member.principalId }
+            # Get-CippDbRoleMembers returns the principal object id as 'id', not 'principalId'.
+            $User = $UserById.Find($Member.id)
 
             # Only process cloud-only accounts
             if ($User -and $User.onPremisesSyncEnabled -ne $true) {
@@ -48,7 +53,7 @@ function Invoke-CippTestZTNA21835 {
 
         # Get CA policies
         $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
-        $EnabledCAPolicies = $CAPolicies | Where-Object { $_.state -eq 'enabled' }
+        $EnabledCAPolicies = $CAPolicies.Where({ $_.state -eq 'enabled' })
 
         $EmergencyAccessAccounts = [System.Collections.Generic.List[object]]::new()
 
@@ -98,7 +103,7 @@ function Invoke-CippTestZTNA21835 {
                 $ExcludeRoles = @($Policy.conditions.users.excludeRoles)
 
                 foreach ($RoleId in $UserRoleIds) {
-                    $Role = $UserRoles | Where-Object { $_.id -eq $RoleId }
+                    $Role = $UserRoles.Where({ $_.id -eq $RoleId })
                     if ($Role -and $IncludeRoles -contains $Role.roleTemplateId) {
                         $IsTargeted = $true
                     }
@@ -165,17 +170,19 @@ function Invoke-CippTestZTNA21835 {
 
             $UserSummary = [System.Collections.Generic.List[object]]::new()
             foreach ($Member in $PermanentGAMembers) {
-                $User = $Users | Where-Object { $_.id -eq $Member.principalId }
+                # 'id', not 'principalId' — see the note above; this lookup silently matched
+                # nothing and every row was skipped by the -not $User guard below.
+                $User = $UserById.Find($Member.id)
                 if (-not $User) { continue }
 
                 $PortalLink = "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/$($User.id)"
                 $IsCloudOnly = ($User.onPremisesSyncEnabled -ne $true)
                 $CloudOnlyEmoji = if ($IsCloudOnly) { '✅' } else { '❌' }
 
-                $EmergencyAccount = $EmergencyAccessAccounts | Where-Object { $_.Id -eq $User.id }
+                $EmergencyAccount = $EmergencyAccessAccounts.Where({ $_.Id -eq $User.id })
                 $CAExcludedEmoji = if ($EmergencyAccount) { '✅' } else { '❌' }
 
-                $Candidate = $EmergencyAccountCandidates | Where-Object { $_.Id -eq $User.id }
+                $Candidate = $EmergencyAccountCandidates.Where({ $_.Id -eq $User.id })
                 $PhishingResistantEmoji = if ($Candidate) { '✅' } else { '❌' }
 
                 $UserSummary.Add([PSCustomObject]@{

@@ -1,0 +1,265 @@
+[
+  {
+    "id": "AdminUnmanagedDevice",
+    "group": "Admin accounts",
+    "persona": "admin",
+    "title": "Global Admin · unmanaged device · known location",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "deviceInfo": { "isCompliant": false } },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "No compliant-device requirement for administrators", "fix": { "caTemplate": "Require a compliant device for administrators" } }
+  },
+  {
+    "id": "AdminForeignCountry",
+    "group": "Admin accounts",
+    "persona": "admin",
+    "title": "Global Admin · sign-in from a foreign country",
+    "countryFromSelection": true,
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "country": "RU", "ipAddress": "45.132.1.20" },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "No location policy for administrators", "fix": { "caTemplate": "Block sign-ins from countries outside the allowed list" } }
+  },
+  {
+    "id": "AdminHostingIp",
+    "group": "Admin accounts",
+    "persona": "admin",
+    "title": "Global Admin · sign-in from a hosting-provider address",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "country": "US", "ipAddress": "104.244.72.115" },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "Admin sign-ins from hosting-provider addresses are not blocked", "fix": { "caTemplate": "Block sign-ins from hosting-provider IP ranges" } }
+  },
+  {
+    "id": "AdminDeviceCode",
+    "group": "Admin accounts",
+    "persona": "admin",
+    "title": "Global Admin · device-code flow",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "authenticationFlow": { "transferMethod": "deviceCodeFlow" } },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "Device code flow is not blocked for administrators", "fix": { "caTemplate": "Block device code flow sign-ins" } }
+  },
+  {
+    "id": "AdminLegacyAuth",
+    "group": "Admin accounts",
+    "persona": "admin",
+    "title": "Global Admin · legacy authentication client",
+    "conditions": { "clientAppType": "other", "devicePlatform": "windows" },
+    "attackerCanSatisfy": [],
+    "expected": "blocked",
+    "missingControl": { "text": "Legacy authentication is not blocked", "fix": { "caTemplate": "Block legacy authentication" } }
+  },
+  {
+    "id": "AdminHighSignInRisk",
+    "group": "Admin accounts",
+    "persona": "admin",
+    "title": "Global Admin · high sign-in risk",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "signInRiskLevel": "high" },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "No sign-in risk policy for administrators", "fix": { "caTemplate": "Require multifactor authentication for medium and high sign-in risk" } }
+  },
+  {
+    "id": "AdminMacOsUnmanaged",
+    "group": "Admin accounts",
+    "persona": "admin",
+    "title": "Global Admin · unmanaged macOS device",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "macOS", "deviceInfo": { "isCompliant": false } },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "No compliant-device requirement for administrators", "fix": { "caTemplate": "Require a compliant device for administrators" } }
+  },
+  {
+    "id": "AdminDesktopClientUnmanaged",
+    "group": "Admin accounts",
+    "persona": "admin",
+    "title": "Global Admin · desktop client · unmanaged device",
+    "conditions": { "clientAppType": "mobileAppsAndDesktopClients", "devicePlatform": "windows", "deviceInfo": { "isCompliant": false } },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "No compliant-device requirement for administrators", "fix": { "caTemplate": "Require a compliant device for administrators" } }
+  },
+  {
+    "id": "UserUnmanagedDevice",
+    "group": "Standard users",
+    "persona": "user",
+    "title": "Standard user · unmanaged device · browser",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "deviceInfo": { "isCompliant": false } },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "mfa",
+    "missingControl": { "text": "No compliant-device requirement for standard users", "fix": { "caTemplate": "Require a compliant or Microsoft Entra hybrid joined device" } }
+  },
+  {
+    "id": "UserForeignCountry",
+    "group": "Standard users",
+    "persona": "user",
+    "title": "Standard user · sign-in from a foreign country",
+    "countryFromSelection": true,
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "country": "CN", "ipAddress": "223.5.5.5" },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "No location policy for standard users", "fix": { "caTemplate": "Block sign-ins from countries outside the allowed list" } }
+  },
+  {
+    "id": "UserDeviceCode",
+    "group": "Standard users",
+    "persona": "user",
+    "title": "Standard user · device-code flow",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "authenticationFlow": { "transferMethod": "deviceCodeFlow" } },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "Device code flow is not blocked", "fix": { "caTemplate": "Block device code flow sign-ins" } }
+  },
+  {
+    "id": "UserLegacyActiveSync",
+    "group": "Standard users",
+    "persona": "user",
+    "title": "Standard user · legacy Exchange ActiveSync",
+    "conditions": { "clientAppType": "exchangeActiveSync", "devicePlatform": "android" },
+    "attackerCanSatisfy": [],
+    "expected": "blocked",
+    "missingControl": { "text": "Legacy authentication is not blocked", "fix": { "caTemplate": "Block legacy authentication" } }
+  },
+  {
+    "id": "UserLegacyOther",
+    "group": "Standard users",
+    "persona": "user",
+    "title": "Standard user · other legacy client",
+    "conditions": { "clientAppType": "other", "devicePlatform": "windows" },
+    "attackerCanSatisfy": [],
+    "expected": "blocked",
+    "missingControl": { "text": "Legacy authentication is not blocked", "fix": { "caTemplate": "Block legacy authentication" } }
+  },
+  {
+    "id": "UserHighSignInRisk",
+    "group": "Standard users",
+    "persona": "user",
+    "title": "Standard user · high sign-in risk",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "signInRiskLevel": "high" },
+    "attackerCanSatisfy": [],
+    "expected": "blocked",
+    "missingControl": { "text": "No sign-in risk policy", "fix": { "caTemplate": "Require multifactor authentication for medium and high sign-in risk" } }
+  },
+  {
+    "id": "UserHighUserRisk",
+    "group": "Standard users",
+    "persona": "user",
+    "title": "Standard user · high user risk",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "userRiskLevel": "high" },
+    "attackerCanSatisfy": [],
+    "expected": "blocked",
+    "missingControl": { "text": "No user risk policy", "fix": { "caTemplate": "Require a secure password change for high user risk" } }
+  },
+  {
+    "id": "UserElevatedInsiderRisk",
+    "group": "Standard users",
+    "persona": "user",
+    "title": "Standard user · elevated insider risk",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "insiderRiskLevel": "elevated" },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "No insider-risk policy", "fix": { "caTemplate": "Limit access for elevated insider risk" } }
+  },
+  {
+    "id": "UserAndroidUnmanaged",
+    "group": "Standard users",
+    "persona": "user",
+    "title": "Standard user · unmanaged Android device",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "android", "deviceInfo": { "isCompliant": false } },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "mfa",
+    "missingControl": { "text": "No app protection or compliant-device requirement on mobile", "fix": { "caTemplate": "Require an approved client app or app protection policy on mobile" } }
+  },
+  {
+    "id": "UserIosUnmanaged",
+    "group": "Standard users",
+    "persona": "user",
+    "title": "Standard user · unmanaged iOS device",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "iOS", "deviceInfo": { "isCompliant": false } },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "mfa",
+    "missingControl": { "text": "No app protection or compliant-device requirement on mobile", "fix": { "caTemplate": "Require an approved client app or app protection policy on mobile" } }
+  },
+  {
+    "id": "UserDesktopClientUnmanaged",
+    "group": "Standard users",
+    "persona": "user",
+    "title": "Standard user · desktop client · unmanaged device",
+    "conditions": { "clientAppType": "mobileAppsAndDesktopClients", "devicePlatform": "windows", "deviceInfo": { "isCompliant": false } },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "mfa",
+    "missingControl": { "text": "No compliant-device requirement for standard users", "fix": { "caTemplate": "Require a compliant or Microsoft Entra hybrid joined device" } }
+  },
+  {
+    "id": "GuestBrowserAccess",
+    "group": "Guests",
+    "persona": "guest",
+    "title": "Guest · browser access · known location",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows" },
+    "attackerCanSatisfy": [],
+    "expected": "mfa",
+    "missingControl": { "text": "Guest access does not require MFA", "fix": { "caTemplate": "Require multifactor authentication for guest access" } }
+  },
+  {
+    "id": "GuestForeignCountry",
+    "group": "Guests",
+    "persona": "guest",
+    "title": "Guest · sign-in from a foreign country",
+    "countryFromSelection": true,
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "country": "RU", "ipAddress": "45.132.1.20" },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "No location policy for guests", "fix": { "caTemplate": "Block sign-ins from countries outside the allowed list" } }
+  },
+  {
+    "id": "GuestLegacyAuth",
+    "group": "Guests",
+    "persona": "guest",
+    "title": "Guest · legacy authentication client",
+    "conditions": { "clientAppType": "other", "devicePlatform": "windows" },
+    "attackerCanSatisfy": [],
+    "expected": "blocked",
+    "missingControl": { "text": "Legacy authentication is not blocked", "fix": { "caTemplate": "Block legacy authentication" } }
+  },
+  {
+    "id": "GuestUnmanagedDevice",
+    "group": "Guests",
+    "persona": "guest",
+    "title": "Guest · unmanaged device · browser",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "deviceInfo": { "isCompliant": false } },
+    "attackerCanSatisfy": [],
+    "expected": "mfa",
+    "missingControl": { "text": "Guest access does not require MFA or a compliant device", "fix": { "caTemplate": "Require multifactor authentication for guest access" } }
+  },
+  {
+    "id": "GuestDeviceCode",
+    "group": "Guests",
+    "persona": "guest",
+    "title": "Guest · device-code flow",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "authenticationFlow": { "transferMethod": "deviceCodeFlow" } },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "Device code flow is not blocked", "fix": { "caTemplate": "Block device code flow sign-ins" } }
+  },
+  {
+    "id": "GuestHighSignInRisk",
+    "group": "Guests",
+    "persona": "guest",
+    "title": "Guest · high sign-in risk",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "signInRiskLevel": "high" },
+    "attackerCanSatisfy": [],
+    "expected": "blocked",
+    "missingControl": { "text": "No sign-in risk policy for guests", "fix": { "caTemplate": "Require multifactor authentication for medium and high sign-in risk" } }
+  },
+  {
+    "id": "GuestAuthTransfer",
+    "group": "Guests",
+    "persona": "guest",
+    "title": "Guest · authentication transfer",
+    "conditions": { "clientAppType": "browser", "devicePlatform": "windows", "authenticationFlow": { "transferMethod": "authenticationTransfer" } },
+    "attackerCanSatisfy": ["mfa"],
+    "expected": "blocked",
+    "missingControl": { "text": "Authentication transfer is not blocked", "fix": { "caTemplate": "Block authentication transfer" } }
+  }
+]

@@ -49,7 +49,7 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
 
     try {
 
-        $RoleAssignments = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?$expand=principal' -tenantid $Tenant
+        $RoleAssignments = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?$select=id,principalId,roleDefinitionId,directoryScopeId&$expand=principal($select=id,userPrincipalName)' -tenantid $Tenant
         $DirectAdminUPNs = ($RoleAssignments | Where-Object { $_.principal.'@odata.type' -eq '#microsoft.graph.user' }).principal.userPrincipalName
         $AdminGroupIds = ($RoleAssignments | Where-Object { $_.principal.'@odata.type' -eq '#microsoft.graph.group' }).principal.id | Select-Object -Unique
 
@@ -80,23 +80,37 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Started disabling Exchange Online PowerShell for $PowerShellEnabledCount users." -sev Info
 
             $Request = foreach ($User in $UsersWithPowerShell) {
+                # New-ExoBulkRequest only emits a success record when an OperationGuid was given,
+                # and Set-User returns no body - so without one, a fully successful run reported
+                # "0 out of N". The UPN doubles as the correlation id.
+                $Identity = if ($User.Guid) { $User.Guid } else { $User.UPN }
                 @{
-                    CmdletInput = @{
+                    OperationGuid = $User.UPN
+                    CmdletInput   = @{
                         CmdletName = 'Set-User'
-                        Parameters = @{Identity = $User.Guid ?? $User.UPN; RemotePowerShellEnabled = $false }
+                        Parameters = @{Identity = $Identity; RemotePowerShellEnabled = $false }
                     }
                 }
             }
 
-            $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
+            $BatchResults = @(New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request))
             $SuccessCount = 0
             foreach ($Result in $BatchResults) {
                 if ($Result.error) {
                     $ErrorMessage = Get-NormalizedError -Message $Result.error
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Exchange Online PowerShell for $($Result.target). Error: $ErrorMessage" -sev Error
+                    # Prefer our own correlation id: it is the UPN, whereas Exchange's target
+                    # echoes back the Identity we sent, which is usually an opaque GUID.
+                    $Target = if ($Result.OperationGuid) { $Result.OperationGuid } else { $Result.target }
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Exchange Online PowerShell for $Target. Error: $ErrorMessage" -sev Error
                 } else {
                     $SuccessCount++
                 }
+            }
+
+            # A short batch means users were neither confirmed nor reported as failed. Say so
+            # rather than letting them disappear into the summary count.
+            if ($BatchResults.Count -lt $PowerShellEnabledCount) {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Exchange returned $($BatchResults.Count) results for $PowerShellEnabledCount requested users. $($PowerShellEnabledCount - $BatchResults.Count) user(s) were neither confirmed nor reported as failed." -sev Warning
             }
 
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully disabled Exchange Online PowerShell for $SuccessCount out of $PowerShellEnabledCount users." -sev Info
@@ -123,6 +137,5 @@ function Invoke-CIPPStandardDisableExchangeOnlinePowerShell {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableExchangeOnlinePowerShell' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'ExchangeOnlinePowerShellDisabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

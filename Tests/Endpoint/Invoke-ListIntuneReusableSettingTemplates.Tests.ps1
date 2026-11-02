@@ -3,7 +3,10 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Entrypoints/HTTP Functions/Endpoint/MEM/Invoke-ListIntuneReusableSettingTemplates.ps1'
+    # Resolve by name under Modules/ so the test survives the function moving between modules.
+    $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-ListIntuneReusableSettingTemplates.ps1' -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $FunctionPath) { throw 'Could not locate Invoke-ListIntuneReusableSettingTemplates.ps1 under Modules/' }
 
     class HttpResponseContext {
         [int]$StatusCode

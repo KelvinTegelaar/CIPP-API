@@ -13,28 +13,28 @@ function Invoke-CippTestZTNA24560 {
             return
         }
 
-        $WindowsPolicies = $ConfigPolicies | Where-Object {
+        $WindowsPolicies = $ConfigPolicies.Where({
             $_.templateReference.templateFamily -eq 'endpointSecurityAccountProtection' -and
             $_.platforms -like '*windows10*'
-        }
+        })
 
         if (-not $WindowsPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24560' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Windows LAPS policies found' -Risk 'High' -Name 'Local administrator credentials on Windows are protected by Windows LAPS' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 
-        $LapsPolicies = $WindowsPolicies | Where-Object {
+        $LapsPolicies = $WindowsPolicies.Where({
             $settingIds = $_.settings.settingInstance.settingDefinitionId
             $settingIds -contains 'device_vendor_msft_laps_policies_backupdirectory' -or
             $settingIds -contains 'device_vendor_msft_laps_policies_automaticaccountmanagementenabled'
-        }
+        })
 
         if (-not $LapsPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24560' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No LAPS policies configured' -Risk 'High' -Name 'Local administrator credentials on Windows are protected by Windows LAPS' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 
-        $CompliantPolicies = $LapsPolicies | Where-Object {
+        $CompliantPolicies = $LapsPolicies.Where({
             $settingIds = $_.settings.settingInstance.settingDefinitionId
             $choiceValues = $_.settings.settingInstance.choiceSettingValue.value
 
@@ -44,11 +44,11 @@ function Invoke-CippTestZTNA24560 {
             $hasAutoMgmt = $choiceValues -contains 'device_vendor_msft_laps_policies_automaticaccountmanagementenabled_true'
 
             ($hasBackupDir -and ($hasEntraBackup -or $hasAdBackup) -and $hasAutoMgmt)
-        }
+        })
 
-        $AssignedCompliantPolicies = $CompliantPolicies | Where-Object {
+        $AssignedCompliantPolicies = $CompliantPolicies.Where({
             $_.assignments -and $_.assignments.Count -gt 0
-        }
+        })
 
         if ($AssignedCompliantPolicies) {
             $Status = 'Passed'

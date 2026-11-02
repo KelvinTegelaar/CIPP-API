@@ -103,8 +103,6 @@ function Invoke-CIPPStandardDelegateSentItems {
     }
 
     if ($Settings.report -eq $true) {
-        $Filtered = $Mailboxes | Select-Object -Property UPN, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled
         Set-CIPPStandardsCompareField -FieldName 'standards.DelegateSentItems' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DelegateSentItems' -FieldValue $Filtered -StoreAs json -Tenant $Tenant
     }
 }

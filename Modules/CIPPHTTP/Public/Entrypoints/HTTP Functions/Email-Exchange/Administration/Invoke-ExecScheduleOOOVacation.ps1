@@ -86,6 +86,7 @@ function Invoke-ExecScheduleOOOVacation {
         }) -hidden $false
 
         $Result     = "Successfully scheduled OOO vacation mode for $UserDisplay."
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

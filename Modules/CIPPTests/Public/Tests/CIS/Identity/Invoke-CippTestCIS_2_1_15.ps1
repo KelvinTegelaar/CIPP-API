@@ -13,8 +13,8 @@ function Invoke-CippTestCIS_2_1_15 {
             return
         }
 
-        $Default = $Outbound | Where-Object { $_.IsDefault -eq $true } | Select-Object -First 1
-        if (-not $Default) { $Default = $Outbound | Select-Object -First 1 }
+        $Default = $Outbound.Where({ $_.IsDefault -eq $true }, 'First')[0]
+        if (-not $Default) { $Default = @($Outbound)[0] }
 
         $External = [int]$Default.RecipientLimitExternalPerHour
         $Internal = [int]$Default.RecipientLimitInternalPerHour

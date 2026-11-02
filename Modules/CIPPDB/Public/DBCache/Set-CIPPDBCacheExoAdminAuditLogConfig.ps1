@@ -26,6 +26,11 @@ function Set-CIPPDBCacheExoAdminAuditLogConfig {
             $AuditConfigArray = @($AuditConfig)
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAdminAuditLogConfig' -Data $AuditConfigArray -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Exchange Admin Audit Log configuration' -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAdminAuditLogConfig' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Admin Audit Log configurations (none found)' -sev Debug
         }
         $AuditConfig = $null
 

@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_8_2_4 {
             return
         }
 
-        $Cfg = $Federation | Select-Object -First 1
+        $Cfg = @($Federation)[0]
 
         if ($Cfg.AllowTeamsConsumer -eq $false) {
             $Status = 'Passed'

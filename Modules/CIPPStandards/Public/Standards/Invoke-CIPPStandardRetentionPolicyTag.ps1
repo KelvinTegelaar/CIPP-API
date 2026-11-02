@@ -59,7 +59,7 @@ function Invoke-CIPPStandardRetentionPolicyTag {
     }
 
     $CurrentAgeLimitForRetention = if ($CurrentState.AgeLimitForRetention) {
-        ([timespan]$CurrentState.AgeLimitForRetention).TotalDays
+        [int]([timespan]$CurrentState.AgeLimitForRetention).TotalDays
     }
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
@@ -130,7 +130,6 @@ function Invoke-CIPPStandardRetentionPolicyTag {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'RetentionPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
 
         $CurrentValue = @{
             retentionEnabled     = $CurrentState.RetentionEnabled

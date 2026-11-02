@@ -1,0 +1,183 @@
+{
+  "UserStats": {
+    "licensedUsers": 128,
+    "unlicensedUsers": 12,
+    "guests": 9,
+    "globalAdmins": 3,
+    "permanentGlobalAdmins": 2,
+    "eligibleGlobalAdmins": 1,
+    "pimCapable": true
+  },
+  "SecureScore": {
+    "currentScore": 61,
+    "maxScore": 100,
+    "percentageCurrent": 61,
+    "percentageVsSimilar": 54,
+    "percentageVsAllTenants": 49,
+    "trend": [
+      {
+        "label": "Jul 29",
+        "value": 50
+      },
+      {
+        "label": "Jul 30",
+        "value": 52
+      },
+      {
+        "label": "Jul 31",
+        "value": 55
+      },
+      {
+        "label": "Aug 1",
+        "value": 57
+      },
+      {
+        "label": "Aug 2",
+        "value": 58
+      },
+      {
+        "label": "Aug 3",
+        "value": 60
+      },
+      {
+        "label": "Aug 4",
+        "value": 61
+      }
+    ]
+  },
+  "Licenses": [
+    {
+      "name": "Microsoft 365 E3",
+      "used": "88",
+      "available": "12",
+      "total": "100"
+    },
+    {
+      "name": "Exchange Online (Plan 1)",
+      "used": "27",
+      "available": "3",
+      "total": "30"
+    },
+    {
+      "name": "Microsoft Defender for Office 365",
+      "used": "64",
+      "available": "36",
+      "total": "100"
+    }
+  ],
+  "Devices": [
+    {
+      "name": "SAMPLE-LT-001",
+      "os": "Windows",
+      "compliance": "compliant",
+      "compliant": true,
+      "lastSync": "Aug 5, 2026",
+      "encrypted": true
+    },
+    {
+      "name": "SAMPLE-LT-002",
+      "os": "Windows",
+      "compliance": "noncompliant",
+      "compliant": false,
+      "lastSync": "Jul 28, 2026",
+      "encrypted": false
+    },
+    {
+      "name": "SAMPLE-MB-003",
+      "os": "iOS",
+      "compliance": "compliant",
+      "compliant": true,
+      "lastSync": "Aug 5, 2026",
+      "encrypted": true
+    },
+    {
+      "name": "SAMPLE-MB-004",
+      "os": "Android",
+      "compliance": "compliant",
+      "compliant": true,
+      "lastSync": "Aug 4, 2026",
+      "encrypted": true
+    },
+    {
+      "name": "CPC-SAMPLE-005",
+      "os": "Windows",
+      "compliance": "compliant",
+      "compliant": true,
+      "lastSync": "Aug 5, 2026",
+      "encrypted": true
+    }
+  ],
+  "CAPolicies": [
+    {
+      "name": "Require MFA for all users",
+      "state": "enabled",
+      "controls": [
+        "mfa"
+      ],
+      "controlsText": "MFA",
+      "applications": "All"
+    },
+    {
+      "name": "Block legacy authentication",
+      "state": "enabled",
+      "controls": [
+        "block"
+      ],
+      "controlsText": "Block",
+      "applications": "All"
+    },
+    {
+      "name": "Require compliant device for Exchange",
+      "state": "enabledForReportingButNotEnforced",
+      "controls": [
+        "compliantDevice"
+      ],
+      "controlsText": "Compliant Device",
+      "applications": "Exchange Online"
+    }
+  ],
+  "SecurityControls": [
+    {
+      "name": "Anti-Phishing Policy",
+      "description": "Protects users from impersonation and spoofing attempts in email.",
+      "tags": "Exchange, Defender",
+      "status": "Compliant"
+    },
+    {
+      "name": "Safe Links Policy",
+      "description": "Rewrites and scans links in mail and Office documents at click time.",
+      "tags": "Exchange, Defender",
+      "status": "Compliant"
+    },
+    {
+      "name": "Unified Audit Log",
+      "description": "Records tenant activity so incidents can be investigated after the fact.",
+      "tags": "Compliance",
+      "status": "Compliant"
+    },
+    {
+      "name": "Guest Access Restrictions",
+      "description": "Limits what guest accounts can see and do in the directory.",
+      "tags": "Identity",
+      "status": "Review"
+    },
+    {
+      "name": "Password Expiry Disabled",
+      "description": "Removes forced rotation in favour of strong, unique passwords.",
+      "tags": "Identity",
+      "status": "Compliant"
+    },
+    {
+      "name": "Disable Basic Authentication",
+      "description": "Blocks legacy protocols that cannot enforce multi-factor authentication.",
+      "tags": "Exchange, Identity",
+      "status": "Review"
+    },
+    {
+      "name": "Windows Device Compliance",
+      "description": "Intune compliance policy requiring encryption, updates and a supported OS.",
+      "tags": "Intune",
+      "status": "Compliant"
+    }
+  ]
+}

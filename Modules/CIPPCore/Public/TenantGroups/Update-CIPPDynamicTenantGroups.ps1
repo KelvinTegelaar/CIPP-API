@@ -43,6 +43,8 @@ function Update-CIPPDynamicTenantGroups {
         $TotalMembersAdded = 0
         $TotalMembersRemoved = 0
         $GroupsProcessed = 0
+        $GdapAgeByCustomer = $null
+        $GdapFetchAttempted = $false
 
         # Pre-load tenant group memberships for tenantGroupMember rules
         # This creates a cache to avoid repeated table queries during rule evaluation
@@ -69,7 +71,36 @@ function Update-CIPPDynamicTenantGroups {
                 $RequiresLicense = $Rules.property -contains 'availableLicense'
                 $RequiresCustomVariables = $Rules.property -contains 'customVariable'
                 $RequiresServicePlans = $Rules.property -contains 'availableServicePlan'
+                $RequiresGdapAge = $Rules.property -contains 'gdapRelationshipAge'
                 Write-Information "Processing $($Rules.Count) rules for group '$($Group.Name)'"
+
+                if ($RequiresGdapAge) {
+                    if (-not $GdapFetchAttempted) {
+                        $GdapFetchAttempted = $true
+                        try {
+                            $Relationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$top=300" -tenantid $env:TenantID -NoAuthCheck $true -ComplexFilter
+                            $Now = (Get-Date).ToUniversalTime()
+                            $AgeMap = @{}
+                            foreach ($Relationship in $Relationships) {
+                                $RelCustomerId = [string]$Relationship.customer.tenantId
+                                if ([string]::IsNullOrEmpty($RelCustomerId) -or -not $Relationship.activatedDateTime) { continue }
+                                if ($Relationship.status -in @('terminated', 'expired')) { continue }
+                                $AgeDays = [int][math]::Floor(($Now - ([datetime]$Relationship.activatedDateTime).ToUniversalTime()).TotalDays)
+                                # Oldest active relationship wins - relationship age should not reset
+                                # when an additional/replacement relationship is accepted later.
+                                if (-not $AgeMap.ContainsKey($RelCustomerId) -or $AgeMap[$RelCustomerId] -lt $AgeDays) {
+                                    $AgeMap[$RelCustomerId] = $AgeDays
+                                }
+                            }
+                            $GdapAgeByCustomer = $AgeMap
+                        } catch {
+                            Write-LogMessage -API 'TenantGroups' -message "Failed to get GDAP relationships for dynamic group evaluation: $((Get-NormalizedError -Message $_.Exception.Message))" -sev Error
+                        }
+                    }
+                    if ($null -eq $GdapAgeByCustomer) {
+                        throw 'Could not retrieve GDAP relationships, skipping this group so existing membership is preserved.'
+                    }
+                }
 
                 $TenantObj = foreach ($Tenant in $AllTenants) {
                     $LicenseInfo = $null
@@ -126,6 +157,7 @@ function Update-CIPPDynamicTenantGroups {
                         servicePlans             = $ServicePlans
                         delegatedPrivilegeStatus = $Tenant.delegatedPrivilegeStatus
                         customVariables          = $TenantVariables
+                        gdapRelationshipAgeDays  = if ($GdapAgeByCustomer -and $GdapAgeByCustomer.ContainsKey([string]$Tenant.customerId)) { $GdapAgeByCustomer[[string]$Tenant.customerId] } else { $null }
                     }
                 }
                 # Evaluate rules safely using Test-CIPPDynamicGroupFilter with AND/OR logic
@@ -188,7 +220,7 @@ function Update-CIPPDynamicTenantGroups {
                     $TenantInfo = $AllTenants | Where-Object { $_.customerId -eq $TenantId }
                     $MemberToRemove = $CurrentMembers | Where-Object { $_.customerId -eq $TenantId }
                     if ($MemberToRemove) {
-                        Remove-AzDataTableEntity @MembersTable -Entity $MemberToRemove -Force
+                        Remove-CIPPAzDataTableEntity @MembersTable -Entity $MemberToRemove -Force
                         Write-LogMessage -API 'TenantGroups' -message "Removed tenant '$($TenantInfo.displayName)' from dynamic group '$($Group.Name)'" -sev Info
                         $TotalMembersRemoved++
                     }
@@ -207,6 +239,12 @@ function Update-CIPPDynamicTenantGroups {
 
         # Bust the TenantGroups cache so subsequent calls reflect the changes made above
         Get-TenantGroups -SkipCache | Out-Null
+
+        # Roles scoped to a tenant group resolve through this membership, so the cached access
+        # scope rules are stale too. Only worth the write when membership actually moved.
+        if ($TotalMembersAdded -gt 0 -or $TotalMembersRemoved -gt 0) {
+            Clear-CippAccessScopeCache
+        }
 
         return @{
             MembersAdded    = $TotalMembersAdded

@@ -39,7 +39,7 @@ function Invoke-CippTestCISAMSEXO95 {
 
             # Check if required types are blocked
             $BlockedTypes = $Policy.FileTypes
-            $MissingTypes = $RequiredBlockedTypes | Where-Object { $_ -notin $BlockedTypes }
+            $MissingTypes = $RequiredBlockedTypes.Where({ $_ -notin $BlockedTypes })
 
             if ($MissingTypes) {
                 $FailedPolicies.Add([PSCustomObject]@{

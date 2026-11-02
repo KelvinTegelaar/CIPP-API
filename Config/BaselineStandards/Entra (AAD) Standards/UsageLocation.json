@@ -1,0 +1,65 @@
+{
+  "name": "UsageLocation",
+  "label": "Usage location for all users",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Sets the Entra usage location (the two-letter country code that licensing and security tools such as Huntress ITDR depend on) on every member account. Optionally limit the sweep to members of named groups, skip members of named groups (users legitimately based in another country), or only fill in accounts that have no usage location yet.",
+  "executiveText": "Ensures every employee account records the country it is used from, which Microsoft requires before licences can be assigned and which security monitoring uses to recognise sign-ins from unexpected locations. Staff based in other countries are exempted through a group.",
+  "docsDescription": "Grades every member account against the configured usage location; guest accounts are ignored. Group names are resolved per tenant by display name and expanded to their transitive user members: include groups restrict the sweep to those members, exclude groups remove them from it. A configured group that does not exist in a tenant, or a failed membership lookup, reports No Data rather than sweeping the wrong accounts. With 'only set when blank' enabled, accounts that already carry any usage location are left as they are. Directory-synced accounts are included: usage location is cloud-managed and stays writable for them unless a custom sync rule maps it from on-premises.",
+  "impactColour": "warning",
+  "addedDate": "2026-09-16",
+  "powershellEquivalent": "Update-MgUser -UserId user@domain.com -UsageLocation 'US'",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "usageLocation": {
+      "type": "CountryCodeSelect",
+      "label": "Usage location",
+      "required": true
+    },
+    "includeGroups": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "omitWhenBlank": true,
+      "label": "Only apply to members of these groups (display names; blank = all member accounts)"
+    },
+    "excludeGroups": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "omitWhenBlank": true,
+      "label": "Skip members of these groups (display names; users legitimately located elsewhere)"
+    },
+    "onlyWhenBlank": {
+      "type": "switch",
+      "label": "Only set accounts that have no usage location (never overwrite an existing value)",
+      "default": false
+    }
+  },
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Users"
+  },
+  "prepare": "Get-CIPPBaselineUsageLocationState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "refreshCache": [
+      "Users"
+    ],
+    "writes": [
+      {
+        "method": "PATCH",
+        "uri": "users/%id%",
+        "body": {
+          "usageLocation": "%usageLocation%"
+        }
+      }
+    ]
+  }
+}

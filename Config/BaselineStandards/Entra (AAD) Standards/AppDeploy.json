@@ -1,0 +1,74 @@
+{
+  "name": "AppDeploy",
+  "label": "Deploy Application",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Deploys an application to the tenant, from an App Approval template or by copying permissions from source applications. Add the standard once per application - each instance deploys and grades one app, like the other templated standards.",
+  "executiveText": "Automatically deploys approved business applications across every managed tenant, keeping access and permissions consistent.",
+  "docsDescription": "Multi-instance: each instance grades an empty missing-apps list against the ServicePrincipals cache for one application. Copy mode checks the configured app ids; template mode resolves the App Approval template to its type-specific identity (display name for manifests, gallery template id, or app id). Remediation deploys per template type, copying or consenting permissions as the classic did. Configurations saved before this standard became multi-instance (one instance selecting several templates) are split into one instance per template the next time the baseline is read, exactly as the editor would save them today.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Portal or Graph API",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "templateIds",
+  "identity": {
+    "partition": "AppApprovalTemplate",
+    "nameField": "TemplateName"
+  },
+  "variables": {
+    "mode": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "App Approval Mode",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "template",
+          "label": "Template"
+        },
+        {
+          "value": "copy",
+          "label": "Copy Permissions"
+        }
+      ]
+    },
+    "templateIds": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select Application (App Approval Template)",
+      "omitWhenBlank": true,
+      "api": {
+        "url": "/api/ListAppApprovalTemplates",
+        "labelField": "TemplateName",
+        "valueField": "TemplateId",
+        "queryKey": "StdAppApprovalTemplateList",
+        "templateView": { "title": "App Approval Template" }
+      }
+    },
+    "appids": {
+      "type": "textField",
+      "label": "Application IDs, comma separated (Copy Permissions mode)",
+      "omitWhenBlank": true
+    }
+  },
+  "read": {
+    "cacheType": "ServicePrincipals"
+  },
+  "prepare": "Get-CIPPBaselineAppDeployState",
+  "remediate": {
+    "executor": "AppDeploy",
+    "mode": "%mode%",
+    "templateIds": "%templateIds%",
+    "appids": "%appids%"
+  }
+}

@@ -5,7 +5,7 @@ function Invoke-ListScheduledItems {
     .ROLE
         CIPP.Scheduler.Read
     .DESCRIPTION
-        Lists scheduled tasks in CIPP, filterable by tenant or task ID. Returns task name, command, schedule, and last execution status.
+        Lists scheduled tasks in CIPP, filterable by tenant, task ID, task state, or reference. Returns task name, command, schedule, and last execution status.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -17,55 +17,107 @@ function Invoke-ListScheduledItems {
 
     if ($Id) {
         # Interact with query parameters.
-        $ScheduledItemFilter.Add("RowKey eq '$($Id)'")
+        $SafeId = ConvertTo-CIPPODataFilterValue -Value $Id -Type String
+        $ScheduledItemFilter.Add("RowKey eq '$SafeId'")
     } else {
         # Interact with query parameters or the body of the request.
-        $ShowHidden = $Request.Query.ShowHidden ?? $Request.Body.ShowHidden
+        # Include tasks CIPP hides from the normal task list (internal/system-scheduled work).
+        $ShowHidden = ($Request.Query.ShowHidden -eq $true) -or ($Request.Body.ShowHidden -eq $true)
         $Name = $Request.Query.Name ?? $Request.Body.Name
         $Type = $Request.Query.Type ?? $Request.Body.Type
         $SearchTitle = $Request.query.SearchTitle ?? $Request.body.SearchTitle
+        # Only tasks whose Reference contains this text, case-insensitive with no wildcards (e.g. '[ID:1528]').
+        $Reference = $Request.Query.Reference ?? $Request.Body.Reference
+        # Only tasks in these states, comma-separated (e.g. 'Planned' or 'Planned,Running').
+        $TaskState = $Request.Query.TaskState ?? $Request.Body.TaskState
 
-        if ($ShowHidden -eq $true) {
+        if ($ShowHidden) {
             $ScheduledItemFilter.Add("(Hidden eq true or Hidden eq 'True')")
         } else {
             $ScheduledItemFilter.Add("(Hidden eq false or Hidden eq 'False')")
         }
 
         if ($Name) {
-            $ScheduledItemFilter.Add("Name eq '$($Name)'")
+            $SafeName = ConvertTo-CIPPODataFilterValue -Value $Name -Type String
+            $ScheduledItemFilter.Add("Name eq '$SafeName'")
         }
 
+        if ($Type) {
+            $SafeType = ConvertTo-CIPPODataFilterValue -Value $Type -Type String
+            $ScheduledItemFilter.Add("Command eq '$SafeType'")
+        }
+
+        if ($TaskState) {
+            # Stored states are single title-case words (Planned, Running, Completed...) and storage
+            # compares case-sensitively, so normalise the casing rather than silently matching nothing.
+            $TextInfo = [System.Globalization.CultureInfo]::InvariantCulture.TextInfo
+            $StateClauses = foreach ($State in ($TaskState -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })) {
+                "TaskState eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $TextInfo.ToTitleCase($State.ToLowerInvariant()) -Type String)
+            }
+            if ($StateClauses) {
+                $ScheduledItemFilter.Add('({0})' -f ($StateClauses -join ' or '))
+            }
+        }
+    }
+
+    if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
+        # Tasks are stored against whichever tenant identifier the caller supplied - customerId,
+        # default domain, or the initial .onmicrosoft.com domain - so resolve the tenant up front
+        # and let storage match any of them. (Get-Tenants itself accepts all three as -TenantFilter.)
+        $TenantObject = Get-Tenants -TenantFilter $TenantFilter | Select-Object -First 1
+        $TenantIdentifiers = @($TenantObject.defaultDomainName, $TenantObject.initialDomainName, $TenantObject.customerId) | Where-Object { $_ } | Select-Object -Unique
+        if (-not $TenantIdentifiers) {
+            # Tenant could not be resolved (deleted, excluded, or not visible to the caller).
+            # Fall back to the raw value so we filter on something rather than on nothing.
+            $TenantIdentifiers = @($TenantFilter)
+        }
+        $TenantClauses = foreach ($TenantIdentifier in $TenantIdentifiers) {
+            "Tenant eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $TenantIdentifier -Type String)
+        }
+        $ScheduledItemFilter.Add('({0})' -f ($TenantClauses -join ' or '))
     }
 
     $Filter = $ScheduledItemFilter -join ' and '
 
     Write-Host "Filter: $Filter"
     $Table = Get-CIPPTable -TableName 'ScheduledTasks'
-    if ($ShowHidden -eq $true) {
-        $HiddenTasks = $false
-    } else {
-        $HiddenTasks = $true
-    }
     $Tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     Write-Information "Retrieved $($Tasks.Count) scheduled tasks from storage."
-    if ($Type) {
-        $Tasks = $Tasks | Where-Object { $_.command -eq $Type }
-    }
 
-    if ($TenantFilter) {
-        $Tasks = $Tasks | Where-Object { $_.tenant -eq $TenantFilter -or $TenantFilter -eq 'AllTenants' }
-    }
-
+    # Kept client-side: Azure Table Storage has no contains/startswith, and SearchTitle is used with
+    # both leading and trailing wildcards (e.g. '*Vacation*').
     if ($SearchTitle) {
         $Tasks = $Tasks | Where-Object { $_.Name -like $SearchTitle }
     }
 
+    # Also client-side for the same reason. A plain substring match rather than -like, because
+    # references are typically ticket IDs in square brackets, which -like treats as a character set.
+    if ($Reference) {
+        $Tasks = $Tasks | Where-Object { $_.Reference -and ([string]$_.Reference).Contains([string]$Reference, [System.StringComparison]::OrdinalIgnoreCase) }
+    }
+
     $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
 
+    $TenantLookup = @{}
+    foreach ($Tenant in (Get-Tenants -IncludeErrors | Select-Object customerId, defaultDomainName, initialDomainName)) {
+        if ($Tenant.customerId) {
+            $TenantLookup[[string]$Tenant.customerId] = $Tenant
+        }
+    }
+
     if ($AllowedTenants -notcontains 'AllTenants') {
-        $TenantList = Get-Tenants -IncludeErrors | Select-Object customerId, defaultDomainName
-        $AllowedTenantDomains = $TenantList | Where-Object -Property customerId -In $AllowedTenants | Select-Object -ExpandProperty defaultDomainName
-        $Tasks = $Tasks | Where-Object -Property Tenant -In $AllowedTenantDomains
+        $AllowedTenantIdentifiers = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($AllowedTenant in $AllowedTenants) {
+            $null = $AllowedTenantIdentifiers.Add([string]$AllowedTenant)
+            if ($TenantLookup.ContainsKey([string]$AllowedTenant)) {
+                # A task keyed on any of the tenant's identifiers must pass the access check, not just
+                # the default domain - otherwise a scoped user cannot see their own initial-domain tasks.
+                foreach ($Domain in @($TenantLookup[[string]$AllowedTenant].defaultDomainName, $TenantLookup[[string]$AllowedTenant].initialDomainName)) {
+                    if ($Domain) { $null = $AllowedTenantIdentifiers.Add([string]$Domain) }
+                }
+            }
+        }
+        $Tasks = $Tasks | Where-Object { $AllowedTenantIdentifiers.Contains([string]$_.Tenant) }
     }
 
     Write-Information "Found $($Tasks.Count) scheduled tasks after filtering and access check."
@@ -120,9 +172,13 @@ function Invoke-ListScheduledItems {
             if (!$Task.Tenant) {
                 $Task | Add-Member -NotePropertyName Tenant -NotePropertyValue 'None' -Force
             } else {
+                $TenantValue = [string]$Task.Tenant
+                if ($TenantLookup.ContainsKey($TenantValue)) {
+                    $TenantValue = $TenantLookup[$TenantValue].defaultDomainName
+                }
                 $Task.Tenant = [PSCustomObject]@{
-                    label = $Task.Tenant
-                    value = $Task.Tenant
+                    label = $TenantValue
+                    value = $TenantValue
                     type  = 'Tenant'
                 }
             }

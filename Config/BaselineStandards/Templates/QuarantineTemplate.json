@@ -1,0 +1,97 @@
+{
+  "name": "QuarantineTemplate",
+  "label": "Quarantine Policy",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Deploy a custom quarantine policy. Each instance defines one policy by name with its end-user notification and permission settings.",
+  "executiveText": "Deploys standardized quarantine policies that control what users can do with quarantined messages - preview, release, request release - and whether they are notified. Consistent policies keep the quarantine experience uniform across tenants.",
+  "docsDescription": "Deploy a custom quarantine policy. Unlike the other template standards this one has no stored template - the instance's settings ARE the policy definition, keyed on its display name. The standard grades the policy's notification setting and each end-user permission individually and remediation creates or updates the policy to match.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-QuarantinePolicy or Set-QuarantinePolicy",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "displayName",
+  "variables": {
+    "displayName": {
+      "type": "autoComplete",
+      "creatable": true,
+      "label": "Quarantine Display Name",
+      "required": true
+    },
+    "ESNEnabled": {
+      "type": "switch",
+      "label": "Enable end-user spam notifications",
+      "default": true
+    },
+    "ReleaseAction": {
+      "type": "select",
+      "label": "Select release action preference",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Allow recipients to request a message to be released from quarantine",
+          "value": "PermissionToRequestRelease"
+        },
+        {
+          "label": "Allow recipients to release a message from quarantine",
+          "value": "PermissionToRelease"
+        }
+      ]
+    },
+    "IncludeMessagesFromBlockedSenderAddress": {
+      "type": "switch",
+      "label": "Include Messages From Blocked Sender Address",
+      "default": false
+    },
+    "PermissionToDelete": {
+      "type": "switch",
+      "label": "Allow recipients to delete message",
+      "default": false
+    },
+    "PermissionToPreview": {
+      "type": "switch",
+      "label": "Allow recipients to preview message",
+      "default": false
+    },
+    "PermissionToBlockSender": {
+      "type": "switch",
+      "label": "Allow recipients to block Sender Address",
+      "default": false
+    },
+    "PermissionToAllowSender": {
+      "type": "switch",
+      "label": "Allow recipients to whitelist Sender Address",
+      "default": false
+    }
+  },
+  "read": {
+    "cacheType": "ExoQuarantinePolicy"
+  },
+  "prepare": "Get-CIPPBaselineQuarantineTemplateState",
+  "remediate": {
+    "executor": "QuarantineTemplate",
+    "esnEnabled": "%ESNEnabled%",
+    "releaseAction": "%ReleaseAction%",
+    "includeMessagesFromBlockedSenderAddress": "%IncludeMessagesFromBlockedSenderAddress%",
+    "permissionToDelete": "%PermissionToDelete%",
+    "permissionToPreview": "%PermissionToPreview%",
+    "permissionToBlockSender": "%PermissionToBlockSender%",
+    "permissionToAllowSender": "%PermissionToAllowSender%"
+  }
+}

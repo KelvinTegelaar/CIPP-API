@@ -1,0 +1,52 @@
+{
+  "name": "DisableAgentBlueprintCreation",
+  "label": "Disable agent identity blueprint creation by users",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Disables the ability for users to register agent identity blueprints in the tenant. This is a separate setting from 'Users can register applications'; disabling app registrations does not stop users from creating agent identity blueprints.",
+  "executiveText": "Prevents regular employees from creating AI agent identity blueprints, which are the templates that agent identities are issued from. Restricting this to designated roles keeps agent identities and their credentials under IT governance and avoids a sprawl of unmanaged agent registrations.",
+  "docsDescription": "Sets the Entra default user role permission 'Users can register agent identity blueprints' (defaultUserRolePermissions.allowedToCreateAgentIdentityBlueprints on the Graph beta authorization policy) to No. Microsoft enables this for all users by default, and the creator of a blueprint becomes its owner and can manage its credentials. This setting is independent of 'Users can register applications', so apply both standards to keep application and agent identity creation limited to the Agent ID Developer and Agent ID Administrator roles.",
+  "impactColour": "info",
+  "addedDate": "2026-10-15",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthorizationPolicy -DefaultUserRolePermissions @{ allowedToCreateAgentIdentityBlueprints = $false }",
+  "appliesToTest": [],
+  "recommendedBy": ["CIPP"],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "allowAgentBlueprintCreation": {
+      "type": "switch",
+      "label": "Allow users to register agent identity blueprints",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "allowedToCreateAgentIdentityBlueprints": "%allowAgentBlueprintCreation%"
+  },
+  "read": {
+    "cacheType": "AuthorizationPolicy",
+    "object": "defaultUserRolePermissions"
+  },
+  "writeTarget": "authorizationPolicy",
+  "writeTargetProperties": {
+    "defaultUserRolePermissions.allowedToCreateAgentIdentityBlueprints": "%allowAgentBlueprintCreation%"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "asApp": false,
+        "uri": "policies/authorizationPolicy/authorizationPolicy",
+        "body": {
+          "defaultUserRolePermissions": {
+            "allowedToCreateAgentIdentityBlueprints": "%allowAgentBlueprintCreation%"
+          }
+        }
+      }
+    ]
+  }
+}

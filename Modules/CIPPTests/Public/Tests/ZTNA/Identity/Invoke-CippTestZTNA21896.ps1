@@ -13,12 +13,12 @@ function Invoke-CippTestZTNA21896 {
         }
 
         $MicrosoftOwnerId = 'f8cdef31-a31e-4b4a-93e4-5f571e91255a'
-        $SPsWithPassCreds = $ServicePrincipals | Where-Object {
+        $SPsWithPassCreds = $ServicePrincipals.Where({
             $_.passwordCredentials -and $_.passwordCredentials.Count -gt 0 -and $_.appOwnerOrganizationId -ne $MicrosoftOwnerId
-        }
-        $SPsWithKeyCreds = $ServicePrincipals | Where-Object {
+        })
+        $SPsWithKeyCreds = $ServicePrincipals.Where({
             $_.keyCredentials -and $_.keyCredentials.Count -gt 0 -and $_.appOwnerOrganizationId -ne $MicrosoftOwnerId
-        }
+        })
 
         if (-not $SPsWithPassCreds -and -not $SPsWithKeyCreds) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21896' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'Service principals do not have credentials associated with them' -Risk 'Medium' -Name 'Service principals do not have certificates or credentials associated with them' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'

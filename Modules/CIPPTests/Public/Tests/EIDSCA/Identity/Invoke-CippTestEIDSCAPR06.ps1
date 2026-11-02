@@ -13,7 +13,7 @@ function Invoke-CippTestEIDSCAPR06 {
             return
         }
 
-        $SettingValue = ($Settings.values | Where-Object { $_.name -eq 'LockoutThreshold' }).value
+        $SettingValue = $Settings.values.Where({ $_.name -eq 'LockoutThreshold' }).value
 
         if ([int]$SettingValue -le 10) {
             $Status = 'Passed'

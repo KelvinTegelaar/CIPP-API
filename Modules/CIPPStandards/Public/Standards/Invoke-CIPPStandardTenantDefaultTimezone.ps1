@@ -86,7 +86,6 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'TenantDefaultTimezone' -FieldValue $CurrentState.tenantDefaultTimezone -StoreAs string -Tenant $Tenant
         $CurrentValue = @{
             tenantDefaultTimezone = $CurrentState.tenantDefaultTimezone
         }

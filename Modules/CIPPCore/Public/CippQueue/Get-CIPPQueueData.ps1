@@ -3,10 +3,19 @@ function Get-CIPPQueueData {
 
     $QueueId = $Request.Query.QueueId ?? $QueueId
     $Reference = $Request.Query.Reference ?? $Reference
+    # Whoever may read a queue may follow it live; without a request caller this does nothing.
+    if ($QueueId) { Add-CIPPRealtimeWatch -JobId $QueueId -Run }
 
     if ($env:CIPPNG -eq 'true') {
-        $json = [Craft.Services.QueueStatusBridge]::GetRunStatus($Reference, $QueueId)
-        return ($json | ConvertFrom-Json)
+        # Craft rolls a queue's chained and child runs (same QueueId suffix) up into one status, so a tracker
+        # keeps going while any of them is still active.
+        $Lookup = if ($QueueId) { $QueueId } else { $Reference }
+        $Runs = if ($Lookup) {
+            [Craft.Services.QueueStatusBridge]::GetRun($Lookup) | ConvertFrom-Json
+        } else {
+            [Craft.Services.QueueStatusBridge]::GetRuns($null) | ConvertFrom-Json
+        }
+        return @(foreach ($Run in $Runs) { if ($Run) { ConvertFrom-CIPPCraftRunStatus -Run $Run } })
     }
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'

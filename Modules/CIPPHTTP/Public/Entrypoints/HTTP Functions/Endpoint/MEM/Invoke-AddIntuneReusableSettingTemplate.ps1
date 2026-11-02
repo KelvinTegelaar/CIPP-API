@@ -75,12 +75,12 @@ function Invoke-AddIntuneReusableSettingTemplate {
             RawJSON      = "$sanitizedJson" # ensure string serialization for table storage
         }
 
-        Write-LogMessage -headers $Headers -API $APINAME -message "Created Intune reusable setting template named $displayName with GUID $GUID" -Sev 'Debug'
+        Write-LogMessage -headers $Headers -API $APINAME -tenant 'Global' -message "Created Intune reusable setting template named $displayName with GUID $GUID" -Sev 'Info'
         $body = [pscustomobject]@{ Results = 'Successfully added reusable setting template' }
         $StatusCode = [System.Net.HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APINAME -message "Reusable Settings Template creation failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APINAME -tenant 'Global' -message "Reusable Settings Template creation failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $body = [pscustomobject]@{ Results = "Reusable Settings Template creation failed: $($ErrorMessage.NormalizedError)" }
         $StatusCode = [System.Net.HttpStatusCode]::InternalServerError
     }

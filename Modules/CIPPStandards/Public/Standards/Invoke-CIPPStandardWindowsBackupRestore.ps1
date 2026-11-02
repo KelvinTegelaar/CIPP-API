@@ -102,6 +102,5 @@ function Invoke-CIPPStandardWindowsBackupRestore {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.WindowsBackupRestore' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'WindowsBackupRestore' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

@@ -13,7 +13,7 @@ function Invoke-CippTestEIDSCAAF01 {
             return
         }
 
-        $Fido2Config = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Fido2' }
+        $Fido2Config = $AuthMethodsPolicy.authenticationMethodConfigurations.Where({ $_.id -eq 'Fido2' })
 
         if (-not $Fido2Config) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAF01' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'FIDO2 configuration not found in Authentication Methods Policy.' -Risk 'Low' -Name 'FIDO2 - State' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Authentication Methods'

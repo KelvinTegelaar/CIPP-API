@@ -12,8 +12,8 @@ function Invoke-RemoveTenantCapabilitiesCache {
     $Headers = $Request.Headers
 
 
-    # Get the tenant identifier from query parameters
-    $DefaultDomainName = $Request.Query.defaultDomainName
+    # Get the tenant identifier from the request body (POST) or query (legacy GET).
+    $DefaultDomainName = $Request.Body.defaultDomainName ?? $Request.Query.defaultDomainName
     if (-not $DefaultDomainName) {
         $body = [pscustomobject]@{'Results' = 'Missing required parameter: defaultDomainName' }
         $StatusCode = [HttpStatusCode]::BadRequest
@@ -25,6 +25,15 @@ function Invoke-RemoveTenantCapabilitiesCache {
     }
 
     try {
+        # AnyTenant: enforce tenant scope here; Get-Tenants is narrowed to the caller's allowed tenants
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        if ($AllowedTenants -notcontains 'AllTenants' -and -not (Get-Tenants -TenantFilter $DefaultDomainName)) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = [pscustomobject]@{'Results' = 'Access to this tenant is not allowed' }
+                })
+        }
+
         # Get the CacheCapabilities table
         $Table = Get-CippTable -tablename 'CacheCapabilities'
 
@@ -34,7 +43,7 @@ function Invoke-RemoveTenantCapabilitiesCache {
 
         if ($CacheEntry) {
             # Remove the cache entry
-            Remove-AzDataTableEntity -Force @Table -Entity $CacheEntry
+            Remove-CIPPAzDataTableEntity -Force @Table -Entity $CacheEntry
             Write-LogMessage -Headers $Headers -API $APIName -message "Removed capabilities cache for tenant $DefaultDomainName." -Sev 'Info'
             $body = [pscustomobject]@{'Results' = "Successfully removed capabilities cache for tenant $DefaultDomainName" }
             $StatusCode = [HttpStatusCode]::OK

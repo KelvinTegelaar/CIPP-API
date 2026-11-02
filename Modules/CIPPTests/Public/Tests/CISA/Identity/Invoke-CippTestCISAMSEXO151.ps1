@@ -23,7 +23,7 @@ function Invoke-CippTestCISAMSEXO151 {
             return
         }
 
-        $FailedPolicies = $SafeLinksPolicies | Where-Object { -not $_.EnableSafeLinksForEmail }
+        $FailedPolicies = $SafeLinksPolicies.Where({ -not $_.EnableSafeLinksForEmail })
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($SafeLinksPolicies.Count) Safe Links policy/policies have URL comparison with block-list enabled.")

@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_8_5_8 {
             return
         }
 
-        $Cfg = $MP | Select-Object -First 1
+        $Cfg = @($MP)[0]
 
         if ($Cfg.AllowExternalNonTrustedMeetingChat -eq $false) {
             $Status = 'Passed'

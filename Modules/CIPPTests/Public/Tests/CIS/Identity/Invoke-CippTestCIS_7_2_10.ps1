@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_7_2_10 {
             return
         }
 
-        $Cfg = $SPO | Select-Object -First 1
+        $Cfg = @($SPO)[0]
         $Required = $Cfg.EmailAttestationRequired
         $Days = [int]$Cfg.EmailAttestationReAuthDays
 

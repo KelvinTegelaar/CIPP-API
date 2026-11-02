@@ -84,6 +84,5 @@ function Invoke-CIPPStandardDisableTenantCreation {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableTenantCreation' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableTenantCreation' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

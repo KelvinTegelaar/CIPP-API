@@ -13,9 +13,9 @@ function Invoke-CippTestZTNA21780 {
             return
         }
 
-        $AdalRecommendations = $Recommendations | Where-Object {
+        $AdalRecommendations = $Recommendations.Where({
             $_.recommendationType -eq 'adalToMsalMigration'
-        }
+        })
 
         if ($AdalRecommendations.Count -eq 0) {
             $Status = 'Passed'

@@ -13,13 +13,13 @@ function Invoke-CippTestZTNA21824 {
             return
         }
 
-        $filteredCAPolicies = $allCAPolicies | Where-Object {
+        $filteredCAPolicies = $allCAPolicies.Where({
             ($null -ne $_.conditions.users.includeGuestsOrExternalUsers) -and
             ($_.state -in @('enabled', 'enabledForReportingButNotEnforced')) -and
             ($null -eq $_.grantControls.termsOfUse -or $_.grantControls.termsOfUse.Count -eq 0)
-        }
+        })
 
-        $matchedPolicies = $filteredCAPolicies | Where-Object {
+        $matchedPolicies = $filteredCAPolicies.Where({
             $signInFrequency = $_.sessionControls.signInFrequency
             if ($signInFrequency -and $signInFrequency.isEnabled) {
                 ($signInFrequency.type -eq 'hours' -and $signInFrequency.value -le 24) -or
@@ -28,7 +28,7 @@ function Invoke-CippTestZTNA21824 {
             } else {
                 $false
             }
-        }
+        })
 
         $passed = if ($filteredCAPolicies.Count -eq $matchedPolicies.Count) { 'Passed' } else { 'Failed' }
 

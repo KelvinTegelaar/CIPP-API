@@ -14,14 +14,14 @@ function Invoke-CippTestCIS_5_2_2_14 {
         }
 
         # A named location reference is any include/exclude location GUID (i.e. not 'All' or 'AllTrusted')
-        $Matching = $CA | Where-Object {
+        $Matching = $CA.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.locations -and
             (
-                ($_.conditions.locations.includeLocations | Where-Object { $_ -and $_ -notin @('All', 'AllTrusted') }) -or
-                ($_.conditions.locations.excludeLocations | Where-Object { $_ -and $_ -notin @('All', 'AllTrusted') })
+                ($_.conditions.locations.includeLocations.Where({ $_ -and $_ -notin @('All', 'AllTrusted') })) -or
+                ($_.conditions.locations.excludeLocations.Where({ $_ -and $_ -notin @('All', 'AllTrusted') }))
             )
-        }
+        })
 
         if ($Matching) {
             $Status = 'Passed'

@@ -13,14 +13,23 @@ function Invoke-CippTestGenericTest011 {
             return
         }
 
-        # Load standards.json for friendly name resolution
+        # Load standards.json for friendly name and compliance-tag resolution
         $StandardsLabelMap = @{}
+        $StandardsTagMap = @{}
         $StandardsJsonPath = Join-Path $env:CIPPRootPath 'Config\standards.json'
         if (Test-Path $StandardsJsonPath) {
             $StandardsJson = Get-Content $StandardsJsonPath -Raw | ConvertFrom-Json
             foreach ($Std in $StandardsJson) {
                 if ($Std.name -and $Std.label) {
                     $StandardsLabelMap[$Std.name] = $Std.label
+                }
+                if ($Std.name -and $Std.tag) {
+                    # Keep human-readable compliance-framework references (CIS, NIST, etc. - they
+                    # contain spaces) and drop internal single-token tags like 'mip_search_auditlog'.
+                    $FrameworkTags = @($Std.tag.Where({ $_ -is [string] -and $_ -match '\s' }))
+                    if ($FrameworkTags.Count -gt 0) {
+                        $StandardsTagMap[$Std.name] = ($FrameworkTags -join ', ')
+                    }
                 }
             }
         }
@@ -34,8 +43,10 @@ function Invoke-CippTestGenericTest011 {
             $AllIntuneTemplates = @($RawIntuneTemplates | ForEach-Object {
                 $JSONData = $_.JSON | ConvertFrom-Json -Depth 10
                 $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 10
-                $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
-                $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
+                $data | Add-Member -NotePropertyMembers ([ordered]@{
+                        displayName = $JSONData.Displayname
+                        GUID        = $_.RowKey
+                    }) -Force
                 $data
             })
         } catch { $AllIntuneTemplates = @() }
@@ -58,6 +69,8 @@ function Invoke-CippTestGenericTest011 {
         $ResolveDisplayName = {
             param($StandardName, $TemplateSettings)
 
+            if ([string]::IsNullOrWhiteSpace($StandardName)) { return $null }
+
             # 1. Regular standards — look up in standards.json
             if ($StandardsLabelMap.ContainsKey($StandardName)) {
                 return $StandardsLabelMap[$StandardName]
@@ -66,20 +79,20 @@ function Invoke-CippTestGenericTest011 {
             # 2. IntuneTemplate — extract GUID, look up in template table, fall back to standardSettings
             if ($StandardName -like '*IntuneTemplate*') {
                 $Parts = $StandardName.Split('.')
-                $TemplateGuid = $Parts | Where-Object {
+                $TemplateGuid = $Parts.Where({
                     $_ -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-                } | Select-Object -First 1
+                }, 'First')[0]
 
                 if ($TemplateGuid) {
                     # Try template table first
-                    $MatchedTemplate = $AllIntuneTemplates | Where-Object { $_.GUID -match "$TemplateGuid" }
+                    $MatchedTemplate = $AllIntuneTemplates.Where({ $_.GUID -match "$TemplateGuid" })
                     if ($MatchedTemplate -and $MatchedTemplate.displayName) {
                         return "Intune - $($MatchedTemplate.displayName)"
                     }
                     # Fall back to standardSettings TemplateList.label
                     if ($TemplateSettings -and $TemplateSettings.IntuneTemplate) {
                         $IntuneTemplates = @($TemplateSettings.IntuneTemplate)
-                        $Match = $IntuneTemplates | Where-Object { $_.TemplateList.value -eq $TemplateGuid }
+                        $Match = $IntuneTemplates.Where({ $_.TemplateList.value -eq $TemplateGuid })
                         if ($Match -and $Match.TemplateList.label) {
                             return "Intune - $($Match.TemplateList.label)"
                         }
@@ -91,18 +104,18 @@ function Invoke-CippTestGenericTest011 {
             # 3. ConditionalAccessTemplate — extract GUID, look up in template table
             if ($StandardName -like '*ConditionalAccessTemplate*') {
                 $Parts = $StandardName.Split('.')
-                $TemplateGuid = $Parts | Where-Object {
+                $TemplateGuid = $Parts.Where({
                     $_ -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-                } | Select-Object -First 1
+                }, 'First')[0]
 
                 if ($TemplateGuid) {
-                    $MatchedTemplate = $AllCATemplates | Where-Object { $_.GUID -match "$TemplateGuid" }
+                    $MatchedTemplate = $AllCATemplates.Where({ $_.GUID -match "$TemplateGuid" })
                     if ($MatchedTemplate -and $MatchedTemplate.displayName) {
                         return "Conditional Access - $($MatchedTemplate.displayName)"
                     }
                     if ($TemplateSettings -and $TemplateSettings.ConditionalAccessTemplate) {
                         $CATemplates = @($TemplateSettings.ConditionalAccessTemplate)
-                        $Match = $CATemplates | Where-Object { $_.TemplateList.value -eq $TemplateGuid }
+                        $Match = $CATemplates.Where({ $_.TemplateList.value -eq $TemplateGuid })
                         if ($Match -and $Match.TemplateList.label) {
                             return "Conditional Access - $($Match.TemplateList.label)"
                         }
@@ -126,6 +139,26 @@ function Invoke-CippTestGenericTest011 {
 
             # 5. Not found in any source
             return $null
+        }
+
+        # Helper: resolve a standard's compliance-framework tags (CIS/NIST/etc.). Template-based
+        # standards (Intune/CA/Quarantine) have no standards.json entry, so they return empty.
+        $ResolveTags = {
+            param($StandardName)
+            if ([string]::IsNullOrWhiteSpace($StandardName)) { return '' }
+            if ($StandardsTagMap.ContainsKey($StandardName)) { return $StandardsTagMap[$StandardName] }
+            return ''
+        }
+
+        # Helper: render a stored CurrentValue/ExpectedValue (plain string, bool, or compact JSON)
+        # safely inside a markdown table cell - escape pipes, collapse newlines, and truncate blobs.
+        $FormatValue = {
+            param($Value)
+            if ($null -eq $Value -or "$Value" -eq '') { return '' }
+            $Text = [string]$Value
+            $Text = $Text -replace '\|', '\|' -replace '\r?\n', ' '
+            if ($Text.Length -gt 300) { $Text = $Text.Substring(0, 297) + '...' }
+            return $Text
         }
 
         foreach ($Template in $AlignmentItems) {
@@ -166,24 +199,32 @@ function Invoke-CippTestGenericTest011 {
 
             # Compliant items
             if ($CompliantItems.Count -gt 0) {
-                $null = $Result.Append("| Standard | Status |`n")
-                $null = $Result.Append("|----------|--------|`n")
+                $null = $Result.Append("#### Compliant Standards`n`n")
+                $null = $Result.Append("| Standard | Tags | Status |`n")
+                $null = $Result.Append("|----------|------|--------|`n")
                 foreach ($Item in $CompliantItems) {
                     $FriendlyName = & $ResolveDisplayName $Item.StandardName $TemplateSettings
                     if (-not $FriendlyName) { continue }
-                    $null = $Result.Append("| $FriendlyName | ✅ Compliant |`n")
+                    $Tags = & $ResolveTags $Item.StandardName
+                    $null = $Result.Append("| $FriendlyName | $Tags | ✅ Compliant |`n")
                 }
                 $null = $Result.Append("`n")
             }
 
-            # Non-compliant items
+            # Non-compliant items — include the compliance tags and the reason for failure
+            # (expected value from the standard vs. the current config on the tenant).
             if ($NonCompliantItems.Count -gt 0) {
-                $null = $Result.Append("| Standard | Status |`n")
-                $null = $Result.Append("|----------|--------|`n")
+                $null = $Result.Append("#### Non-Compliant Standards`n`n")
+                $null = $Result.Append("| Standard | Tags | Expected Value | Current Value (on tenant) |`n")
+                $null = $Result.Append("|----------|------|----------------|---------------------------|`n")
                 foreach ($Item in $NonCompliantItems) {
                     $FriendlyName = & $ResolveDisplayName $Item.StandardName $TemplateSettings
                     if (-not $FriendlyName) { continue }
-                    $null = $Result.Append("| $FriendlyName | ❌ Non-Compliant |`n")
+                    $Tags = & $ResolveTags $Item.StandardName
+                    $Expected = & $FormatValue $Item.ExpectedValue
+                    $Current = & $FormatValue $Item.CurrentValue
+                    if (-not $Current) { $Current = '_Not configured / no data_' }
+                    $null = $Result.Append("| $FriendlyName | $Tags | $Expected | $Current |`n")
                 }
                 $null = $Result.Append("`n")
             }
@@ -192,12 +233,13 @@ function Invoke-CippTestGenericTest011 {
             if ($LicenseMissingItems.Count -gt 0) {
                 $null = $Result.Append("#### Standards Not Applied Due to Missing Licenses`n`n")
                 $null = $Result.Append("These items are part of this baseline, but your environment does not meet the minimum required licenses for them to be applied.`n`n")
-                $null = $Result.Append("| Standard | Status |`n")
-                $null = $Result.Append("|----------|--------|`n")
+                $null = $Result.Append("| Standard | Tags | Status |`n")
+                $null = $Result.Append("|----------|------|--------|`n")
                 foreach ($Item in $LicenseMissingItems) {
                     $FriendlyName = & $ResolveDisplayName $Item.StandardName $TemplateSettings
                     if (-not $FriendlyName) { continue }
-                    $null = $Result.Append("| $FriendlyName | ⚠️ License Missing |`n")
+                    $Tags = & $ResolveTags $Item.StandardName
+                    $null = $Result.Append("| $FriendlyName | $Tags | ⚠️ License Missing |`n")
                 }
                 $null = $Result.Append("`n")
             }
@@ -205,12 +247,13 @@ function Invoke-CippTestGenericTest011 {
             # Reporting disabled items
             if ($ReportingDisabledItems.Count -gt 0) {
                 $null = $Result.Append("#### Standards With Reporting Disabled`n`n")
-                $null = $Result.Append("| Standard | Status |`n")
-                $null = $Result.Append("|----------|--------|`n")
+                $null = $Result.Append("| Standard | Tags | Status |`n")
+                $null = $Result.Append("|----------|------|--------|`n")
                 foreach ($Item in $ReportingDisabledItems) {
                     $FriendlyName = & $ResolveDisplayName $Item.StandardName $TemplateSettings
                     if (-not $FriendlyName) { continue }
-                    $null = $Result.Append("| $FriendlyName | ⏸️ Reporting Disabled |`n")
+                    $Tags = & $ResolveTags $Item.StandardName
+                    $null = $Result.Append("| $FriendlyName | $Tags | ⏸️ Reporting Disabled |`n")
                 }
                 $null = $Result.Append("`n")
             }

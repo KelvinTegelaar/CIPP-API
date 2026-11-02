@@ -8,6 +8,7 @@ function Invoke-ListExoRequest {
         Executes an arbitrary read-only Exchange Online cmdlet (Get-* or Search-*) for a tenant. Accepts cmdlet name and parameters in the request body.
     #>
     param($Request, $TriggerMetadata)
+    $StatusCode = [HttpStatusCode]::OK
     try {
         $AllowedVerbs = @(
             'Get'
@@ -15,7 +16,11 @@ function Invoke-ListExoRequest {
         )
 
         $Cmdlet = $Request.Body.Cmdlet
-        $cmdParams = if ($Request.Body.cmdParams) { $Request.Body.cmdParams } else { [PSCustomObject]@{} }
+        # Parameters to splat onto the Exchange cmdlet, as an object of name/value pairs
+        # (e.g. { "Identity": "user@contoso.com" }). Cast to an object so the generated schema
+        # types cmdParams as an object rather than a string - a string-typed schema made the
+        # client reject an object body, leaving no way to pass parameters.
+        $cmdParams = if ($Request.Body.cmdParams) { [pscustomobject]$Request.Body.cmdParams } else { [PSCustomObject]@{} }
         $Verb = ($Cmdlet -split '-')[0]
 
         $TenantFilter = $Request.Body.TenantFilter
@@ -85,13 +90,18 @@ function Invoke-ListExoRequest {
                 $Body = [pscustomobject]@{
                     Results = @(@{ Error = $ErrorMessage })
                 }
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
     } catch {
         Write-Information "ExoRequest Error: $($_.Exception.Message)"
+        $Body = [pscustomobject]@{
+            Results = @(@{ Error = (Get-NormalizedError -Message $_.Exception.Message) })
+        }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = ConvertTo-Json -InputObject $Body -Compress
         })
 }

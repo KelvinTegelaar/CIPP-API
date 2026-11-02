@@ -4,6 +4,8 @@ function Invoke-ExecAPIPermissionList {
         Entrypoint
     .ROLE
         CIPP.SuperAdmin.Read
+    .DESCRIPTION
+        Lists every CIPP API endpoint grouped by the role that gates it. Backs the permission picker in the custom role editor.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

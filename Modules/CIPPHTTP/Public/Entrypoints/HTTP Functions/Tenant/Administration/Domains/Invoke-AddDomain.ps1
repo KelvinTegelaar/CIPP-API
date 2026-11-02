@@ -13,17 +13,23 @@ function Invoke-AddDomain {
     $TenantFilter = $Request.Body.tenantFilter
     $DomainName = $Request.Body.domain
 
+    if ([string]::IsNullOrWhiteSpace($DomainName)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{'Results' = 'Failed to add domain: Domain name is required' }
+            })
+    }
+
+    # Validate domain name format
+    if ($DomainName -notmatch '^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{'Results' = "Failed to add domain $DomainName`: Invalid domain name format" }
+            })
+    }
+
     # Interact with query parameters or the body of the request.
     try {
-        if ([string]::IsNullOrWhiteSpace($DomainName)) {
-            throw 'Domain name is required'
-        }
-
-        # Validate domain name format
-        if ($DomainName -notmatch '^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$') {
-            throw 'Invalid domain name format'
-        }
-
         Write-Information "Adding domain $DomainName to tenant $TenantFilter"
 
         $Body = @{
@@ -39,7 +45,7 @@ function Invoke-AddDomain {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to add domain $DomainName`: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add domain $DomainName`: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

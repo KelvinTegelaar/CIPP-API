@@ -155,7 +155,7 @@ function Invoke-AddEditTransportRule {
     $ExceptIfSenderIpRanges = $Request.Body.ExceptIfSenderIpRanges
 
     # Helper function to process array fields
-    function Process-ArrayField {
+    function ConvertTo-FieldArray {
         param (
             [Parameter(Mandatory = $false)]
             $Field
@@ -203,7 +203,7 @@ function Invoke-AddEditTransportRule {
     }
 
     # Helper function to process comma-separated text fields into arrays
-    function Process-TextArrayField {
+    function ConvertTo-TextFieldArray {
         param (
             [Parameter(Mandatory = $false)]
             $Field
@@ -241,77 +241,77 @@ function Invoke-AddEditTransportRule {
     }
 
     # Process array fields for recipients/users
-    $From = Process-ArrayField -Field $From
-    $FromMemberOf = Process-ArrayField -Field $FromMemberOf
-    $SentTo = Process-ArrayField -Field $SentTo
-    $SentToMemberOf = Process-ArrayField -Field $SentToMemberOf
-    $AnyOfToHeader = Process-ArrayField -Field $AnyOfToHeader
-    $AnyOfToHeaderMemberOf = Process-ArrayField -Field $AnyOfToHeaderMemberOf
-    $AnyOfCcHeader = Process-ArrayField -Field $AnyOfCcHeader
-    $AnyOfCcHeaderMemberOf = Process-ArrayField -Field $AnyOfCcHeaderMemberOf
-    $AnyOfToCcHeader = Process-ArrayField -Field $AnyOfToCcHeader
-    $AnyOfToCcHeaderMemberOf = Process-ArrayField -Field $AnyOfToCcHeaderMemberOf
-    $RedirectMessageTo = Process-ArrayField -Field $RedirectMessageTo
-    $BlindCopyTo = Process-ArrayField -Field $BlindCopyTo
-    $CopyTo = Process-ArrayField -Field $CopyTo
-    $ModerateMessageByUser = Process-ArrayField -Field $ModerateMessageByUser
-    $ExceptIfFrom = Process-ArrayField -Field $ExceptIfFrom
-    $ExceptIfFromMemberOf = Process-ArrayField -Field $ExceptIfFromMemberOf
-    $ExceptIfSentTo = Process-ArrayField -Field $ExceptIfSentTo
-    $ExceptIfSentToMemberOf = Process-ArrayField -Field $ExceptIfSentToMemberOf
-    $ExceptIfAnyOfToHeader = Process-ArrayField -Field $ExceptIfAnyOfToHeader
-    $ExceptIfAnyOfToHeaderMemberOf = Process-ArrayField -Field $ExceptIfAnyOfToHeaderMemberOf
-    $ExceptIfAnyOfCcHeader = Process-ArrayField -Field $ExceptIfAnyOfCcHeader
-    $ExceptIfAnyOfCcHeaderMemberOf = Process-ArrayField -Field $ExceptIfAnyOfCcHeaderMemberOf
-    $ExceptIfAnyOfToCcHeader = Process-ArrayField -Field $ExceptIfAnyOfToCcHeader
-    $ExceptIfAnyOfToCcHeaderMemberOf = Process-ArrayField -Field $ExceptIfAnyOfToCcHeaderMemberOf
-    $SenderDomainIs = Process-ArrayField -Field $SenderDomainIs
-    $RecipientDomainIs = Process-ArrayField -Field $RecipientDomainIs
-    $ExceptIfSenderDomainIs = Process-ArrayField -Field $ExceptIfSenderDomainIs
-    $ExceptIfRecipientDomainIs = Process-ArrayField -Field $ExceptIfRecipientDomainIs
+    $From = ConvertTo-FieldArray -Field $From
+    $FromMemberOf = ConvertTo-FieldArray -Field $FromMemberOf
+    $SentTo = ConvertTo-FieldArray -Field $SentTo
+    $SentToMemberOf = ConvertTo-FieldArray -Field $SentToMemberOf
+    $AnyOfToHeader = ConvertTo-FieldArray -Field $AnyOfToHeader
+    $AnyOfToHeaderMemberOf = ConvertTo-FieldArray -Field $AnyOfToHeaderMemberOf
+    $AnyOfCcHeader = ConvertTo-FieldArray -Field $AnyOfCcHeader
+    $AnyOfCcHeaderMemberOf = ConvertTo-FieldArray -Field $AnyOfCcHeaderMemberOf
+    $AnyOfToCcHeader = ConvertTo-FieldArray -Field $AnyOfToCcHeader
+    $AnyOfToCcHeaderMemberOf = ConvertTo-FieldArray -Field $AnyOfToCcHeaderMemberOf
+    $RedirectMessageTo = ConvertTo-FieldArray -Field $RedirectMessageTo
+    $BlindCopyTo = ConvertTo-FieldArray -Field $BlindCopyTo
+    $CopyTo = ConvertTo-FieldArray -Field $CopyTo
+    $ModerateMessageByUser = ConvertTo-FieldArray -Field $ModerateMessageByUser
+    $ExceptIfFrom = ConvertTo-FieldArray -Field $ExceptIfFrom
+    $ExceptIfFromMemberOf = ConvertTo-FieldArray -Field $ExceptIfFromMemberOf
+    $ExceptIfSentTo = ConvertTo-FieldArray -Field $ExceptIfSentTo
+    $ExceptIfSentToMemberOf = ConvertTo-FieldArray -Field $ExceptIfSentToMemberOf
+    $ExceptIfAnyOfToHeader = ConvertTo-FieldArray -Field $ExceptIfAnyOfToHeader
+    $ExceptIfAnyOfToHeaderMemberOf = ConvertTo-FieldArray -Field $ExceptIfAnyOfToHeaderMemberOf
+    $ExceptIfAnyOfCcHeader = ConvertTo-FieldArray -Field $ExceptIfAnyOfCcHeader
+    $ExceptIfAnyOfCcHeaderMemberOf = ConvertTo-FieldArray -Field $ExceptIfAnyOfCcHeaderMemberOf
+    $ExceptIfAnyOfToCcHeader = ConvertTo-FieldArray -Field $ExceptIfAnyOfToCcHeader
+    $ExceptIfAnyOfToCcHeaderMemberOf = ConvertTo-FieldArray -Field $ExceptIfAnyOfToCcHeaderMemberOf
+    $SenderDomainIs = ConvertTo-FieldArray -Field $SenderDomainIs
+    $RecipientDomainIs = ConvertTo-FieldArray -Field $RecipientDomainIs
+    $ExceptIfSenderDomainIs = ConvertTo-FieldArray -Field $ExceptIfSenderDomainIs
+    $ExceptIfRecipientDomainIs = ConvertTo-FieldArray -Field $ExceptIfRecipientDomainIs
 
     # Process text array fields (comma-separated strings)
-    $SubjectContainsWords = Process-TextArrayField -Field $SubjectContainsWords
-    $SubjectMatchesPatterns = Process-TextArrayField -Field $SubjectMatchesPatterns
-    $SubjectOrBodyContainsWords = Process-TextArrayField -Field $SubjectOrBodyContainsWords
-    $SubjectOrBodyMatchesPatterns = Process-TextArrayField -Field $SubjectOrBodyMatchesPatterns
-    $FromAddressContainsWords = Process-TextArrayField -Field $FromAddressContainsWords
-    $FromAddressMatchesPatterns = Process-TextArrayField -Field $FromAddressMatchesPatterns
-    $AttachmentContainsWords = Process-TextArrayField -Field $AttachmentContainsWords
-    $AttachmentMatchesPatterns = Process-TextArrayField -Field $AttachmentMatchesPatterns
-    $AttachmentNameMatchesPatterns = Process-TextArrayField -Field $AttachmentNameMatchesPatterns
-    $AttachmentPropertyContainsWords = Process-TextArrayField -Field $AttachmentPropertyContainsWords
-    $AttachmentExtensionMatchesWords = Process-TextArrayField -Field $AttachmentExtensionMatchesWords
-    $RecipientAddressContainsWords = Process-TextArrayField -Field $RecipientAddressContainsWords
-    $RecipientAddressMatchesPatterns = Process-TextArrayField -Field $RecipientAddressMatchesPatterns
-    $AnyOfRecipientAddressContainsWords = Process-TextArrayField -Field $AnyOfRecipientAddressContainsWords
-    $AnyOfRecipientAddressMatchesPatterns = Process-TextArrayField -Field $AnyOfRecipientAddressMatchesPatterns
-    $HeaderContainsWords = Process-TextArrayField -Field $HeaderContainsWords
-    $HeaderMatchesPatterns = Process-TextArrayField -Field $HeaderMatchesPatterns
-    $IncidentReportContent = Process-TextArrayField -Field $IncidentReportContent
+    $SubjectContainsWords = ConvertTo-TextFieldArray -Field $SubjectContainsWords
+    $SubjectMatchesPatterns = ConvertTo-TextFieldArray -Field $SubjectMatchesPatterns
+    $SubjectOrBodyContainsWords = ConvertTo-TextFieldArray -Field $SubjectOrBodyContainsWords
+    $SubjectOrBodyMatchesPatterns = ConvertTo-TextFieldArray -Field $SubjectOrBodyMatchesPatterns
+    $FromAddressContainsWords = ConvertTo-TextFieldArray -Field $FromAddressContainsWords
+    $FromAddressMatchesPatterns = ConvertTo-TextFieldArray -Field $FromAddressMatchesPatterns
+    $AttachmentContainsWords = ConvertTo-TextFieldArray -Field $AttachmentContainsWords
+    $AttachmentMatchesPatterns = ConvertTo-TextFieldArray -Field $AttachmentMatchesPatterns
+    $AttachmentNameMatchesPatterns = ConvertTo-TextFieldArray -Field $AttachmentNameMatchesPatterns
+    $AttachmentPropertyContainsWords = ConvertTo-TextFieldArray -Field $AttachmentPropertyContainsWords
+    $AttachmentExtensionMatchesWords = ConvertTo-TextFieldArray -Field $AttachmentExtensionMatchesWords
+    $RecipientAddressContainsWords = ConvertTo-TextFieldArray -Field $RecipientAddressContainsWords
+    $RecipientAddressMatchesPatterns = ConvertTo-TextFieldArray -Field $RecipientAddressMatchesPatterns
+    $AnyOfRecipientAddressContainsWords = ConvertTo-TextFieldArray -Field $AnyOfRecipientAddressContainsWords
+    $AnyOfRecipientAddressMatchesPatterns = ConvertTo-TextFieldArray -Field $AnyOfRecipientAddressMatchesPatterns
+    $HeaderContainsWords = ConvertTo-TextFieldArray -Field $HeaderContainsWords
+    $HeaderMatchesPatterns = ConvertTo-TextFieldArray -Field $HeaderMatchesPatterns
+    $IncidentReportContent = ConvertTo-TextFieldArray -Field $IncidentReportContent
 
     # Process exception text array fields
-    $ExceptIfSubjectContainsWords = Process-TextArrayField -Field $ExceptIfSubjectContainsWords
-    $ExceptIfSubjectMatchesPatterns = Process-TextArrayField -Field $ExceptIfSubjectMatchesPatterns
-    $ExceptIfSubjectOrBodyContainsWords = Process-TextArrayField -Field $ExceptIfSubjectOrBodyContainsWords
-    $ExceptIfSubjectOrBodyMatchesPatterns = Process-TextArrayField -Field $ExceptIfSubjectOrBodyMatchesPatterns
-    $ExceptIfFromAddressContainsWords = Process-TextArrayField -Field $ExceptIfFromAddressContainsWords
-    $ExceptIfFromAddressMatchesPatterns = Process-TextArrayField -Field $ExceptIfFromAddressMatchesPatterns
-    $ExceptIfAttachmentContainsWords = Process-TextArrayField -Field $ExceptIfAttachmentContainsWords
-    $ExceptIfAttachmentMatchesPatterns = Process-TextArrayField -Field $ExceptIfAttachmentMatchesPatterns
-    $ExceptIfAttachmentNameMatchesPatterns = Process-TextArrayField -Field $ExceptIfAttachmentNameMatchesPatterns
-    $ExceptIfAttachmentPropertyContainsWords = Process-TextArrayField -Field $ExceptIfAttachmentPropertyContainsWords
-    $ExceptIfAttachmentExtensionMatchesWords = Process-TextArrayField -Field $ExceptIfAttachmentExtensionMatchesWords
-    $ExceptIfRecipientAddressContainsWords = Process-TextArrayField -Field $ExceptIfRecipientAddressContainsWords
-    $ExceptIfRecipientAddressMatchesPatterns = Process-TextArrayField -Field $ExceptIfRecipientAddressMatchesPatterns
-    $ExceptIfAnyOfRecipientAddressContainsWords = Process-TextArrayField -Field $ExceptIfAnyOfRecipientAddressContainsWords
-    $ExceptIfAnyOfRecipientAddressMatchesPatterns = Process-TextArrayField -Field $ExceptIfAnyOfRecipientAddressMatchesPatterns
-    $ExceptIfHeaderContainsWords = Process-TextArrayField -Field $ExceptIfHeaderContainsWords
-    $ExceptIfHeaderMatchesPatterns = Process-TextArrayField -Field $ExceptIfHeaderMatchesPatterns
+    $ExceptIfSubjectContainsWords = ConvertTo-TextFieldArray -Field $ExceptIfSubjectContainsWords
+    $ExceptIfSubjectMatchesPatterns = ConvertTo-TextFieldArray -Field $ExceptIfSubjectMatchesPatterns
+    $ExceptIfSubjectOrBodyContainsWords = ConvertTo-TextFieldArray -Field $ExceptIfSubjectOrBodyContainsWords
+    $ExceptIfSubjectOrBodyMatchesPatterns = ConvertTo-TextFieldArray -Field $ExceptIfSubjectOrBodyMatchesPatterns
+    $ExceptIfFromAddressContainsWords = ConvertTo-TextFieldArray -Field $ExceptIfFromAddressContainsWords
+    $ExceptIfFromAddressMatchesPatterns = ConvertTo-TextFieldArray -Field $ExceptIfFromAddressMatchesPatterns
+    $ExceptIfAttachmentContainsWords = ConvertTo-TextFieldArray -Field $ExceptIfAttachmentContainsWords
+    $ExceptIfAttachmentMatchesPatterns = ConvertTo-TextFieldArray -Field $ExceptIfAttachmentMatchesPatterns
+    $ExceptIfAttachmentNameMatchesPatterns = ConvertTo-TextFieldArray -Field $ExceptIfAttachmentNameMatchesPatterns
+    $ExceptIfAttachmentPropertyContainsWords = ConvertTo-TextFieldArray -Field $ExceptIfAttachmentPropertyContainsWords
+    $ExceptIfAttachmentExtensionMatchesWords = ConvertTo-TextFieldArray -Field $ExceptIfAttachmentExtensionMatchesWords
+    $ExceptIfRecipientAddressContainsWords = ConvertTo-TextFieldArray -Field $ExceptIfRecipientAddressContainsWords
+    $ExceptIfRecipientAddressMatchesPatterns = ConvertTo-TextFieldArray -Field $ExceptIfRecipientAddressMatchesPatterns
+    $ExceptIfAnyOfRecipientAddressContainsWords = ConvertTo-TextFieldArray -Field $ExceptIfAnyOfRecipientAddressContainsWords
+    $ExceptIfAnyOfRecipientAddressMatchesPatterns = ConvertTo-TextFieldArray -Field $ExceptIfAnyOfRecipientAddressMatchesPatterns
+    $ExceptIfHeaderContainsWords = ConvertTo-TextFieldArray -Field $ExceptIfHeaderContainsWords
+    $ExceptIfHeaderMatchesPatterns = ConvertTo-TextFieldArray -Field $ExceptIfHeaderMatchesPatterns
 
     # Process IP range fields
-    $SenderIpRanges = Process-TextArrayField -Field $SenderIpRanges
-    $ExceptIfSenderIpRanges = Process-TextArrayField -Field $ExceptIfSenderIpRanges
+    $SenderIpRanges = ConvertTo-TextFieldArray -Field $SenderIpRanges
+    $ExceptIfSenderIpRanges = ConvertTo-TextFieldArray -Field $ExceptIfSenderIpRanges
 
     try {
         # Build command parameters for transport rule

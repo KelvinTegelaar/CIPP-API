@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_5_1_4_3 {
             return
         }
 
-        $Cfg = $DRP | Select-Object -First 1
+        $Cfg = @($DRP)[0]
         $EnableGA = [bool]$Cfg.azureADJoin.localAdmins.enableGlobalAdmins
 
         if (-not $EnableGA) {

@@ -1,0 +1,83 @@
+{
+  "name": "SPAnonymousLinkExpiration",
+  "label": "Set expiration and permissions for Anyone (anonymous) sharing links",
+  "cat": "SharePoint Standards",
+  "tag": [
+    "CISA (MS.SPO.3.1v1)",
+    "CISA (MS.SPO.3.2v1)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Requires every Anyone sharing link in SharePoint and OneDrive to expire after the configured number of days. Optionally restricts the permission Anyone links can grant on files and folders (View only, or View and edit). By default Anyone links never expire.",
+  "executiveText": "Ensures that files and folders shared with anyone via a link stop being reachable after a set period, so a link forwarded or leaked months ago no longer grants access. Optionally limits such links to read-only, preventing anonymous recipients from changing shared content. Together these reduce the exposure created by convenience sharing without disabling it.",
+  "docsDescription": "Sets the tenant-wide expiration for Anyone (anonymous) sharing links in SharePoint and OneDrive (SharePoint admin center > Policies > Sharing > Choose expiration and permissions options for Anyone links). Links created after the policy is applied expire at the end of the configured period. A tenant that does not require expiration reads -1 for this property (the SharePoint default), which this standard grades as drift. The optional permission variable additionally grades and sets the maximum permission Anyone links may grant on files and folders (View, or View and edit); leave it blank to grade expiration only. These settings only take effect for tenants whose sharing level permits Anyone links (see the sharingCapability standard).",
+  "impactColour": "warning",
+  "addedDate": "2026-09-14",
+  "powershellEquivalent": "Set-SPOTenant -RequireAnonymousLinksExpireInDays 30 -FileAnonymousLinkType View -FolderAnonymousLinkType View",
+  "recommendedBy": [
+    "CISA"
+  ],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "days": {
+      "type": "number",
+      "label": "Days until Anyone links expire (1-730, default 30)",
+      "default": 30,
+      "validators": {
+        "min": {
+          "value": 1,
+          "message": "Minimum is 1 day"
+        },
+        "max": {
+          "value": 730,
+          "message": "SharePoint accepts at most 730 days"
+        }
+      }
+    },
+    "linkPermission": {
+      "type": "autoComplete",
+      "label": "Anyone link permission for files and folders (optional - blank grades expiration only)",
+      "options": [
+        {
+          "label": "View only",
+          "value": 1
+        },
+        {
+          "label": "View and edit",
+          "value": 2
+        }
+      ],
+      "omitWhenBlank": true
+    }
+  },
+  "expected": {
+    "RequireAnonymousLinksExpireInDays": "%days%",
+    "FileAnonymousLinkType": "%linkPermission%",
+    "FolderAnonymousLinkType": "%linkPermission%"
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "writeTarget": "spoTenant",
+  "writeTargetProperties": {
+    "RequireAnonymousLinksExpireInDays": "%days%",
+    "FileAnonymousLinkType": "%linkPermission%",
+    "FolderAnonymousLinkType": "%linkPermission%"
+  },
+  "remediate": {
+    "executor": "SPOTenant",
+    "properties": {
+      "RequireAnonymousLinksExpireInDays": "%days%",
+      "FileAnonymousLinkType": "%linkPermission%",
+      "FolderAnonymousLinkType": "%linkPermission%"
+    }
+  }
+}

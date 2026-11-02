@@ -2,26 +2,27 @@ function Get-CIPPIntuneAppProtectionPolicyReport {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+
+        # Rows already read by the AllTenants path, keyed by cache type
+        [Parameter(DontShow = $true)]
+        [hashtable]$DbItems
     )
 
     $PolicyTypes = @('IntuneAppProtectionManagedAppPolicies', 'IntuneAppProtectionMobileAppConfigurations')
 
     if ($TenantFilter -eq 'AllTenants') {
-        $Tenants = foreach ($Type in $PolicyTypes) {
-            Get-CIPPDbItem -TenantFilter 'allTenants' -Type $Type |
-                Where-Object { $_.RowKey -notlike '*-Count' } |
-                Select-Object -ExpandProperty PartitionKey -Unique
-        }
-        $Tenants = @($Tenants | Select-Object -Unique)
-
-        $TenantList = Get-Tenants -IncludeErrors
-        $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
+        $ByType = @{}
+        foreach ($Type in $PolicyTypes) { $ByType[$Type] = Get-CIPPDbItem -TenantFilter 'allTenants' -Type $Type -ByTenant }
+        $Tenants = @(foreach ($Type in $PolicyTypes) { $ByType[$Type].Keys }) | Select-Object -Unique
 
         $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
         foreach ($Tenant in $Tenants) {
+            # Hand each tenant its rows and drop them here so they can be freed once processed
+            $TenantItems = @{}
+            foreach ($Type in $PolicyTypes) { $TenantItems[$Type] = $ByType[$Type][$Tenant] ?? @(); $ByType[$Type].Remove($Tenant) }
             try {
-                $TenantResults = Get-CIPPIntuneAppProtectionPolicyReport -TenantFilter $Tenant
+                $TenantResults = Get-CIPPIntuneAppProtectionPolicyReport -TenantFilter $Tenant -DbItems $TenantItems
                 foreach ($Result in $TenantResults) {
                     $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
                     $AllResults.Add($Result)
@@ -44,7 +45,7 @@ function Get-CIPPIntuneAppProtectionPolicyReport {
     $ItemsByType = @{}
     $AllItems = [System.Collections.Generic.List[object]]::new()
     foreach ($Type in $PolicyTypes) {
-        $Items = @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Type | Where-Object { $_.RowKey -notlike '*-Count' })
+        $Items = @($(if ($DbItems) { $DbItems[$Type] } else { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Type }) | Where-Object { $_.RowKey -notlike '*-Count' })
         $ItemsByType[$Type] = $Items
         foreach ($Item in $Items) { $AllItems.Add($Item) }
     }
@@ -91,11 +92,13 @@ function Get-CIPPIntuneAppProtectionPolicyReport {
             }
         }
 
-        $Policy | Add-Member -NotePropertyName 'PolicyTypeName' -NotePropertyValue $policyType -Force
-        $Policy | Add-Member -NotePropertyName 'PolicySource' -NotePropertyValue 'AppProtection' -Force
-        $Policy | Add-Member -NotePropertyName 'PolicyAssignment' -NotePropertyValue ($PolicyAssignment -join ', ') -Force
-        $Policy | Add-Member -NotePropertyName 'PolicyExclude' -NotePropertyValue ($PolicyExclude -join ', ') -Force
-        $Policy | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
+        $Policy | Add-Member -NotePropertyMembers ([ordered]@{
+                PolicyTypeName   = $policyType
+                PolicySource     = 'AppProtection'
+                PolicyAssignment = ($PolicyAssignment -join ', ')
+                PolicyExclude    = ($PolicyExclude -join ', ')
+                CacheTimestamp   = $CacheTimestamp
+            }) -Force
         $Results.Add($Policy)
     }
 
@@ -130,15 +133,18 @@ function Get-CIPPIntuneAppProtectionPolicyReport {
             }
         }
 
-        $Config | Add-Member -NotePropertyName 'PolicyTypeName' -NotePropertyValue $policyType -Force
-        $Config | Add-Member -NotePropertyName 'URLName' -NotePropertyValue 'mobileAppConfigurations' -Force
-        $Config | Add-Member -NotePropertyName 'PolicySource' -NotePropertyValue 'AppConfiguration' -Force
-        $Config | Add-Member -NotePropertyName 'PolicyAssignment' -NotePropertyValue ($PolicyAssignment -join ', ') -Force
-        $Config | Add-Member -NotePropertyName 'PolicyExclude' -NotePropertyValue ($PolicyExclude -join ', ') -Force
-        if (-not $Config.PSObject.Properties['isAssigned']) {
-            $Config | Add-Member -NotePropertyName 'isAssigned' -NotePropertyValue $false -Force
+        $ConfigProps = [ordered]@{
+            PolicyTypeName   = $policyType
+            URLName          = 'mobileAppConfigurations'
+            PolicySource     = 'AppConfiguration'
+            PolicyAssignment = ($PolicyAssignment -join ', ')
+            PolicyExclude    = ($PolicyExclude -join ', ')
         }
-        $Config | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
+        if (-not $Config.PSObject.Properties['isAssigned']) {
+            $ConfigProps['isAssigned'] = $false
+        }
+        $ConfigProps['CacheTimestamp'] = $CacheTimestamp
+        $Config | Add-Member -NotePropertyMembers $ConfigProps -Force
         $Results.Add($Config)
     }
 

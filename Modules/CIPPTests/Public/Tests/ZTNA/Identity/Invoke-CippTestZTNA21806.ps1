@@ -13,11 +13,11 @@ function Invoke-CippTestZTNA21806 {
             return
         }
 
-        $matchedPolicies = $allCAPolicies | Where-Object {
+        $matchedPolicies = $allCAPolicies.Where({
             ($_.conditions.applications.includeUserActions -contains 'urn:user:registersecurityinfo') -and
             ($_.conditions.users.includeUsers -contains 'All') -and
             $_.state -eq 'enabled'
-        }
+        })
 
         $testResultMarkdown = ''
 

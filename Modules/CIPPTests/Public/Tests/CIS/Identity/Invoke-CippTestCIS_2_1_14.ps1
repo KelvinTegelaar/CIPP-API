@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_2_1_14 {
             return
         }
 
-        $Offending = $Inbound | Where-Object { $_.AllowedSenderDomains -and $_.AllowedSenderDomains.Count -gt 0 }
+        $Offending = $Inbound.Where({ $_.AllowedSenderDomains -and $_.AllowedSenderDomains.Count -gt 0 })
 
         if (-not $Offending) {
             $Status = 'Passed'

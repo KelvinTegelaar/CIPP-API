@@ -1,0 +1,50 @@
+{
+  "name": "RetentionCompliancePolicyTemplate",
+  "label": "Retention Compliance Policy Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Deploy Microsoft Purview retention compliance policies from CIPP templates. Existing policies and rules are overwritten in place.",
+  "executiveText": "Deploys retention policies that govern how long content is preserved in Exchange, SharePoint, OneDrive, and Teams. Enforces consistent compliance retention across tenants for regulatory and legal hold needs.",
+  "docsDescription": "Deploy Microsoft Purview retention compliance policies from CIPP templates. If a policy or rule with the same name already exists in the tenant, it is updated in place; otherwise it is created. Uses the application token to bypass GDAP delegated-identity restrictions on retention cmdlets. The standard grades whether each selected policy exists by name - it does not diff policy settings - and rewrites every selected policy on each remediation run, matching the classic standard.",
+  "impactColour": "warning",
+  "addedDate": "2026-05-10",
+  "powershellEquivalent": "New-RetentionCompliancePolicy or Set-RetentionCompliancePolicy",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "checkBeforeRun": false,
+  "multiple": true,
+  "instanceIdentity": "retentionCompliancePolicyTemplate",
+  "identity": {
+    "partition": "RetentionCompliancePolicyTemplate",
+    "nameField": "name"
+  },
+  "variables": {
+    "retentionCompliancePolicyTemplate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select Retention Compliance Policy Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListRetentionCompliancePolicyTemplates",
+        "labelField": "name",
+        "valueField": "GUID",
+        "queryKey": "ListRetentionCompliancePolicyTemplates"
+      }
+    }
+  },
+  "read": {
+    "cacheType": "ComplianceRetentionPolicies"
+  },
+  "prepare": "Get-CIPPBaselineRetentionCompliancePolicyTemplateState",
+  "remediate": {
+    "executor": "RetentionCompliancePolicyTemplate"
+  }
+}

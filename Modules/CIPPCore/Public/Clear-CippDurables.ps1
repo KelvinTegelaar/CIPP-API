@@ -15,6 +15,14 @@ function Clear-CippDurables {
     Remove-AzDataTable @QueueTable
     Remove-AzDataTable @CippQueueTasks
 
+    # Drop these from the Get-CIPPTable cache so they get recreated on next use.
+    Unregister-CIPPTable -TableName @(
+        ('{0}Instances' -f $FunctionName)
+        ('{0}History' -f $FunctionName)
+        'CippQueue'
+        'CippQueueTasks'
+    )
+
     $Queues = Get-CIPPAzStorageQueue -Name ('{0}*' -f $FunctionName)
 
     $RunningQueues = $Queues | Where-Object { $_.ApproximateMessageCount -gt 0 }

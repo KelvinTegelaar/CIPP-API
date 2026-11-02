@@ -6,17 +6,18 @@ function Invoke-ListGraphRequest {
     .ROLE
         CIPP.Core.Read
     .DESCRIPTION
-        Proxies an arbitrary Microsoft Graph API GET request for a tenant. Supports custom endpoints, filters, pagination, and field selection via query parameters.
+        Proxies an arbitrary Microsoft Graph API GET request for a tenant. Supports custom endpoints, filters, pagination, and field selection via query parameters. If a request returns a permission error, retry with AsApp set to true: admin and application-scoped endpoints (for example admin/sharepoint/settings) require the application's own permissions rather than the default delegated access.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
-    Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Debug'
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $CippLink = ([System.Uri]$TriggerMetadata.Headers.Referer).PathAndQuery
+    # Craft breaks egress accounting out per Graph resource on this header.
+    $EgressHeaders = @{ 'X-Craft-Endpoint' = (Get-CippGraphEndpointLabel -Endpoint $Request.Query.Endpoint) }
 
     $Parameters = @{}
     if ($Request.Query.'$filter') {
@@ -39,6 +40,10 @@ function Invoke-ListGraphRequest {
         $Parameters.'expand' = $Request.Query.expand
     }
 
+    # Graph's page size, NOT a result limit. This endpoint follows @odata.nextLink to the
+    # end by default, so $top alone changes how many round trips it makes and not how many
+    # records come back - asking for 1 still returns everything. Pair it with NoPagination
+    # to stop after one page, or manualPagination to page through deliberately.
     if ($Request.Query.'$top') {
         $Parameters.'$top' = $Request.Query.'$top'
     }
@@ -61,6 +66,9 @@ function Invoke-ListGraphRequest {
     }
 
     $GraphRequestParams = @{
+        # The Graph path to call, without the version prefix - 'users',
+        # 'deviceManagement/managedDevices', 'groups/<id>/members'. Use ListGraphSchema to
+        # check what an endpoint returns before spending a call on it.
         Endpoint   = $Request.Query.Endpoint
         Parameters = $Parameters
         CippLink   = $CippLink
@@ -74,22 +82,56 @@ function Invoke-ListGraphRequest {
         $GraphRequestParams.QueueId = $Request.Query.QueueId
     }
 
-    if ($Request.Query.Version) {
-        $GraphRequestParams.Version = $Request.Query.Version
+    # Graph API version to call: v1.0 or beta. Defaults to beta when omitted.
+    switch ($Request.Query.Version) {
+        'v1.0' { $GraphRequestParams.Version = 'v1.0' }
+        'beta' { $GraphRequestParams.Version = 'beta' }
+        default {
+            if ($Request.Query.Version) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = 'Version must be v1.0 or beta.'
+                    })
+            }
+        }
     }
 
+    # Return only the first page and stop. The default follows every @odata.nextLink until
+    # the collection is exhausted, which on a large tenant is both slow and very large - use
+    # this with $top when a sample is enough.
     if ($Request.Query.NoPagination) {
         $GraphRequestParams.NoPagination = [System.Convert]::ToBoolean($Request.Query.NoPagination)
     }
 
+    # Return one page plus its @odata.nextLink in the response metadata, so the caller can
+    # fetch the next page itself by passing that link back as nextLink. Use this to walk a
+    # large collection in bounded steps rather than pulling it all at once.
     if ($Request.Query.manualPagination) {
         $GraphRequestParams.ManualPagination = [System.Convert]::ToBoolean($Request.Query.manualPagination)
     }
 
+    # $top is Graph's page size, so $top=1 with pagination fetches the entire collection one
+    # record per round trip. A caller asking for 1 wants one record; only an explicit
+    # NoPagination/manualPagination overrides this.
+    if ($Parameters.'$top' -eq '1' -and $null -eq $Request.Query.NoPagination -and $null -eq $Request.Query.manualPagination) {
+        $GraphRequestParams.NoPagination = $true
+    }
+
+    # Continue a manualPagination walk: pass back the @odata.nextLink returned with the
+    # previous page. Endpoint is still required, and the other query options are already
+    # encoded in the link.
     if ($Request.Query.nextLink) {
         $GraphRequestParams.nextLink = $Request.Query.nextLink
     }
 
+    # Paged AllTenants cache reads only: target page size in bytes of raw JSON, clamped
+    # between 262144 and 8388608 (default 4000000). Pages always hold at least one whole tenant.
+    if ($Request.Query.maxPageBytes -as [int]) {
+        $GraphRequestParams.MaxPageBytes = [int]$Request.Query.maxPageBytes
+    }
+
+    # Return just the number of matching records instead of the records themselves. The
+    # cheapest way to size a collection before deciding whether to fetch it.
     if ($Request.Query.CountOnly) {
         $GraphRequestParams.CountOnly = [System.Convert]::ToBoolean($Request.Query.CountOnly)
     }
@@ -140,6 +182,28 @@ function Invoke-ListGraphRequest {
             $Metadata.GraphHeaders = $script:LastGraphResponseHeaders
         }
 
+        # Paged AllTenants cache serve: one page of tenant blobs plus Metadata.nextLink.
+        if ($UseRawJson -and $Results -isnot [string] -and $Results.PSObject.Properties.Name -contains 'CippPagedJson') {
+            if ($Request.Headers.'x-ms-coldstart' -eq 1) {
+                $Metadata.ColdStart = $true
+            }
+            if ($Results.CippNextLink) {
+                $Metadata.nextLink = $Results.CippNextLink
+            } else {
+                # Do not echo the incoming token back on the final page.
+                $Metadata.Remove('nextLink')
+            }
+            $MetadataJson = ConvertTo-Json -InputObject $Metadata -Depth 5 -Compress
+            $GraphRequestData = '{"Results":' + $Results.CippPagedJson + ',"Metadata":' + $MetadataJson + '}'
+
+            return ([HttpResponseContext]@{
+                    StatusCode  = [HttpStatusCode]::OK
+                    ContentType = 'application/json'
+                    Headers     = $EgressHeaders
+                    Body        = $GraphRequestData
+                })
+        }
+
         # RawJsonArray returns a JSON string directly — skip object-level processing
         if ($UseRawJson -and $Results -is [string] -and $Results.StartsWith('[')) {
             if ($Request.Headers.'x-ms-coldstart' -eq 1) {
@@ -152,6 +216,7 @@ function Invoke-ListGraphRequest {
             return ([HttpResponseContext]@{
                     StatusCode  = $StatusCode
                     ContentType = 'application/json'
+                    Headers     = $EgressHeaders
                     Body        = $GraphRequestData
                 })
         }
@@ -202,6 +267,7 @@ function Invoke-ListGraphRequest {
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
+            Headers    = $EgressHeaders
             Body       = $GraphRequestData
         })
 }

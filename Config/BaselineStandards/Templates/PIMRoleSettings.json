@@ -1,0 +1,57 @@
+{
+  "name": "PIMRoleSettings",
+  "label": "PIM Role Settings Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Deploys a Privileged Identity Management role settings template to the tenant: activation limits, MFA or authentication context, justification, approval, eligibility and active-assignment expiry and notification rules for the roles the template covers. Templates cannot weaken settings below CIPP's secure floor.",
+  "executiveText": "Enforces consistent Privileged Identity Management settings so that administrator roles can only be used for a limited time, after strong authentication and with a recorded reason. This keeps standing administrative access to a minimum and makes every use of privilege visible and accountable.",
+  "docsDescription": "Deploys a Privileged Identity Management role settings template to the tenant. The template defines, for a set of roles, the maximum activation duration, whether activation requires MFA or an authentication context, justification, ticket and approval requirements, the maximum lifetime of eligible and active assignments, and additional notification recipients. Each covered role grades separately against the template, and remediation patches only the policy rules that differ. Templates are validated against CIPP's secure floor (activation within 24 hours with MFA or an authentication context and a justification; eligible and active assignments must expire within a year; active assignments require a justification) and a template below it reports an error rather than being applied. Requires Entra ID P2.",
+  "impactColour": "danger",
+  "addedDate": "2026-08-23",
+  "powershellEquivalent": "Update-MgBetaPolicyRoleManagementPolicyRule",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "AAD_PREMIUM_P2"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "TemplateList",
+  "identity": {
+    "partition": "PIMRoleSettingsTemplate",
+    "nameField": "templateName"
+  },
+  "variables": {
+    "TemplateList": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select PIM Role Settings Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListPIMRoleSettingsTemplates",
+        "labelField": "templateName",
+        "valueField": "GUID",
+        "queryKey": "ListPIMRoleSettingsTemplates",
+        "showRefresh": true,
+        "templateView": {
+          "title": "PIM Role Settings Template"
+        }
+      }
+    }
+  },
+  "read": {
+    "cacheType": "RoleManagementPolicies"
+  },
+  "prepare": "Get-CIPPBaselinePIMRoleSettingsState",
+  "remediate": {
+    "executor": "PIMRoleSettings"
+  }
+}

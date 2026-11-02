@@ -28,7 +28,7 @@ function Invoke-CippTestCISAMSEXO61 {
         foreach ($Policy in $SharingPolicies) {
             if ($Policy.Enabled) {
                 # Check if any domain allows contact sharing (ContactsSharing capability)
-                $ContactSharingDomains = $Policy.Domains | Where-Object { $_ -match 'ContactsSharing' }
+                $ContactSharingDomains = $Policy.Domains.Where({ $_ -match 'ContactsSharing' })
                 if ($ContactSharingDomains) {
                     $FailedPolicies.Add([PSCustomObject]@{
                             'Policy Name' = $Policy.Name

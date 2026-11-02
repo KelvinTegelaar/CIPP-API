@@ -1,0 +1,36 @@
+{
+  "name": "RotateDKIM",
+  "label": "Rotate DKIM keys that are 1024 bit to 2048 bit",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Rotates enabled DKIM configurations still using 1024-bit keys to 2048-bit.",
+  "executiveText": "Upgrades weak email signing keys to current cryptographic strength, keeping the organization's email authentication resistant to forgery.",
+  "docsDescription": "Grades enabled DKIM configurations whose selector keys are still 1024-bit. Remediation rotates each to 2048-bit; rotation is asynchronous in Exchange, so the row stays at drift until the new key publishes.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Rotate-DkimSigningConfig",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "read": {
+    "cacheType": "ExoDkimSigningConfig"
+  },
+  "prepare": "Get-CIPPBaselineRotateDKIMState",
+  "remediate": {
+    "executor": "RotateDKIM"
+  }
+}

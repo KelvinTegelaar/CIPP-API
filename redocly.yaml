@@ -1,0 +1,5 @@
+apis:
+  enriched:
+    root: ./openapi.enriched.json
+extends:
+  - recommended

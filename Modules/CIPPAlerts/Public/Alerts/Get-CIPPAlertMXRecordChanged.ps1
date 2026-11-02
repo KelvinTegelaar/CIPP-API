@@ -23,6 +23,11 @@ function Get-CIPPAlertMXRecordChanged {
         $ChangedDomains = foreach ($Domain in $DomainData) {
             try {
                 $PreviousDomain = $PreviousResults | Where-Object { $_.Domain -eq $Domain.Domain }
+                if (-not $PreviousDomain) {
+                    Write-Information "Initializing MX record baseline for domain $($Domain.Domain): $($Domain.ActualMXRecords.Hostname -join ', ')"
+                    continue
+                }
+
                 $PreviousRecords = if ($PreviousDomain.ActualMXRecords) { @($PreviousDomain.ActualMXRecords -split ',' | Sort-Object) } else { @() }
                 $CurrentRecords = if ($Domain.ActualMXRecords.Hostname) { @($Domain.ActualMXRecords.Hostname | Sort-Object) } else { @() }
 
@@ -67,9 +72,7 @@ function Get-CIPPAlertMXRecordChanged {
             Add-CIPPAzDataTableEntity @CacheTable -Entity $CacheEntity -Force
         }
 
-        if ($ChangedDomains) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $ChangedDomains
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $ChangedDomains
     } catch {
         Write-LogMessage -message "Failed to check MX record changes: $($_.Exception.Message)" -API 'MX Record Alert' -tenant $TenantFilter -sev Error
     }

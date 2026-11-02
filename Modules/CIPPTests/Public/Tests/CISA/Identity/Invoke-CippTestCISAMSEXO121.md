@@ -16,7 +16,7 @@ Remove-TenantAllowBlockListItems -ListType Sender -Ids <submission-id>
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.12.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo121v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.12.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo121v1)
 - [Manage the Tenant Allow/Block List](https://learn.microsoft.com/microsoft-365/security/office-365-security/tenant-allow-block-list-about)
 
 <!--- Results --->

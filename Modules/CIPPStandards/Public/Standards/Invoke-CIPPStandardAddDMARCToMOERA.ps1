@@ -41,12 +41,13 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
     #$Rerun -Type Standard -Tenant $Tenant -API 'AddDMARCToMOERA' -Settings $Settings
 
     $DesiredValue = $Settings.RecordValue.Value ?? 'v=DMARC1; p=reject;'
+    $DesiredTags = (($DesiredValue -split ';').Trim() -ne '') -join ';'
 
     # Get all fallback domains (onmicrosoft.com domains) and check if the DMARC record is set correctly
     try {
         $DomainsResponse = New-GraphGetRequest -TenantID $Tenant -Uri 'https://graph.microsoft.com/beta/domains'
         Write-Warning ($DomainsResponse | ConvertTo-Json -Depth 5)
-        $Domains = @($DomainsResponse | Where-Object { $_.id -like '*.onmicrosoft.com' } | ForEach-Object { $_.id })
+        $Domains = @($DomainsResponse | Where-Object { $_.id -like '*.onmicrosoft.com' -and $_.id -notlike '*.mail.onmicrosoft.com' } | ForEach-Object { $_.id })
         Write-Information "Detected $($Domains.Count) MOERA domains: $($Domains -join ', ')"
 
         $CurrentInfo = foreach ($Domain in $Domains) {
@@ -64,7 +65,7 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
             } else {
                 [PSCustomObject]@{
                     DomainName    = $Domain
-                    Match         = $CurrentRecord -eq $DesiredValue
+                    Match         = ((($CurrentRecord -split ';').Trim() -ne '') -join ';') -eq $DesiredTags
                     CurrentRecord = $CurrentRecord
                 }
             }
@@ -90,7 +91,7 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DMARC record is already set for all MOERA (onmicrosoft.com) domains.' -sev Info
         } else {
             $UniqueDomains = ($CurrentInfo | Sort-Object -Property DomainName -Unique)
-            $NotSetDomains = @($UniqueDomains | ForEach-Object { if ($_.Match -eq $false -or ($CurrentInfo | Where-Object -Property DomainName -EQ $_.DomainName).Count -eq 1) { $_.DomainName } })
+            $NotSetDomains = @($UniqueDomains | Where-Object -Property Match -EQ $false | ForEach-Object { $_.DomainName })
             $Message = "DMARC record is not set for $($NotSetDomains.count) of $($UniqueDomains.count) MOERA (onmicrosoft.com) domains."
 
             Write-StandardsAlert -message $Message -object @{MissingDMARC = ($NotSetDomains -join ', ') } -tenant $tenant -standardName 'AddDMARCToMOERA' -standardId $Settings.standardId
@@ -100,6 +101,5 @@ function Invoke-CIPPStandardAddDMARCToMOERA {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.AddDMARCToMOERA' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'AddDMARCToMOERA' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

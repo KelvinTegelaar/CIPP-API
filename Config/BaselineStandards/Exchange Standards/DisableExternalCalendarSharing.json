@@ -1,0 +1,65 @@
+{
+  "name": "DisableExternalCalendarSharing",
+  "label": "Disable external calendar sharing",
+  "cat": "Exchange Standards",
+  "tag": [
+    "CIS M365 7.0.0 (1.3.3)",
+    "exo_individualsharing"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Disables the ability for users to share their calendar with external users. Only for the default policy, so exclusions can be made if needed.",
+  "executiveText": "Prevents employees from sharing their calendars with external parties, protecting sensitive meeting information and internal schedules from unauthorized access. This security measure helps maintain confidentiality of business activities while still allowing internal collaboration.",
+  "docsDescription": "Disables external calendar sharing for the entire tenant. This is not a widely used feature, and it's therefore unlikely that this will impact users. Only for the default policy, so exclusions can be made if needed by making a new policy and assigning it to users.",
+  "impactColour": "info",
+  "addedDate": "2024-01-08",
+  "powershellEquivalent": "Get-SharingPolicy | Set-SharingPolicy -Enabled $False",
+  "appliesToTest": [
+    "CISAMSEXO62",
+    "CIS_1_3_3",
+    "ZTNA21803"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 5,
+  "compare": "subset",
+  "variables": {
+    "externalCalendarSharingEnabled": {
+      "type": "switch",
+      "label": "External calendar sharing enabled on the default sharing policy",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "Enabled": "%externalCalendarSharingEnabled%"
+  },
+  "read": {
+    "cacheType": "ExoSharingPolicy",
+    "filter": [
+      {
+        "property": "Default",
+        "value": true
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-SharingPolicy",
+        "params": {
+          "Identity": "Default Sharing Policy",
+          "Enabled": "%externalCalendarSharingEnabled%"
+        }
+      }
+    ]
+  }
+}

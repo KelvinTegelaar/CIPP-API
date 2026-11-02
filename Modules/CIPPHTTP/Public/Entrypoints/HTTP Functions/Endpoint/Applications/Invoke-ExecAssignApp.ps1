@@ -24,16 +24,30 @@ function Invoke-ExecAssignApp {
     $AssignmentFilterName = $Request.Body.AssignmentFilterName
     $AssignmentFilterType = $Request.Body.AssignmentFilterType
     $ExcludeGroup = $Request.Body.excludeGroup
+    $ExcludeGroupIdsRaw = $Request.Body.ExcludeGroupIds
+    $ExcludeGroupNamesRaw = $Request.Body.ExcludeGroupNames
+    $AssignmentDirection = $Request.Body.assignmentDirection
 
     $Intent = if ([string]::IsNullOrWhiteSpace($Intent)) { 'Required' } else { $Intent }
 
     if ([string]::IsNullOrWhiteSpace($AssignmentMode)) {
-        $AssignmentMode = 'replace'
+        $AssignmentMode = 'append'
     } else {
         $AssignmentMode = $AssignmentMode.ToLower()
         if ($AssignmentMode -notin @('replace', 'append')) {
             throw "Unsupported AssignmentMode value '$AssignmentMode'. Valid options are 'replace' or 'append'."
         }
+    }
+
+    # assignmentDirection is sent only by the Custom Group action and switches that request to
+    # direction-scoped Replace (preserve the other direction + All Users/All Devices broad targets).
+    if (-not [string]::IsNullOrWhiteSpace($AssignmentDirection)) {
+        $AssignmentDirection = $AssignmentDirection.ToLower()
+        if ($AssignmentDirection -notin @('include', 'exclude')) {
+            $AssignmentDirection = $null
+        }
+    } else {
+        $AssignmentDirection = $null
     }
 
     function Get-StandardizedAssignmentList {
@@ -53,9 +67,25 @@ function Invoke-ExecAssignApp {
 
     $GroupNames = Get-StandardizedAssignmentList -InputObject $GroupNamesRaw
     $GroupIds = Get-StandardizedAssignmentList -InputObject $GroupIdsRaw
+    $ExcludeGroupIds = Get-StandardizedAssignmentList -InputObject $ExcludeGroupIdsRaw
+    $ExcludeGroupNames = Get-StandardizedAssignmentList -InputObject $ExcludeGroupNamesRaw
 
-    if (-not $AssignTo -and $GroupIds.Count -eq 0 -and $GroupNames.Count -eq 0) {
-        throw 'No assignment target provided. Supply AssignTo, GroupNames, or GroupIds.'
+    # 'Clear all exclusions' is a Custom Group Exclude + Replace request with no groups selected.
+    $IsClearExclusions = ($AssignmentDirection -eq 'exclude') -and ($AssignmentMode -eq 'replace')
+
+    if (-not $AssignTo -and $GroupIds.Count -eq 0 -and $GroupNames.Count -eq 0 -and $ExcludeGroupIds.Count -eq 0 -and [string]::IsNullOrWhiteSpace($ExcludeGroup) -and -not $IsClearExclusions) {
+        throw 'No assignment target provided. Supply AssignTo, GroupNames, GroupIds, or an exclude group.'
+    }
+
+    # Safety net for legacy/API callers (no assignmentDirection): an exclude-only request in
+    # 'replace' mode would post just the exclusion target and wipe every existing assignment, so
+    # force preserve. The Custom Group action sends assignmentDirection and uses direction-scoped
+    # Replace instead, so it is exempt.
+    $IsExcludeOnly = (-not $AssignTo -and $GroupIds.Count -eq 0 -and $GroupNames.Count -eq 0) -and
+    ($ExcludeGroupIds.Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($ExcludeGroup))
+    if ($IsExcludeOnly -and $AssignmentMode -eq 'replace' -and -not $AssignmentDirection) {
+        Write-Information 'Exclude-only assignment requested; forcing append mode to preserve existing assignments.'
+        $AssignmentMode = 'append'
     }
 
     # Try to get the application type if not provided. Mostly just useful for ppl using the API that dont know the application type.
@@ -78,7 +108,8 @@ function Invoke-ExecAssignApp {
     } elseif ($GroupIds.Count -gt 0) {
         "GroupIds: $($GroupIds -join ',')"
     } else {
-        'CustomGroupAssignment'
+        # Exclude-only assignment: no include target, so the helper must not try to resolve one
+        $null
     }
 
     $setParams = @{
@@ -108,6 +139,18 @@ function Invoke-ExecAssignApp {
 
     if (-not [string]::IsNullOrWhiteSpace($ExcludeGroup)) {
         $setParams.ExcludeGroup = $ExcludeGroup
+    }
+
+    if ($ExcludeGroupIds.Count -gt 0) {
+        $setParams.ExcludeGroupIds = $ExcludeGroupIds
+    }
+
+    if ($ExcludeGroupNames.Count -gt 0) {
+        $setParams.ExcludeGroupNames = $ExcludeGroupNames
+    }
+
+    if ($AssignmentDirection) {
+        $setParams.AssignmentDirection = $AssignmentDirection
     }
 
     try {

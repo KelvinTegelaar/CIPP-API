@@ -100,6 +100,5 @@ function Invoke-CIPPStandardExcludedfileExt {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.ExcludedfileExt' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'ExcludedfileExt' -FieldValue $CurrentInfo.excludedFileExtensionsForSyncApp -StoreAs json -Tenant $tenant
     }
 }

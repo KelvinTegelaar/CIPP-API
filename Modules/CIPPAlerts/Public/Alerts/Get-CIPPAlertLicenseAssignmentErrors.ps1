@@ -90,10 +90,7 @@ function Get-CIPPAlertLicenseAssignmentErrors {
             }
         }
 
-        # If errors are found, write alert
-        if ($LicenseAssignmentErrors) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $LicenseAssignmentErrors
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $LicenseAssignmentErrors
 
     } catch {
         Write-LogMessage -message "Failed to check license assignment errors: $($_.exception.message)" -API 'License Assignment Alerts' -tenant $TenantFilter -sev Error

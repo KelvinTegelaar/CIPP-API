@@ -4,6 +4,8 @@ Function Invoke-ExecGeoIPLookup {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Resolves a single IP address to its geographic location using CIPP's bundled GeoIP database.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -13,13 +13,13 @@ function Invoke-CippTestZTNA21828 {
             return
         }
 
-        $matchedPolicies = $allCAPolicies | Where-Object {
+        $matchedPolicies = $allCAPolicies.Where({
             $_.conditions.authenticationFlows.transferMethods -match 'authenticationTransfer' -and
             $_.grantControls.builtInControls -contains 'block' -and
             $_.conditions.users.includeUsers -eq 'all' -and
             $_.conditions.applications.includeApplications -eq 'all' -and
             $_.state -eq 'enabled'
-        }
+        })
 
         if ($matchedPolicies.Count -gt 0) {
             $passed = 'Passed'

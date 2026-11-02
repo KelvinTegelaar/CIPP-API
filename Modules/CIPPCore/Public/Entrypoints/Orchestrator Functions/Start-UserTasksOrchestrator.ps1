@@ -28,11 +28,12 @@ function Start-UserTasksOrchestrator {
         }
     } else {
         $4HoursAgo = (Get-Date).AddHours(-4).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-        $24HoursAgo = (Get-Date).AddHours(-24).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-        # Pending = orchestrator queued, Running = actively executing
-        # Pick up: Planned, Failed-Planned, stuck Pending (>24hr), or stuck Running (>4hr for large AllTenants tasks)
-        $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$24HoursAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo') or (TaskState eq 'Processing' and Timestamp lt datetime'$4HoursAgo'))"
-        $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+        $1HourAgo = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        # Pending = orchestrator claimed but executor not yet started, Running = actively executing
+        # Pick up: Planned, Failed-Planned, stuck Pending (>1hr - orphaned claim), or stuck Running/Processing (>4hr for large AllTenants tasks)
+        $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$1HourAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo') or (TaskState eq 'Processing' and Timestamp lt datetime'$4HoursAgo'))"
+        # Disabled is filtered client side: an OData comparison excludes rows that lack the property, which is every task created before the flag existed
+        $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Disabled -ne $true }
     }
 
     $Batch = [System.Collections.Generic.List[object]]::new()
@@ -105,7 +106,11 @@ function Start-UserTasksOrchestrator {
                         throw "Command '$($task.Command)' not found and no module could be resolved from the command name for scheduled task '$($task.Name)'."
                     }
                 }
-                $HasTenantFilter = $CommandInfo.Parameters.ContainsKey('TenantFilter')
+                # The task's authorized tenant is injected into the most specific tenant-identifying
+                # parameter the command declares - stored parameter values must never select the tenant.
+                $TenantParamNames = [array](@('TenantFilter', 'Tenant', 'TenantId') | Where-Object { $CommandInfo.Parameters.ContainsKey($_) })
+                $HasTenantFilter = $TenantParamNames.Count -gt 0
+                $PrimaryTenantParam = $TenantParamNames.Count -gt 0 ? $TenantParamNames[0] : $null
 
                 $ScheduledCommand = [pscustomobject]@{
                     Command      = $task.Command
@@ -114,13 +119,79 @@ function Start-UserTasksOrchestrator {
                     FunctionName = 'ExecScheduledCommand'
                 }
 
-                if ($task.Tenant -eq 'AllTenants') {
-                    $ExcludedTenants = $task.excludedTenants -split ','
-                    Write-Host "Excluded Tenants from this task: $ExcludedTenants"
-                    $AllTenantCommands = foreach ($Tenant in $TenantList | Where-Object { $_.defaultDomainName -notin $ExcludedTenants }) {
+                # Scope is resolved on every run so group membership stays current, as
+                # Test-CIPPAuditLogRules does for audit alerts. The stored selection is only trusted
+                # on a row the execution gates also read as multi-tenant, otherwise the fan-out here
+                # and Push-ExecScheduledCommand would disagree about the task's shape.
+                $UsesStoredSelection = $task.Tenants -and $task.Tenant -eq 'AllTenants'
+                if ($task.Tenants -and -not $UsesStoredSelection) {
+                    Write-Information "Task $($task.Name): ignoring the stored selection, Tenant is '$($task.Tenant)' rather than AllTenants"
+                }
+                $Selection = if ($UsesStoredSelection) {
+                    @($task.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue)
+                } elseif ($task.TenantGroup) {
+                    @($task.TenantGroup | ConvertFrom-Json -ErrorAction SilentlyContinue)
+                }
+
+                $TargetTenants = $null
+                $ResolvedScope = $false
+                if ($Selection) {
+                    try {
+                        $Expanded = Expand-CIPPTenantGroups -TenantFilter $Selection
+                    } catch {
+                        # Must not fall through to the single-tenant path below: Tenant is the
+                        # AllTenants sentinel for a multi-entry selection. Fail the task instead.
+                        throw "Failed to expand tenant selection for task $($task.Name): $($_.Exception.Message)"
+                    }
+                    # Non-group entries pass through unexpanded, so the sentinel survives.
+                    $TargetTenants = if ($Expanded.value -contains 'AllTenants') {
+                        $TenantList
+                    } else {
+                        @($TenantList | Where-Object { $_.defaultDomainName -in $Expanded.value })
+                    }
+                    $ResolvedScope = $true
+                } elseif ($task.Tenant -eq 'AllTenants') {
+                    # An explicit *All Tenants pick, with no selection stored alongside it
+                    $TargetTenants = $TenantList
+                    $ResolvedScope = $true
+                }
+
+                # Rows predating runtime expansion merged a snapshot of every unselected tenant into
+                # excludedTenants, indistinguishable from the operator's own picks, so it is ignored
+                # for those. A selection carrying the AllTenants sentinel never had a snapshot
+                # written, so its exclusions are the operator's and are kept. excludedTenantGroups
+                # was never part of the snapshot either and always applies.
+                $IsLegacySnapshot = $UsesStoredSelection -and -not $task.TenantSelectionVersion -and ($Selection.value -notcontains 'AllTenants')
+                $ExcludedTenants = [System.Collections.Generic.List[string]]::new()
+                if ($task.excludedTenants) {
+                    $StoredExclusions = @($task.excludedTenants -split ',' | Where-Object { $_ })
+                    if ($IsLegacySnapshot) {
+                        # Only report a snapshot that would actually have dropped a tenant in scope
+                        # now, or every run of every legacy row logs the same no-op indefinitely.
+                        $Reinstated = @($StoredExclusions | Where-Object { $_ -in $TargetTenants.defaultDomainName })
+                        if ($Reinstated.Count -gt 0) {
+                            Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Task $($task.Name): ignored $($Reinstated.Count) stale snapshot exclusions, tenant group membership is now resolved at runtime" -Sev 'Info'
+                        }
+                    } else {
+                        $ExcludedTenants.AddRange([string[]]$StoredExclusions)
+                    }
+                }
+                if ($task.excludedTenantGroups) {
+                    $ExcludedGroups = $task.excludedTenantGroups | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    if ($ExcludedGroups) {
+                        $ExcludedTenants.AddRange([string[]]@((Expand-CIPPTenantGroups -TenantFilter $ExcludedGroups).value | Where-Object { $_ }))
+                    }
+                }
+
+                if ($ResolvedScope) {
+                    Write-Information "Task $($task.Name): $(@($TargetTenants).Count) tenants in scope, $($ExcludedTenants.Count) excluded"
+                    $FanOutCommands = foreach ($Tenant in $TargetTenants | Where-Object { $_.defaultDomainName -notin $ExcludedTenants }) {
                         $NewParams = $task.Parameters.Clone()
                         if ($HasTenantFilter) {
+                            # TenantFilter always carries the execution tenant context; it is stripped
+                            # before splatting if the command does not declare it
                             $NewParams.TenantFilter = $Tenant.defaultDomainName
+                            $NewParams.$PrimaryTenantParam = $Tenant.defaultDomainName
                         }
                         # Clone TaskInfo to prevent shared object references
                         $TaskInfoClone = $task.PSObject.Copy()
@@ -131,68 +202,49 @@ function Start-UserTasksOrchestrator {
                             FunctionName = 'ExecScheduledCommand'
                         }
                     }
-                    $Batch.AddRange(@($AllTenantCommands))
-                } elseif ($task.TenantGroup) {
-                    # Handle tenant groups - expand group to individual tenants
-                    try {
-                        $TenantGroupObject = $task.TenantGroup | ConvertFrom-Json
-                        Write-Host "Expanding tenant group: $($TenantGroupObject.label) with ID: $($TenantGroupObject.value)"
-
-                        # Create a tenant filter object for expansion
-                        $TenantFilterForExpansion = @([PSCustomObject]@{
-                                type  = 'Group'
-                                value = $TenantGroupObject.value
-                                label = $TenantGroupObject.label
-                            })
-
-                        # Expand the tenant group to individual tenants
-                        $ExpandedTenants = Expand-CIPPTenantGroups -TenantFilter $TenantFilterForExpansion
-
-                        $ExcludedTenants = $task.excludedTenants -split ','
-                        Write-Host "Excluded Tenants from this task: $ExcludedTenants"
-
-                        $GroupTenantCommands = foreach ($ExpandedTenant in $ExpandedTenants | Where-Object { $_.value -notin $ExcludedTenants }) {
-                            $NewParams = $task.Parameters.Clone()
-                            if ($HasTenantFilter) {
-                                $NewParams.TenantFilter = $ExpandedTenant.value
-                            }
-                            # Clone TaskInfo to prevent shared object references
-                            $TaskInfoClone = $task.PSObject.Copy()
-                            [pscustomobject]@{
-                                Command      = $task.Command
-                                Parameters   = $NewParams
-                                TaskInfo     = $TaskInfoClone
-                                FunctionName = 'ExecScheduledCommand'
-                            }
+                    if (@($FanOutCommands).Count -gt 0) {
+                        $Batch.AddRange(@($FanOutCommands))
+                    } else {
+                        # Every selected group resolved empty, or was deleted. Close the run out here:
+                        # the row is already Pending, and with no batch item no orchestrator or post
+                        # execution runs, so it would be reclaimed as stale every hour and a recurring
+                        # task would never advance its schedule.
+                        $NextRun = Get-CIPPScheduledTaskNextRun -Recurrence $task.Recurrence -ScheduledTime $task.ScheduledTime
+                        $EmptyScopeEntity = @{
+                            PartitionKey = $task.PartitionKey
+                            RowKey       = $task.RowKey
+                            Results      = 'No tenants in scope for this task.'
+                            ExecutedTime = "$currentUnixTime"
+                            TaskState    = $NextRun -gt 0 ? 'Planned' : 'Completed'
                         }
-                        $Batch.AddRange(@($GroupTenantCommands))
-                    } catch {
-                        Write-Host "Error expanding tenant group: $($_.Exception.Message)"
-                        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to expand tenant group for task $($task.Name): $($_.Exception.Message)" -sev Error
-
-                        # Fall back to treating as single tenant
-                        if ($HasTenantFilter) {
-                            $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
-                        }
-                        $Batch.Add($ScheduledCommand)
+                        if ($NextRun -gt 0) { $EmptyScopeEntity.ScheduledTime = "$NextRun" }
+                        $null = Update-AzDataTableEntity -Force @Table -Entity $EmptyScopeEntity
+                        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Task $($task.Name): no tenants in scope, nothing to run" -Sev 'Info'
                     }
                 } else {
-                    # Handle single tenant
+                    # Single tenant
                     if ($HasTenantFilter) {
                         $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
+                        $ScheduledCommand.Parameters[$PrimaryTenantParam] = $task.Tenant
                     }
                     $Batch.Add($ScheduledCommand)
                 }
             } catch {
                 $errorMessage = $_.Exception.Message
 
-                $null = Update-AzDataTableEntity -Force @Table -Entity @{
+                # Failed is terminal - the pickup filter only reads Planned and Failed - Planned - so
+                # a recurring task parked there never runs again. A transient failure here (a tenant
+                # or group table read, say) must not permanently stop it.
+                $NextRun = Get-CIPPScheduledTaskNextRun -Recurrence $task.Recurrence -ScheduledTime $task.ScheduledTime
+                $FailureEntity = @{
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     Results      = "$errorMessage"
                     ExecutedTime = "$currentUnixTime"
-                    TaskState    = 'Failed'
+                    TaskState    = $NextRun -gt 0 ? 'Failed - Planned' : 'Failed'
                 }
+                if ($NextRun -gt 0) { $FailureEntity.ScheduledTime = "$NextRun" }
+                $null = Update-AzDataTableEntity -Force @Table -Entity $FailureEntity
                 Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to execute task $($task.Name): $errorMessage" -sev Error
             }
         }
@@ -236,6 +288,10 @@ function Start-UserTasksOrchestrator {
                     OrchestratorName = "UserTaskOrchestrator_$TenantName"
                     Batch            = $BatchWithQueue
                     SkipLog          = $true
+                    # User band: scheduled/run-now tasks must not queue behind P4 background fan-outs.
+                    # Explicit because the starter jobs that invoke this function expose no ambient
+                    # priority to inherit. Child orchestrations (e.g. OffboardingUser_*) inherit this.
+                    Priority         = 2
                 }
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Single-Tenant Tasks Orchestrator')) {
@@ -285,6 +341,8 @@ function Start-UserTasksOrchestrator {
                     OrchestratorName = "UserTaskOrchestrator_$($ParentTask.Name)"
                     Batch            = @($AllBatchItems)
                     SkipLog          = $true
+                    # User band - see the single-tenant orchestrator above.
+                    Priority         = 2
                     PostExecution    = @{
                         FunctionName = 'ScheduledTaskPostExecution'
                         Parameters   = @{

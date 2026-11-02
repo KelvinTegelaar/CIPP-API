@@ -1,0 +1,70 @@
+{
+  "name": "intuneDeviceRegLocalAdmins",
+  "label": "Configure local administrator rights for users joining devices",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CIS M365 7.0.0 (5.1.4.3)",
+    "CIS M365 7.0.0 (5.1.4.4)",
+    "SMB1001 (2.2)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Controls whether users who register Microsoft Entra joined devices are granted local administrator rights on those devices and if Global Administrators are added as local admins.",
+  "executiveText": "Controls whether employees who enroll devices automatically receive local administrator access. Disabling registering-user admin rights follows least-privilege principles and reduces security risk from over-privileged endpoints.",
+  "docsDescription": "Configures the Device Registration Policy local administrator behavior for registering users. When enabled, users who register devices are not granted local administrator rights, you can also configure if Global Administrators are added as local admins.",
+  "impactColour": "warning",
+  "addedDate": "2026-02-23",
+  "powershellEquivalent": "Update-MgBetaPolicyDeviceRegistrationPolicy",
+  "appliesToTest": [
+    "CIS_5_1_4_3",
+    "CIS_5_1_4_4",
+    "SMB1001_2_2"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "registeringUsers": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "Registering users as local administrators",
+      "required": true,
+      "options": [
+        {
+          "label": "Disabled (registering users are not local administrators)",
+          "value": "#microsoft.graph.noDeviceRegistrationMembership"
+        },
+        {
+          "label": "Enabled (registering users become local administrators)",
+          "value": "#microsoft.graph.allDeviceRegistrationMembership"
+        }
+      ],
+      "default": "#microsoft.graph.noDeviceRegistrationMembership",
+      "recommended": "#microsoft.graph.noDeviceRegistrationMembership"
+    },
+    "enableGlobalAdmins": {
+      "type": "switch",
+      "label": "Allow Global Administrators to be local administrators",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "expected": {
+    "localAdminsRegisteringUsers": "%registeringUsers%",
+    "localAdminsEnableGlobalAdmins": "%enableGlobalAdmins%"
+  },
+  "read": {
+    "cacheType": "DeviceRegistrationPolicy"
+  },
+  "prepare": "Get-CIPPBaselineDeviceRegistrationPolicyState",
+  "writeTarget": "deviceRegistrationPolicy",
+  "remediate": {
+    "executor": "DeviceRegistrationPolicy",
+    "set": {
+      "azureADJoin.localAdmins.registeringUsers": {
+        "@odata.type": "%registeringUsers%"
+      },
+      "azureADJoin.localAdmins.enableGlobalAdmins": "%enableGlobalAdmins%"
+    }
+  }
+}

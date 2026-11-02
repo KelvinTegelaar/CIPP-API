@@ -1,0 +1,99 @@
+{
+  "name": "SafeLinksPolicy",
+  "label": "Default SafeLinks Policy",
+  "cat": "Defender Standards",
+  "tag": [
+    "CIS M365 7.0.0 (2.1.1)",
+    "mdo_safelinksforemail",
+    "mdo_safelinksforOfficeApps",
+    "NIST CSF 2.0 (DE.CM-09)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "This creates a SafeLinks policy. An existing policy carrying a legacy CIPP or Microsoft default name is adopted and updated rather than duplicated.",
+  "executiveText": "Scans links in email and Office documents at click time, blocking known-malicious destinations even when the link was safe at delivery. This protects employees from phishing sites that go live after the message arrives.",
+  "docsDescription": "Creates or updates the SafeLinks policy and the rule that scopes it to every accepted domain.",
+  "impactColour": "info",
+  "addedDate": "2024-03-25",
+  "powershellEquivalent": "Set-SafeLinksPolicy or New-SafeLinksPolicy",
+  "appliesToTest": [
+    "CIS_2_1_1"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    [
+      "EXCHANGE_S_STANDARD",
+      "EXCHANGE_S_ENTERPRISE",
+      "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_ENTERPRISE_GOV",
+      "EXCHANGE_LITE"
+    ],
+    [
+      "ATP_ENTERPRISE",
+      "ATP_ENTERPRISE_GOV",
+      "THREAT_INTELLIGENCE",
+      "THREAT_INTELLIGENCE_GOV"
+    ]
+  ],
+  "secureScoreImpact": 12,
+  "compare": "subset",
+  "variables": {
+    "name": {
+      "type": "textField",
+      "label": "Policy Name",
+      "required": true,
+      "default": "CIPP Default SafeLinks Policy"
+    },
+    "AllowClickThrough": {
+      "type": "switch",
+      "label": "Allow users to click through to the original URL",
+      "default": false,
+      "recommended": false
+    },
+    "DisableUrlRewrite": {
+      "type": "switch",
+      "label": "Disable URL rewriting",
+      "default": false,
+      "recommended": false
+    },
+    "EnableOrganizationBranding": {
+      "type": "switch",
+      "label": "Enable organization branding on notification pages",
+      "default": false
+    },
+    "DoNotRewriteUrls": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Do not rewrite the following URLs",
+      "omitWhenBlank": true,
+      "default": ""
+    }
+  },
+  "read": {
+    "cacheType": "ExoSafeLinksPolicies"
+  },
+  "prepare": "Get-CIPPBaselineSafeLinksPolicyState",
+  "remediate": {
+    "executor": "ExoPolicyRule",
+    "policyCmdlet": "SafeLinksPolicy",
+    "ruleCmdlet": "SafeLinksRule",
+    "policyParams": {
+      "EnableSafeLinksForEmail": true,
+      "EnableSafeLinksForTeams": true,
+      "EnableSafeLinksForOffice": true,
+      "TrackClicks": true,
+      "ScanUrls": true,
+      "EnableForInternalSenders": true,
+      "DeliverMessageAfterScan": true,
+      "AllowClickThrough": "%AllowClickThrough%",
+      "DisableUrlRewrite": "%DisableUrlRewrite%",
+      "EnableOrganizationBranding": "%EnableOrganizationBranding%",
+      "DoNotRewriteUrls": "%DoNotRewriteUrls%"
+    },
+    "ruleParams": {
+      "Priority": 0
+    }
+  }
+}

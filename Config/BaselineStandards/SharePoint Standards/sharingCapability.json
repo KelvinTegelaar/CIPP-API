@@ -1,0 +1,76 @@
+{
+  "name": "sharingCapability",
+  "label": "Set Sharing Level for OneDrive and SharePoint",
+  "cat": "SharePoint Standards",
+  "tag": [
+    "CIS M365 7.0.0 (7.2.3)",
+    "CIS M365 7.0.0 (7.2.4)",
+    "CISA (MS.AAD.14.1v1)",
+    "CISA (MS.SPO.1.1v1)"
+  ],
+  "impact": "High Impact",
+  "helpText": "Sets the default sharing level for OneDrive and SharePoint. This is a tenant wide setting and overrules any settings set on the site level",
+  "executiveText": "Defines the organization's default policy for sharing files and folders in SharePoint and OneDrive, balancing collaboration needs with security requirements. This fundamental setting determines whether employees can share with external users, anonymous links, or only internal colleagues.",
+  "impactColour": "danger",
+  "addedDate": "2022-06-15",
+  "powershellEquivalent": "Update-MgBetaAdminSharePointSetting",
+  "appliesToTest": [
+    "CIS_7_2_3",
+    "CIS_7_2_4",
+    "ZTNA21803",
+    "ZTNA21804"
+  ],
+  "recommendedBy": [
+    "CIS",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "sharingCapability": {
+      "type": "autoComplete",
+      "label": "Select Sharing Level",
+      "required": true,
+      "recommended": 1,
+      "options": [
+        {
+          "label": "Users can share only with people in the organization. No external sharing is allowed.",
+          "value": 0
+        },
+        {
+          "label": "Users can share with new and existing guests. Guests must sign in or provide a verification code.",
+          "value": 1
+        },
+        {
+          "label": "Users can share with anyone by using links that do not require sign-in.",
+          "value": 2
+        },
+        {
+          "label": "Users can share with existing guests (those already in the directory of the organization).",
+          "value": 3
+        }
+      ]
+    }
+  },
+  "expected": {
+    "SharingCapability": "%sharingCapability%"
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "writeTarget": "spoTenant",
+  "remediate": {
+    "executor": "SPOTenant",
+    "properties": {
+      "SharingCapability": "%sharingCapability%"
+    }
+  }
+}

@@ -40,7 +40,7 @@ function Invoke-CIPPStandardGlobalQuarantineSettings {
         https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'QuarantineTemplate' -TenantFilter $Tenant -Preset Exchange #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'GlobalQuarantineSettings' -TenantFilter $Tenant -Preset Exchange #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         return $true
@@ -136,6 +136,5 @@ function Invoke-CIPPStandardGlobalQuarantineSettings {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.GlobalQuarantineSettings' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'GlobalQuarantineSettingsConfigured' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

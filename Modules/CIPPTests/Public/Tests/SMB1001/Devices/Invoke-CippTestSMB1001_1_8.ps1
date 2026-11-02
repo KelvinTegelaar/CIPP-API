@@ -23,7 +23,7 @@ function Invoke-CippTestSMB1001_1_8 {
             return
         }
 
-        $WindowsPolicies = $ConfigurationPolicies | Where-Object { $_.platforms -match 'windows10' }
+        $WindowsPolicies = $ConfigurationPolicies.Where({ $_.platforms -match 'windows10' })
 
         $WindowsBitLockerPolicies = @(
             foreach ($Policy in $WindowsPolicies) {
@@ -45,7 +45,7 @@ function Invoke-CippTestSMB1001_1_8 {
             }
         )
 
-        $AssignedPolicies = @($WindowsBitLockerPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $AssignedPolicies = @($WindowsBitLockerPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
 
         if ($AssignedPolicies.Count -gt 0) {
             $Status = 'Passed'

@@ -11,7 +11,8 @@ function Set-CIPPDBCacheTeamsActivity {
         $Type = 'TeamsUserActivityUser'
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Caching Teams activity: $Type" -sev Debug
 
-        $TeamsActivity = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($Type)Detail(period='D30')" -tenantid $TenantFilter | ConvertFrom-Csv | Select-Object @{ Name = 'UPN'; Expression = { $_.'User Principal Name' } },
+        $TeamsActivity = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($Type)Detail(period='D30')" -tenantid $TenantFilter | ConvertFrom-Csv | Select-Object @{ Name = 'id'; Expression = { if ($_.'User Principal Name') { $_.'User Principal Name' } } },
+        @{ Name = 'UPN'; Expression = { $_.'User Principal Name' } },
         @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
         @{ Name = 'TeamsChat'; Expression = { $_.'Team Chat Message Count' } },
         @{ Name = 'CallCount'; Expression = { $_.'Call Count' } },

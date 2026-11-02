@@ -18,7 +18,7 @@ function Start-TestsOrchestrator {
     if ($PSCmdlet.ShouldProcess('Start-TestsOrchestrator', "Starting Tests Orchestrator for $TenantFilter")) {
         try {
             Write-LogMessage -API 'Tests' -tenant $TenantFilter -message 'Starting Tests Schedule' -sev Info
-            return Start-CIPPDBTestsRun -TenantFilter $TenantFilter -Force:$Force
+            return Start-CIPPDBTestsRun -TenantFilter $TenantFilter -Force:$Force -Priority 11
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -API 'Tests' -tenant $TenantFilter -message "Failed to start tests orchestrator: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

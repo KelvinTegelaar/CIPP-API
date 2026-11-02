@@ -90,6 +90,33 @@ function Get-CIPPTenantAlignment {
                 $CATemplatesByPackage[$t.Package].Add($t)
             }
         }
+        # Every id a standards template can legitimately reference for each template type: the
+        # RowKey, the GUID column (the picker surfaces that one) and the bare guid of a built-in
+        # '<guid>.<Type>.json' row. A reference that matches none of these points at a template that
+        # was deleted, and its standard can never get a report row - it would sit at NOT FOUND
+        # forever with nothing naming the culprit.
+        function Get-TemplateIdSet {
+            param($Rows)
+            $Set = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($Row in @($Rows)) {
+                if ($Row.RowKey) {
+                    [void]$Set.Add([string]$Row.RowKey)
+                    if ($Row.RowKey -match '^([0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12})\.') { [void]$Set.Add($Matches[1]) }
+                }
+                if ($Row.GUID) { [void]$Set.Add([string]$Row.GUID) }
+            }
+            return , $Set
+        }
+        $KnownIntuneTemplateIds = Get-TemplateIdSet -Rows $TagTemplates
+        $KnownCATemplateIds = Get-TemplateIdSet -Rows $CATagTemplates
+        $KnownReusableTemplateIds = Get-TemplateIdSet -Rows (Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'IntuneReusableSettingTemplate'")
+        function Get-MissingTemplateMessage {
+            param([string]$Kind, $Reference, [System.Collections.Generic.HashSet[string]]$KnownIds)
+            $Id = [string]$Reference.value
+            if ([string]::IsNullOrWhiteSpace($Id) -or $KnownIds.Contains($Id)) { return $null }
+            $Name = if ($Reference.label) { "'$($Reference.label)' " } else { '' }
+            return "$Kind template $Name($Id) no longer exists in the template library. Remove it from this standards template or select the template again."
+        }
         # Build tenant standards data structure
         $tenantData = @{}
         foreach ($Standard in $Standards) {
@@ -218,6 +245,7 @@ function Get-CIPPTenantAlignment {
                             [PSCustomObject]@{
                                 StandardId       = $IntuneStandardId
                                 ReportingEnabled = $IntuneReportingEnabled
+                                MissingTemplate  = Get-MissingTemplateMessage -Kind 'Intune' -Reference $IntuneTemplate.TemplateList -KnownIds $KnownIntuneTemplateIds
                             }
                         }
 
@@ -228,7 +256,10 @@ function Get-CIPPTenantAlignment {
                                 $TagValue = if ($Tag.value) { $Tag.value } else { $Tag }
                                 $TagTemplate = if ($TagValue -and $TemplatesByPackage.ContainsKey($TagValue)) { $TemplatesByPackage[$TagValue] } else { @() }
                                 $TagTemplate | ForEach-Object {
-                                    $TagStandardId = "standards.IntuneTemplate.$($_.GUID)"
+                                    # RowKey, not the GUID column: the standards engine deploys tag members with
+                                    # TemplateList.value = RowKey and writes the compare row under that id, so the
+                                    # expected id must match it. The GUID column can be missing or stale.
+                                    $TagStandardId = "standards.IntuneTemplate.$($_.RowKey)"
                                     [PSCustomObject]@{
                                         StandardId       = $TagStandardId
                                         ReportingEnabled = $IntuneReportingEnabled
@@ -249,6 +280,7 @@ function Get-CIPPTenantAlignment {
                             [PSCustomObject]@{
                                 StandardId       = $CAStandardId
                                 ReportingEnabled = $CAReportingEnabled
+                                MissingTemplate  = Get-MissingTemplateMessage -Kind 'Conditional Access' -Reference $CATemplate.TemplateList -KnownIds $KnownCATemplateIds
                             }
                         }
 
@@ -260,11 +292,34 @@ function Get-CIPPTenantAlignment {
                                 $TagValue = if ($Tag.value) { $Tag.value } else { $Tag }
                                 $TagTemplate = if ($CATemplatesByPackage.ContainsKey($TagValue)) { $CATemplatesByPackage[$TagValue] } else { @() }
                                 $TagTemplate | ForEach-Object {
-                                    $TagStandardId = "standards.ConditionalAccessTemplate.$($_.GUID)"
+                                    # RowKey, not the GUID column - must match the id the standards engine
+                                    # deploys with and writes the compare row under (see Intune block above)
+                                    $TagStandardId = "standards.ConditionalAccessTemplate.$($_.RowKey)"
                                     [PSCustomObject]@{
                                         StandardId       = $TagStandardId
                                         ReportingEnabled = $CAReportingEnabled
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+                # Handle Reusable Settings templates — TemplateList is multi-select, one key per template id.
+                # Match on the key alone (not truthiness): an empty template value (@()) must stay in this
+                # branch and emit nothing, not fall through to the catch-all below and produce a bare
+                # 'standards.ReusableSettingsTemplate' id that can never match a report row (shows as NOT FOUND).
+                elseif ($StandardKey -eq 'ReusableSettingsTemplate') {
+                    foreach ($RSTemplate in @($StandardConfig)) {
+                        $RSActions = if ($RSTemplate.action) { $RSTemplate.action } else { @() }
+                        $RSReportingEnabled = ($RSActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
+                        foreach ($RSReference in @($RSTemplate.TemplateList)) {
+                            $RSTemplateId = if ($RSReference.value) { [string]$RSReference.value } else { [string]$RSReference }
+                            if ($RSTemplateId) {
+                                $RSLookup = if ($RSReference.value) { $RSReference } else { [PSCustomObject]@{ value = $RSTemplateId; label = $null } }
+                                [PSCustomObject]@{
+                                    StandardId       = "standards.ReusableSettingsTemplate.$RSTemplateId"
+                                    ReportingEnabled = $RSReportingEnabled
+                                    MissingTemplate  = Get-MissingTemplateMessage -Kind 'Reusable settings' -Reference $RSLookup -KnownIds $KnownReusableTemplateIds
                                 }
                             }
                         }
@@ -292,6 +347,12 @@ function Get-CIPPTenantAlignment {
             }
 
             if (-not $StandardsData) { continue }
+            $MissingTemplateMessages = @{}
+            foreach ($Entry in @($StandardsData)) {
+                if ($Entry.PSObject.Properties['MissingTemplate'] -and $Entry.MissingTemplate -and $Entry.StandardId) {
+                    $MissingTemplateMessages[[string]$Entry.StandardId] = [string]$Entry.MissingTemplate
+                }
+            }
             $AllStandards = @($StandardsData.StandardId | Where-Object { $_ })
             if ($AllStandards.Count -eq 0) { continue }
             $AllStandardsArray = $AllStandards
@@ -353,6 +414,23 @@ function Get-CIPPTenantAlignment {
                     # Use HashSet for Contains
                     $IsReportingDisabled = $ReportingDisabledSet.Contains($StandardKey)
                     # Use cached tenant data
+
+                    # A standard pointing at a deleted template never gets a report row. Say so,
+                    # naming the template, instead of reporting NOT FOUND until the end of time.
+                    if ($MissingTemplateMessages.ContainsKey($StandardKey)) {
+                        $ComparisonResults.Add([PSCustomObject]@{
+                                StandardName      = $StandardKey
+                                Compliant         = $false
+                                StandardValue     = $MissingTemplateMessages[$StandardKey]
+                                ComplianceStatus  = if ($IsReportingDisabled) { 'Reporting Disabled' } else { 'Non-Compliant' }
+                                ReportingDisabled = $IsReportingDisabled
+                                LicenseAvailable  = $null
+                                CurrentValue      = $MissingTemplateMessages[$StandardKey]
+                                ExpectedValue     = $null
+                                TemplateMissing   = $true
+                            })
+                        continue
+                    }
 
                     $HasStandard = $StandardKey -and $CurrentTenantStandards.ContainsKey($StandardKey)
 

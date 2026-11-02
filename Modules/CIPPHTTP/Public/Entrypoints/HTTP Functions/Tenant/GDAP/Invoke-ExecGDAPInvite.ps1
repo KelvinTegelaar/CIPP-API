@@ -15,6 +15,7 @@ function Invoke-ExecGDAPInvite {
     $InviteId = $Request.Body.InviteId
     $Reference = $Request.Body.Reference
     $Table = Get-CIPPTable -TableName 'GDAPInvites'
+    $StatusCode = [HttpStatusCode]::OK
 
     # Extract technician from headers (same logic as Write-LogMessage)
     if ($Headers.'x-ms-client-principal-idp' -eq 'azureStaticWebApps' -or !$Headers.'x-ms-client-principal-idp') {
@@ -36,8 +37,41 @@ function Invoke-ExecGDAPInvite {
     switch ($Action) {
         'Create' {
             $RoleMappings = $Request.Body.roleMappings
+            # Entra role definition id; a role mapped to more than one group is sent to Graph once
+            $RoleIds = @($RoleMappings.roleDefinitionId | Where-Object { $_ } | Sort-Object -Unique)
 
-            if ($RoleMappings.roleDefinitionId -contains '62e90394-69f5-4237-9190-012177145e10') {
+            $Problems = [System.Collections.Generic.List[string]]::new()
+            if ($RoleIds.Count -eq 0) {
+                $Problems.Add('The role template has no roles.')
+            }
+            foreach ($Mapping in @($RoleMappings).Where({ -not $_.roleDefinitionId })) {
+                $Problems.Add("'$($Mapping.RoleName ?? $Mapping.GroupName)' has no role definition id.")
+            }
+            if ($RoleIds.Count -gt 0) {
+                try {
+                    $BuiltInRoleIds = (New-GraphGetRequest -NoAuthCheck $true -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions?$select=id&$filter=isBuiltIn eq true' -tenantid $env:TenantID).id
+                    # Partner Tier1/Tier2 Support exist in every tenant but GDAP cannot delegate them
+                    $NotDelegable = @('4ba39ca4-527c-499a-b93d-d9b492c50246', 'e00e864a-17c5-4a4b-9c06-f5b95a8d5bd8')
+                    foreach ($RoleId in $RoleIds) {
+                        if ($RoleId -notin $BuiltInRoleIds -or $RoleId -in $NotDelegable) {
+                            $RoleName = @($RoleMappings).Where({ $_.roleDefinitionId -eq $RoleId }, 'First')[0].RoleName
+                            $Problems.Add("'$RoleName' ($RoleId) is not a built-in Entra role that GDAP can delegate.")
+                        }
+                    }
+                } catch {
+                    Write-Information "GDAP invite role check skipped: $($_.Exception.Message)"
+                }
+            }
+            if ($Problems.Count -gt 0) {
+                $Message = "The role template cannot be used for an invite. Edit the template and fix: $($Problems -join ' ')"
+                Write-LogMessage -headers $Headers -API $APIName -tenant $env:TenantID -message $Message -Sev 'Error'
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Message = $Message }
+                    })
+            }
+
+            if ($RoleIds -contains '62e90394-69f5-4237-9190-012177145e10') {
                 $AutoExtendDuration = 'PT0S'
             } else {
                 $AutoExtendDuration = 'P180D'
@@ -48,7 +82,7 @@ function Invoke-ExecGDAPInvite {
                 $JSONBody = @{
                     'displayName'        = "CIPP_$((New-Guid).GUID)"
                     'accessDetails'      = @{
-                        'unifiedRoles' = @($RoleMappings | Select-Object roleDefinitionId)
+                        'unifiedRoles' = @($RoleIds | ForEach-Object { @{ roleDefinitionId = $_ } })
                     }
                     'autoExtendDuration' = $AutoExtendDuration
                     'duration'           = 'P730D'
@@ -78,10 +112,10 @@ function Invoke-ExecGDAPInvite {
 
                     if ($NewRelationshipRequest.action -eq 'lockForApproval') {
                         $InviteUrl = "https://admin.microsoft.com/AdminPortal/Home#/partners/invitation/granularAdminRelationships/$($NewRelationship.id)"
-                        try {
-                            $Uri = ([System.Uri]$TriggerMetadata.Headers.Referer)
-                            $OnboardingUrl = $Uri.AbsoluteUri.Replace($Uri.PathAndQuery, "/tenant/gdap-management/onboarding/start?id=$($NewRelationship.id)")
-                        } catch {
+                        $Hostname = Get-CIPPHostname -Headers $Headers -PreferCustomDomain
+                        if ($Hostname) {
+                            $OnboardingUrl = "https://$Hostname/tenant/gdap-management/onboarding/start?id=$($NewRelationship.id)"
+                        } else {
                             $OnboardingUrl = $null
                         }
 
@@ -100,13 +134,14 @@ function Invoke-ExecGDAPInvite {
                         $Message = 'GDAP relationship invite created. Log in as a Global Admin in the new tenant to approve the invite.'
                     } else {
                         $Message = 'Error creating GDAP relationship request'
+                        $StatusCode = [HttpStatusCode]::InternalServerError
                     }
 
                     Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created GDAP Invite - $InviteUrl" -Sev 'Info'
                 }
             } catch {
                 $Message = 'Error creating GDAP relationship, failed at step: ' + $Step
-                Write-Host "GDAP ERROR: $($_.InvocationInfo.PositionMessage)"
+                Write-Information "GDAP ERROR: on line $($_.InvocationInfo.PositionMessage) | $(($_ | ConvertTo-Json -Compress))"
 
                 if ($Step -eq 'Creating GDAP relationship' -and $_.Exception.Message -match 'The user (principal) does not have the required permissions to perform the specified action on the resource.') {
                     $Message = 'Error creating GDAP relationship, ensure that all users have MFA enabled and enforced without exception. Please see the Microsoft Partner Security Requirements documentation for more information. https://learn.microsoft.com/en-us/partner-center/security/partner-security-requirements'
@@ -115,6 +150,7 @@ function Invoke-ExecGDAPInvite {
                 }
 
                 Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $env:TenantID -message $Message -Sev 'Error' -LogData (Get-CippException -Exception $_)
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
 
             $body = @{
@@ -137,6 +173,7 @@ function Invoke-ExecGDAPInvite {
                 $Message = 'Invite updated'
             } else {
                 $Message = 'Invite not found'
+                $StatusCode = [HttpStatusCode]::NotFound
             }
             $body = @{
                 Message = $Message
@@ -145,10 +182,11 @@ function Invoke-ExecGDAPInvite {
         'Delete' {
             $Invite = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'invite' and RowKey eq '$InviteId'"
             if ($Invite) {
-                Remove-AzDataTableEntity @Table -Entity $Invite
+                Remove-CIPPAzDataTableEntity @Table -Entity $Invite
                 $Message = 'Invite deleted'
             } else {
                 $Message = 'Invite not found'
+                $StatusCode = [HttpStatusCode]::NotFound
             }
             $body = @{
                 Message = $Message
@@ -157,7 +195,7 @@ function Invoke-ExecGDAPInvite {
 
     }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 }

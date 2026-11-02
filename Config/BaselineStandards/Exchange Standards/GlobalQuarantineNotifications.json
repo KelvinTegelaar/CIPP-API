@@ -1,0 +1,58 @@
+{
+  "name": "GlobalQuarantineNotifications",
+  "label": "Set Global Quarantine Notification Interval",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets how often quarantine notification emails are sent to users.",
+  "executiveText": "Controls how frequently users are notified about quarantined messages, balancing awareness of blocked mail against notification fatigue.",
+  "docsDescription": "Grades the global quarantine policy notification interval, normalized to hours on both sides. The Microsoft default policy cannot be modified, so remediation creates the custom DefaultGlobalTag when needed.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Set-QuarantinePolicy -EndUserSpamNotificationFrequency",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "NotificationInterval": {
+      "type": "autoComplete",
+      "required": true,
+      "creatable": false,
+      "options": [
+        {
+          "label": "4 hours",
+          "value": "04:00:00"
+        },
+        {
+          "label": "1 day/Daily",
+          "value": "1.00:00:00"
+        },
+        {
+          "label": "7 days/Weekly",
+          "value": "7.00:00:00"
+        }
+      ],
+      "label": "Notification interval"
+    }
+  },
+  "read": {
+    "cacheType": "ExoGlobalQuarantinePolicy"
+  },
+  "prepare": "Get-CIPPBaselineGlobalQuarantineNotificationsState",
+  "remediate": {
+    "executor": "GlobalQuarantineNotifications",
+    "notificationInterval": "%NotificationInterval%"
+  }
+}

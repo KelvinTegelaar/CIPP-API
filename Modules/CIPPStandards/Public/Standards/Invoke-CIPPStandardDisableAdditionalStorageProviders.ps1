@@ -52,7 +52,7 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
     }
     catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableAddShortcutsToOneDrive state for $Tenant. Error: $ErrorMessage" -Sev Error
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableAdditionalStorageProviders state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
@@ -91,8 +91,6 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
     }
 
     if ($Settings.report -eq $true) {
-        $State = $AdditionalStorageProvidersState.AdditionalStorageProvidersAvailable ? $false : $true
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableAdditionalStorageProviders' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'AdditionalStorageProvidersAvailable' -FieldValue $State -StoreAs bool -Tenant $Tenant
     }
 }

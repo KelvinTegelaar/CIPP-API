@@ -25,20 +25,35 @@ function Invoke-RemoveStandardTemplate {
             $TemplateName = ''
         }
         $Entities = Get-AzDataTableEntity @Table -Filter $Filter
-        Remove-AzDataTableEntity -Force @Table -Entity $Entities
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entities
 
         # Remove any drift remediation scheduled tasks associated with this template
         $ScheduledTasksTable = Get-CIPPTable -TableName 'ScheduledTasks'
         $SafeTag = ConvertTo-CIPPODataFilterValue -Value "DriftRemediation_$SafeID"
         $DriftTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter "PartitionKey eq 'ScheduledTask' and Tag eq '$SafeTag'"
         foreach ($DriftTask in $DriftTasks) {
-            Remove-AzDataTableEntity -Force @ScheduledTasksTable -Entity $DriftTask
+            Remove-CIPPAzDataTableEntity -Force @ScheduledTasksTable -Entity $DriftTask
             Write-LogMessage -Headers $Headers -API $APIName -message "Removed drift remediation scheduled task: $($DriftTask.Name)" -Sev Info
+        }
+        $StandardsReportsTable = Get-CIPPTable -TableName 'CippStandardsReports'
+        $RemovedTemplateIds = @(@($Entities.RowKey) + $ID | Where-Object { $_ } | Select-Object -Unique)
+        $OrphanedReports = [System.Collections.Generic.List[object]]::new()
+        foreach ($RemovedTemplateId in $RemovedTemplateIds) {
+            $SafeTemplateId = ConvertTo-CIPPODataFilterValue -Value $RemovedTemplateId -Type Guid
+            $Rows = Get-CIPPAzDataTableEntity @StandardsReportsTable -Filter "TemplateId eq '$SafeTemplateId'"
+            foreach ($Row in $Rows) { $OrphanedReports.Add($Row) }
+        }
+        if ($OrphanedReports.Count -gt 0) {
+            Remove-CIPPAzDataTableEntity -Force @StandardsReportsTable -Entity @($OrphanedReports)
+            Write-LogMessage -Headers $Headers -API $APIName -message "Removed $($OrphanedReports.Count) orphaned standards comparison row(s) for template id: $($ID)" -Sev Info
         }
 
         $Result = "Removed Standards Template named: '$($TemplateName)' with id: $($ID)"
         if ($DriftTasks) {
             $Result += ". Also removed $(@($DriftTasks).Count) associated drift remediation scheduled task(s)."
+        }
+        if ($OrphanedReports.Count -gt 0) {
+            $Result += " Cleaned up $($OrphanedReports.Count) orphaned standards comparison row(s)."
         }
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Info
         $StatusCode = [HttpStatusCode]::OK

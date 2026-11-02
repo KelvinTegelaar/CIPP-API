@@ -1,0 +1,36 @@
+{
+  "name": "DisableOutlookAddins",
+  "label": "Disable users from installing add-ins in Outlook",
+  "cat": "Exchange Standards",
+  "tag": [
+    "exo_outlookaddins"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Disables the ability for users to install add-ins in Outlook. This is to prevent users from installing malicious add-ins.",
+  "executiveText": "Prevents employees from installing third-party add-ins in Outlook without administrative approval, reducing security risks from potentially malicious extensions.",
+  "docsDescription": "Grades whether any of the three app-install roles (My Custom Apps, My Marketplace Apps, My ReadWriteMailbox Apps) remain on the default role assignment policy - the policy reads live, one small object. Remediation removes each role's management role assignments by GUID, continuing past per-role failures. NOTE: removal is one-way through CIPP, as in the classic - re-enabling requires recreating the assignments in Exchange.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Get-ManagementRoleAssignment | Remove-ManagementRoleAssignment",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 3,
+  "compare": "subset",
+  "variables": {},
+  "read": {},
+  "prepare": "Get-CIPPBaselineDisableOutlookAddinsState",
+  "remediate": {
+    "executor": "DisableOutlookAddins"
+  }
+}

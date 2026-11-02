@@ -1,0 +1,61 @@
+{
+  "name": "ReusableSettingsTemplate",
+  "label": "Reusable Settings Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Deploy Intune reusable settings from CIPP templates. An existing setting with the same name is diffed against the template and overwritten when it drifts.",
+  "executiveText": "Deploys Intune reusable policy settings - shared building blocks referenced by security and configuration policies - so the same certificates, file paths and definitions apply consistently across tenants.",
+  "docsDescription": "Deploy an Intune reusable policy setting from a CIPP template. The standard grades presence by display name and diffs the full setting body against the template via the Intune comparer; remediation creates the setting or overwrites it in place.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: POST or PUT deviceManagement/reusablePolicySettings",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "reusableSettingsTemplate",
+  "identity": {
+    "partition": "IntuneReusableSettingTemplate",
+    "nameField": "displayName"
+  },
+  "variables": {
+    "reusableSettingsTemplate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select Reusable Settings Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListIntuneReusableSettingTemplates",
+        "labelField": "displayName",
+        "valueField": "GUID",
+        "queryKey": "ListIntuneReusableSettingTemplates",
+        "showRefresh": true,
+        "templateView": {
+          "title": "Reusable Settings",
+          "property": "RawJSON",
+          "type": "intune"
+        }
+      }
+    }
+  },
+  "read": {
+    "cacheType": "IntuneReusableSettings"
+  },
+  "prepare": "Get-CIPPBaselineReusableSettingsTemplateState",
+  "remediate": {
+    "executor": "ReusableSettingsTemplate"
+  }
+}

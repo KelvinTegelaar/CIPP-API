@@ -16,7 +16,7 @@ function Invoke-CippTestZTNA21829 {
             return
         }
 
-        $FederatedDomains = $Domains | Where-Object { $_.authenticationType -eq 'Federated' }
+        $FederatedDomains = $Domains.Where({ $_.authenticationType -eq 'Federated' })
         $Passed = if ($FederatedDomains.Count -eq 0) { 'Passed' } else { 'Failed' }
 
         if ($Passed -eq 'Passed') {

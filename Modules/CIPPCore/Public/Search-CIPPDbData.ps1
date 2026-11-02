@@ -12,7 +12,7 @@ function Search-CIPPDbData {
         Optional tenant domain or GUID to filter search. If not specified, searches all tenants.
 
     .PARAMETER SearchTerms
-        Search terms to look for. Uses regex matching by default (special characters are escaped).
+        Search terms to look for, matched as case-insensitive substrings.
         Can be a single string or array of strings.
 
     .PARAMETER Types
@@ -103,14 +103,16 @@ function Search-CIPPDbData {
             )
         }
 
-        # Get tenants to search - use 'allTenants' if no filter specified
-        $TenantsToSearch = @()
-        if ($TenantFilter) {
-            $TenantsToSearch = @($TenantFilter)
+        # All tenants are read one partition at a time in key order, so only one tenant's rows are held and a full -Limit stops the reads
+        $AllTenants = (-not $TenantFilter -or ($TenantFilter.Count -eq 1 -and $TenantFilter[0] -eq 'allTenants')) -and -not $script:CIPPLockedTenant
+        $TenantsToSearch = if ($AllTenants) {
+            $Domains = [string[]]@((Get-Tenants -IncludeErrors).defaultDomainName | Where-Object { $_ })
+            [System.Array]::Sort($Domains, [System.StringComparer]::Ordinal)
+            $Domains
+        } elseif ($TenantFilter) {
+            $TenantFilter
         } else {
-            # Use 'allTenants' to search across all tenants
-            $TenantsToSearch = @('allTenants')
-            Write-Verbose 'Searching all tenants'
+            'allTenants'
         }
 
         # Process each data type
@@ -124,13 +126,12 @@ function Search-CIPPDbData {
 
                 try {
                     # Get items for this type and tenant
-                    $Items = Get-CIPPDbItem -TenantFilter $Tenant -Type $Type | Where-Object { $_.RowKey -notlike '*-Count' }
-                    Write-Verbose "Found $(@($Items).Count) items for type '$Type' in tenant '$Tenant'"
+                    $Items = if ($AllTenants) { Get-CIPPDbItem -Partition $Tenant -Type $Type } else { Get-CIPPDbItem -TenantFilter $Tenant -Type $Type }
 
                     if ($Items) {
                         foreach ($Item in $Items) {
                             # Data is already in JSON format, do a quick text search first
-                            if (-not $Item.Data) { continue }
+                            if (-not $Item.Data -or $Item.RowKey.EndsWith('-Count', [System.StringComparison]::OrdinalIgnoreCase)) { continue }
 
                             # Check if any search term matches in the JSON string
                             $IsMatch = $false
@@ -139,8 +140,7 @@ function Search-CIPPDbData {
                                 # All terms must match
                                 $IsMatch = $true
                                 foreach ($SearchTerm in $SearchTerms) {
-                                    $SearchPattern = [regex]::Escape($SearchTerm)
-                                    if ($Item.Data -notmatch $SearchPattern) {
+                                    if ($Item.Data.IndexOf($SearchTerm, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
                                         $IsMatch = $false
                                         break
                                     }
@@ -148,8 +148,7 @@ function Search-CIPPDbData {
                             } else {
                                 # Any term can match (default)
                                 foreach ($SearchTerm in $SearchTerms) {
-                                    $SearchPattern = [regex]::Escape($SearchTerm)
-                                    if ($Item.Data -match $SearchPattern) {
+                                    if ($Item.Data.IndexOf($SearchTerm, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
                                         $IsMatch = $true
                                         break
                                     }

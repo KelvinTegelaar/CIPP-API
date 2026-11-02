@@ -20,7 +20,7 @@ function New-ExoRequest {
         [Parameter(Mandatory = $false, ParameterSetName = 'ExoRequest')]
         [bool]$useSystemMailbox,
 
-        [string]$tenantid,
+        [string]$tenantid = $env:TenantID,
 
         [bool]$NoAuthCheck,
 
@@ -32,7 +32,10 @@ function New-ExoRequest {
         [switch]$AvailableCmdlets,
 
         $ModuleVersion = '3.9.2',
-        [switch]$AsApp
+        [switch]$AsApp,
+        [switch]$UseCertificate,
+        # Emit each page as @{ Value } as it arrives instead of returning every page at the end
+        [switch]$StreamPages
     )
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
         if ($Compliance.IsPresent) {
@@ -40,7 +43,9 @@ function New-ExoRequest {
         } else {
             $Resource = 'https://outlook.office365.com'
         }
-        $token = Get-GraphToken -Tenantid $tenantid -scope "$Resource/.default" -AsApp:$AsApp.IsPresent
+        # -UseCertificate authenticates the app with the SAM certificate instead of the
+        # client secret: delegated (refresh token) by default, app-only with -AsApp
+        $token = Get-GraphToken -Tenantid $tenantid -scope "$Resource/.default" -AsApp:$AsApp.IsPresent -UseCertificate:$UseCertificate
 
         if ($cmdParams) {
             #if cmdParams is a pscustomobject, convert to hashtable, otherwise leave as is
@@ -48,7 +53,7 @@ function New-ExoRequest {
         } else {
             $Params = @{}
         }
-        $ExoBody = ConvertTo-Json -Depth 5 -Compress -InputObject @{
+        $ExoBody = ConvertTo-Json -Depth 20 -Compress -InputObject @{
             CmdletInput = @{
                 CmdletName = $cmdlet
                 Parameters = $Params
@@ -56,7 +61,7 @@ function New-ExoRequest {
         }
         $ExoBody = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $ExoBody -EscapeForJson
 
-        $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $tenantid -or $_.customerId -eq $tenantid -or $_.initialDomainName -eq $tenantid } | Select-Object -First 1
+        $Tenant = @(Get-Tenants -IncludeErrors -TenantFilter $tenantid)[0]
         if (-not $Tenant -and $NoAuthCheck -eq $true) {
             $Tenant = [PSCustomObject]@{
                 customerId = $tenantid
@@ -131,6 +136,14 @@ function New-ExoRequest {
 
                 Write-Information "POST [ $URL ] | tenant: $tenantid | cmdlet: $cmdlet"
                 Write-Verbose "Request Body: $ExoBody"
+                if ($StreamPages) {
+                    do {
+                        $Return = Invoke-CIPPRestMethod -Uri $URL -Method POST -Body $ExoBody -Headers $Headers -ContentType 'application/json; charset=utf-8'
+                        $URL = $Return.'@odata.nextLink'
+                        [PSCustomObject]@{ Value = $Return.value }
+                    } until ($null -eq $URL)
+                    return
+                }
                 $ReturnedData = do {
                     $ExoRequestParams = @{
                         Uri         = $URL
@@ -145,7 +158,7 @@ function New-ExoRequest {
                     $Return
                 } until ($null -eq $URL)
 
-                Write-Verbose "Response Headers: $($ResponseHeaders | ConvertTo-Json -Depth 5 -Compress)"
+                if ($VerbosePreference -ne 'SilentlyContinue') { Write-Verbose "Response Headers: $($ResponseHeaders | ConvertTo-Json -Depth 5 -Compress)" }
                 if ($ReturnedData.'@adminapi.warnings' -and $null -eq $ReturnedData.value) {
                     $ReturnedData.value = $ReturnedData.'@adminapi.warnings'
                 }
@@ -156,7 +169,9 @@ function New-ExoRequest {
                     $Message = if ($ReportedError.error.details.message) {
                         $ReportedError.error.details.message
                     } elseif ($ReportedError.error.innererror) {
-                        $ReportedError.error.innererror.internalException.message
+                        # Not every innererror carries an internalException; fall through to its own
+                        # message and then the top-level one rather than losing the body entirely.
+                        $ReportedError.error.innererror.internalException.message ?? $ReportedError.error.innererror.message ?? $ReportedError.error.message
                     } elseif ($ReportedError.error.message) { $ReportedError.error.message }
                 } catch { $Message = $_.ErrorDetails }
                 if ($null -eq $Message) { $Message = $ErrorMess }
@@ -165,6 +180,6 @@ function New-ExoRequest {
             return $ReturnedData.value
         }
     } else {
-        Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
+        Write-Error (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Exchange request')
     }
 }

@@ -1,0 +1,88 @@
+{
+  "name": "DeployMailContact",
+  "label": "Deploy Mail Contact",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Creates a new mail contact in Exchange Online across all selected tenants. The contact will be visible in the Global Address List.",
+  "executiveText": "Automatically creates external email contacts in the organization's address book, enabling seamless communication with external partners and vendors. This standardizes contact management across all company locations and improves collaboration efficiency.",
+  "docsDescription": "This standard creates a new mail contact in Exchange Online. Mail contacts are useful for adding external email addresses to your organization's address book. They can be used for distribution lists, shared mailboxes, and other collaboration scenarios.",
+  "impactColour": "info",
+  "addedDate": "2024-03-19",
+  "powershellEquivalent": "New-MailContact",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "ExternalEmailAddress": {
+      "type": "textField",
+      "label": "External Email Address",
+      "required": true,
+      "default": ""
+    },
+    "DisplayName": {
+      "type": "textField",
+      "label": "Display Name",
+      "required": true,
+      "default": ""
+    },
+    "FirstName": {
+      "type": "textField",
+      "label": "First Name",
+      "default": ""
+    },
+    "LastName": {
+      "type": "textField",
+      "label": "Last Name",
+      "default": ""
+    }
+  },
+  "expected": {
+    "DisplayName": "%DisplayName%",
+    "ExternalEmailAddress": "%ExternalEmailAddress%",
+    "FirstName": "%FirstName%",
+    "LastName": "%LastName%"
+  },
+  "read": {
+    "cacheType": "ExoMailContacts",
+    "filter": [
+      {
+        "property": "ExternalEmailAddress",
+        "value": "%ExternalEmailAddress%"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "New-MailContact",
+        "params": {
+          "Name": "%DisplayName%",
+          "ExternalEmailAddress": "%ExternalEmailAddress%",
+          "FirstName": "%FirstName%",
+          "LastName": "%LastName%"
+        },
+        "continueOnError": true
+      },
+      {
+        "cmdlet": "Set-Contact",
+        "params": {
+          "Identity": "%ExternalEmailAddress%",
+          "DisplayName": "%DisplayName%",
+          "FirstName": "%FirstName%",
+          "LastName": "%LastName%"
+        }
+      }
+    ]
+  }
+}

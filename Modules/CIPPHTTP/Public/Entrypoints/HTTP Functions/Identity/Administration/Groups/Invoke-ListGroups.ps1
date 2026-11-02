@@ -5,22 +5,59 @@ function Invoke-ListGroups {
     .ROLE
         Identity.Group.Read
     .DESCRIPTION
-        Lists Entra ID groups for a tenant, including group members and owners. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.
+        Lists Entra ID groups for a tenant, including group members and owners. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. When manualPagination is also set on a cached read, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $TenantFilter = $Request.Query.tenantFilter
     $GroupID = $Request.Query.groupID
+    # Type of the group named by groupID, used to pick the owners lookup. This does NOT filter the group list.
     $GroupType = $Request.Query.groupType
-    $Members = $Request.Query.members
-    $Owners = $Request.Query.owners
+    # Return the members of the group named by groupID instead of the group list. Requires groupID.
+    $Members = $Request.Query.members -eq $true
+    # Return the owners of the group named by groupID instead of the group list. Requires groupID.
+    $Owners = $Request.Query.owners -eq $true
 
-    $ExpandMembers = $Request.Query.expandMembers ?? $false
-    $UseReportDB = $Request.Query.UseReportDB
+    # Expand each listed group's members inline. Graph allows only one expand, and members wins over owners.
+    $ExpandMembers = $Request.Query.expandMembers -eq $true
+    # Expand each listed group's owners inline. Ignored when expandMembers is also set.
+    $ExpandOwners = $Request.Query.expandOwners -eq $true
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
+    # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.
+    $ManualPagination = $Request.Query.manualPagination -and [System.Convert]::ToBoolean($Request.Query.manualPagination)
+
+    # members/owners read groups/<groupID>/..., so without a groupID the URL collapses to
+    # groups//members and the failure surfaces as an opaque parameter binding error.
+    if (($Members -or $Owners) -and -not $GroupID) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = "The 'members' and 'owners' parameters require 'groupID' to be set." }
+            })
+    }
 
     # Cache path: list view only — skip when fetching a specific group's details
-    if ((-not $GroupID) -and (-not $Members) -and (-not $Owners) -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+    if ((-not $GroupID) -and (-not $Members) -and (-not $Owners) -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB)) {
         try {
+            if ($ManualPagination) {
+                # Rows per page, clamped between 100 and 5000. Defaults to 750: group rows
+                # carry full member arrays and run far heavier than other report types.
+                $PageSize = 750
+                if ($Request.Query.PageSize -as [int]) {
+                    $PageSize = [Math]::Min([Math]::Max([int]$Request.Query.PageSize, 100), 5000)
+                }
+                # Continuation token from the previous page's Metadata.nextLink; opaque to callers.
+                # Stream the cached blobs as raw JSON so member arrays are never re-parsed here.
+                $Page = Get-CIPPGroupsReport -TenantFilter $TenantFilter -PageSize $PageSize -ContinuationToken $Request.Query.nextLink -AsRawJson -ErrorAction Stop
+                $Metadata = @{}
+                if ($Page.NextToken) { $Metadata.nextLink = $Page.NextToken }
+                $MetadataJson = ConvertTo-Json -InputObject $Metadata -Depth 5 -Compress
+                return ([HttpResponseContext]@{
+                        StatusCode  = [HttpStatusCode]::OK
+                        ContentType = 'application/json'
+                        Body        = '{"Results":' + $Page.CippPagedJson + ',"Metadata":' + $MetadataJson + '}'
+                    })
+            }
             $GraphRequest = Get-CIPPGroupsReport -TenantFilter $TenantFilter -ErrorAction Stop
             $StatusCode = [HttpStatusCode]::OK
         } catch {
@@ -31,8 +68,11 @@ function Invoke-ListGroups {
     }
 
     $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,resourceProvisioningOptions,assignedLicenses,userPrincipalName,licenseProcessingState'
-    if ($ExpandMembers -ne $false) {
+    # Graph allows only one navigational $expand on groups; members wins if both are requested
+    if ($ExpandMembers) {
         $SelectString = '{0}&$expand=members($select=userPrincipalName)' -f $SelectString
+    } elseif ($ExpandOwners) {
+        $SelectString = '{0}&$expand=owners($select=userPrincipalName)' -f $SelectString
     }
 
 
@@ -125,25 +165,45 @@ function Invoke-ListGroups {
                 SID                    = (Convert-AzureAdObjectIdToSid -ObjectID $((($RawGraphRequest | Where-Object { $_.id -eq 1 }).body).id))
             }
         } else {
-            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
-            @{Name = 'membersCsv'; Expression = { $_.members.userPrincipalName -join ',' } },
-            @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true }else { $false } } },
-            @{Name = 'groupType'; Expression = {
+            # Reached only for the plain list view: a groupID, members or owners request all
+            # add a bulk sub-request above, so this branch always means "every group in the
+            # tenant". The URL previously interpolated $GroupID and $Members, both necessarily
+            # empty here, which produced 'groups//' and only worked because Graph tolerated it.
+            # membersCsv/ownersCsv are computed from the expanded navigation property, so emit
+            # them only when that expand was requested - otherwise they ride along always-empty
+            # and surface as permanently blank columns in the UI and exports.
+            $GroupProperties = [System.Collections.Generic.List[object]]::new()
+            $GroupProperties.Add('*')
+            $GroupProperties.Add(@{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } })
+            if ($ExpandMembers) {
+                $GroupProperties.Add(@{Name = 'membersCsv'; Expression = { $_.members.userPrincipalName -join ',' } })
+            }
+            if ($ExpandOwners -and -not $ExpandMembers) {
+                # hasOwner only - ownersCsv is deliberately not emitted here. Populating it would
+                # make subTableShowsCachedColumn() (frontend) swap the interactive "View owners"
+                # button (Add/Remove Owner actions) for a read-only CSV column tenant-wide, since
+                # that check only looks at whether the field is populated, not which caller asked
+                # for it.
+                $GroupProperties.Add(@{Name = 'hasOwner'; Expression = { $_.owners.Count -gt 0 } })
+            }
+            $GroupProperties.Add(@{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true }else { $false } } })
+            $GroupProperties.Add(@{Name = 'groupType'; Expression = {
                     if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
                     elseif ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
                     elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'Security' }
                     elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'Distribution List' }
                 }
-            },
-            @{Name = 'calculatedGroupType'; Expression = {
+            })
+            $GroupProperties.Add(@{Name = 'calculatedGroupType'; Expression = {
                     if ($_.groupTypes -contains 'Unified') { 'm365' }
                     elseif ($_.mailEnabled -and $_.securityEnabled) { 'security' }
                     elseif (-not $_.mailEnabled -and $_.securityEnabled) { 'generic' }
                     elseif (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (-not $_.securityEnabled)) { 'distributionList' }
                 }
-            },
-            @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } },
-            @{Name = 'SID'; Expression = { Convert-AzureAdObjectIdToSid -ObjectID $_.id } }
+            })
+            $GroupProperties.Add(@{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } })
+            $GroupProperties.Add(@{Name = 'SID'; Expression = { Convert-AzureAdObjectIdToSid -ObjectID $_.id } })
+            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object -Property $GroupProperties
             $GraphRequest = @($GraphRequest | Sort-Object displayName)
         }
 
@@ -151,7 +211,7 @@ function Invoke-ListGroups {
     } catch {
         Write-Warning $_.InvocationInfo.PositionMessage
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
     return ([HttpResponseContext]@{

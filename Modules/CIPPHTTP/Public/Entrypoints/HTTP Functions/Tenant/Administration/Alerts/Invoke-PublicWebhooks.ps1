@@ -12,17 +12,25 @@ function Invoke-PublicWebhooks {
     $CIPPURL = [string]$url
     Write-Host $url
 
+    # Graph (and Partner Center) validate a new subscription by POSTing a token and comparing the raw
+    # response body to it byte for byte. The response has to be the bare token as text/plain - the
+    # default application/json content type re-quotes the string, and Graph then rejects the
+    # subscription with "did not return the expected validation token".
+    $ContentType = 'application/json'
     if ($Request.Query.ValidationToken) {
         Write-Host 'Validation token received - query ValidationToken'
-        $body = $Request.Query.ValidationToken
+        $body = [string]$Request.Query.ValidationToken
+        $ContentType = 'text/plain'
         $StatusCode = [HttpStatusCode]::OK
     } elseif ($Request.Body.validationCode) {
         Write-Host 'Validation token received - body validationCode'
-        $body = $Request.Body.validationCode
+        $body = [string]$Request.Body.validationCode
+        $ContentType = 'text/plain'
         $StatusCode = [HttpStatusCode]::OK
     } elseif ($Request.Query.validationCode) {
         Write-Host 'Validation token received - query validationCode'
-        $body = $Request.Query.validationCode
+        $body = [string]$Request.Query.validationCode
+        $ContentType = 'text/plain'
         $StatusCode = [HttpStatusCode]::OK
     } elseif ($Request.Query.CIPPID) {
         $CIPPID = ConvertTo-CIPPODataFilterValue -Value $Request.Query.CIPPID -Type Guid
@@ -53,6 +61,7 @@ function Invoke-PublicWebhooks {
                     FunctionName = 'PublicWebhookProcess'
                 }
                 Add-CIPPAzDataTableEntity @WebhookIncoming -Entity $Entity
+                Write-LogMessage -headers $Headers -API ($Request.Params.CIPPEndpoint ?? 'PublicWebhooks') -tenant 'Global' -message "Graph subscription webhook received and queued (CIPPID=$($Request.Query.CIPPID))" -Sev 'Info'
 
             } elseif ($Request.Query.Type -eq 'PartnerCenter') {
                 [pscustomobject]$ReceivedItem = $Request.Body
@@ -66,6 +75,7 @@ function Invoke-PublicWebhooks {
                     FunctionName = 'PublicWebhookProcess'
                 }
                 Add-CIPPAzDataTableEntity @WebhookIncoming -Entity $Entity
+                Write-LogMessage -headers $Headers -API ($Request.Params.CIPPEndpoint ?? 'PublicWebhooks') -tenant 'Global' -message "Partner Center webhook received and queued (CIPPID=$($Request.Query.CIPPID))" -Sev 'Info'
             } else {
                 $Body = 'This webhook is not authorized.'
                 $StatusCode = [HttpStatusCode]::Forbidden
@@ -80,7 +90,8 @@ function Invoke-PublicWebhooks {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = $Body
+            StatusCode  = $StatusCode
+            Body        = $Body
+            ContentType = $ContentType
         })
 }

@@ -20,36 +20,42 @@ function Invoke-ExecCIPPDBCache {
 
     Write-Information "ExecCIPPDBCache called with Name: '$Name', TenantFilter: '$TenantFilter', Types: '$Types'"
 
+    if ([string]::IsNullOrEmpty($Name)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [PSCustomObject]@{ Results = 'Failed to start cache operation: Name parameter is required' }
+            })
+    }
+
+    if ([string]::IsNullOrEmpty($TenantFilter)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [PSCustomObject]@{ Results = 'Failed to start cache operation: TenantFilter parameter is required' }
+            })
+    }
+
+    # A derived cache type has no collector of its own — it is produced as a side-effect of
+    # another collector (e.g. SharePointSiteListing by Set-CIPPDBCacheSharePointSiteUsage). The
+    # registry's 'collectedBy' names that producing collector, so a run of the derived type runs
+    # it and populates the derived data.
+    $CacheTypesPath = Join-Path $env:CIPPRootPath 'Config/CIPPDBCacheTypes.json'
+    if (Test-Path $CacheTypesPath) {
+        $CollectedBy = ((Get-Content $CacheTypesPath -Raw | ConvertFrom-Json) | Where-Object { $_.type -eq $Name }).collectedBy
+        if ($CollectedBy) {
+            Write-Information "ExecCIPPDBCache: '$Name' is a derived cache type; running its producing collector '$CollectedBy'"
+            $Name = "$CollectedBy"
+        }
+    }
+
+    $FunctionName = "Set-CIPPDBCache$Name"
+    if (-not (Resolve-CIPPCommand -Name $FunctionName)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = [PSCustomObject]@{ Results = "Failed to start cache operation: Cache function '$FunctionName' not found" }
+            })
+    }
+
     try {
-        if ([string]::IsNullOrEmpty($Name)) {
-            throw 'Name parameter is required'
-        }
-
-        if ([string]::IsNullOrEmpty($TenantFilter)) {
-            throw 'TenantFilter parameter is required'
-        }
-
-        # Validate the function exists — on HttpOnly workers CIPPDB module isn't loaded,
-        # so import it temporarily for validation (the actual execution runs on activity workers)
-        $FunctionName = "Set-CIPPDBCache$Name"
-        $Function = Get-Command -Name $FunctionName -ErrorAction SilentlyContinue
-        $ImportedCIPPDB = $false
-        if (-not $Function) {
-            try {
-                if (-not (Get-Module -Name 'CIPPDB')) {
-                    Import-Module CIPPDB -ErrorAction Stop
-                    $ImportedCIPPDB = $true
-                }
-                $Function = Get-Command -Name $FunctionName -ErrorAction Stop
-            } catch {
-                throw "Cache function '$FunctionName' not found"
-            } finally {
-                if ($ImportedCIPPDB) {
-                    Remove-Module CIPPDB -ErrorAction SilentlyContinue
-                }
-            }
-        }
-
         # Create queue entry for tracking
         $QueueName = if ($TenantFilter -eq 'AllTenants') {
             "$Name Cache Sync (All Tenants)"
@@ -80,6 +86,7 @@ function Invoke-ExecCIPPDBCache {
             $InputObject = [PSCustomObject]@{
                 Batch            = @($Batch)
                 OrchestratorName = "CIPPDBCache_${Name}_AllTenants"
+                AllowCollision   = $false
                 SkipLog          = $false
             }
 
@@ -103,6 +110,7 @@ function Invoke-ExecCIPPDBCache {
             $InputObject = [PSCustomObject]@{
                 Batch            = @($BatchItem)
                 OrchestratorName = "CIPPDBCache_${Name}_$TenantFilter"
+                AllowCollision   = $false
                 SkipLog          = $false
             }
             Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Starting CIPP DB cache for $Name on tenant $TenantFilter" -sev Info
@@ -110,10 +118,12 @@ function Invoke-ExecCIPPDBCache {
 
         $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
 
-        $ResultsMessage = if ($TenantFilter -eq 'AllTenants') {
-            "Successfully started cache operation for $Name for all tenants"
+        $Skipped = "$InstanceId" -like '*-Skipped'
+        $Scope = if ($TenantFilter -eq 'AllTenants') { 'for all tenants' } else { "on tenant $TenantFilter" }
+        $ResultsMessage = if ($Skipped) {
+            "A $Name cache operation is already running $Scope, so this request was skipped"
         } else {
-            "Successfully started cache operation for $Name on tenant $TenantFilter"
+            "Successfully started cache operation for $Name $Scope"
         }
 
         $Body = [PSCustomObject]@{
@@ -122,7 +132,7 @@ function Invoke-ExecCIPPDBCache {
                 Name       = $Name
                 Tenant     = $TenantFilter
                 InstanceId = $InstanceId
-                QueueId    = $Queue.RowKey
+                QueueId    = if ($Skipped) { $null } else { $Queue.RowKey }
             }
         }
         $StatusCode = [HttpStatusCode]::OK
@@ -132,7 +142,7 @@ function Invoke-ExecCIPPDBCache {
         $Body = [PSCustomObject]@{
             Results = "Failed to start cache operation: $ErrorMessage"
         }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

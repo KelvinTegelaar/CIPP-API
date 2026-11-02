@@ -1,0 +1,50 @@
+{
+  "name": "DisableUserSiteCreate",
+  "label": "Disable site creation by standard users",
+  "cat": "SharePoint Standards",
+  "tag": [
+    "SMB1001 (2.8)"
+  ],
+  "impact": "High Impact",
+  "helpText": "Disables users from creating new SharePoint sites",
+  "executiveText": "Restricts the creation of new SharePoint sites to authorized administrators, preventing uncontrolled proliferation of collaboration spaces and ensuring proper governance. This maintains organized information architecture while requiring approval for new collaborative environments.",
+  "docsDescription": "Disables standard users from creating SharePoint sites, also disables the ability to fully create teams",
+  "impactColour": "danger",
+  "addedDate": "2022-06-15",
+  "powershellEquivalent": "Update-MgAdminSharePointSetting",
+  "appliesToTest": [
+    "SMB1001_2_8"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "isSiteCreationEnabled": false,
+    "isSiteCreationUIEnabled": false
+  },
+  "read": {
+    "cacheType": "SharePointAdminSettings"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "admin/sharepoint/settings",
+        "body": {
+          "isSiteCreationEnabled": false,
+          "isSiteCreationUIEnabled": false
+        }
+      }
+    ]
+  }
+}

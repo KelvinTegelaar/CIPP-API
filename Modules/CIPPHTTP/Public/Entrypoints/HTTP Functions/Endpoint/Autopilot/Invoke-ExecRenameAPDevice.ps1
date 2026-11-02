@@ -37,14 +37,14 @@ Function Invoke-ExecRenameAPDevice {
 
             New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$($DeviceId)/UpdateDeviceProperties" -tenantid $TenantFilter -body $body -method POST | Out-Null
             $Result = "Successfully renamed device '$($DeviceId)' with serial number '$($SerialNumber)' to '$($DisplayName)'"
-            Write-LogMessage -Headers $User -API $APINAME -message $Result -Sev Info
+            Write-LogMessage -Headers $Request.Headers -API $APINAME -tenant $TenantFilter -message $Result -Sev Info
             $StatusCode = [HttpStatusCode]::OK
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Could not rename device '$($DeviceId)' with serial number '$($SerialNumber)' to '$($DisplayName)'. Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -Headers $User -API $APINAME -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        Write-LogMessage -Headers $Request.Headers -API $APINAME -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 

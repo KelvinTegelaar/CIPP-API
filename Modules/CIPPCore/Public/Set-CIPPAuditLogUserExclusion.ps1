@@ -52,7 +52,7 @@ function Set-CIPPAuditLogUserExclusion {
             if ($ExistingEntries.RowKey -contains $User) {
                 if ($PSCmdlet.ShouldProcess("Removing exclusion for user: $User")) {
                     $Entity = $ExistingEntries | Where-Object { $_.RowKey -eq $User -and $_.PartitionKey -eq $TenantFilter -and $_.Type -eq $Type }
-                    Remove-AzDataTableEntity @AuditLogExclusionsTable -Entity $Entity
+                    Remove-CIPPAzDataTableEntity @AuditLogExclusionsTable -Entity $Entity
                     Write-LogMessage -headers $Headers -API 'Set-CIPPAuditLogUserExclusion' -message "Removed audit log exclusion for user: $User" -Sev 'Info' -tenant $TenantFilter -LogData $Entity
                     "Removed audit log exclusion for user: $User"
                 }

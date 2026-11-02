@@ -27,17 +27,18 @@ function Set-CIPPDefenderCompliancePolicy {
         macEnabled                                          = [bool]$Compliance.ConnectMac
         partnerUnsupportedOsVersionBlocked                  = [bool]$Compliance.BlockunsupportedOS
         partnerUnresponsivenessThresholdInDays              = 7
-        allowPartnerToCollectIOSApplicationMetadata         = [bool]$Compliance.ConnectIosCompliance
-        allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Compliance.ConnectIosCompliance
+        allowPartnerToCollectIOSApplicationMetadata         = [bool]$Compliance.AppSync
+        allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Compliance.allowPartnerToCollectIosPersonalApplicationMetadata
         androidDeviceBlockedOnMissingPartnerData            = [bool]$Compliance.androidDeviceBlockedOnMissingPartnerData
         iosDeviceBlockedOnMissingPartnerData                = [bool]$Compliance.iosDeviceBlockedOnMissingPartnerData
-        windowsDeviceBlockedOnMissingPartnerData            = [bool]$Compliance.windowsDeviceBlockedOnMissingPartnerData
-        macDeviceBlockedOnMissingPartnerData                = [bool]$Compliance.macDeviceBlockedOnMissingPartnerData
+        windowsDeviceBlockedOnMissingPartnerData            = if ([bool]$Compliance.ConnectWindows) { $true } else { [bool]$Compliance.windowsDeviceBlockedOnMissingPartnerData }
+        macDeviceBlockedOnMissingPartnerData                = if ([bool]$Compliance.ConnectMac) { $true } else { [bool]$Compliance.macDeviceBlockedOnMissingPartnerData }
         androidMobileApplicationManagementEnabled           = [bool]$Compliance.ConnectAndroidCompliance
-        iosMobileApplicationManagementEnabled               = [bool]$Compliance.appSync
+        iosMobileApplicationManagementEnabled               = [bool]$Compliance.ConnectIosCompliance
         windowsMobileApplicationManagementEnabled           = [bool]$Compliance.windowsMobileApplicationManagementEnabled
         allowPartnerToCollectIosCertificateMetadata         = [bool]$Compliance.allowPartnerToCollectIosCertificateMetadata
         allowPartnerToCollectIosPersonalCertificateMetadata = [bool]$Compliance.allowPartnerToCollectIosPersonalCertificateMetadata
+        grantMobileThreatDefensePartnerRole                 = [bool]$Compliance.grantMobileThreatDefensePartnerRole
         microsoftDefenderForEndpointAttachEnabled           = [bool]$true
     }
     $SettingsObj = $SettingsObject | ConvertTo-Json -Compress
@@ -63,9 +64,13 @@ function Set-CIPPDefenderCompliancePolicy {
         "Defender Intune Configuration already correct and active for $($TenantFilter). Skipping"
     } elseif ($ConnectorExists) {
         $null = New-GraphPOSTRequest -uri $ConnectorUri -tenantid $TenantFilter -type PATCH -body $SettingsObj -AsApp $true
-        "$($TenantFilter): Successfully updated Defender Compliance and Reporting settings."
+        $Result = "$($TenantFilter): Successfully updated Defender Compliance and Reporting settings."
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
+        $Result
     } else {
         $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/' -tenantid $TenantFilter -type POST -body $SettingsObj -AsApp $true
-        "$($TenantFilter): Successfully created Defender Compliance and Reporting settings."
+        $Result = "$($TenantFilter): Successfully created Defender Compliance and Reporting settings."
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
+        $Result
     }
 }

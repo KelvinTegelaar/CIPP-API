@@ -72,7 +72,7 @@ function Start-BackupRetentionCleanup {
                     }
                 }
                 # Delete blob table entities
-                Remove-AzDataTableEntity @CIPPBackupTable -Entity $BlobBackups -Force
+                Remove-CIPPAzDataTableEntity @CIPPBackupTable -Entity $BlobBackups -Force
             }
 
             # Delete table-only backups (no blobs)
@@ -82,7 +82,7 @@ function Start-BackupRetentionCleanup {
 
             $TableDeletedCount = 0
             if ($TableBackups) {
-                Remove-AzDataTableEntity @CIPPBackupTable -Entity $TableBackups -Force
+                Remove-CIPPAzDataTableEntity @CIPPBackupTable -Entity $TableBackups -Force
                 $TableDeletedCount = ($TableBackups | Measure-Object).Count
             }
 
@@ -132,7 +132,7 @@ function Start-BackupRetentionCleanup {
                     }
                 }
                 # Delete blob table entities
-                Remove-AzDataTableEntity @ScheduledBackupTable -Entity $BlobBackups -Force
+                Remove-CIPPAzDataTableEntity @ScheduledBackupTable -Entity $BlobBackups -Force
             }
 
             # Delete table-only backups (no blobs)
@@ -142,7 +142,7 @@ function Start-BackupRetentionCleanup {
 
             $TableDeletedCount = 0
             if ($TableBackups) {
-                Remove-AzDataTableEntity @ScheduledBackupTable -Entity $TableBackups -Force
+                Remove-CIPPAzDataTableEntity @ScheduledBackupTable -Entity $TableBackups -Force
                 $TableDeletedCount = ($TableBackups | Measure-Object).Count
             }
 

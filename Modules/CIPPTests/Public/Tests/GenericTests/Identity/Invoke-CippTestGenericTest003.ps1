@@ -53,7 +53,7 @@ function Invoke-CippTestGenericTest003 {
             $null = $Result.Append("**⚠️ $TrialCount trial subscription(s) detected.** Trial licenses will expire and may cause users to lose access if not converted to paid subscriptions.`n`n")
         }
 
-        $UrgentRenewals = @($UpcomingRenewals | Where-Object { $_.DaysUntilRenew -le 30 -and $_.DaysUntilRenew -ge 0 })
+        $UrgentRenewals = @($UpcomingRenewals.Where({ $_.DaysUntilRenew -le 30 -and $_.DaysUntilRenew -ge 0 }))
         if ($UrgentRenewals.Count -gt 0) {
             $null = $Result.Append("**🔴 $($UrgentRenewals.Count) subscription(s) renewing within 30 days** — review these to ensure billing and seat counts are correct.`n`n")
         }

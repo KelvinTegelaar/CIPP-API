@@ -18,11 +18,19 @@ function Get-CIPPDomainAnalyser {
     if (-not $script:CIPPDomainAnalyserCache) {
         $script:CIPPDomainAnalyserCache = @{}
     }
+    # The in-worker results cache is keyed by tenant filter alone, and a worker serves many
+    # callers in turn: results computed under one caller's tenant scope must never be replayed
+    # to a caller with a different scope. Tenant-restricted requests therefore skip the cache
+    # entirely, in both directions; the unrestricted majority (admins, background alert and
+    # test runs) keeps the caching benefit.
+    $ScopeRestricted = $null -ne (Get-CippRequestContext).AllowedTenants
     $CacheKey = if ([string]::IsNullOrEmpty($TenantFilter)) { 'AllTenants' } else { $TenantFilter }
     $CacheNow = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-    $CachedEntry = $script:CIPPDomainAnalyserCache[$CacheKey]
-    if ($CachedEntry -and ($CacheNow - $CachedEntry.Timestamp) -lt 300) {
-        return $CachedEntry.Results
+    if (-not $ScopeRestricted) {
+        $CachedEntry = $script:CIPPDomainAnalyserCache[$CacheKey]
+        if ($CachedEntry -and ($CacheNow - $CachedEntry.Timestamp) -lt 300) {
+            return $CachedEntry.Results
+        }
     }
 
     $DomainTable = Get-CIPPTable -Table 'Domains'
@@ -45,7 +53,8 @@ function Get-CIPPDomainAnalyser {
                     # Add DkimSelectors from the domain entity if available
                     if (![string]::IsNullOrEmpty($Domain.DkimSelectors)) {
                         $Selectors = $Domain.DkimSelectors | ConvertFrom-Json -ErrorAction SilentlyContinue
-                        $Object | Add-Member -NotePropertyName 'DkimSelectors' -NotePropertyValue ($Selectors) -Force
+                        $Object.PSObject.Properties.Remove('DkimSelectors')
+                        $Object.PSObject.Properties.Add([psnoteproperty]::new('DkimSelectors', $Selectors))
                     }
                     $Object
                 }
@@ -54,6 +63,8 @@ function Get-CIPPDomainAnalyser {
     } catch {
         $Results = @()
     }
-    $script:CIPPDomainAnalyserCache[$CacheKey] = @{ Results = $Results; Timestamp = $CacheNow }
+    if (-not $ScopeRestricted) {
+        $script:CIPPDomainAnalyserCache[$CacheKey] = @{ Results = $Results; Timestamp = $CacheNow }
+    }
     return $Results
 }

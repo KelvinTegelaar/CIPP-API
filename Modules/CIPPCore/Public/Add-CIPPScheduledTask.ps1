@@ -27,6 +27,9 @@ function Add-CIPPScheduledTask {
     )
 
     try {
+        # The [pscustomobject] parameter type doesn't convert hashtables, and PSObject.Properties can't see hashtable keys
+        if ($Task -is [System.Collections.IDictionary]) { $Task = [pscustomobject]$Task }
+        if ($Task.Parameters -is [System.Collections.IDictionary]) { $Task.Parameters = [pscustomobject]$Task.Parameters }
 
         $Table = Get-CIPPTable -TableName 'ScheduledTasks'
 
@@ -34,11 +37,14 @@ function Add-CIPPScheduledTask {
             try {
                 $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$($RowKey)'"
                 $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
-                $ExistingTask.ScheduledTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+                $Now = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+                $DueSlot = Get-CIPPScheduledTaskNextRun -Recurrence $ExistingTask.Recurrence -ScheduledTime $ExistingTask.ScheduledTime -Due
+                $ExistingTask.ScheduledTime = [string]($DueSlot -gt 0 ? $DueSlot : $Now)
                 $ExistingTask.TaskState = 'Planned'
                 Add-CIPPAzDataTableEntity @Table -Entity $ExistingTask -Force
                 Write-LogMessage -headers $Headers -API 'RunNow' -message "Task $($ExistingTask.Name) scheduled to run now" -Sev 'Info' -Tenant $ExistingTask.Tenant
-                Add-CippQueueMessage -Cmdlet 'Start-UserTasksOrchestrator' -Parameters @{
+                # Add-CippQueueMessage returns $true; without discarding it the caller's Results array shows a bare 'true'
+                $null = Add-CippQueueMessage -Cmdlet 'Start-UserTasksOrchestrator' -Parameters @{
                     TaskId = $RowKey
                 }
                 return "Task $($ExistingTask.Name) scheduled to run now"
@@ -58,40 +64,20 @@ function Add-CIPPScheduledTask {
                 $Filter = "PartitionKey eq 'ScheduledTask' and Name eq '$($Task.Name)' and TaskState ne 'Completed' and TaskState ne 'Failed'"
                 $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
                 if ($ExistingTask) {
-                    return "Task with name $($Task.Name) already exists"
+                    return "Error - A scheduled task named '$($Task.Name)' already exists and was not created again."
                 }
             }
 
             $RequestedCommand = $task.Command.value ?? $task.Command
 
-            # Validate the command exists — on HttpOnly workers sibling modules aren't loaded,
-            # so import them temporarily for validation (actual execution runs on activity workers)
-            $Command = Get-Command $RequestedCommand -ErrorAction SilentlyContinue
-            $ImportedModules = [System.Collections.Generic.List[string]]::new()
-            if (-not $Command) {
-                try {
-                    foreach ($SiblingModule in @('CIPPStandards', 'CIPPAlerts', 'CIPPTests', 'CIPPDB', 'CippExtensions')) {
-                        if (-not (Get-Module -Name $SiblingModule)) {
-                            Import-Module $SiblingModule -ErrorAction SilentlyContinue
-                            if (Get-Module -Name $SiblingModule) {
-                                $ImportedModules.Add($SiblingModule)
-                            }
-                        }
-                    }
-                    $Command = Get-Command $RequestedCommand -ErrorAction SilentlyContinue
-                } finally {
-                    foreach ($Imported in $ImportedModules) {
-                        Remove-Module $Imported -ErrorAction SilentlyContinue
-                    }
-                }
-            }
+            $Command = Resolve-CIPPCommand -Name $RequestedCommand
 
             if (!$Command) {
                 Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Blocked attempt to schedule non-existent command: $RequestedCommand" -Sev 'Warning'
                 return "Error - The command '$RequestedCommand' does not exist and cannot be scheduled."
             }
 
-            if ($Command.Module -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPTests', 'CIPPDB', 'CippExtensions')) {
+            if ($Command.ModuleName -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPBaselines', 'CIPPTests', 'CIPPDB', 'CippExtensions', 'CIPPActivityTriggers')) {
                 Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Blocked attempt to schedule command from unauthorized module: $($Command.ModuleName)\$RequestedCommand" -Sev 'Warning'
                 return "Error - The command '$RequestedCommand' is not permitted to run as a scheduled task."
             }
@@ -101,9 +87,19 @@ function Add-CIPPScheduledTask {
                 return "Error - The command '$RequestedCommand' is not permitted to run as a scheduled task."
             }
 
-            $propertiesToCheck = @('Webhook', 'Email', 'PSA')
+            $propertiesToCheck = @('Webhook', 'Email', 'PSA', 'Push')
             $PostExecutionObject = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true })
             $PostExecution = $PostExecutionObject ? @($PostExecutionObject -join ',') : ($Task.PostExecution.value -join ',')
+            # Push goes to the creating user's own devices, so a task asking for it from a user with
+            # none registered would silently notify nobody. Refuse up front; the Preferences page is
+            # where they enrol. Headers are absent for system-created tasks, which never ask for Push.
+            if ($PostExecution -match '(^|,)Push(,|$)' -and $Headers.'x-ms-client-principal') {
+                $PushUser = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
+                $PushTable = Get-CIPPTable -TableName 'PushSubscriptions'
+                if (-not (Get-CIPPAzDataTableEntity @PushTable -Filter "PartitionKey eq '$PushUser'" -First 1)) {
+                    return 'Error - Push (notify me) was selected but you have no push notification devices registered. Enable notifications under Preferences > Push Notifications first, or remove Push from the post execution actions.'
+                }
+            }
             $Parameters = [System.Collections.Hashtable]@{}
             foreach ($Key in $task.Parameters.PSObject.Properties.Name) {
                 $Param = $task.Parameters.$Key
@@ -147,7 +143,6 @@ function Add-CIPPScheduledTask {
                 $Parameters.Headers = $Headers | Select-Object -Property 'x-forwarded-for', 'x-ms-client-principal', 'x-ms-client-principal-idp', 'x-ms-client-principal-name'
             }
 
-            $Parameters = ($Parameters | ConvertTo-Json -Depth 10 -Compress)
             $AdditionalProperties = [System.Collections.Hashtable]@{}
             foreach ($Prop in $task.AdditionalProperties) {
                 if ($null -eq $Prop.Value -or $Prop.Value -eq '' -or ($Prop.Value | Measure-Object).Count -eq 0) {
@@ -156,7 +151,6 @@ function Add-CIPPScheduledTask {
                 $AdditionalProperties[$Prop.Key] = $Prop.Value
             }
             $AdditionalProperties = ([PSCustomObject]$AdditionalProperties | ConvertTo-Json -Compress)
-            if ($Parameters -eq 'null') { $Parameters = '' }
 
 
             $Recurrence = if ([string]::IsNullOrEmpty($task.Recurrence.value)) {
@@ -188,8 +182,15 @@ function Add-CIPPScheduledTask {
                     $task.ScheduledTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
                 }
             }
-            $excludedTenants = if ($task.excludedTenants.value) {
-                $task.excludedTenants.value -join ','
+            # Split exclusions by type (same pattern as Tenant/TenantGroup): plain tenants are
+            # comma-joined, groups are stored as JSON and expanded at runtime by the orchestrator
+            $ExcludedEntries = @($task.excludedTenants | Where-Object { $_.value })
+            $excludedTenants = @($ExcludedEntries | Where-Object { $_.type -ne 'Group' }).value -join ','
+            $ExcludedGroupEntries = @($ExcludedEntries | Where-Object { $_.type -eq 'Group' } | ForEach-Object {
+                    [PSCustomObject]@{ value = $_.value; label = $_.label; type = 'Group' }
+                })
+            $excludedTenantGroups = if ($ExcludedGroupEntries.Count -gt 0) {
+                ConvertTo-Json -InputObject $ExcludedGroupEntries -Compress -Depth 5
             }
 
             # Handle tenant filter - support both single tenant and tenant groups
@@ -216,12 +217,29 @@ function Add-CIPPScheduledTask {
                 }
             }
 
+            # Stored parameters are user input: strip any tenant-identifying parameter so the
+            # authorized task tenant is injected at execution instead of a stored value, and log
+            # when the stored value pointed somewhere other than the picked tenant.
+            foreach ($TenantParamName in @('TenantFilter', 'Tenant', 'TenantId')) {
+                if (-not $Parameters.ContainsKey($TenantParamName)) { continue }
+                $StoredTenantValue = $Parameters[$TenantParamName]
+                $StoredTenantString = [string]($StoredTenantValue.value ?? $StoredTenantValue)
+                if (![string]::IsNullOrWhiteSpace($StoredTenantString) -and $StoredTenantString -ne [string]$tenantFilter) {
+                    Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Task $($task.Name): parameter -$TenantParamName value '$StoredTenantString' does not match the selected tenant '$tenantFilter' and was removed; the task runs against the selected tenant." -Sev 'Error' -Tenant $tenantFilter
+                }
+                $Parameters.Remove($TenantParamName)
+            }
+
+            $Parameters = ($Parameters | ConvertTo-Json -Depth 10 -Compress)
+            if ($Parameters -eq 'null') { $Parameters = '' }
+
             $entity = @{
                 PartitionKey         = [string]'ScheduledTask'
                 TaskState            = [string]'Planned'
                 RowKey               = [string]$RowKey
                 Tenant               = [string]$tenantFilter
                 excludedTenants      = [string]$excludedTenants
+                excludedTenantGroups = [string]$excludedTenantGroups
                 Name                 = [string]$task.Name
                 Command              = [string]$RequestedCommand
                 Parameters           = [string]$Parameters
@@ -234,11 +252,23 @@ function Add-CIPPScheduledTask {
                 Results              = 'Planned'
                 AlertComment         = [string]$task.AlertComment
                 CustomSubject        = [string]$task.CustomSubject
+                PsaTicketStrategy    = [string]($task.PsaTicketStrategy.value ?? $task.PsaTicketStrategy)
+                PsaTicketPriority    = [string]($task.PsaTicketPriority.value ?? $task.PsaTicketPriority)
+                PsaTicketId          = [string]($task.PsaTicketId.value ?? $task.PsaTicketId)
+                AlertReNotify        = [string]$task.AlertReNotify -eq 'True'
             }
 
 
             if ($task.Tag) {
                 $entity['Tag'] = [string]$task.Tag
+            }
+
+            if ($Task.RowKey) {
+                # Editing replaces the entity, so carry the disabled state over to keep a disabled task disabled
+                $ExistingEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ScheduledTask' and RowKey eq '$RowKey'" -Property RowKey, Disabled
+                if ($ExistingEntity.Disabled -eq $true) {
+                    $entity['Disabled'] = $true
+                }
             }
 
             # Always store DesiredStartTime if provided
@@ -261,35 +291,25 @@ function Add-CIPPScheduledTask {
                 }
             }
 
+            # Stored verbatim so the orchestrator expands groups at run time. The version marker tells
+            # it excludedTenants holds only the operator's picks, not a snapshot of unselected tenants.
+            if ($task.Tenants) {
+                $entity['Tenants'] = $task.Tenants -is [string] ? [string]$task.Tenants : [string]($task.Tenants | ConvertTo-Json -Compress -Depth 10)
+                $entity['TenantSelectionVersion'] = 2
+            }
+
             if ($task.Trigger) {
                 $entity.Trigger = [string]($task.Trigger | ConvertTo-Json -Compress)
                 $TriggerType = $task.Trigger.Type.value ?? $task.Trigger.Type
                 if ($TriggerType -eq 'DeltaQuery') {
-                    $Parameters = @{}
-                    if ($task.Trigger.WatchedAttributes -and ($task.Trigger.WatchedAttributes | Measure-Object).Count -gt 0) {
-                        $Parameters.'$select' = $task.Trigger.WatchedAttributes | ForEach-Object { $_.value ?? $_ } -join ','
-                    }
-                    if ($task.Trigger.ResourceFilter) {
-                        $ResourceFilterValues = $task.Trigger.ResourceFilter | ForEach-Object { $_.value ?? $_ }
-                        $Parameters.'$filter' = "id eq '" + ($ResourceFilterValues -join "' or id eq '") + "'"
-                    }
                     $Resource = $task.Trigger.DeltaResource.value ?? $task.Trigger.DeltaResource
-
-                    if ($entity.TenantGroup) {
-                        $tenantFilter = $entity.TenantGroup | ConvertFrom-Json
-                    }
-                    $DeltaQuery = @{
-                        TenantFilter = $tenantFilter
-                        Resource     = $Resource
-                        Parameters   = $Parameters
-                        PartitionKey = $RowKey
-                    }
+                    $DeltaTenantFilter = if ($entity.TenantGroup) { $entity.TenantGroup | ConvertFrom-Json } else { $tenantFilter }
 
                     try {
-                        $null = New-GraphDeltaQuery @DeltaQuery
+                        $null = New-CIPPTaskDeltaQuery -Trigger $task.Trigger -TenantFilter $DeltaTenantFilter -PartitionKey $RowKey
                         Write-Information "Created delta query for resource $($Resource)"
                     } catch {
-                        Write-Warning "Failed to create delta query for resource $($Resource): $($_.Exception.Message)"
+                        throw "Failed to create delta query for resource $($Resource): $($_.Exception.Message)"
                     }
                 }
             }
@@ -346,7 +366,8 @@ function Add-CIPPScheduledTask {
             }
 
             if ($RunNow.IsPresent) {
-                Add-CippQueueMessage -Cmdlet 'Start-UserTasksOrchestrator' -Parameters @{
+                # Add-CippQueueMessage returns $true; without discarding it the caller's Results array shows a bare 'true'
+                $null = Add-CippQueueMessage -Cmdlet 'Start-UserTasksOrchestrator' -Parameters @{
                     TaskId = $RowKey
                 }
                 return "Task $($entity.Name) scheduled to run now"

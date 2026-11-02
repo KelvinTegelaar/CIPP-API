@@ -1,0 +1,913 @@
+{
+  "Summary": {
+    "Tenant": "contoso.onmicrosoft.com",
+    "Currency": "USD",
+    "GeneratedAt": "2026-09-23T09:00:00.0000000+00:00",
+    "ReportPeriodDays": 90,
+    "InactiveDays": 90,
+    "TenureMonths": 6,
+    "RecommendDowngrades": true,
+    "RecommendUpgrades": true,
+    "RecommendTerms": true,
+    "ProtectSecurityFeatures": true,
+    "MonthlySpend": 2433.75,
+    "AssignedSeats": 130,
+    "TotalSeats": 202,
+    "LicensedUsers": 96,
+    "PriceCoverage": 0.992,
+    "ReclaimableMonthly": 412.75,
+    "ReclaimableSeats": 27,
+    "SignInDataAvailable": true,
+    "DowngradeMonthly": 301.75,
+    "DowngradeSeats": 30,
+    "ConsolidationMonthly": 3.5,
+    "TermMonthly": 120.3,
+    "ProtectInvestmentMonthly": 123.75,
+    "ProtectSeats": 13,
+    "TotalPotentialMonthly": 838.3,
+    "TotalPotentialAnnual": 10059.6,
+    "MonthlyCommitmentUplift": 0.2,
+    "SuggestionCount": 71,
+    "AnonymizedReports": false,
+    "DataAvailable": true,
+    "UsageDataAvailable": true,
+    "AppUsageDataAvailable": true,
+    "MailboxUsageDataAvailable": true,
+    "Sources": {
+      "Licenses": "Cache",
+      "Users": "Cache",
+      "ActivityDetail": "Cache",
+      "AppUsage": "Cache",
+      "MailboxUsage": "Cache",
+      "CopilotUsage": "Cache"
+    }
+  },
+  "Suggestions": [],
+  "Optimization": {
+    "Summary": {
+      "MonthlySpend": 2433.75,
+      "AssignedSeats": 130,
+      "PriceCoverage": 0.992
+    },
+    "Opportunities": [
+      {
+        "Tier": "UnassignedSeats",
+        "FindingLabel": "Unassigned",
+        "License": "Microsoft 365 Business Premium",
+        "skuId": "cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46",
+        "Seats": 8,
+        "UnitCost": 22,
+        "MonthlySaving": 176,
+        "SuggestedAction": "Reduce seat count",
+        "Users": [],
+        "PriceKnown": true
+      },
+      {
+        "Tier": "UnassignedSeats",
+        "FindingLabel": "Unassigned",
+        "License": "Microsoft 365 E3",
+        "skuId": "05e9a617-0261-4cee-bb44-138d3ef5d965",
+        "Seats": 2,
+        "UnitCost": 36,
+        "MonthlySaving": 72,
+        "SuggestedAction": "Reduce seat count",
+        "Users": [],
+        "PriceKnown": true
+      },
+      {
+        "Tier": "DisabledAccount",
+        "FindingLabel": "Disabled user",
+        "License": "Microsoft 365 Business Premium",
+        "skuId": "cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46",
+        "Seats": 2,
+        "UnitCost": 22,
+        "MonthlySaving": 44,
+        "SuggestedAction": "Remove license",
+        "Users": [],
+        "PriceKnown": true
+      },
+      {
+        "Tier": "UnassignedSeats",
+        "FindingLabel": "Unassigned",
+        "License": "Microsoft 365 Business Standard",
+        "skuId": "f245ecc8-75af-4f8e-b61f-27d8114de5f3",
+        "Seats": 3,
+        "UnitCost": 12.5,
+        "MonthlySaving": 37.5,
+        "SuggestedAction": "Reduce seat count",
+        "Users": [],
+        "PriceKnown": true
+      },
+      {
+        "Tier": "UnassignedSeats",
+        "FindingLabel": "Unassigned",
+        "License": "Microsoft 365 Business Basic",
+        "skuId": "3b555118-da6a-4418-894f-7df1e2096870",
+        "Seats": 6,
+        "UnitCost": 6,
+        "MonthlySaving": 36,
+        "SuggestedAction": "Reduce seat count",
+        "Users": [],
+        "PriceKnown": true
+      },
+      {
+        "Tier": "Inactive",
+        "FindingLabel": "Inactive 90d+",
+        "License": "Microsoft 365 Business Standard",
+        "skuId": "f245ecc8-75af-4f8e-b61f-27d8114de5f3",
+        "Seats": 2,
+        "UnitCost": 12.5,
+        "MonthlySaving": 25,
+        "SuggestedAction": "Review / remove",
+        "Users": [],
+        "PriceKnown": true
+      },
+      {
+        "Tier": "UnassignedSeats",
+        "FindingLabel": "Unassigned",
+        "License": "Microsoft 365 Apps for business",
+        "skuId": "cdd28e44-67e3-425e-be4c-737fab2899d3",
+        "Seats": 1,
+        "UnitCost": 8.25,
+        "MonthlySaving": 8.25,
+        "SuggestedAction": "Reduce seat count",
+        "Users": [],
+        "PriceKnown": true
+      },
+      {
+        "Tier": "Overlap",
+        "FindingLabel": "Redundant",
+        "License": "Exchange Online (Plan 1)",
+        "skuId": "4b9405b0-7788-4568-add1-99614e613b69",
+        "Seats": 1,
+        "UnitCost": 4,
+        "MonthlySaving": 4,
+        "SuggestedAction": "Remove redundant license",
+        "Users": [],
+        "PriceKnown": true
+      },
+      {
+        "Tier": "UnassignedSeats",
+        "FindingLabel": "Unassigned",
+        "License": "Exchange Online (Plan 1)",
+        "skuId": "4b9405b0-7788-4568-add1-99614e613b69",
+        "Seats": 1,
+        "UnitCost": 4,
+        "MonthlySaving": 4,
+        "SuggestedAction": "Reduce seat count",
+        "Users": [],
+        "PriceKnown": true
+      },
+      {
+        "Tier": "Downgrade",
+        "FindingLabel": "Mailbox-only",
+        "License": "Microsoft 365 E3",
+        "skuId": "05e9a617-0261-4cee-bb44-138d3ef5d965",
+        "Seats": 1,
+        "UnitCost": 36,
+        "MonthlySaving": 0,
+        "SuggestedAction": "Review: only using email",
+        "Users": [],
+        "PriceKnown": true
+      },
+      {
+        "Tier": "UnassignedSeats",
+        "FindingLabel": "Unassigned",
+        "License": "Microsoft Teams Rooms Pro",
+        "skuId": "4fb214cb-a430-4a91-9c91-4976763aa78f",
+        "Seats": 1,
+        "UnitCost": null,
+        "MonthlySaving": 0,
+        "SuggestedAction": "Reduce seat count",
+        "Users": [],
+        "PriceKnown": false
+      }
+    ]
+  },
+  "Downgrades": [
+    {
+      "FromLicense": "Microsoft 365 Copilot",
+      "FromSkuId": "639dec6b-bb19-468b-871c-c5c441c4b0cb",
+      "ToLicense": "No license",
+      "ToSkuId": null,
+      "Action": "Remove",
+      "Seats": 5,
+      "UnitCost": 30,
+      "TargetCost": 0,
+      "UnitSaving": 30,
+      "MonthlySaving": 150,
+      "Keeps": [],
+      "Loses": [
+        "Microsoft 365 Copilot"
+      ],
+      "Users": []
+    },
+    {
+      "FromLicense": "Microsoft 365 Business Standard",
+      "FromSkuId": "f245ecc8-75af-4f8e-b61f-27d8114de5f3",
+      "ToLicense": "Microsoft 365 Business Basic",
+      "ToSkuId": "3b555118-da6a-4418-894f-7df1e2096870",
+      "Action": "Downgrade",
+      "Seats": 9,
+      "UnitCost": 12.5,
+      "TargetCost": 6,
+      "UnitSaving": 6.5,
+      "MonthlySaving": 58.5,
+      "Keeps": [
+        "Email and calendar",
+        "File storage and sharing",
+        "Teams chat and meetings"
+      ],
+      "Loses": [
+        "Office desktop apps"
+      ],
+      "Users": []
+    },
+    {
+      "FromLicense": "Microsoft 365 E3",
+      "FromSkuId": "05e9a617-0261-4cee-bb44-138d3ef5d965",
+      "ToLicense": "Microsoft 365 Business Premium",
+      "ToSkuId": "cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46",
+      "Action": "Downgrade",
+      "Seats": 3,
+      "UnitCost": 36,
+      "TargetCost": 22,
+      "UnitSaving": 14,
+      "MonthlySaving": 42,
+      "Keeps": [
+        "Advanced sign-in security",
+        "Data protection and labelling",
+        "Device management",
+        "Device threat protection",
+        "Email and calendar",
+        "File storage and sharing",
+        "Large mailbox and archive",
+        "Office desktop apps",
+        "Teams chat and meetings",
+        "Windows upgrade rights"
+      ],
+      "Loses": [],
+      "Users": []
+    },
+    {
+      "FromLicense": "Microsoft 365 Business Standard",
+      "FromSkuId": "f245ecc8-75af-4f8e-b61f-27d8114de5f3",
+      "ToLicense": "No license",
+      "ToSkuId": null,
+      "Action": "Remove",
+      "Seats": 1,
+      "UnitCost": 12.5,
+      "TargetCost": 0,
+      "UnitSaving": 12.5,
+      "MonthlySaving": 12.5,
+      "Keeps": [],
+      "Loses": [
+        "Email and calendar",
+        "File storage and sharing",
+        "Office desktop apps",
+        "Teams chat and meetings"
+      ],
+      "Users": []
+    },
+    {
+      "FromLicense": "Microsoft 365 Business Standard",
+      "FromSkuId": "f245ecc8-75af-4f8e-b61f-27d8114de5f3",
+      "ToLicense": "Microsoft 365 Apps for business",
+      "ToSkuId": "cdd28e44-67e3-425e-be4c-737fab2899d3",
+      "Action": "Downgrade",
+      "Seats": 2,
+      "UnitCost": 12.5,
+      "TargetCost": 8.25,
+      "UnitSaving": 4.25,
+      "MonthlySaving": 8.5,
+      "Keeps": [
+        "File storage and sharing",
+        "Office desktop apps"
+      ],
+      "Loses": [
+        "Email and calendar",
+        "Teams chat and meetings"
+      ],
+      "Users": []
+    },
+    {
+      "FromLicense": "Microsoft 365 Apps for business",
+      "FromSkuId": "cdd28e44-67e3-425e-be4c-737fab2899d3",
+      "ToLicense": "No license",
+      "ToSkuId": null,
+      "Action": "Remove",
+      "Seats": 1,
+      "UnitCost": 8.25,
+      "TargetCost": 0,
+      "UnitSaving": 8.25,
+      "MonthlySaving": 8.25,
+      "Keeps": [],
+      "Loses": [
+        "File storage and sharing",
+        "Office desktop apps"
+      ],
+      "Users": []
+    },
+    {
+      "FromLicense": "Microsoft 365 Business Basic",
+      "FromSkuId": "3b555118-da6a-4418-894f-7df1e2096870",
+      "ToLicense": "Exchange Online (Plan 1)",
+      "ToSkuId": "4b9405b0-7788-4568-add1-99614e613b69",
+      "Action": "Downgrade",
+      "Seats": 4,
+      "UnitCost": 6,
+      "TargetCost": 4,
+      "UnitSaving": 2,
+      "MonthlySaving": 8,
+      "Keeps": [
+        "Email and calendar"
+      ],
+      "Loses": [
+        "File storage and sharing",
+        "Teams chat and meetings"
+      ],
+      "Users": []
+    },
+    {
+      "FromLicense": "Microsoft 365 Business Basic",
+      "FromSkuId": "3b555118-da6a-4418-894f-7df1e2096870",
+      "ToLicense": "No license",
+      "ToSkuId": null,
+      "Action": "Remove",
+      "Seats": 1,
+      "UnitCost": 6,
+      "TargetCost": 0,
+      "UnitSaving": 6,
+      "MonthlySaving": 6,
+      "Keeps": [],
+      "Loses": [
+        "Email and calendar",
+        "File storage and sharing",
+        "Teams chat and meetings"
+      ],
+      "Users": []
+    },
+    {
+      "FromLicense": "Exchange Online (Plan 1)",
+      "FromSkuId": "4b9405b0-7788-4568-add1-99614e613b69",
+      "ToLicense": "Exchange Online Kiosk",
+      "ToSkuId": "80b2d799-d2ba-4d2a-8842-fb0d0f3a4b82",
+      "Action": "Downgrade",
+      "Seats": 2,
+      "UnitCost": 4,
+      "TargetCost": 2,
+      "UnitSaving": 2,
+      "MonthlySaving": 4,
+      "Keeps": [
+        "Email and calendar"
+      ],
+      "Loses": [],
+      "Users": []
+    },
+    {
+      "FromLicense": "Microsoft 365 Business Basic",
+      "FromSkuId": "3b555118-da6a-4418-894f-7df1e2096870",
+      "ToLicense": "Microsoft Teams Essentials",
+      "ToSkuId": "3f4d6b3c-4a8c-4aaf-9bb7-1e3d9a3b1f7c",
+      "Action": "Downgrade",
+      "Seats": 2,
+      "UnitCost": 6,
+      "TargetCost": 4,
+      "UnitSaving": 2,
+      "MonthlySaving": 4,
+      "Keeps": [
+        "Teams chat and meetings"
+      ],
+      "Loses": [
+        "Email and calendar",
+        "File storage and sharing"
+      ],
+      "Users": []
+    }
+  ],
+  "Upgrades": [
+    {
+      "Type": "Consolidate",
+      "FromLicenses": [
+        "Microsoft 365 Apps for business",
+        "Microsoft 365 Business Basic"
+      ],
+      "FromSkuIds": [
+        "cdd28e44-67e3-425e-be4c-737fab2899d3",
+        "3b555118-da6a-4418-894f-7df1e2096870"
+      ],
+      "ToLicense": "Microsoft 365 Business Standard",
+      "ToSkuId": "f245ecc8-75af-4f8e-b61f-27d8114de5f3",
+      "Seats": 2,
+      "UnitCost": 14.25,
+      "TargetCost": 12.5,
+      "UnitDelta": -1.75,
+      "MonthlyDelta": -3.5,
+      "Gains": [],
+      "Users": []
+    },
+    {
+      "Type": "Protect",
+      "FromLicenses": [
+        "Exchange Online (Plan 1)",
+        "Microsoft 365 Apps for business"
+      ],
+      "FromSkuIds": [
+        "4b9405b0-7788-4568-add1-99614e613b69",
+        "cdd28e44-67e3-425e-be4c-737fab2899d3"
+      ],
+      "ToLicense": "Microsoft 365 Business Premium",
+      "ToSkuId": "cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46",
+      "Seats": 1,
+      "UnitCost": 12.25,
+      "TargetCost": 22,
+      "UnitDelta": 9.75,
+      "MonthlyDelta": 9.75,
+      "Gains": [
+        "Advanced sign-in security",
+        "Data protection and labelling",
+        "Device management",
+        "Device threat protection",
+        "Teams chat and meetings"
+      ],
+      "Users": []
+    },
+    {
+      "Type": "Protect",
+      "FromLicenses": [
+        "Microsoft 365 Business Standard"
+      ],
+      "FromSkuIds": [
+        "f245ecc8-75af-4f8e-b61f-27d8114de5f3"
+      ],
+      "ToLicense": "Microsoft 365 Business Premium",
+      "ToSkuId": "cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46",
+      "Seats": 12,
+      "UnitCost": 12.5,
+      "TargetCost": 22,
+      "UnitDelta": 9.5,
+      "MonthlyDelta": 114,
+      "Gains": [
+        "Advanced email threat protection",
+        "Advanced sign-in security",
+        "Data protection and labelling",
+        "Device management",
+        "Device threat protection"
+      ],
+      "Users": []
+    }
+  ],
+  "Terms": [
+    {
+      "License": "Microsoft 365 Business Premium",
+      "skuId": "cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46",
+      "TotalSeats": 68,
+      "AssignedSeats": 60,
+      "StableSeats": 52,
+      "MonthlySeats": 30,
+      "YearlySeats": 38,
+      "UnknownTermSeats": 0,
+      "TermKnown": true,
+      "RecommendedAnnual": 52,
+      "RecommendedMonthly": 8,
+      "ConvertibleSeats": 14,
+      "UnitCost": 22,
+      "MonthlySaving": 61.6,
+      "LockedUnusedSeats": 0,
+      "NextRenewalDays": 120,
+      "PriceKnown": true
+    },
+    {
+      "License": "Microsoft 365 Business Standard",
+      "skuId": "f245ecc8-75af-4f8e-b61f-27d8114de5f3",
+      "TotalSeats": 25,
+      "AssignedSeats": 22,
+      "StableSeats": 15,
+      "MonthlySeats": 25,
+      "YearlySeats": 0,
+      "UnknownTermSeats": 0,
+      "TermKnown": true,
+      "RecommendedAnnual": 15,
+      "RecommendedMonthly": 7,
+      "ConvertibleSeats": 15,
+      "UnitCost": 12.5,
+      "MonthlySaving": 37.5,
+      "LockedUnusedSeats": 0,
+      "NextRenewalDays": 12,
+      "PriceKnown": true
+    },
+    {
+      "License": "Microsoft 365 Copilot",
+      "skuId": "639dec6b-bb19-468b-871c-c5c441c4b0cb",
+      "TotalSeats": 8,
+      "AssignedSeats": 8,
+      "StableSeats": 2,
+      "MonthlySeats": 8,
+      "YearlySeats": 0,
+      "UnknownTermSeats": 0,
+      "TermKnown": true,
+      "RecommendedAnnual": 2,
+      "RecommendedMonthly": 6,
+      "ConvertibleSeats": 2,
+      "UnitCost": 30,
+      "MonthlySaving": 12,
+      "LockedUnusedSeats": 0,
+      "NextRenewalDays": 20,
+      "PriceKnown": true
+    },
+    {
+      "License": "Visio Plan 2",
+      "skuId": "c5928f49-12ba-48f7-ada3-0d743a3601d5",
+      "TotalSeats": 2,
+      "AssignedSeats": 2,
+      "StableSeats": 2,
+      "MonthlySeats": 2,
+      "YearlySeats": 0,
+      "UnknownTermSeats": 0,
+      "TermKnown": true,
+      "RecommendedAnnual": 2,
+      "RecommendedMonthly": 0,
+      "ConvertibleSeats": 2,
+      "UnitCost": 15,
+      "MonthlySaving": 6,
+      "LockedUnusedSeats": 0,
+      "NextRenewalDays": 8,
+      "PriceKnown": true
+    },
+    {
+      "License": "Exchange Online (Plan 1)",
+      "skuId": "4b9405b0-7788-4568-add1-99614e613b69",
+      "TotalSeats": 5,
+      "AssignedSeats": 4,
+      "StableSeats": 4,
+      "MonthlySeats": 5,
+      "YearlySeats": 0,
+      "UnknownTermSeats": 0,
+      "TermKnown": true,
+      "RecommendedAnnual": 4,
+      "RecommendedMonthly": 0,
+      "ConvertibleSeats": 4,
+      "UnitCost": 4,
+      "MonthlySaving": 3.2,
+      "LockedUnusedSeats": 0,
+      "NextRenewalDays": 8,
+      "PriceKnown": true
+    },
+    {
+      "License": "Microsoft 365 E3",
+      "skuId": "05e9a617-0261-4cee-bb44-138d3ef5d965",
+      "TotalSeats": 12,
+      "AssignedSeats": 10,
+      "StableSeats": 9,
+      "MonthlySeats": 0,
+      "YearlySeats": 12,
+      "UnknownTermSeats": 0,
+      "TermKnown": true,
+      "RecommendedAnnual": 9,
+      "RecommendedMonthly": 1,
+      "ConvertibleSeats": 0,
+      "UnitCost": 36,
+      "MonthlySaving": 0,
+      "LockedUnusedSeats": 2,
+      "NextRenewalDays": 200,
+      "PriceKnown": true
+    },
+    {
+      "License": "Microsoft 365 Business Basic",
+      "skuId": "3b555118-da6a-4418-894f-7df1e2096870",
+      "TotalSeats": 20,
+      "AssignedSeats": 14,
+      "StableSeats": 10,
+      "MonthlySeats": 0,
+      "YearlySeats": 20,
+      "UnknownTermSeats": 0,
+      "TermKnown": true,
+      "RecommendedAnnual": 10,
+      "RecommendedMonthly": 4,
+      "ConvertibleSeats": 0,
+      "UnitCost": 6,
+      "MonthlySaving": 0,
+      "LockedUnusedSeats": 6,
+      "NextRenewalDays": 45,
+      "PriceKnown": true
+    },
+    {
+      "License": "Power BI Pro",
+      "skuId": "f8a1db68-be16-40ed-86d5-cb42ce701560",
+      "TotalSeats": 6,
+      "AssignedSeats": 6,
+      "StableSeats": 6,
+      "MonthlySeats": 0,
+      "YearlySeats": 0,
+      "UnknownTermSeats": 6,
+      "TermKnown": false,
+      "RecommendedAnnual": 6,
+      "RecommendedMonthly": 0,
+      "ConvertibleSeats": null,
+      "UnitCost": 14,
+      "MonthlySaving": 0,
+      "LockedUnusedSeats": 0,
+      "NextRenewalDays": null,
+      "PriceKnown": true
+    },
+    {
+      "License": "Microsoft 365 Apps for business",
+      "skuId": "cdd28e44-67e3-425e-be4c-737fab2899d3",
+      "TotalSeats": 4,
+      "AssignedSeats": 3,
+      "StableSeats": 3,
+      "MonthlySeats": 0,
+      "YearlySeats": 4,
+      "UnknownTermSeats": 0,
+      "TermKnown": true,
+      "RecommendedAnnual": 3,
+      "RecommendedMonthly": 0,
+      "ConvertibleSeats": 0,
+      "UnitCost": 8.25,
+      "MonthlySaving": 0,
+      "LockedUnusedSeats": 1,
+      "NextRenewalDays": null,
+      "PriceKnown": true
+    },
+    {
+      "License": "Microsoft Teams Rooms Pro",
+      "skuId": "4fb214cb-a430-4a91-9c91-4976763aa78f",
+      "TotalSeats": 2,
+      "AssignedSeats": 1,
+      "StableSeats": 1,
+      "MonthlySeats": 0,
+      "YearlySeats": 2,
+      "UnknownTermSeats": 0,
+      "TermKnown": true,
+      "RecommendedAnnual": 1,
+      "RecommendedMonthly": 0,
+      "ConvertibleSeats": 0,
+      "UnitCost": null,
+      "MonthlySaving": 0,
+      "LockedUnusedSeats": 1,
+      "NextRenewalDays": 300,
+      "PriceKnown": false
+    }
+  ],
+  "Products": [
+    {
+      "License": "Microsoft 365 Business Premium",
+      "skuId": "cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46",
+      "Family": null,
+      "TotalSeats": 68,
+      "AssignedSeats": 60,
+      "UnusedSeats": 8,
+      "TenantLevel": false,
+      "UnitCost": 22,
+      "MonthlySpend": 1320,
+      "PriceKnown": true,
+      "Capabilities": []
+    },
+    {
+      "License": "Microsoft 365 E3",
+      "skuId": "05e9a617-0261-4cee-bb44-138d3ef5d965",
+      "Family": null,
+      "TotalSeats": 12,
+      "AssignedSeats": 10,
+      "UnusedSeats": 2,
+      "TenantLevel": false,
+      "UnitCost": 36,
+      "MonthlySpend": 360,
+      "PriceKnown": true,
+      "Capabilities": []
+    },
+    {
+      "License": "Microsoft 365 Business Standard",
+      "skuId": "f245ecc8-75af-4f8e-b61f-27d8114de5f3",
+      "Family": null,
+      "TotalSeats": 25,
+      "AssignedSeats": 22,
+      "UnusedSeats": 3,
+      "TenantLevel": false,
+      "UnitCost": 12.5,
+      "MonthlySpend": 275,
+      "PriceKnown": true,
+      "Capabilities": []
+    },
+    {
+      "License": "Microsoft 365 Copilot",
+      "skuId": "639dec6b-bb19-468b-871c-c5c441c4b0cb",
+      "Family": null,
+      "TotalSeats": 8,
+      "AssignedSeats": 8,
+      "UnusedSeats": 0,
+      "TenantLevel": false,
+      "UnitCost": 30,
+      "MonthlySpend": 240,
+      "PriceKnown": true,
+      "Capabilities": []
+    },
+    {
+      "License": "Microsoft 365 Business Basic",
+      "skuId": "3b555118-da6a-4418-894f-7df1e2096870",
+      "Family": null,
+      "TotalSeats": 20,
+      "AssignedSeats": 14,
+      "UnusedSeats": 6,
+      "TenantLevel": false,
+      "UnitCost": 6,
+      "MonthlySpend": 84,
+      "PriceKnown": true,
+      "Capabilities": []
+    },
+    {
+      "License": "Power BI Pro",
+      "skuId": "f8a1db68-be16-40ed-86d5-cb42ce701560",
+      "Family": null,
+      "TotalSeats": 6,
+      "AssignedSeats": 6,
+      "UnusedSeats": 0,
+      "TenantLevel": false,
+      "UnitCost": 14,
+      "MonthlySpend": 84,
+      "PriceKnown": true,
+      "Capabilities": []
+    },
+    {
+      "License": "Visio Plan 2",
+      "skuId": "c5928f49-12ba-48f7-ada3-0d743a3601d5",
+      "Family": null,
+      "TotalSeats": 2,
+      "AssignedSeats": 2,
+      "UnusedSeats": 0,
+      "TenantLevel": false,
+      "UnitCost": 15,
+      "MonthlySpend": 30,
+      "PriceKnown": true,
+      "Capabilities": []
+    },
+    {
+      "License": "Microsoft 365 Apps for business",
+      "skuId": "cdd28e44-67e3-425e-be4c-737fab2899d3",
+      "Family": null,
+      "TotalSeats": 4,
+      "AssignedSeats": 3,
+      "UnusedSeats": 1,
+      "TenantLevel": false,
+      "UnitCost": 8.25,
+      "MonthlySpend": 24.75,
+      "PriceKnown": true,
+      "Capabilities": []
+    },
+    {
+      "License": "Exchange Online (Plan 1)",
+      "skuId": "4b9405b0-7788-4568-add1-99614e613b69",
+      "Family": null,
+      "TotalSeats": 5,
+      "AssignedSeats": 4,
+      "UnusedSeats": 1,
+      "TenantLevel": false,
+      "UnitCost": 4,
+      "MonthlySpend": 16,
+      "PriceKnown": true,
+      "Capabilities": []
+    },
+    {
+      "License": "Office 365 Extra File Storage",
+      "skuId": "99049c9c-6011-4908-bf17-15f496e6519d",
+      "Family": null,
+      "TotalSeats": 50,
+      "AssignedSeats": 0,
+      "UnusedSeats": 0,
+      "TenantLevel": true,
+      "UnitCost": 0.2,
+      "MonthlySpend": 0,
+      "PriceKnown": true,
+      "Capabilities": []
+    },
+    {
+      "License": "Microsoft Teams Rooms Pro",
+      "skuId": "4fb214cb-a430-4a91-9c91-4976763aa78f",
+      "Family": null,
+      "TotalSeats": 2,
+      "AssignedSeats": 1,
+      "UnusedSeats": 1,
+      "TenantLevel": false,
+      "UnitCost": null,
+      "MonthlySpend": null,
+      "PriceKnown": false,
+      "Capabilities": []
+    }
+  ],
+  "Capabilities": [
+    {
+      "id": "email",
+      "label": "Email and calendar",
+      "description": "A business mailbox with calendar and contacts.",
+      "measurable": true
+    },
+    {
+      "id": "largeMailbox",
+      "label": "Large mailbox and archive",
+      "description": "A 100 GB mailbox with an unlimited email archive. Only needed when a mailbox is near the 50 GB limit or uses an archive.",
+      "measurable": true
+    },
+    {
+      "id": "desktopApps",
+      "label": "Office desktop apps",
+      "description": "Word, Excel, PowerPoint and Outlook installed on a PC or Mac.",
+      "measurable": true
+    },
+    {
+      "id": "teams",
+      "label": "Teams chat and meetings",
+      "description": "Microsoft Teams for chat, calls and online meetings.",
+      "measurable": true
+    },
+    {
+      "id": "files",
+      "label": "File storage and sharing",
+      "description": "OneDrive and SharePoint for storing and sharing documents.",
+      "measurable": true
+    },
+    {
+      "id": "copilot",
+      "label": "Microsoft 365 Copilot",
+      "description": "The AI assistant inside Word, Excel, Outlook and Teams.",
+      "measurable": true
+    },
+    {
+      "id": "deviceManagement",
+      "label": "Device management",
+      "description": "Intune: enrolling, securing and wiping company laptops and phones.",
+      "measurable": false
+    },
+    {
+      "id": "signInSecurity",
+      "label": "Advanced sign-in security",
+      "description": "Entra ID P1: Conditional Access rules that decide who can sign in from where.",
+      "measurable": false
+    },
+    {
+      "id": "identityRisk",
+      "label": "Identity risk protection",
+      "description": "Entra ID P2: automatic detection of risky sign-ins and privileged access controls.",
+      "measurable": false
+    },
+    {
+      "id": "identityGovernance",
+      "label": "Identity governance",
+      "description": "Access reviews and lifecycle workflows for user access.",
+      "measurable": false
+    },
+    {
+      "id": "endpointSecurity",
+      "label": "Device threat protection",
+      "description": "Microsoft Defender for Business or Endpoint: antivirus and attack detection on devices.",
+      "measurable": false
+    },
+    {
+      "id": "emailSecurity",
+      "label": "Advanced email threat protection",
+      "description": "Defender for Office 365: safe links, safe attachments and phishing protection.",
+      "measurable": false
+    },
+    {
+      "id": "cloudAppSecurity",
+      "label": "Cloud app security",
+      "description": "Defender for Cloud Apps: visibility and control over cloud services staff use.",
+      "measurable": false
+    },
+    {
+      "id": "informationProtection",
+      "label": "Data protection and labelling",
+      "description": "Purview sensitivity labels and rights management for confidential documents.",
+      "measurable": false
+    },
+    {
+      "id": "compliance",
+      "label": "Advanced compliance",
+      "description": "eDiscovery, advanced audit, insider risk and customer lockbox.",
+      "measurable": false
+    },
+    {
+      "id": "phone",
+      "label": "Teams Phone",
+      "description": "Making and receiving regular phone calls through Teams.",
+      "measurable": false
+    },
+    {
+      "id": "audioConferencing",
+      "label": "Dial-in meetings",
+      "description": "Phone dial-in numbers for Teams meetings.",
+      "measurable": false
+    },
+    {
+      "id": "analytics",
+      "label": "Power BI reporting",
+      "description": "Building and sharing interactive business reports.",
+      "measurable": false
+    },
+    {
+      "id": "windows",
+      "label": "Windows upgrade rights",
+      "description": "Upgrading Windows Pro to Enterprise or Business edition.",
+      "measurable": false
+    }
+  ]
+}

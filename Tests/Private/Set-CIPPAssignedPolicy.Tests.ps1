@@ -1,0 +1,224 @@
+# Pester tests for Set-CIPPAssignedPolicy error signalling.
+#
+# This function used to swallow every failure and return the error as a string. To a caller that
+# only watches for an exception that is indistinguishable from success, which is how a policy whose
+# assignment call failed still got recorded as correctly assigned by the Intune Template standard.
+# A failure has to reach the caller as a failure.
+
+BeforeAll {
+    $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+
+    # Stubs mirror the real signatures so signature drift fails loudly here.
+    function New-GraphGetRequest { [CmdletBinding()] param($uri, $tenantid, $AsApp, $ComplexFilter) }
+    function New-GraphPOSTRequest { [CmdletBinding()] param($uri, $tenantid, $type, $body) }
+    function Write-LogMessage { [CmdletBinding()] param($message, $tenant, $API, $tenantId, $headers, $user, $sev, $Sev2, $LogData) }
+    function Get-CippException { [CmdletBinding()] param($Exception) }
+
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneAssignmentTarget.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Set-CIPPAssignedPolicy.ps1')
+
+    $script:Tenant = 'contoso.onmicrosoft.com'
+    $script:SalesId = '11111111-1111-1111-1111-111111111111'
+    $script:AllUsersGroupId = 'acacacac-9df4-4c7d-9d50-4ef0226f57a9'
+}
+
+Describe 'Set-CIPPAssignedPolicy' {
+    BeforeEach {
+        Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Get-CippException -MockWith {
+            [PSCustomObject]@{ NormalizedError = 'Graph said no' }
+        }
+        Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*/groups?*' } -MockWith {
+            @([PSCustomObject]@{ id = $script:SalesId; displayName = 'Sales Users' })
+        }
+        Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*/assignments' } -MockWith { @() }
+        Mock -CommandName New-GraphPOSTRequest -MockWith { @{} }
+    }
+
+    Context 'when the assignment succeeds' {
+        It 'returns a result message and does not throw' {
+            $Result = Set-CIPPAssignedPolicy -GroupName 'Sales Users' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant
+
+            $Result | Should -BeLike '*Successfully assigned*'
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly
+        }
+    }
+
+    Context 'when Graph rejects the assign call' {
+        It 'throws instead of returning the error as a value' {
+            Mock -CommandName New-GraphPOSTRequest -MockWith { throw 'Forbidden' }
+
+            { Set-CIPPAssignedPolicy -GroupName 'Sales Users' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant } |
+                Should -Throw -ExpectedMessage '*Failed to assign*'
+        }
+
+        It 'still writes the failure to the audit log' {
+            Mock -CommandName New-GraphPOSTRequest -MockWith { throw 'Forbidden' }
+
+            { Set-CIPPAssignedPolicy -GroupName 'Sales Users' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant } | Should -Throw
+
+            Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $Sev -eq 'Error' }
+        }
+
+        It 'surfaces the normalized error rather than the exception object' {
+            Mock -CommandName New-GraphPOSTRequest -MockWith { throw 'Forbidden' }
+
+            { Set-CIPPAssignedPolicy -GroupName 'Sales Users' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant } |
+                Should -Throw -ExpectedMessage '*Graph said no*'
+        }
+    }
+
+    Context 'when the requested group does not exist' {
+        It 'throws rather than reporting a successful no-op' {
+            { Set-CIPPAssignedPolicy -GroupName 'Group That Was Renamed' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant } |
+                Should -Throw
+
+            Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
+        }
+    }
+
+    Context 'when existing assignments cannot be read in append mode' {
+        It 'throws rather than posting a set that would drop them' {
+            Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*/assignments' } -MockWith {
+                throw 'Throttled'
+            }
+
+            { Set-CIPPAssignedPolicy -GroupName 'Sales Users' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant -AssignmentMode 'append' } |
+                Should -Throw
+
+            Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
+        }
+    }
+
+    Context 'a picked group whose display name is a broad-target token' {
+        # The deploy drawers send the picked group's display name as GroupName next to its id.
+        It 'assigns the group by id instead of expanding the name to All Devices' {
+            $null = Set-CIPPAssignedPolicy -GroupName 'AllDevices' -GroupIds @($script:SalesId) -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant -AssignmentMode 'replace'
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $Targets = ($body | ConvertFrom-Json).assignments.target
+                @($Targets).Count -eq 1 -and
+                $Targets[0].'@odata.type' -eq '#microsoft.graph.groupAssignmentTarget' -and
+                $Targets[0].groupId -eq $script:SalesId
+            }
+        }
+
+        It 'does not read a group named On as do-not-assign' {
+            $null = Set-CIPPAssignedPolicy -GroupName 'On' -GroupIds @($script:SalesId) -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant -AssignmentMode 'replace'
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                ($body | ConvertFrom-Json).assignments.target.groupId -eq $script:SalesId
+            }
+        }
+    }
+
+    Context 'broad targets on a device management policy' {
+        It 'sends the allLicensedUsers target' {
+            $null = Set-CIPPAssignedPolicy -GroupName 'allLicensedUsers' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                ($body | ConvertFrom-Json).assignments.target.'@odata.type' -eq '#microsoft.graph.allLicensedUsersAssignmentTarget'
+            }
+        }
+    }
+
+    Context 'broad targets on an App Protection policy' {
+        # The MAM service rejects any assign carrying a target class other than group/exclusion, so
+        # the whole assignment fails - which is how a remediated policy ended up with none at all.
+        It 'assigns all users as a group target on the All Users virtual group' {
+            $null = Set-CIPPAssignedPolicy -GroupName 'allLicensedUsers' -PolicyId 'policy-1' -Type 'iosManagedAppProtections' -PlatformType 'deviceAppManagement' -TenantFilter $script:Tenant
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $Sent = ($body | ConvertFrom-Json).assignments
+                @($Sent).Count -eq 1 -and
+                $Sent.target.'@odata.type' -eq '#microsoft.graph.groupAssignmentTarget' -and
+                $Sent.target.groupId -eq $script:AllUsersGroupId
+            }
+        }
+
+        It 'accepts the singular type name the policy lists expose' {
+            $null = Set-CIPPAssignedPolicy -GroupName 'allLicensedUsers' -PolicyId 'policy-1' -Type 'androidManagedAppProtection' -PlatformType 'deviceAppManagement' -TenantFilter $script:Tenant
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                ($body | ConvertFrom-Json).assignments.target.groupId -eq $script:AllUsersGroupId
+            }
+        }
+
+        It 'refuses All Devices instead of sending a target Graph will reject' {
+            # Echo the real message rather than this file's fixed stand-in: the point of the guard
+            # is that the operator is told why, not just that something failed.
+            Mock -CommandName Get-CippException -MockWith { [PSCustomObject]@{ NormalizedError = $Exception.Exception.Message } }
+
+            { Set-CIPPAssignedPolicy -GroupName 'AllDevices' -PolicyId 'policy-1' -Type 'iosManagedAppProtections' -PlatformType 'deviceAppManagement' -TenantFilter $script:Tenant } |
+                Should -Throw -ExpectedMessage '*cannot be assigned to All Devices*'
+
+            Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
+        }
+
+        It 'applies the users half of AllDevicesAndUsers rather than failing outright' {
+            $null = Set-CIPPAssignedPolicy -GroupName 'AllDevicesAndUsers' -PolicyId 'policy-1' -Type 'iosManagedAppProtections' -PlatformType 'deviceAppManagement' -TenantFilter $script:Tenant
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $Sent = ($body | ConvertFrom-Json).assignments
+                @($Sent).Count -eq 1 -and $Sent.target.groupId -eq $script:AllUsersGroupId
+            }
+            Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -eq 'Warning' -and $message -like "*'All Devices'*" }
+        }
+
+        It 'still applies exclusions alongside the translated include target' {
+            $null = Set-CIPPAssignedPolicy -GroupName 'allLicensedUsers' -ExcludeGroup 'Sales Users' -PolicyId 'policy-1' -Type 'iosManagedAppProtections' -PlatformType 'deviceAppManagement' -TenantFilter $script:Tenant
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $Types = @(($body | ConvertFrom-Json).assignments.target.'@odata.type')
+                $Types -contains '#microsoft.graph.groupAssignmentTarget' -and
+                $Types -contains '#microsoft.graph.exclusionGroupAssignmentTarget'
+            }
+        }
+    }
+
+    Context 'direction-scoped replace (Custom Group action)' {
+        BeforeEach {
+            $script:ExcludedId = '22222222-2222-2222-2222-222222222222'
+            Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*/assignments' } -MockWith {
+                @(
+                    [PSCustomObject]@{ target = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget' } }
+                    [PSCustomObject]@{ target = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget' } }
+                    [PSCustomObject]@{ target = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.exclusionGroupAssignmentTarget'; groupId = $script:ExcludedId } }
+                )
+            }
+        }
+
+        # Keeping the broad targets made Include + Replace a no-op: All Devices plus a group is still All Devices.
+        It 'include replaces All Users / All Devices with the picked groups and keeps exclusions' {
+            $null = Set-CIPPAssignedPolicy -GroupIds @($script:SalesId) -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant -AssignmentMode 'replace' -AssignmentDirection 'include'
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $Targets = @(($body | ConvertFrom-Json).assignments.target)
+                $Targets.Count -eq 2 -and
+                ($Targets | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.groupAssignmentTarget' }).groupId -eq $script:SalesId -and
+                ($Targets | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.exclusionGroupAssignmentTarget' }).groupId -eq $script:ExcludedId
+            }
+        }
+
+        It 'exclude keeps All Users / All Devices, the exclusions narrow them' {
+            $null = Set-CIPPAssignedPolicy -ExcludeGroupIds @($script:SalesId) -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant -AssignmentMode 'replace' -AssignmentDirection 'exclude'
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $Types = @(($body | ConvertFrom-Json).assignments.target.'@odata.type')
+                $Types.Count -eq 3 -and
+                $Types -contains '#microsoft.graph.allDevicesAssignmentTarget' -and
+                $Types -contains '#microsoft.graph.allLicensedUsersAssignmentTarget' -and
+                @(($body | ConvertFrom-Json).assignments.target.groupId) -notcontains $script:ExcludedId
+            }
+        }
+    }
+
+    Context 'WhatIf' {
+        It 'does not post and does not throw' {
+            $Result = Set-CIPPAssignedPolicy -GroupName 'Sales Users' -PolicyId 'policy-1' -Type 'deviceConfigurations' -TenantFilter $script:Tenant -WhatIf
+
+            $Result | Should -BeNullOrEmpty
+            Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
+        }
+    }
+}

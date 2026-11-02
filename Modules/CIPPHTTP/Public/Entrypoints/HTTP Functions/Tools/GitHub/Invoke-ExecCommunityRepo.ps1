@@ -7,10 +7,13 @@ function Invoke-ExecCommunityRepo {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.Core.ReadWrite
+        CIPP.TemplateLibrary.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
 
     $Action = $Request.Body.Action
     $Id = $Request.Body.Id
@@ -30,7 +33,7 @@ function Invoke-ExecCommunityRepo {
         }
 
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
+                StatusCode = [HttpStatusCode]::BadRequest
                 Body       = $Body
             })
         return
@@ -39,33 +42,74 @@ function Invoke-ExecCommunityRepo {
     $Table = Get-CIPPTable -TableName CommunityRepos
     $RepoEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
+    $StatusCode = [HttpStatusCode]::OK
     switch ($Action) {
         'Add' {
-            $Repo = Invoke-GitHubApiRequest -Path "repositories/$($Id)"
-            $RepoEntity = @{
-                PartitionKey  = 'CommunityRepos'
-                RowKey        = [string]$Repo.id
-                Name          = [string]$Repo.name
-                Description   = [string]$Repo.description
-                URL           = [string]$Repo.html_url
-                FullName      = [string]$Repo.full_name
-                Owner         = [string]$Repo.owner.login
-                Visibility    = [string]$Repo.visibility
-                WriteAccess   = [bool]$Repo.permissions.push
-                DefaultBranch = [string]$Repo.default_branch
-                Permissions   = [string]($Repo.permissions | ConvertTo-Json -Compress)
+            try {
+                if ($Id) {
+                    $Repo = Invoke-GitHubApiRequest -Path "repositories/$($Id)"
+                } else {
+                    $Repo = Invoke-GitHubApiRequest -Path "repos/$($Request.Body.FullName)"
+                }
+                # The anonymous fallback answers a 404 with a null result instead of throwing;
+                # writing that would create a row with an empty RowKey and no name.
+                if (-not $Repo.id) {
+                    $FailCode = [HttpStatusCode]::NotFound
+                    throw "Repository '$($Request.Body.FullName ?? $Id)' was not found on GitHub. Check the owner/repo spelling; a private repository needs the GitHub integration configured with access to it."
+                }
+                $RepoEntity = @{
+                    PartitionKey  = 'CommunityRepos'
+                    RowKey        = [string]$Repo.id
+                    Name          = [string]$Repo.name
+                    Description   = [string]$Repo.description
+                    URL           = [string]$Repo.html_url
+                    FullName      = [string]$Repo.full_name
+                    Owner         = [string]$Repo.owner.login
+                    Visibility    = [string]$Repo.visibility
+                    WriteAccess   = [bool]$Repo.permissions.push
+                    DefaultBranch = [string]$Repo.default_branch
+                    Permissions   = [string]($Repo.permissions | ConvertTo-Json -Compress)
+                }
+                if ($Request.Body.TemplateTypes) {
+                    $RepoEntity.TemplateTypes = [string](ConvertTo-Json -InputObject @($Request.Body.TemplateTypes) -Compress)
+                }
+
+                Add-CIPPAzDataTableEntity @Table -Entity $RepoEntity -Force | Out-Null
+
+                $Results = @{
+                    resultText = "Community repository '$($Repo.name)' added"
+                    state      = 'success'
+                }
+            } catch {
+                $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
+                $Results = @{
+                    resultText = "Unable to add repository: $($_.Exception.Message)"
+                    state      = 'error'
+                }
             }
+        }
+        'SetTemplateTypes' {
+            if (!$RepoEntity) {
+                $StatusCode = [HttpStatusCode]::NotFound
+                $Results = @{
+                    resultText = "Repository $($Id) not found"
+                    state      = 'error'
+                }
+            } else {
+                $TemplateTypesJson = [string](ConvertTo-Json -InputObject @($Request.Body.TemplateTypes) -Compress)
+                $RepoEntity | Add-Member -NotePropertyName 'TemplateTypes' -NotePropertyValue $TemplateTypesJson -Force
+                $null = Add-CIPPAzDataTableEntity @Table -Entity $RepoEntity -Force
 
-            Add-CIPPAzDataTableEntity @Table -Entity $RepoEntity -Force | Out-Null
-
-            $Results = @{
-                resultText = "Community repository '$($Repo.name)' added"
-                state      = 'success'
+                $Results = @{
+                    resultText = "Template types updated for $($RepoEntity.Name)"
+                    state      = 'success'
+                }
             }
         }
         'Update' {
             if ($RepoEntity) {
                 $Repo = Invoke-GitHubApiRequest -Path "repositories/$($Id)"
+                if (-not $Repo.id) { throw "Repository $($Id) was not found on GitHub." }
                 $Update = @{
                     PartitionKey  = 'CommunityRepos'
                     RowKey        = [string]$Repo.id
@@ -88,6 +132,7 @@ function Invoke-ExecCommunityRepo {
                     state      = 'success'
                 }
             } else {
+                $StatusCode = [HttpStatusCode]::NotFound
                 $Results = @{
                     resultText = "Repository $($Repo.name) not found"
                     state      = 'error'
@@ -97,7 +142,7 @@ function Invoke-ExecCommunityRepo {
         'Delete' {
             if ($RepoEntity) {
                 $Delete = $RepoEntity | Select-Object PartitionKey, RowKey, ETag
-                Remove-AzDataTableEntity @Table -Entity $Delete
+                Remove-CIPPAzDataTableEntity @Table -Entity $Delete
             }
             $Results = @{
                 resultText = "Repository $($RepoEntity.Name) deleted"
@@ -105,38 +150,31 @@ function Invoke-ExecCommunityRepo {
             }
         }
         'UploadTemplate' {
-            $GUID = $Request.Body.GUID
-            $TemplateTable = Get-CIPPTable -TableName templates
-            $TemplateEntity = Get-CIPPAzDataTableEntity @TemplateTable -Filter "RowKey eq '$($GUID)'" | Select-Object -ExcludeProperty ETag, Timestamp
             $Branch = $RepoEntity.UploadBranch ?? $RepoEntity.DefaultBranch
-            if ($TemplateEntity) {
-                $Template = $TemplateEntity.JSON | ConvertFrom-Json
-                $DisplayName = $Template.Displayname ?? $Template.templateName ?? $Template.name
-                if ($Template.tenantFilter) {
-                    $Template.tenantFilter = @(@{ label = 'Template Tenant'; value = 'Template Tenant' })
-                }
-                if ($Template.excludedTenants) {
-                    $Template.excludedTenants = @()
-                }
-                $TemplateEntity.JSON = $Template | ConvertTo-Json -Compress -Depth 100
-
-                $Basename = $DisplayName -replace '\s', '_' -replace '[^\w\d_]', ''
-                $Path = '{0}/{1}.json' -f $TemplateEntity.PartitionKey, $Basename
-                $Results = Push-GitHubContent -FullName $Request.Body.FullName -Path $Path -Content ($TemplateEntity | ConvertTo-Json -Compress) -Message $Request.Body.Message -Branch $Branch
-
-                $Results = @{
-                    resultText = "Template '$($DisplayName)' uploaded"
-                    state      = 'success'
-                }
-            } else {
-                $Results = @{
-                    resultText = "Template '$($GUID)' not found"
-                    state      = 'error'
-                }
+            try {
+                $Results = Push-CIPPTemplateToRepo -GUID $Request.Body.GUID -FullName $Request.Body.FullName -Message $Request.Body.Message -Branch $Branch
+            } catch {
+                $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
+                $Results = @{ resultText = $_.Exception.Message; state = 'error' }
+            }
+        }
+        'UploadBaseline' {
+            # A baseline is not a templates-table row: Export-CIPPBaselineTemplate
+            # assembles the portable set - the BaselineTemplate file plus one standard
+            # template file per referenced CA/Intune template (packages expanded to
+            # their current members). Related templates are separate files, exactly the
+            # shape UploadTemplate writes, so they import through the untouched path.
+            $Branch = $RepoEntity.UploadBranch ?? $RepoEntity.DefaultBranch
+            try {
+                $Results = Push-CIPPBaselineToRepo -GUID $Request.Body.GUID -FullName $Request.Body.FullName -Message $Request.Body.Message -Branch $Branch
+            } catch {
+                $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
+                $Results = @{ resultText = $_.Exception.Message; state = 'error' }
             }
         }
         'SetBranch' {
             if (!$RepoEntity) {
+                $StatusCode = [HttpStatusCode]::NotFound
                 $Results = @{
                     resultText = "Repository $($Id) not found"
                     state      = 'error'
@@ -160,31 +198,46 @@ function Invoke-ExecCommunityRepo {
             $Path = $Request.Body.Path
             $FullName = $Request.Body.FullName
             $Branch = $Request.Body.Branch
+            $Force = [bool]$Request.Body.Force
             try {
                 $Template = Get-GitHubFileContents -FullName $FullName -Path $Path -Branch $Branch
 
                 $Content = $Template.content | ConvertFrom-Json
-                if ($Content.'@odata.type' -like '*conditionalAccessPolicy*') {
-                    $Files = (Get-GitHubFileTree -FullName $FullName -Branch $Branch).tree | Where-Object { $_.path -match '.json$' -and $_.path -notmatch 'NativeImport' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($SplatParams.FullName)/tree/$($SplatParams.Branch)/$($_.path)" } }, @{n = 'name'; e = { ($_.path -split '/')[ -1 ] -replace '\.json$', '' } }
-
-                    $MigrationTable = $Files | Where-Object { $_.name -eq 'MigrationTable' } | Select-Object -Last 1
-                    if ($MigrationTable) {
-                        Write-Host "Found a migration table, getting contents for $FullName"
-                        $MigrationTable = (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $MigrationTable.path).content | ConvertFrom-Json
+                if ($Content.TemplateType -eq 'BaselineTemplate') {
+                    # Baseline files carry a referencedTemplates manifest: the importer
+                    # fetches every related template from this repo first (the same
+                    # related-items pattern as CA named locations), then creates the
+                    # baseline itself. Never a templates-table write.
+                    $User = $(try { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } catch { $null })
+                    $ImportResult = Import-CIPPBaselineTemplate -Baseline $Content -FullName $FullName -Branch $Branch -SHA $Template.sha -Path $Path -User $User -Force:$Force
+                    $Results = @{
+                        resultText = $ImportResult ?? 'Baseline imported'
+                        state      = 'success'
                     }
+                } else {
+                    if ($Content.'@odata.type' -like '*conditionalAccessPolicy*') {
+                        $Files = (Get-GitHubFileTree -FullName $FullName -Branch $Branch).tree | Where-Object { $_.path -match '.json$' -and $_.path -notmatch 'NativeImport' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($SplatParams.FullName)/tree/$($SplatParams.Branch)/$($_.path)" } }, @{n = 'name'; e = { ($_.path -split '/')[ -1 ] -replace '\.json$', '' } }
 
-                    $NamedLocations = $Files | Where-Object { $_.name -match 'ALLOWED COUNTRIES' }
-                    $LocationData = foreach ($Location in $NamedLocations) {
-                        (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $Location.path).content | ConvertFrom-Json
+                        $MigrationTable = $Files | Where-Object { $_.name -eq 'MigrationTable' } | Select-Object -Last 1
+                        if ($MigrationTable) {
+                            Write-Host "Found a migration table, getting contents for $FullName"
+                            $MigrationTable = (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $MigrationTable.path).content | ConvertFrom-Json
+                        }
+
+                        $NamedLocations = $Files | Where-Object { $_.name -match 'ALLOWED COUNTRIES' }
+                        $LocationData = foreach ($Location in $NamedLocations) {
+                            (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $Location.path).content | ConvertFrom-Json
+                        }
                     }
-                }
-                $ImportResult = Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $FullName
+                    $ImportResult = Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $FullName -Path $Path -Force:$Force
 
-                $Results = @{
-                    resultText = $ImportResult ?? 'Template imported'
-                    state      = 'success'
+                    $Results = @{
+                        resultText = $ImportResult ?? 'Template imported'
+                        state      = 'success'
+                    }
                 }
             } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Results = @{
                     resultText = "Error importing template: $($_.Exception.Message)"
                     state      = 'error'
@@ -217,13 +270,14 @@ function Invoke-ExecCommunityRepo {
 
                 $Basename = $LatestScript.ScriptName -replace '\s', '_' -replace '[^\w\d_]', ''
                 $Path = 'CustomTests/{0}.json' -f $Basename
-                $null = Push-GitHubContent -FullName $Request.Body.FullName -Path $Path -Content ($ExportData | ConvertTo-Json -Compress -Depth 10) -Message $Request.Body.Message -Branch $Branch
+                $null = Push-GitHubContent -FullName $Request.Body.FullName -Path $Path -Content ($ExportData | ConvertTo-Json -Depth 10) -Message $Request.Body.Message -Branch $Branch
 
                 $Results = @{
                     resultText = "Custom test '$($LatestScript.ScriptName)' uploaded"
                     state      = 'success'
                 }
             } else {
+                $StatusCode = [HttpStatusCode]::NotFound
                 $Results = @{
                     resultText = "Custom test '$($ScriptGuid)' not found"
                     state      = 'error'
@@ -239,10 +293,11 @@ function Invoke-ExecCommunityRepo {
                 $ScriptData = $FileContent.content | ConvertFrom-Json
 
                 if (-not $ScriptData.ScriptName -or -not $ScriptData.ScriptContent) {
+                    $FailCode = [HttpStatusCode]::BadRequest
                     throw 'Invalid custom test file: ScriptName and ScriptContent are required'
                 }
 
-                Test-CustomScriptSecurity -ScriptContent $ScriptData.ScriptContent
+                try { Test-CustomScriptSecurity -ScriptContent $ScriptData.ScriptContent } catch { $FailCode = [HttpStatusCode]::BadRequest; throw }
 
                 $ScriptTable = Get-CippTable -tablename 'CustomPowershellScripts'
                 $ScriptGuid = (New-Guid).ToString()
@@ -279,6 +334,7 @@ function Invoke-ExecCommunityRepo {
                     state      = 'success'
                 }
             } catch {
+                $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
                 $Results = @{
                     resultText = "Error importing custom test: $($_.Exception.Message)"
                     state      = 'error'
@@ -286,10 +342,20 @@ function Invoke-ExecCommunityRepo {
             }
         }
         default {
+            $StatusCode = [HttpStatusCode]::BadRequest
             $Results = @{
                 resultText = "Action $Action not supported"
                 state      = 'error'
             }
+        }
+    }
+
+    if ($Results) {
+        if ($Results.state -eq 'success') {
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results.resultText -Sev 'Info'
+        } elseif ($Results.state -eq 'error') {
+            if ($StatusCode -eq [HttpStatusCode]::OK) { $StatusCode = [HttpStatusCode]::InternalServerError }
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Results.resultText -Sev 'Error'
         }
     }
 
@@ -298,7 +364,7 @@ function Invoke-ExecCommunityRepo {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 }

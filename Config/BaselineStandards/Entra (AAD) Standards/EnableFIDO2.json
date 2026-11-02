@@ -1,0 +1,64 @@
+{
+  "name": "EnableFIDO2",
+  "label": "Enable FIDO2 capabilities",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "EIDSCA.AF01",
+    "EIDSCA.AF02",
+    "EIDSCA.AF03",
+    "EIDSCA.AF04",
+    "EIDSCA.AF05",
+    "EIDSCA.AF06",
+    "NIST CSF 2.0 (PR.AA-03)",
+    "SMB1001 (2.5)",
+    "SMB1001 (2.6)",
+    "SMB1001 (2.9)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Enables the FIDO2 authenticationMethod for the tenant",
+  "executiveText": "Enables support for hardware security keys (like YubiKey) that provide the highest level of authentication security. These physical devices prevent phishing attacks and credential theft, offering superior protection for high-value accounts and sensitive business operations.",
+  "docsDescription": "Enables FIDO2 capabilities for the tenant. This allows users to use FIDO2 keys like a Yubikey for authentication.",
+  "impactColour": "info",
+  "addedDate": "2022-12-08",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
+  "appliesToTest": [
+    "EIDSCAAF01",
+    "EIDSCAAF02",
+    "EIDSCAAF03",
+    "EIDSCAAF04",
+    "EIDSCAAF05",
+    "EIDSCAAF06",
+    "SMB1001_2_5",
+    "SMB1001_2_6",
+    "SMB1001_2_9",
+    "ZTNA21838",
+    "ZTNA21839"
+  ],
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "state": "enabled"
+  },
+  "read": {
+    "cacheType": "AuthenticationMethodsPolicy",
+    "array": "authenticationMethodConfigurations",
+    "filter": [
+      {
+        "property": "id",
+        "value": "Fido2"
+      }
+    ]
+  },
+  "writeTarget": "authenticationMethodsPolicy",
+  "writeTargetProperties": {
+    "Fido2.state": "enabled"
+  },
+  "remediate": {
+    "executor": "EnableFIDO2"
+  }
+}

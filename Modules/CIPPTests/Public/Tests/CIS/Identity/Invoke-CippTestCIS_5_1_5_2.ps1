@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_5_1_5_2 {
             return
         }
 
-        $Cfg = $Policy | Select-Object -First 1
+        $Cfg = @($Policy)[0]
 
         if ($Cfg.isEnabled -eq $true -and $Cfg.reviewers -and $Cfg.reviewers.Count -gt 0) {
             $Status = 'Passed'

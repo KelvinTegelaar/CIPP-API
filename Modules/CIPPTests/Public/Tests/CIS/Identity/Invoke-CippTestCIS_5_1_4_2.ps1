@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_5_1_4_2 {
             return
         }
 
-        $Cfg = $DRP | Select-Object -First 1
+        $Cfg = @($DRP)[0]
         $Quota = [int]$Cfg.userDeviceQuota
 
         if ($Quota -gt 0 -and $Quota -le 10) {

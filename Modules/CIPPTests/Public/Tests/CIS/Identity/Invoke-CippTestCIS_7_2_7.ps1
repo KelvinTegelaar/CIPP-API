@@ -13,15 +13,27 @@ function Invoke-CippTestCIS_7_2_7 {
             return
         }
 
-        $Cfg = $SPO | Select-Object -First 1
+        $Cfg = @($SPO)[0]
+
+        # The SPOTenant cache comes from the SharePoint CSOM endpoint, which returns
+        # DefaultSharingLinkType as a numeric SharingLinkType (None=0, Direct=1, Internal=2,
+        # AnonymousAccess=3) - not the friendly name Get-SPOTenant shows. Normalise before comparing,
+        # or every tenant false-fails.
+        $LinkTypeName = switch ("$($Cfg.DefaultSharingLinkType)") {
+            '0' { 'None' }
+            '1' { 'Direct' }
+            '2' { 'Internal' }
+            '3' { 'AnonymousAccess' }
+            default { "$($Cfg.DefaultSharingLinkType)" }
+        }
         $Acceptable = @('Direct', 'Internal')
 
-        if ($Cfg.DefaultSharingLinkType -in $Acceptable) {
+        if ($LinkTypeName -in $Acceptable) {
             $Status = 'Passed'
-            $Result = "DefaultSharingLinkType is restricted ($($Cfg.DefaultSharingLinkType))."
+            $Result = "DefaultSharingLinkType is restricted ($LinkTypeName)."
         } else {
             $Status = 'Failed'
-            $Result = "DefaultSharingLinkType is too permissive ($($Cfg.DefaultSharingLinkType)). Set to Direct or Internal."
+            $Result = "DefaultSharingLinkType is too permissive ($LinkTypeName). Set to Direct or Internal."
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_7_2_7' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Link sharing is restricted in SharePoint and OneDrive' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'External Collaboration'

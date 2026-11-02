@@ -75,6 +75,5 @@ function Invoke-CIPPStandardEnablePronouns {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.EnablePronouns' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'PronounsEnabled' -FieldValue $CurrentState.isEnabledInOrganization -StoreAs bool -Tenant $tenant
     }
 }

@@ -1,0 +1,40 @@
+{
+  "name": "SPDisableStoreAccess",
+  "label": "Disable SharePoint Store access",
+  "cat": "SharePoint Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Disables end users from installing applications from the Microsoft Store into SharePoint sites.",
+  "executiveText": "Prevents end users from installing applications from the Microsoft Store into SharePoint sites, ensuring that only approved applications are available. This reduces governance overhead and aligns with Microsoft's Baseline Security Mode recommendations.",
+  "docsDescription": "Removes the ability for end users to install applications directly from the Microsoft Store into SharePoint. This prevents uncontrolled app installations that can increase governance costs and go against organizational policies.",
+  "impactColour": "info",
+  "addedDate": "2026-04-28",
+  "powershellEquivalent": "Set-SPOTenant -DisableSharePointStoreAccess $true",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "DisableSharePointStoreAccess": true
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "writeTarget": "spoTenant",
+  "remediate": {
+    "executor": "SPOTenant",
+    "properties": {
+      "DisableSharePointStoreAccess": true
+    }
+  }
+}

@@ -50,7 +50,7 @@ function Invoke-CIPPStandardDefenderEDRPolicy {
 
     # Check existing policies
     try {
-        $ExistingPolicies = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $Tenant
+        $ExistingPolicies = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies?$select=id,name' -tenantid $Tenant
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to retrieve configuration policies: $ErrorMessage" -sev Error
@@ -130,6 +130,5 @@ function Invoke-CIPPStandardDefenderEDRPolicy {
 
     if ($Settings.report -eq $true) {
         Set-CIPPStandardsCompareField -FieldName 'standards.DefenderEDRPolicy' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DefenderEDRPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

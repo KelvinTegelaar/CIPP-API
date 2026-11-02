@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_8_5_2 {
             return
         }
 
-        $Cfg = $MP | Select-Object -First 1
+        $Cfg = @($MP)[0]
 
         if ($Cfg.AllowAnonymousUsersToStartMeeting -eq $false) {
             $Status = 'Passed'

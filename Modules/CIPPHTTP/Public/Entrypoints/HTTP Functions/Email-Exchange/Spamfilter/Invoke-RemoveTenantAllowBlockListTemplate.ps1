@@ -10,15 +10,28 @@ Function Invoke-RemoveTenantAllowBlockListTemplate {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
 
     $ID = $Request.query.ID ?? $Request.body.ID
     try {
-        $Table = Get-CippTable -tablename 'templates'
         $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
+    } catch {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = "Failed to remove Tenant Allow/Block List template: '$ID' is not a valid template ID." }
+            })
+    }
+
+    try {
+        $Table = Get-CippTable -tablename 'templates'
         $Filter = "PartitionKey eq 'TenantAllowBlockListTemplate' and RowKey eq '$SafeID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
+        if (-not $ClearRow) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::NotFound
+                    Body       = @{ Results = "Tenant Allow/Block List template with ID $ID not found." }
+                })
+        }
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $ClearRow
         $Result = "Removed Tenant Allow/Block List Template with ID $ID."
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Info
         $StatusCode = [HttpStatusCode]::OK
@@ -26,7 +39,7 @@ Function Invoke-RemoveTenantAllowBlockListTemplate {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to remove Tenant Allow/Block List Template with ID $ID. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

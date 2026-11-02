@@ -16,15 +16,13 @@ function Invoke-RemovePolicy {
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
     $PolicyId = $Request.Query.ID ?? $Request.body.ID
     $UrlName = $Request.Query.URLName ?? $Request.body.URLName
-    $BaseEndpoint = switch ($UrlName) {
-        'managedAppPolicies' { 'deviceAppManagement' }
-        'mobileAppConfigurations' { 'deviceAppManagement' }
-        default { 'deviceManagement' }
-    }
+    # App protection policy lists expose the singular @odata.type as the URLName, but a Graph
+    # DELETE needs the plural collection segment under deviceAppManagement. Normalize here.
+    $GraphPath = Get-CIPPIntunePolicyGraphPath -UrlName $UrlName
     if (!$PolicyId) { exit }
 
     try {
-        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/$($BaseEndpoint)/$($UrlName)('$($PolicyId)')" -type DELETE -tenant $TenantFilter
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/$($GraphPath)('$($PolicyId)')" -type DELETE -tenant $TenantFilter
 
         $Results = "Successfully deleted the $UrlName policy with ID: $($PolicyId)"
         Write-LogMessage -headers $Headers -API $APINAME -message $Results -Sev Info -tenant $TenantFilter
@@ -34,7 +32,7 @@ function Invoke-RemovePolicy {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Could not delete policy: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APINAME -message $Results -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $Body = [pscustomobject]@{'Results' = "$Results" }

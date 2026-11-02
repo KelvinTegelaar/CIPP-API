@@ -1,0 +1,37 @@
+{
+  "name": "EnableNamePronunciation",
+  "label": "Enable Name Pronunciation",
+  "cat": "Global Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Enables the Name Pronunciation feature for the tenant. This allows users to set their name pronunciation in their profile.",
+  "executiveText": "Enables employees to add pronunciation guides for their names in Microsoft 365 profiles, improving communication and respect in diverse workplaces. This feature helps colleagues pronounce names correctly, enhancing professional relationships and inclusive culture.",
+  "docsDescription": "Enables the Name Pronunciation feature for the tenant. This allows users to set their name pronunciation in their profile.",
+  "impactColour": "info",
+  "addedDate": "2025-06-06",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "isEnabledInOrganization": true
+  },
+  "read": {
+    "cacheType": "NamePronunciation"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "admin/people/namePronunciation",
+        "body": {
+          "isEnabledInOrganization": true
+        }
+      }
+    ]
+  }
+}

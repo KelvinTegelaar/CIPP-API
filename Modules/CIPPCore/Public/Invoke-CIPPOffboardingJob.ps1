@@ -7,7 +7,11 @@ function Invoke-CIPPOffboardingJob {
         $Options,
         $APIName = 'Offboard user',
         $Headers,
-        $TaskInfo
+        $TaskInfo,
+        # Live-progress job created by the caller; when set, the user's status row is kept up to date
+        [string]$DeploymentId,
+        # Zero-based indices of the steps to run again (a step re-run); empty runs every selected task
+        [int[]]$StepIndexes = @()
     )
 
     try {
@@ -22,12 +26,39 @@ function Invoke-CIPPOffboardingJob {
         $UserID = $User.id
         $DisplayName = $User.displayName
 
+        # Resolve OOO once; empty TipTap HTML must not enable automatic replies
+        $OooMessage = $null
+        if (-not (Test-CIPPHtmlIsEmpty -Html ([string]$Options.OOO))) {
+            $OooMessage = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Options.OOO
+        }
+
         # Build dynamic batch of offboarding tasks based on selected options
         $Batch = [System.Collections.Generic.List[object]]::new()
 
-        # Build list of tasks in execution order with their cmdlets
+        # When the user is being deleted, only user removal and OneDrive access grants remain valid; every other task is skipped regardless of its flag
+        $DeleteUserSelected = $Options.DeleteUser -eq $true
+        $AllowedCmdletsWhenDeletingUser = @('Remove-CIPPUser', 'Set-CIPPSharePointPerms')
+        $SkippedForDeleteUser = [System.Collections.Generic.List[string]]::new()
+
+        # Build list of tasks in execution order with their cmdlets.
+        # The account-only wipe must run before session revocation, sign-in disable and device removal:
+        # the wipe is delivered on the device's next Exchange connection, so the account must still be
+        # able to authenticate and the ActiveSync partnership must still exist when it is issued.
         $TaskOrder = @(
             @{
+                Title      = 'Wipe mobile devices (account data only)'
+                Condition  = { $Options.WipeMobile -eq $true }
+                Cmdlet     = 'Clear-CIPPMobileDevice'
+                Parameters = @{
+                    userid       = $UserID
+                    username     = $Username
+                    tenantFilter = $TenantFilter
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Title      = 'Revoke all sessions'
                 Condition  = { $Options.RevokeSessions -eq $true }
                 Cmdlet     = 'Revoke-CIPPSessions'
                 Parameters = @{
@@ -39,6 +70,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Reset password'
                 Condition  = { $Options.ResetPass -eq $true }
                 Cmdlet     = 'Set-CIPPResetPassword'
                 Parameters = @{
@@ -50,6 +82,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Disable sign in'
                 Condition  = { $Options.DisableSignIn -eq $true }
                 Cmdlet     = 'Set-CIPPSignInState'
                 Parameters = @{
@@ -61,6 +94,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Hide from Global Address List'
                 Condition  = { $Options.HideFromGAL -eq $true }
                 Cmdlet     = 'Set-CIPPHideFromGAL'
                 Parameters = @{
@@ -72,6 +106,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Remove from all groups'
                 Condition  = { $Options.RemoveGroups -eq $true }
                 Cmdlet     = 'Remove-CIPPGroups'
                 Parameters = @{
@@ -83,6 +118,20 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Remove group ownership'
+                Condition  = { $Options.RemoveGroupOwnership -eq $true }
+                Cmdlet     = 'Remove-CIPPGroupOwnerships'
+                Parameters = @{
+                    userid       = $UserID
+                    tenantFilter = $TenantFilter
+                    APIName      = $APIName
+                    Username     = $Username
+                    NewOwner     = [string]($Options.NewGroupOwner.value ?? $Options.NewGroupOwner)
+                    Headers      = $Headers
+                }
+            }
+            @{
+                Title      = 'Remove all rules'
                 Condition  = { $Options.RemoveRules -eq $true }
                 Cmdlet     = 'Remove-CIPPMailboxRule'
                 Parameters = @{
@@ -95,6 +144,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Remove all mobile devices'
                 Condition  = { $Options.RemoveMobile -eq $true }
                 Cmdlet     = 'Remove-CIPPMobileDevice'
                 Parameters = @{
@@ -106,6 +156,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Cancel all calendar invites'
                 Condition  = { $Options.removeCalendarInvites -eq $true }
                 Cmdlet     = 'Remove-CIPPCalendarInvites'
                 Parameters = @{
@@ -117,19 +168,21 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
-                Condition  = { ![string]::IsNullOrEmpty($Options.OOO) }
+                Title      = 'Set Out of Office message'
+                Condition  = { -not [string]::IsNullOrEmpty($OooMessage) }
                 Cmdlet     = 'Set-CIPPOutOfOffice'
                 Parameters = @{
                     tenantFilter    = $TenantFilter
                     UserID          = $Username
-                    InternalMessage = $Options.OOO
-                    ExternalMessage = $Options.OOO
+                    InternalMessage = $OooMessage
+                    ExternalMessage = $OooMessage
                     APIName         = $APIName
                     state           = 'Enabled'
                     Headers         = $Headers
                 }
             }
             @{
+                Title      = 'Forward email'
                 Condition  = { ![string]::IsNullOrEmpty($Options.forward) }
                 Cmdlet     = 'Set-CIPPForwarding'
                 Parameters = @{
@@ -143,6 +196,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Disable email forwarding'
                 Condition  = { $Options.disableForwarding -eq $true }
                 Cmdlet     = 'Set-CIPPForwarding'
                 Parameters = @{
@@ -155,6 +209,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Grant OneDrive full access'
                 Condition  = { $Options.OnedriveAccess.Count -gt 0 }
                 Cmdlet     = 'Set-CIPPSharePointPerms'
                 Parameters = @{
@@ -166,6 +221,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Disable OneDrive sharing links'
                 Condition  = { $Options.DisableOneDriveSharing -eq $true }
                 Cmdlet     = 'Set-CIPPOneDriveSharing'
                 Parameters = @{
@@ -177,6 +233,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Grant full access (no automap)'
                 Condition  = { $Options.AccessNoAutomap.Count -gt 0 }
                 Cmdlet     = 'Set-CIPPMailboxAccess'
                 Parameters = @{
@@ -190,6 +247,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Grant full access (automap)'
                 Condition  = { $Options.AccessAutomap.Count -gt 0 }
                 Cmdlet     = 'Set-CIPPMailboxAccess'
                 Parameters = @{
@@ -203,6 +261,33 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Grant Send As access'
+                Condition  = { $Options.AccessSendAs.Count -gt 0 }
+                Cmdlet     = 'Set-CIPPMailboxAccess'
+                Parameters = @{
+                    tenantFilter    = $TenantFilter
+                    userid          = $Username
+                    AccessUser      = $Options.AccessSendAs
+                    PermissionLevel = 'SendAs'
+                    APIName         = $APIName
+                    Headers         = $Headers
+                }
+            }
+            @{
+                Title      = 'Grant Send on Behalf access'
+                Condition  = { $Options.AccessSendOnBehalf.Count -gt 0 }
+                Cmdlet     = 'Set-CIPPMailboxAccess'
+                Parameters = @{
+                    tenantFilter    = $TenantFilter
+                    userid          = $Username
+                    AccessUser      = $Options.AccessSendOnBehalf
+                    PermissionLevel = 'SendOnBehalf'
+                    APIName         = $APIName
+                    Headers         = $Headers
+                }
+            }
+            @{
+                Title      = 'Remove user''s mailbox permissions'
                 Condition  = { $Options.removePermissions -eq $true }
                 Cmdlet     = 'Remove-CIPPMailboxPermissions'
                 Parameters = @{
@@ -214,6 +299,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Remove user''s calendar permissions'
                 Condition  = { $Options.removeCalendarPermissions -eq $true }
                 Cmdlet     = 'Remove-CIPPCalendarPermissions'
                 Parameters = @{
@@ -225,6 +311,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Convert to shared mailbox'
                 Condition  = { $Options.ConvertToShared -eq $true }
                 Cmdlet     = 'Set-CIPPMailboxType'
                 Parameters = @{
@@ -237,6 +324,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Remove all MFA devices'
                 Condition  = { $Options.RemoveMFADevices -eq $true }
                 Cmdlet     = 'Remove-CIPPUserMFA'
                 Parameters = @{
@@ -247,6 +335,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Remove Teams Phone DID'
                 Condition  = { $Options.RemoveTeamsPhoneDID -eq $true }
                 Cmdlet     = 'Remove-CIPPUserTeamsPhoneDIDs'
                 Parameters = @{
@@ -258,6 +347,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Remove licenses'
                 Condition  = { $Options.RemoveLicenses -eq $true }
                 Cmdlet     = 'Remove-CIPPLicense'
                 Parameters = @{
@@ -270,6 +360,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Clear Immutable ID'
                 Condition  = { $Options.ClearImmutableId -eq $true }
                 Cmdlet     = 'Clear-CIPPImmutableID'
                 Parameters = @{
@@ -282,6 +373,7 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Delete user'
                 Condition  = { $Options.DeleteUser -eq $true }
                 Cmdlet     = 'Remove-CIPPUser'
                 Parameters = @{
@@ -296,28 +388,92 @@ function Invoke-CIPPOffboardingJob {
 
         # Build batch from selected tasks
         foreach ($Task in $TaskOrder) {
-            if (& $Task.Condition) {
-                $Batch.Add(@{
-                        FunctionName = 'CIPPOffboardingTask'
-                        Cmdlet       = $Task.Cmdlet
-                        Parameters   = $Task.Parameters
-                    })
+            if (-not (& $Task.Condition)) {
+                continue
             }
+
+            if ($DeleteUserSelected -and $Task.Cmdlet -notin $AllowedCmdletsWhenDeletingUser) {
+                $SkippedForDeleteUser.Add($Task.Cmdlet)
+                continue
+            }
+
+            $Batch.Add(@{
+                    FunctionName = 'CIPPOffboardingTask'
+                    Cmdlet       = $Task.Cmdlet
+                    Title        = $Task.Title
+                    Parameters   = $Task.Parameters
+                })
+        }
+
+        if ($SkippedForDeleteUser.Count -gt 0) {
+            $SkippedMessage = "Delete user selected for $Username. Skipped tasks: $($SkippedForDeleteUser -join ', ')"
+            Write-Information $SkippedMessage
+            Write-LogMessage -API $APIName -tenant $TenantFilter -message $SkippedMessage -sev Info
         }
 
         if ($Batch.Count -eq 0) {
-            Write-LogMessage -API $APIName -tenant $TenantFilter -message "No offboarding tasks selected for user $Username" -sev Warning
-            return "No offboarding tasks were selected for $Username"
+            $NoTasksMessage = "No offboarding tasks were selected for $Username. The offboarding job was not executed - check that at least one action was enabled."
+            Write-LogMessage -API $APIName -tenant $TenantFilter -message $NoTasksMessage -sev Error
+            throw $NoTasksMessage
         }
 
         Write-Information "Built batch of $($Batch.Count) offboarding tasks for $Username"
 
-        # Start orchestration
+        # Live progress: the wizard pre-created a queued row per user under this job id. Replace it with
+        # the real step list and stamp every task with its step, so the workers (which run in parallel)
+        # each report to their own step.
+        if ($DeploymentId) {
+            if ($StepIndexes.Count -gt 0) {
+                # Re-running selected steps: keep the row and reset only those steps.
+                foreach ($Index in $StepIndexes) {
+                    Set-CIPPAsyncDeploymentStep -JobId $DeploymentId -Name $Username -StepIndex $Index -StepStatus 'pending' -Message 'Waiting to start'
+                }
+            } else {
+                # Notification channels configured on the task are steps from the start, so the row does
+                # not look finished while the deliveries are still being made.
+                $NotifySteps = @(
+                    foreach ($Channel in @(([string]$TaskInfo.PostExecution -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })) {
+                        @{ Title = "Notify via $Channel"; Kind = 'notify'; Message = 'Sent once every action has finished' }
+                    }
+                )
+                try {
+                    $null = New-CIPPAsyncDeployment -JobId $DeploymentId -Names @($Username) -StepTitles (@($Batch | ForEach-Object { $_.Title }) + $NotifySteps) -Source 'Offboarding' -TaskId $TaskInfo.RowKey -TenantFilter $TenantFilter
+                } catch {
+                    # Progress is a nice-to-have: a storage hiccup here must not fail the offboarding itself.
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Could not write the progress row for $Username : $($_.Exception.Message)" -sev Warning
+                }
+            }
+            for ($i = 0; $i -lt $Batch.Count; $i++) {
+                $Batch[$i].DeploymentId = $DeploymentId
+                $Batch[$i].DeploymentName = $Username
+                $Batch[$i].StepIndex = $i
+            }
+            Set-CIPPAsyncDeploymentStatus -JobId $DeploymentId -Name $Username -Status 'running'
+        }
+
+        if ($StepIndexes.Count -gt 0) {
+            # Step re-run: the full list above keeps the indices stable; only the requested steps run.
+            $Batch = [System.Collections.Generic.List[object]]@($StepIndexes | Where-Object { $_ -ge 0 -and $_ -lt $Batch.Count } | ForEach-Object { $Batch[$_] })
+            if ($Batch.Count -eq 0) {
+                throw "None of the requested steps ($($StepIndexes -join ', ')) exist for $Username"
+            }
+        }
+
+        # Start orchestration.
+        #
+        # Offboarding steps must run in payload order — a later step can undo an earlier one if they race
+        # (e.g. convert-to-shared reverting mailbox grants added a step earlier). DurableMode='Sequence' is
+        # the legacy Azure Functions durable flag and is kept for that host; Craft ignores it and instead
+        # honours Sequential, which pins the whole run to ONE worker and runs the steps one at a time in
+        # order. Start-CIPPOrchestrator probes the Craft bridge arity, so on a Craft too old to know
+        # Sequential it logs a warning and falls back to fan-out rather than failing — safe here because the
+        # grant steps are already idempotent (they read the ACE back), so the ordering is belt-and-suspenders.
         $InputObject = [PSCustomObject]@{
             OrchestratorName = "OffboardingUser_$($Username)_$TenantFilter"
             Batch            = @($Batch)
             SkipLog          = $true
             DurableMode      = 'Sequence'
+            Sequential       = $true
         }
 
         # Add post-execution handler if TaskInfo is provided (from scheduled task)
@@ -328,6 +484,7 @@ function Invoke-CIPPOffboardingJob {
                 TenantFilter = $TenantFilter
                 Username     = $Username
                 Headers      = $Headers
+                DeploymentId = $DeploymentId
             }
         }
 
@@ -340,6 +497,9 @@ function Invoke-CIPPOffboardingJob {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Offboarding' -tenant $TenantFilter -message "Failed to start offboarding job for $Username : $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        if ($DeploymentId) {
+            Set-CIPPAsyncDeploymentStatus -JobId $DeploymentId -Name $Username -Status 'failed' -Logs $ErrorMessage.NormalizedError
+        }
         throw $ErrorMessage
     }
 }

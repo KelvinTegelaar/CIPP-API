@@ -13,34 +13,34 @@ function Invoke-CippTestZTNA24568 {
             return
         }
 
-        $MacOSPolicies = $ConfigPolicies | Where-Object {
+        $MacOSPolicies = $ConfigPolicies.Where({
             $_.platforms -like '*macOS*' -and
             $_.technologies -like '*mdm*' -and
             $_.technologies -like '*appleRemoteManagement*'
-        }
+        })
 
         if (-not $MacOSPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24568' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No macOS policies found' -Risk 'Medium' -Name 'Platform SSO is configured to strengthen authentication on macOS devices' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Tenant'
             return
         }
 
-        $SSOPolicies = $MacOSPolicies | Where-Object {
+        $SSOPolicies = $MacOSPolicies.Where({
             $children = $_.settings.settingInstance.groupSettingCollectionValue.children
-            $extensionIdSetting = $children | Where-Object {
+            $extensionIdSetting = $children.Where({
                 $_.settingDefinitionId -eq 'com.apple.extensiblesso_extensionidentifier'
-            }
+            })
             $extensionValue = $extensionIdSetting.simpleSettingValue.value
             $extensionValue -eq 'com.microsoft.CompanyPortalMac.ssoextension'
-        }
+        })
 
         if (-not $SSOPolicies) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24568' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No macOS SSO policies configured with Microsoft Company Portal extension' -Risk 'Medium' -Name 'Platform SSO is configured to strengthen authentication on macOS devices' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Tenant'
             return
         }
 
-        $AssignedSSOPolicies = $SSOPolicies | Where-Object {
+        $AssignedSSOPolicies = $SSOPolicies.Where({
             $_.assignments -and $_.assignments.Count -gt 0
-        }
+        })
 
         if ($AssignedSSOPolicies) {
             $Status = 'Passed'

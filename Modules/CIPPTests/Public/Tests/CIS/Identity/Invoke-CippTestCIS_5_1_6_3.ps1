@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_5_1_6_3 {
             return
         }
 
-        $Cfg = $Auth | Select-Object -First 1
+        $Cfg = @($Auth)[0]
         $Allow = $Cfg.allowInvitesFrom
 
         if ($Allow -eq 'adminsAndGuestInviters') {

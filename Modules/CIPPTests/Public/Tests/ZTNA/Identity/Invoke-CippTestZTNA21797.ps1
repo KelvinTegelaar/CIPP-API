@@ -14,23 +14,23 @@ function Invoke-CippTestZTNA21797 {
             return
         }
 
-        $caPasswordChangePolicies = $allCAPolicies | Where-Object {
+        $caPasswordChangePolicies = $allCAPolicies.Where({
             $_.conditions.userRiskLevels -contains 'high' -and
             $_.grantControls.builtInControls -contains 'passwordChange' -and
             $_.state -eq 'enabled'
-        }
+        })
 
-        $caBlockPolicies = $allCAPolicies | Where-Object {
+        $caBlockPolicies = $allCAPolicies.Where({
             $_.conditions.userRiskLevels -contains 'high' -and
             $_.grantControls.builtInControls -contains 'block' -and
             $_.state -eq 'enabled'
-        }
+        })
 
-        $inactiveCAPolicies = $allCAPolicies | Where-Object {
+        $inactiveCAPolicies = $allCAPolicies.Where({
             $_.conditions.userRiskLevels -contains 'high' -and
             ($_.grantControls.builtInControls -contains 'passwordChange' -or $_.grantControls.builtInControls -contains 'block') -and
             $_.state -ne 'enabled'
-        }
+        })
 
         $passwordlessEnabled = $false
         $passwordlessAuthMethods = [System.Collections.Generic.List[object]]::new()

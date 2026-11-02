@@ -28,6 +28,27 @@ function New-GraphBulkRequest {
         }
 
         $URL = "https://graph.microsoft.com/$Version/`$batch"
+        # a $batch lands its sub-requests at once, so the rate limiter can only space whole batches: no batch holds more
+        # sub-requests of one measured budget (CIPPRateLimiter) than its burst
+        $HasBudgets = $null -ne ('CIPP.CIPPRateLimiter' -as [type])
+        $Split = {
+            param($Items)
+            $Batches = [System.Collections.Generic.List[object]]::new()
+            $Current = [System.Collections.Generic.List[object]]::new()
+            $Used = @{}
+            foreach ($Item in @($Items)) {
+                $Budget = if ($HasBudgets) { [CIPP.CIPPRateLimiter]::BatchBudgetFor([string]$Item.url, $Version) }
+                if ($Current.Count -ge 20 -or ($Budget -and [int]$Used[$Budget.Name] -ge $Budget.Burst)) {
+                    $Batches.Add($Current.ToArray())
+                    $Current = [System.Collections.Generic.List[object]]::new()
+                    $Used = @{}
+                }
+                $Current.Add($Item)
+                if ($Budget) { $Used[$Budget.Name] = [int]$Used[$Budget.Name] + 1 }
+            }
+            if ($Current.Count -gt 0) { $Batches.Add($Current.ToArray()) }
+            , $Batches
+        }
 
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
@@ -35,18 +56,16 @@ function New-GraphBulkRequest {
         $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
         if (!$Tenant) {
             $Tenant = @{
-                GraphErrorCount = 0
                 LastGraphError  = ''
                 PartitionKey    = 'TenantFailed'
                 RowKey          = 'Failed'
             }
         }
         try {
-            $ReturnedData = for ($i = 0; $i -lt $Requests.count; $i += 20) {
+            $ReturnedData = foreach ($Batch in (& $Split $Requests)) {
                 $req = @{}
-                # Use select to create hashtables of id, method and url for each call
-                $req['requests'] = ($Requests[$i..($i + 19)])
-                $ReqBody = (ConvertTo-Json -InputObject $req -Compress -Depth 100)
+                $req['requests'] = $Batch
+                $ReqBody = [CIPP.CippJson]::ToJson($req, 100) ?? (ConvertTo-Json -InputObject $req -Compress -Depth 100)
                 $Return = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $ReqBody
                 if ($Return.headers.'retry-after') {
                     #Revist this when we are pushing this data into our custom schema instead.
@@ -55,7 +74,34 @@ function New-GraphBulkRequest {
                 }
                 $Return
             }
-            foreach ($MoreData in $ReturnedData.Responses | Where-Object { $_.body.'@odata.nextLink' }) {
+            # A throttled or briefly unavailable FIRST page used to come straight back as the item's failure
+            # (continuation pages below are retried). Send those items again - twice, waiting the longest
+            # Retry-After they asked for, up to 30 s - before a caller sees a failure.
+            $TransientStatus = @(429, 503, 504)
+            for ($Attempt = 1; $Attempt -le 2; $Attempt++) {
+                $Transient = @(@($ReturnedData.responses).Where({ ($_.status -as [int]) -in $TransientStatus }))
+                if ($Transient.Count -eq 0) { break }
+                $Wait = 1
+                foreach ($Throttled in $Transient) {
+                    $Asked = $Throttled.headers.'Retry-After' -as [int]
+                    if ($Asked -gt $Wait) { $Wait = $Asked }
+                }
+                Start-Sleep -Seconds ([Math]::Min($Wait, 30))
+                $TransientIds = @($Transient | ForEach-Object { [string]$_.id })
+                $RetryRequests = @($Requests | Where-Object { [string]$_.id -in $TransientIds })
+                foreach ($RetryBatch in (& $Split $RetryRequests)) {
+                    $RetryBody = ConvertTo-Json -InputObject @{ requests = @($RetryBatch) } -Compress -Depth 100
+                    $RetryReturn = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $RetryBody
+                    foreach ($Fresh in @($RetryReturn.responses)) {
+                        foreach ($Batch in @($ReturnedData)) {
+                            for ($k = 0; $k -lt @($Batch.responses).Count; $k++) {
+                                if ([string]$Batch.responses[$k].id -eq [string]$Fresh.id) { $Batch.responses[$k] = $Fresh }
+                            }
+                        }
+                    }
+                }
+            }
+            foreach ($MoreData in @($ReturnedData.Responses).Where({ $_.body.'@odata.nextLink' })) {
                 if ($NoPaginateIds -contains $MoreData.id) {
                     continue
                 }
@@ -68,6 +114,7 @@ function New-GraphBulkRequest {
                         id  = $MoreData.id
                         url = $InitialNextUrl
                     })
+                $RetriedPages = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
                 while ($NextLinkQueue.Count -gt 0) {
                     # Drain up to 20 nextLinks into a batch
@@ -88,7 +135,36 @@ function New-GraphBulkRequest {
                         $NextReturn = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $NextReqBody
                     }
 
+                    # A continuation page that fails (throttled, timed out, or missing from the batch
+                    # reply) used to be dropped silently: the parent item kept status 200 with only
+                    # its first page, so callers took a partial list for the complete one. The drift
+                    # engine then pruned the decisions for every policy that sat on a later page and
+                    # re-created them as New on the next run. Retry the page once, then mark the
+                    # parent so callers can tell the collection is incomplete.
+                    $AnsweredIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
                     foreach ($NextResponse in $NextReturn.responses) {
+                        $null = $AnsweredIds.Add([string]$NextResponse.id)
+                        $PageStatus = $NextResponse.status -as [int]
+                        if ($PageStatus -ge 400) {
+                            $PageRequest = $NextBatchRequests.Where({ $_.id -eq $NextResponse.id }, 'First')[0]
+                            $RetryKey = "$($NextResponse.id)|$($PageRequest.url)"
+                            if ($PageRequest -and $RetriedPages.Add($RetryKey)) {
+                                $RetryAfter = [Math]::Min([Math]::Max(($NextResponse.headers.'Retry-After' -as [int]), 0), 30)
+                                if ($RetryAfter -gt 0) { Start-Sleep -Seconds $RetryAfter }
+                                $NextLinkQueue.Enqueue([PSCustomObject]@{
+                                        id  = $PageRequest.id
+                                        url = $PageRequest.url
+                                    })
+                                continue
+                            }
+                            $PageError = "continuation page returned $PageStatus$(if ($NextResponse.body.error.message) { ": $($NextResponse.body.error.message)" })"
+                            Write-Warning "Graph bulk request for '$($NextResponse.id)' ($tenantid): $PageError. The result is incomplete."
+                            $MoreData | Add-Member -NotePropertyMembers ([ordered]@{
+                                    PagingIncomplete = $true
+                                    PagingError      = $PageError
+                                }) -Force
+                            continue
+                        }
                         if ($NextResponse.body.value) {
                             $NewValues = [System.Collections.Generic.List[PSCustomObject]]$MoreData.body.value
                             foreach ($val in $NextResponse.body.value) { $NewValues.Add($val) }
@@ -102,28 +178,41 @@ function New-GraphBulkRequest {
                                 })
                         }
                     }
+                    foreach ($Unanswered in ($NextBatchRequests | Where-Object { -not $AnsweredIds.Contains([string]$_.id) })) {
+                        Write-Warning "Graph bulk request for '$($Unanswered.id)' ($tenantid): no reply for continuation page '$($Unanswered.url)'. The result is incomplete."
+                        $MoreData | Add-Member -NotePropertyMembers ([ordered]@{
+                                PagingIncomplete = $true
+                                PagingError      = 'continuation page missing from the batch reply'
+                            }) -Force
+                    }
                 }
             }
 
         } catch {
             Write-Host 'updating graph table because something failed.'
+            $ErrorRecord = $_ # $_ is the parse error inside the nested catch
             # Try to parse ErrorDetails.Message as JSON
-            if ($_.ErrorDetails.Message) {
+            $ErrorBody = [string]$ErrorRecord.ErrorDetails.Message
+            if ($ErrorBody) {
                 try {
-                    $ErrorJson = $_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop
+                    $ErrorJson = $ErrorBody | ConvertFrom-Json -ErrorAction Stop
                     $Message = $ErrorJson.error.message
                 } catch {
-                    $Message = $_.ErrorDetails.Message
+                    $Message = $ErrorBody
                 }
             }
 
             if ([string]::IsNullOrEmpty($Message)) {
-                $Message = $_.Exception.Message
+                $Message = $ErrorRecord.Exception.Message
+            }
+
+            # An IIS error page ('Request Too Long') is HTML, not a Graph error; keep its text only.
+            if ($Message -match '(?i)<html') {
+                $Message = ($Message -replace '(?s)<[^>]+>', ' ' -replace '\s+', ' ').Trim()
             }
 
             if ($Message -ne 'Request not applicable to target tenant.') {
                 $Tenant.LastGraphError = $Message ?? ''
-                $Tenant.GraphErrorCount++
                 Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
             }
             throw $Message
@@ -131,12 +220,13 @@ function New-GraphBulkRequest {
 
         if ($Tenant.PSObject.Properties.Name -notcontains 'LastGraphError') {
             $Tenant | Add-Member -MemberType NoteProperty -Name 'LastGraphError' -Value '' -Force
-        } else {
+            Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
+        } elseif ($Tenant.LastGraphError -ne '') {
             $Tenant.LastGraphError = ''
+            Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
         }
-        Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
         return $ReturnedData.responses
     } else {
-        Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
+        Write-Error (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Graph bulk request')
     }
 }

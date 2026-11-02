@@ -68,7 +68,6 @@ function Invoke-CIPPStandardSecurityDefaults {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SecurityDefaults' -FieldValue $SecureDefaultsState.IsEnabled -StoreAs bool -Tenant $tenant
         $CurrentData = @{
             SecurityDefaultsEnabled = $SecureDefaultsState.IsEnabled
         }

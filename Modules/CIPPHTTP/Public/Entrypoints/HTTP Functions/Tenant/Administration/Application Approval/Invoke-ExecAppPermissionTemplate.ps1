@@ -15,6 +15,7 @@ function Invoke-ExecAppPermissionTemplate {
     $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json
 
     $Action = $Request.Query.Action ?? $Request.Body.Action
+    $StatusCode = [HttpStatusCode]::OK
 
     switch ($Action) {
         'Save' {
@@ -42,6 +43,7 @@ function Invoke-ExecAppPermissionTemplate {
                 $Body = @{
                     'Results' = $_.Exception.Message
                 }
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
         'Delete' {
@@ -51,7 +53,7 @@ function Invoke-ExecAppPermissionTemplate {
                 $TemplateName = $Template.TemplateName
 
                 if ($TemplateId) {
-                    $null = Remove-AzDataTableEntity @Table -Entity $Template -Force
+                    $null = Remove-CIPPAzDataTableEntity @Table -Entity $Template -Force
                     $Body = @{
                         'Results' = "Successfully deleted template '$TemplateName'"
                     }
@@ -60,11 +62,13 @@ function Invoke-ExecAppPermissionTemplate {
                     $Body = @{
                         'Results' = 'No Template ID provided for deletion'
                     }
+                    $StatusCode = [HttpStatusCode]::BadRequest
                 }
             } catch {
                 $Body = @{
                     'Results' = "Failed to delete template: $($_.Exception.Message)"
                 }
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
         default {
@@ -88,7 +92,7 @@ function Invoke-ExecAppPermissionTemplate {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = ConvertTo-Json -Depth 10 -InputObject @($Body)
         })
 

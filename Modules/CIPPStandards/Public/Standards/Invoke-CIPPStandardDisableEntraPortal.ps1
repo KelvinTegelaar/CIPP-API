@@ -29,7 +29,7 @@ function Invoke-CIPPStandardDisableEntraPortal {
     }
 
     if ($Settings.alert -eq $true) {
-        if ($CurrentInfo.isSoftwareOathEnabled) {
+        if ($CurrentInfo.restrictNonAdminAccess) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disable user access to Entra Portal is enabled' -sev Info
         } else {
             Write-StandardsAlert -message 'Disable user access to Entra Portal is not enabled' -object $CurrentInfo -tenant $tenant -standardName 'DisableEntraPortal' -standardId $Settings.standardId
@@ -38,8 +38,7 @@ function Invoke-CIPPStandardDisableEntraPortal {
     }
 
     if ($Settings.report -eq $true) {
-        set-CIPPStandardsCompareField -FieldName 'standards.DisableEntraPortal' -FieldValue $CurrentInfo.isSoftwareOathEnabled -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableEntraPortal' -FieldValue $CurrentInfo.isSoftwareOathEnabled -StoreAs bool -Tenant $tenant
+        set-CIPPStandardsCompareField -FieldName 'standards.DisableEntraPortal' -FieldValue $CurrentInfo.restrictNonAdminAccess -TenantFilter $Tenant
     }
 
 }

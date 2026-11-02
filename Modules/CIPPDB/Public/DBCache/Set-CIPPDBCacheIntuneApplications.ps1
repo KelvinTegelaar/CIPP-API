@@ -10,6 +10,11 @@ function Set-CIPPDBCacheIntuneApplications {
         $TestResult = Test-CIPPStandardLicense -StandardName 'IntuneApplicationsCache' -TenantFilter $TenantFilter -Preset Intune -SkipLog
         if ($TestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping applications cache' -sev Debug
+            # A license skip is still a completed collection: record authoritative empty sets for
+            # every type this collector writes so collect-on-miss does not re-run it forever.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplicationGroups' -Data @() -AddCount -ClearOnEmpty
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplications' -Data @() -AddCount -ClearOnEmpty
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneMobileAppsAll' -Data @() -AddCount -ClearOnEmpty
             return
         }
 
@@ -25,17 +30,27 @@ function Set-CIPPDBCacheIntuneApplications {
                 method = 'GET'
                 url    = '/deviceAppManagement/mobileApps?$top=999&$expand=assignments&$filter=(microsoft.graph.managedApp/appAvailability%20eq%20null%20or%20microsoft.graph.managedApp/appAvailability%20eq%20%27lineOfBusiness%27%20or%20isAssigned%20eq%20true)&$orderby=displayName'
             }
+            # Unfiltered lightweight list: the filtered 'Apps' fetch above excludes unassigned
+            # store/web apps, so presence checks need this full snapshot.
+            @{
+                id     = 'AllApps'
+                method = 'GET'
+                url    = '/deviceAppManagement/mobileApps?$top=999&$select=id,displayName'
+            }
         )
 
         $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
         $Groups = ($BulkResults | Where-Object { $_.id -eq 'Groups' }).body.value
         $Apps = ($BulkResults | Where-Object { $_.id -eq 'Apps' }).body.value
+        $AllApps = ($BulkResults | Where-Object { $_.id -eq 'AllApps' }).body.value
 
         if (-not $Groups) { $Groups = @() }
         if (-not $Apps) { $Apps = @() }
+        if (-not $AllApps) { $AllApps = @() }
 
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplicationGroups' -Data @($Groups) -AddCount
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplications' -Data @($Apps) -AddCount
+        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneMobileAppsAll' -Data @($AllApps) -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(($Apps | Measure-Object).Count) Intune applications" -sev Debug
     } catch {

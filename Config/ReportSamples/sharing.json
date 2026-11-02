@@ -1,0 +1,53 @@
+{
+  "summary": {
+    "totalLinks": 24,
+    "itemsShared": 18,
+    "externalRecipients": 6,
+    "anonymousLinks": 4,
+    "anonymousEditLinks": 1,
+    "neverExpiringAnonymous": 2,
+    "folderShares": 3,
+    "externalLinks": 6,
+    "sharePointSites": 5,
+    "teamsSites": 3,
+    "oneDriveAccounts": 12
+  },
+  "links": [
+    {
+      "itemName": "Sample Proposal.docx",
+      "siteName": "Sample Marketing",
+      "linkType": "Anonymous",
+      "scope": "Edit",
+      "expires": "Never",
+      "recipients": "Anyone with the link"
+    },
+    {
+      "itemName": "Sample Budget.xlsx",
+      "siteName": "Sample Finance",
+      "linkType": "External",
+      "scope": "View",
+      "expires": "2026-12-31",
+      "recipients": "partner@example.com"
+    }
+  ],
+  "topRecipients": [
+    {
+      "recipient": "partner@example.com",
+      "links": 5
+    },
+    {
+      "recipient": "supplier@example.net",
+      "links": 3
+    }
+  ],
+  "topLibraries": [
+    {
+      "library": "Sample Marketing / Documents",
+      "links": 9
+    },
+    {
+      "library": "Sample Finance / Documents",
+      "links": 6
+    }
+  ]
+}

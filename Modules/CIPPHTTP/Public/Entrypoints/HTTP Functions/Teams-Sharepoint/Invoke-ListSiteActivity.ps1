@@ -1,0 +1,122 @@
+function Invoke-ListSiteActivity {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Sharepoint.Site.Read
+    .DESCRIPTION
+        Lists cached site activity rows from the CIPP reporting database for SharePoint and Teams sites.
+        Supports tenantFilter and optional Type filter (SharePoint or TeamsSite).
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+
+    $APIName = 'ListSiteActivity'
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    # Optional site-type filter: 'SharePoint' or 'TeamsSite'. Omit to return both.
+    $Type = $Request.Query.Type ?? $Request.Body.Type
+    $SiteId = $Request.Query.siteId ?? $Request.Body.siteId
+
+    if (-not $TenantFilter) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = 'tenantFilter is required'
+            })
+    }
+
+    switch ($Type) {
+        'SharePoint' { }
+        'TeamsSite' { }
+        default {
+            if ($Type) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = 'Type must be SharePoint or TeamsSite'
+                    })
+            }
+        }
+    }
+
+    try {
+        $NormalizeSiteId = {
+            param($Value)
+            if ([string]::IsNullOrWhiteSpace($Value)) { return $null }
+            return $Value.ToString().Trim().Trim('{}').ToLowerInvariant()
+        }
+        $LookupSiteId = & $NormalizeSiteId $SiteId
+
+        $TypeMap = @{
+            SharePoint = 'SharePoint'
+            TeamsSite  = 'SharePointAndTeams'
+        }
+        $SelectedSiteType = if ($Type) { $TypeMap[$Type] } else { $null }
+
+        $AllResults = [System.Collections.Generic.List[object]]::new()
+        $TotalTenants = 0
+        $FailedTenants = 0
+
+        if ($TenantFilter -eq 'AllTenants') {
+            $ItemsByTenant = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'SiteActivity' -ByTenant
+            $TotalTenants = @($ItemsByTenant.Keys).Count
+
+            foreach ($Tenant in @($ItemsByTenant.Keys)) {
+                # Hand each tenant its rows and drop them here so they can be freed once processed
+                $TenantItems = $ItemsByTenant[$Tenant]; $ItemsByTenant[$Tenant] = $null
+                try {
+                    $TenantRows = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'SiteActivity' -Rows $TenantItems)
+                    if (-not $TenantRows) { continue }
+
+                    $CountRow = Get-CIPPDbItem -TenantFilter $Tenant -Type 'SiteActivity' -CountsOnly | Select-Object -First 1
+                    $CacheTimestamp = $CountRow.Timestamp
+
+                    foreach ($Row in $TenantRows) {
+                        if ($Row.siteType -eq 'OneDrive') { continue }
+                        if ($SelectedSiteType -and $Row.siteType -ne $SelectedSiteType) { continue }
+                        if ($LookupSiteId) {
+                            $RowSiteId = & $NormalizeSiteId $Row.siteId
+                            if ($RowSiteId -ne $LookupSiteId) { continue }
+                        }
+
+                        $Row | Add-Member -NotePropertyMembers ([ordered]@{
+                                Tenant         = $Tenant
+                                CacheTimestamp = $CacheTimestamp
+                            }) -Force
+                        [void]$AllResults.Add($Row)
+                    }
+                } catch {
+                    $FailedTenants++
+                    Write-LogMessage -API $APIName -tenant $Tenant -message "Failed to retrieve cached site activity: $($_.Exception.Message)" -sev Warning
+                }
+            }
+        } else {
+            $TenantRows = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'SiteActivity')
+            $CountRow = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'SiteActivity' -CountsOnly | Select-Object -First 1
+            $CacheTimestamp = $CountRow.Timestamp
+
+            foreach ($Row in $TenantRows) {
+                if ($Row.siteType -eq 'OneDrive') { continue }
+                if ($SelectedSiteType -and $Row.siteType -ne $SelectedSiteType) { continue }
+                if ($LookupSiteId) {
+                    $RowSiteId = & $NormalizeSiteId $Row.siteId
+                    if ($RowSiteId -ne $LookupSiteId) { continue }
+                }
+
+                $Row | Add-Member -NotePropertyName 'CacheTimestamp' -NotePropertyValue $CacheTimestamp -Force
+                [void]$AllResults.Add($Row)
+            }
+        }
+
+        $GraphRequest = @($AllResults | Sort-Object -Property displayName)
+        $StatusCode = Get-CippBulkStatusCode -Total $TotalTenants -Failed $FailedTenants
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to list site activity: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
+        $GraphRequest = @{ Error = $ErrorMessage.NormalizedError }
+    }
+
+    return ([HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = @($GraphRequest)
+        })
+}

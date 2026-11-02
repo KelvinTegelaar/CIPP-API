@@ -9,9 +9,9 @@ Function Invoke-EditSpamFilter {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $TenantFilter = $request.Query.tenantFilter
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $Name = $Request.Query.name ?? $Request.Body.name
-    $State = $State ?? $Request.Body.state
+    $State = $Request.Query.State ?? $Request.Body.State
 
     try {
         $Params = @{
@@ -26,7 +26,7 @@ Function Invoke-EditSpamFilter {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed setting Spamfilter rule $($Name) to $($State). Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

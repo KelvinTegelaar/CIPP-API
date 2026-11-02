@@ -10,6 +10,7 @@ function Invoke-ExecApiClient {
 
     $Table = Get-CippTable -tablename 'ApiClients'
     $Action = $Request.Query.Action ?? $Request.Body.Action
+    $StatusCode = [HttpStatusCode]::OK
 
     switch ($Action) {
         'List' {
@@ -24,12 +25,46 @@ function Invoke-ExecApiClient {
         'ListAvailable' {
             $sitename = $env:WEBSITE_SITE_NAME
             $Apps = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=signInAudience eq 'AzureAdMyOrg' and web/redirectUris/any(x:x eq 'https://$($sitename).azurewebsites.net/.auth/login/aad/callback')&`$top=999&`$select=appId,displayName,createdDateTime,api,web,passwordCredentials&`$count=true" -NoAuthCheck $true -asapp $true -ComplexFilter
+            $ProtectedAppIds = Get-CippProtectedAppId
             $Body = @{
-                Results = @($Apps)
+                Results = @(@($Apps).Where({ $_.appId -and $_.appId -notin $ProtectedAppIds }))
             }
         }
         'AddUpdate' {
             $Results = [System.Collections.Generic.List[object]]::new()
+
+            # Authorize the role assignment BEFORE any side effects (app registration /
+            # secret creation). A caller may only assign a role whose effective
+            # permissions are a subset of their own, and may only modify an existing
+            # client whose current role is likewise within their grant. This blocks
+            # privilege escalation via the ApiClients table (e.g. editor -> superadmin).
+            $RequestedRole = [string]$Request.Body.Role.value
+            $RolesToAuthorize = [System.Collections.Generic.List[string]]::new()
+            $RolesToAuthorize.Add($RequestedRole)
+            $ExistingClientForAuth = $null
+            $AuthClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
+            if ($AuthClientId) {
+                $ExistingClientForAuth = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($AuthClientId)'"
+                if ($ExistingClientForAuth) {
+                    $RolesToAuthorize.Add([string]$ExistingClientForAuth.Role)
+                }
+                if ($AuthClientId -in (Get-CippProtectedAppId)) {
+                    $StatusCode = [HttpStatusCode]::BadRequest
+                    $Body = @{ Results = @(@{ resultText = 'This app is CIPP''s own sign-in (SSO) or SAM app registration and cannot be used as an API client.'; state = 'error' }) }
+                    break
+                }
+            }
+            $RoleGrant = Test-CippApiClientRoleGrant -Request $Request -Role $RolesToAuthorize
+            if (-not $RoleGrant.Allowed) {
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked API client role assignment: $($RoleGrant.Message)" -Sev 'Warning'
+                $StatusCode = [HttpStatusCode]::Forbidden
+                $Body = @(@{
+                        resultText = $RoleGrant.Message
+                        state      = 'error'
+                    })
+                break
+            }
+
             if ($Request.Body.ClientId -or $Request.Body.AppName) {
                 $ClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
                 $AddUpdateSuccess = $false
@@ -72,6 +107,9 @@ function Invoke-ExecApiClient {
                         if ($RetryObjectId) {
                             $AddedText.retryPayload.ApplicationObjectID = $RetryObjectId
                         }
+                    } else {
+                        # The add dialog only picks up retryPayload from a successful response
+                        $StatusCode = [HttpStatusCode]::InternalServerError
                     }
                 }
             }
@@ -133,12 +171,24 @@ function Invoke-ExecApiClient {
 
                 Add-CIPPAzDataTableEntity @Table -Entity $Client -Force | Out-Null
 
-                # When this client is MCP-enabled, configure its app registration as the MCP OAuth
-                # resource (host identifier URIs + v2 tokens) so the Claude connector flow can resolve it.
+                # When this client is MCP-enabled it becomes one of the OAuth client apps that AI
+                # connectors sign in as. Several MCPAllowed clients may coexist (each with its own
+                # redirects); the dedicated CIPP-MCP app is the shared protected resource.
+                # Configure this client (callbacks, public client flows, resource permissions +
+                # consent) and ensure the resource app exists (Set-CIPPMCPClientApp ->
+                # New-CIPPMcpResourceApp).
                 if ([bool]($Request.Body.MCPAllowed ?? $false)) {
                     try {
-                        $null = Set-CIPPMCPClientApp -AppId $ClientId -Headers $Request.Headers
-                        $Results.Add('MCP resource URIs and v2 tokens configured on the app registration. Run Save to Azure to apply the changes.')
+                        $McpResult = Set-CIPPMCPClientApp -AppId $ClientId -Headers $Request.Headers
+                        $Results.Add("Configured '$($Client.AppName)' as an MCP OAuth client (callbacks for Claude, ChatGPT, VS Code and Copilot Studio) against the CIPP-MCP resource app. Run Save to Azure to apply the changes.")
+                        if (-not $McpResult.ResourceAppId) {
+                            $Results.Add(@{
+                                    resultText = 'The CIPP-MCP resource app could not be created or resolved. MCP connectors will not be able to sign in until this succeeds - re-run Save, or check the app registration permissions.'
+                                    state      = 'warning'
+                                })
+                        } else {
+                            $Results.Add('For Copilot Studio, use this client''s Application (Client) ID and its secret (reset it with Actions > Reset Application Secret if you did not save it).')
+                        }
                     } catch {
                         $Results.Add(@{
                                 resultText = "Client saved, but MCP app configuration failed: $($_.Exception.Message)"
@@ -166,22 +216,13 @@ function Invoke-ExecApiClient {
             }
         }
         'GetAzureConfiguration' {
-            if ($env:WEBSITE_RESOURCE_GROUP) {
-                $RGName = $env:WEBSITE_RESOURCE_GROUP
-            } else {
-                $Owner = $env:WEBSITE_OWNER_NAME
-                if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                    $RGName = $Matches.RGName
-                } else {
-                    Write-Information "Could not determine resource group from environment variables. Owner: $Owner"
-                    $RGName = $null
-                }
-            }
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             try {
+                $RGName = Get-CIPPFunctionAppResourceGroup -SiteName $FunctionAppName
                 $APIClients = Get-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName
                 $Results = $ApiClients
             } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Results = @{
                     Enabled = 'Could not get API clients, ensure you have the appropriate rights to read the Authentication settings.'
                     Error   = (Get-CippException -Exception $_)
@@ -193,37 +234,56 @@ function Invoke-ExecApiClient {
         }
         'SaveToAzure' {
             $TenantId = $env:TenantID
-            if ($env:WEBSITE_RESOURCE_GROUP) {
-                $RGName = $env:WEBSITE_RESOURCE_GROUP
-            } else {
-                $Owner = $env:WEBSITE_OWNER_NAME
-                if ($env:WEBSITE_SKU -ne 'FlexConsumption' -and $Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                    $RGName = $Matches.RGName
-                } else {
-                    Write-Information "Could not determine resource group from environment variables. Owner: $Owner"
-                    $RGName = $null
-                }
-            }
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
             $ClientIds = $AllClients.RowKey
             # MCPAllowed can round-trip from table storage as a bool or a string; compare on string form.
-            $McpClientIds = @($AllClients | Where-Object { "$($_.MCPAllowed)" -eq 'True' } | ForEach-Object { $_.RowKey })
+            $ProtectedAppIds = Get-CippProtectedAppId
+            $McpClientIds = @($AllClients | Where-Object { "$($_.MCPAllowed)" -eq 'True' -and $_.RowKey -notin $ProtectedAppIds } | ForEach-Object { $_.RowKey })
             Write-Information "[ExecApiClient] MCP clients resolved for audiences/scope: $($McpClientIds -join ', ')"
             try {
+                $RGName = Get-CIPPFunctionAppResourceGroup -SiteName $FunctionAppName
+
+                # Ensure the dedicated CIPP-MCP resource app exists and every MCP client app is wired
+                # up (callbacks, resource permission, admin consent) BEFORE writing EasyAuth:
+                # Set-CippApiAuth reads the resource app id for allowedAudiences, so the resource must
+                # exist first. This makes Save to Azure a full deploy for both new and existing setups
+                # (an instance upgraded from the single-app model gets its resource app created and its
+                # client rewired here). Best-effort per client.
+                foreach ($McpId in $McpClientIds) {
+                    if ([string]::IsNullOrEmpty($McpId)) { continue }
+                    try {
+                        $null = Set-CIPPMCPClientApp -AppId $McpId -Headers $Request.Headers
+                    } catch {
+                        Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "MCP client $McpId could not be configured during Save to Azure: $($_.Exception.Message)" -Sev 'Warning'
+                    }
+                }
+
                 Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds -McpClientIds $McpClientIds
 
-                # Advertise the MCP resource scope via App Service PRM so the Claude connector requests
-                # a scope that matches the resource app (clears AADSTS9010010). Cleared when no MCP clients.
                 if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
-                    $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation" }
+                    # Advertise the OIDC + offline_access scopes alongside the resource scope so
+                    # discovery-based MCP clients (ChatGPT, VS Code, Copilot CLI) request a refresh
+                    # token. offline_access is what makes Entra issue one; without it the client
+                    # re-consents every ~hour. Claude appends offline_access itself, but stricter
+                    # clients only request what the metadata advertises, so it has to be in the
+                    # challenge header and the discovery docs, not just one of them. The values come
+                    # from Get-CippMcpScopeAppSettings so the Initialize-CIPPAuth warmup reconcile
+                    # writes byte-identical settings and the two paths never fight each other.
+                    # NOTE: Copilot Studio does NOT read any of this. Entra has no RFC 7591 DCR, so
+                    # Copilot Studio uses Manual OAuth with a maker-typed scope; its refresh token
+                    # depends on offline_access being consented on the MCP client app registration
+                    # (Set-CIPPMCPClientApp / Grant-CippAppGraphConsent), not on these documents.
+                    $McpAppSettings = Get-CippMcpScopeAppSettings -Hostname $env:WEBSITE_HOSTNAME -TenantId $env:TenantID -IsCippNg:([bool]$env:CIPPNG)
+                    $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting $McpAppSettings
                 } else {
-                    $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{} -RemoveKeys @('WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES')
+                    $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{} -RemoveKeys @('WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES', 'CRAFT_PRM', 'CRAFT_PRM_AS')
                 }
 
                 $Body = @{ Results = 'API clients saved to Azure' }
                 Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message 'Saved API clients to Azure' -Sev 'Info'
             } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
                 $Body = @{
                     Results = 'Failed to save allowed API clients to Azure, ensure your function app has the appropriate rights to make changes to the Authentication settings.'
                     Error   = (Get-CippException -Exception $_)
@@ -234,11 +294,32 @@ function Invoke-ExecApiClient {
         'ResetSecret' {
             $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.ClientId)'"
             if (!$Client) {
+                $StatusCode = [HttpStatusCode]::NotFound
                 $Results = @{
                     resultText = 'API client not found'
                     state      = 'error'
                 }
+            } elseif ($Request.Body.ClientId -in (Get-CippProtectedAppId)) {
+                # Resetting removes every password on the app, including the one EasyAuth signs in with.
+                $StatusCode = [HttpStatusCode]::BadRequest
+                $Results = @{
+                    resultText = 'This app is CIPP''s own sign-in (SSO) or SAM app registration; its secret cannot be reset from here.'
+                    state      = 'error'
+                }
             } else {
+                # Block resetting the secret of a client whose role outranks the caller;
+                # otherwise an editor could harvest a working superadmin secret.
+                $RoleGrant = Test-CippApiClientRoleGrant -Request $Request -Role ([string]$Client.Role)
+                if (-not $RoleGrant.Allowed) {
+                    Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked API client secret reset for $($Request.Body.ClientId): $($RoleGrant.Message)" -Sev 'Warning'
+                    $StatusCode = [HttpStatusCode]::Forbidden
+                    $Results = @{
+                        resultText = $RoleGrant.Message
+                        state      = 'error'
+                    }
+                    $Body = @($Results)
+                    break
+                }
                 $ApiConfig = New-CIPPAPIConfig -ResetSecret -AppId $Request.Body.ClientId -Headers $Request.Headers
 
                 if ($ApiConfig.ApplicationSecret) {
@@ -248,6 +329,7 @@ function Invoke-ExecApiClient {
                         state      = 'success'
                     }
                 } else {
+                    $StatusCode = [HttpStatusCode]::InternalServerError
                     $Results = @{
                         resultText = "Failed to reset secret for $($Client.AppName)"
                         state      = 'error'
@@ -259,6 +341,7 @@ function Invoke-ExecApiClient {
         'RepairUri' {
             $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.ClientId)'"
             if (!$Client) {
+                $StatusCode = [HttpStatusCode]::NotFound
                 $Results = @{
                     resultText = 'API client not found'
                     state      = 'error'
@@ -280,6 +363,7 @@ function Invoke-ExecApiClient {
                         }
                     }
                 } catch {
+                    $StatusCode = [HttpStatusCode]::InternalServerError
                     $ErrorMessage = Get-CippException -Exception $_
                     Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Failed to repair identifier URI for $($Client.AppName) $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
                     $Results = @{
@@ -294,36 +378,199 @@ function Invoke-ExecApiClient {
             try {
                 if ($Request.Body.ClientId) {
                     $ClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
+                    # Block deleting a client whose role outranks the caller (tamper/DoS).
+                    $ExistingClientForAuth = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'"
+                    if ($ExistingClientForAuth) {
+                        $RoleGrant = Test-CippApiClientRoleGrant -Request $Request -Role ([string]$ExistingClientForAuth.Role)
+                        if (-not $RoleGrant.Allowed) {
+                            Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked API client deletion for $($ClientId): $($RoleGrant.Message)" -Sev 'Warning'
+                            $StatusCode = [HttpStatusCode]::Forbidden
+                            $Body = @{ Results = $RoleGrant.Message }
+                            break
+                        }
+                    }
                     if ($Request.Body.RemoveAppReg -eq $true) {
                         Write-Information "Deleting API Client: $ClientId from Entra"
                         $App = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=appId eq '$($ClientId)'&`$select=id,appId,web" -NoAuthCheck $true -asapp $true
                         $Id = $App.id
-                        if ($Id -and $App.web.redirectUris -like "*$($env:WEBSITE_SITE_NAME)*") {
+                        if ($Id -and $App.web.redirectUris -like "*$($env:WEBSITE_SITE_NAME)*" -and $ClientId -notin (Get-CippProtectedAppId)) {
                             New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$Id" -type DELETE -Body '{}' -NoAuthCheck $true -asapp $true
                             Write-Information "Deleted App Registration for $ClientId"
                         } else {
-                            Write-Information "App Registration for $ClientId not found or Redirect URI does not match"
+                            Write-Information "App Registration for $ClientId not found, Redirect URI does not match, or it is CIPP's SSO/SAM app"
                         }
                     }
                     Write-Information "Deleting API Client: $ClientId from CIPP"
                     $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'" -Property RowKey, PartitionKey
-                    Remove-AzDataTableEntity @Table -Entity $Client -Force
+                    Remove-CIPPAzDataTableEntity @Table -Entity $Client -Force
                     Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Deleted API client $ClientId" -Sev 'Info'
                     $Body = @{ Results = "API client $ClientId deleted" }
                 } else {
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     $Body = @{ Results = "API client $ClientId not found or not a valid CIPP-API application" }
                 }
             } catch {
                 Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Failed to remove app registration for $ClientId" -sev 'Warning'
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $Body = @{ Results = "Failed to delete API client $($ClientId): $($_.Exception.Message)" }
+            }
+        }
+        'GetMcpAuth' {
+            # MCP status for the client-management UI: whether the dedicated CIPP-MCP resource app is
+            # provisioned, plus each MCPAllowed client app and its custom (non-default) redirect URIs.
+            $KnownClients = Get-CippMcpKnownClients
+            $McpResTable = Get-CippTable -tablename 'CippMcpResource'
+            $McpResRow = Get-CIPPAzDataTableEntity @McpResTable -Filter "PartitionKey eq 'McpResource' and RowKey eq 'McpResource'"
+            $ResourceConfigured = $false
+            $ResourceAppId = ''
+            $ResourceObjectId = ''
+            $ResourceDisplayName = ''
+            $ResourceIdentifierUris = @()
+            $PreAuthorizedClientIds = @()
+            if (-not [string]::IsNullOrWhiteSpace($McpResRow.AppId)) {
+                try {
+                    $ResApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($McpResRow.AppId)')?`$select=id,appId,displayName,identifierUris,api" -NoAuthCheck $true -asapp $true
+                    $ResourceConfigured = [bool]$ResApp.appId
+                    $ResourceAppId = "$($ResApp.appId)"
+                    $ResourceObjectId = "$($ResApp.id)"
+                    $ResourceDisplayName = "$($ResApp.displayName)"
+                    $ResourceIdentifierUris = @($ResApp.identifierUris)
+                    $PreAuthorizedClientIds = @(@($ResApp.api.preAuthorizedApplications) | ForEach-Object { $_.appId })
+                } catch {
+                    $ResourceConfigured = $false
+                }
+            }
+            # If the resource app isn't set up, check whether the MCP resource URL is being held by a
+            # DIFFERENT app (e.g. a client left over from the old single-app setup) - that blocks
+            # creation and the admin must delete it manually. Surface it so the page can warn.
+            $ResourceConflict = $null
+            if (-not $ResourceConfigured -and $env:WEBSITE_HOSTNAME) {
+                try {
+                    $HostUri = "https://$($env:WEBSITE_HOSTNAME)/api/ExecMcp"
+                    $Holders = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=identifierUris/any(u:u eq '$HostUri')&`$count=true&`$select=appId,displayName" -NoAuthCheck $true -asapp $true -ComplexFilter)
+                    $Conflict = $Holders | Where-Object { $_.appId -and $_.displayName -ne 'CIPP-MCP' } | Select-Object -First 1
+                    if ($Conflict) { $ResourceConflict = @{ AppId = "$($Conflict.appId)"; AppName = "$($Conflict.displayName)" } }
+                } catch {
+                    Write-Information "[ExecApiClient] Could not check for MCP resource URI conflict: $($_.Exception.Message)"
+                }
+                # Fall back to (or enrich with) the conflict error persisted by New-CIPPMcpResourceApp.
+                try {
+                    $ErrRow = Get-CIPPAzDataTableEntity @McpResTable -Filter "PartitionKey eq 'McpResource' and RowKey eq 'Error'"
+                    if ($ErrRow.RowKey) {
+                        if (-not $ResourceConflict) { $ResourceConflict = @{ AppId = "$($ErrRow.ConflictAppId)"; AppName = "$($ErrRow.ConflictAppName)" } }
+                        $ResourceConflict.Message = "$($ErrRow.Message)"
+                    }
+                } catch {
+                    Write-Information "[ExecApiClient] Could not read stored MCP conflict error: $($_.Exception.Message)"
+                }
+            }
+            $McpClients = @(Get-CIPPAzDataTableEntity @Table | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) -and "$($_.MCPAllowed)" -eq 'True' })
+            $ClientInfo = [System.Collections.Generic.List[object]]::new()
+            foreach ($C in $McpClients) {
+                # Custom redirect URIs are surfaced per platform: 'public' (mobile & desktop, PKCE -
+                # Claude/ChatGPT/CLI) and 'web' (confidential, secret - Copilot Studio). Which bucket a
+                # URI is in decides whether the token exchange succeeds, so the UI edits them separately.
+                $CustomPublic = @()
+                $CustomWeb = @()
+                try {
+                    $CApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($C.RowKey)')?`$select=publicClient,web" -NoAuthCheck $true -asapp $true
+                    $CustomPublic = @(@($CApp.publicClient.redirectUris) | Where-Object { $_ -notin $KnownClients.PublicClientRedirectUris })
+                    $CustomWeb = @(@($CApp.web.redirectUris) | Where-Object { $_ -notin $KnownClients.ConfidentialRedirectUris -and $_ -notlike "*/.auth/login/aad/callback" })
+                } catch {
+                    $CustomPublic = @()
+                    $CustomWeb = @()
+                }
+                $ClientInfo.Add(@{
+                        AppId                          = "$($C.RowKey)"
+                        AppName                        = "$($C.AppName)"
+                        PublicRedirectUris             = @($CustomPublic)
+                        WebRedirectUris                = @($CustomWeb)
+                        UserImpersonationPreAuthorized = ($PreAuthorizedClientIds -contains "$($C.RowKey)")
+                    })
+            }
+            $Body = @{ Results = @{
+                    ResourceConfigured     = $ResourceConfigured
+                    ResourceAppId          = $ResourceAppId
+                    ResourceObjectId       = $ResourceObjectId
+                    ResourceDisplayName    = $ResourceDisplayName
+                    ResourceIdentifierUris = @($ResourceIdentifierUris)
+                    ResourceConflict       = $ResourceConflict
+                    DefaultRedirectUris    = @($KnownClients.PublicClientRedirectUris)
+                    DefaultWebRedirectUris = @($KnownClients.ConfidentialRedirectUris)
+                    Clients                = @($ClientInfo)
+                } }
+        }
+        'SetMcpRedirectUris' {
+            # Replace the CUSTOM redirect URIs on a specific MCP client app, per platform. The built-in
+            # provider callbacks are always kept. Body.ClientId picks the client; Body.PublicRedirectUris
+            # go under 'publicClient' (mobile & desktop / PKCE - Claude, ChatGPT, CLI) and
+            # Body.WebRedirectUris under 'web' (confidential / secret - Copilot Studio). A URI under the
+            # wrong platform fails at the token exchange, which is why they are edited separately.
+            # Back-compat: a lone Body.RedirectUris is treated as the public list.
+            $KnownClients = Get-CippMcpKnownClients
+            $TargetClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
+            if ([string]::IsNullOrWhiteSpace($TargetClientId)) {
+                $StatusCode = [HttpStatusCode]::BadRequest
+                $Body = @{ Results = @{ resultText = 'No ClientId provided.'; state = 'error' } }
+                break
+            }
+            # Only ever patch an app registration that is a CIPP-managed, MCP-enabled API client -
+            # never an arbitrary appId, which would let a caller rewrite the redirect URIs of any app
+            # in the tenant via CIPP's app-only Graph rights.
+            $ManagedClient = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$TargetClientId'"
+            if (-not $ManagedClient.RowKey -or "$($ManagedClient.MCPAllowed)" -ne 'True' -or $TargetClientId -in (Get-CippProtectedAppId)) {
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked MCP redirect URI update for $TargetClientId : not an MCP-enabled CIPP API client." -Sev 'Warning'
+                $StatusCode = [HttpStatusCode]::NotFound
+                $Body = @{ Results = @{ resultText = 'That app is not an MCP-enabled CIPP API client.'; state = 'error' } }
+                break
+            }
+            $Invalid = [System.Collections.Generic.List[string]]::new()
+            $ParseUris = {
+                param($Raw)
+                $Out = [System.Collections.Generic.List[string]]::new()
+                foreach ($Uri in @($Raw)) {
+                    $U = "$Uri".Trim()
+                    if ([string]::IsNullOrWhiteSpace($U)) { continue }
+                    $Parsed = $null
+                    if ([System.Uri]::TryCreate($U, [System.UriKind]::Absolute, [ref]$Parsed)) {
+                        if ($Out -notcontains $U) { $Out.Add($U) }
+                    } else {
+                        $Invalid.Add($U)
+                    }
+                }
+                $Out
+            }
+            $CustomPublic = & $ParseUris ($Request.Body.PublicRedirectUris ?? $Request.Body.RedirectUris)
+            $CustomWeb = & $ParseUris $Request.Body.WebRedirectUris
+            if ($Invalid.Count -gt 0) {
+                $StatusCode = [HttpStatusCode]::BadRequest
+                $Body = @{ Results = @{ resultText = "These are not valid absolute URIs: $($Invalid -join ', ')"; state = 'error' } }
+                break
+            }
+            try {
+                $CApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$TargetClientId')?`$select=id,web" -NoAuthCheck $true -asapp $true
+                # Preserve the EasyAuth login callback if this app carries one; it is not ours to drop.
+                $KeepWeb = @(@($CApp.web.redirectUris) | Where-Object { $_ -like "*/.auth/login/aad/callback" })
+                $DesiredPublic = @(@($KnownClients.PublicClientRedirectUris) + @($CustomPublic) | Where-Object { $_ } | Select-Object -Unique)
+                $DesiredWeb = @(@($KnownClients.ConfidentialRedirectUris) + @($KeepWeb) + @($CustomWeb) | Where-Object { $_ } | Select-Object -Unique)
+                $PatchBody = @{ publicClient = @{ redirectUris = @($DesiredPublic) }; web = @{ redirectUris = @($DesiredWeb) } } | ConvertTo-Json -Depth 6 -Compress
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($CApp.id)" -type PATCH -body $PatchBody -NoAuthCheck $true -asapp $true
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Updated MCP client $TargetClientId redirect URIs ($($CustomPublic.Count) public, $($CustomWeb.Count) web)." -Sev 'Info'
+                $Body = @{ Results = @{ resultText = 'MCP connector redirect URIs updated.'; state = 'success' } }
+            } catch {
+                $StatusCode = [HttpStatusCode]::InternalServerError
+                $ErrorMessage = Get-CippException -Exception $_
+                $Body = @{ Results = @{ resultText = "Failed to update redirect URIs: $($ErrorMessage.NormalizedError)"; state = 'error' } }
             }
         }
         default {
+            $StatusCode = [HttpStatusCode]::BadRequest
             $Body = @{Results = 'Invalid action' }
         }
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Body
         })
 }

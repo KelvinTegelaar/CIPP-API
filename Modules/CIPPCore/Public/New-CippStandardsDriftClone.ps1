@@ -2,8 +2,7 @@ function New-CippStandardsDriftClone {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)][string]$TemplateId,
-        [Parameter(Mandatory)][switch]$UpgradeToDrift,
-        $Headers
+        [Parameter(Mandatory)][switch]$UpgradeToDrift
     )
 
     $Table = Get-CippTable -tablename 'templates'
@@ -32,8 +31,8 @@ function New-CippStandardsDriftClone {
             $Entity.JSON = "$(ConvertTo-Json -InputObject $data -Compress -Depth 100)"
             $Entity.RowKey = "$($data.GUID)"
             $Entity.GUID = $data.GUID
-            $update = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
-            return 'Clone Completed successfully'
+            $null = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
+            return "Created drift template '$($data.templateName)' ($($data.GUID)) from $TemplateId"
         } catch {
             return "Failed to Clone template to Drift Template: $_"
         }

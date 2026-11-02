@@ -15,25 +15,25 @@ function Invoke-CippTestZTNA21774 {
 
         $MicrosoftTenantId = 'f8cdef31-a31e-4b4a-93e4-5f571e91255a'
 
-        $MicrosoftSPs = $ServicePrincipals | Where-Object {
+        $MicrosoftSPs = $ServicePrincipals.Where({
             $_.appOwnerOrganizationId -eq $MicrosoftTenantId
-        }
+        })
 
         $SPsWithPasswordCreds = @()
         $SPsWithKeyCreds = @()
 
         if ($MicrosoftSPs) {
-            $SPsWithPasswordCreds = $MicrosoftSPs | Where-Object {
+            $SPsWithPasswordCreds = $MicrosoftSPs.Where({
                 $_.passwordCredentials -and
                 $_.passwordCredentials.Count -gt 0 -and
                 $_.passwordCredentials -ne '[]'
-            }
+            })
 
-            $SPsWithKeyCreds = $MicrosoftSPs | Where-Object {
+            $SPsWithKeyCreds = $MicrosoftSPs.Where({
                 $_.keyCredentials -and
                 $_.keyCredentials.Count -gt 0 -and
                 $_.keyCredentials -ne '[]'
-            }
+            })
         }
 
         $TotalWithCreds = $SPsWithPasswordCreds.Count + $SPsWithKeyCreds.Count

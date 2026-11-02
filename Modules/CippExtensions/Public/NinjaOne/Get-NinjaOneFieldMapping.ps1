@@ -3,6 +3,13 @@ function Get-NinjaOneFieldMapping {
     param (
         $CIPPMapping
     )
+
+    $Unset = [PSCustomObject]@{
+        name  = '--- Do not synchronize ---'
+        value = $null
+        type  = 'unset'
+    }
+
     try {
         #Get available mappings
         $Mappings = [pscustomobject]@{}
@@ -56,6 +63,12 @@ function Get-NinjaOneFieldMapping {
                 FieldLabel = 'Intune Device Compliance Status - Field Used to Monitor Device Compliance'
                 FieldType  = 'Device'
                 Type       = 'TEXT'
+            },
+            [PSCustomObject]@{
+                FieldName  = 'DeviceNonCompliantSettings'
+                FieldLabel = 'Intune Non-Compliant Settings - Field Used to List the Compliance Policy Settings a Device Fails'
+                FieldType  = 'Device'
+                Type       = @('TEXT_MULTILINE', 'TEXT')
             }
         )
 
@@ -66,7 +79,7 @@ function Get-NinjaOneFieldMapping {
                 IntegrationId   = $_.NinjaOne
                 IntegrationName = $_.NinjaOneName
             }
-            Remove-AzDataTableEntity -Force @CIPPMapping -Entity $_
+            Remove-CIPPAzDataTableEntity -Force @CIPPMapping -Entity $_
         }
         if (($MappingFieldMigrate | Measure-Object).count -gt 0) {
             Add-CIPPAzDataTableEntity @CIPPMapping -Entity $MappingFieldMigrate -Force
@@ -94,13 +107,9 @@ function Get-NinjaOneFieldMapping {
         if ($Null -eq $NinjaCustomFieldsOrg) {
             [System.Collections.Generic.List[object]]$NinjaCustomFieldsOrg = @()
         }
-        $Unset = [PSCustomObject]@{
-            name  = '--- Do not synchronize ---'
-            value = $null
-            type  = 'unset'
-        }
 
     } catch {
+        Write-Information "Get-NinjaOneFieldMapping: failed to retrieve NinjaOne custom fields: $($_.Exception.Message)"
         [System.Collections.Generic.List[object]]$NinjaCustomFieldsNode = @()
         [System.Collections.Generic.List[object]]$NinjaCustomFieldsOrg = @()
     }

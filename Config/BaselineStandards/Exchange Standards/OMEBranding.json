@@ -1,0 +1,155 @@
+{
+  "name": "OMEBranding",
+  "label": "Set Encrypted Message Branding (OME)",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Applies the organization's branding to encrypted messages and the secure reading portal: colors, texts, logo, and recipient sign-in options. Only configured fields are enforced.",
+  "executiveText": "Brands encrypted email so recipients recognize legitimate secure messages from the organization - consistent branding makes phishing lookalikes easier to spot and secure mail more trusted.",
+  "docsDescription": "Grades the OME configuration's branding fields against the configured values - fields left empty are not graded or written. A configured logo grades as permanent drift and re-uploads on every remediation run, because Exchange never exposes the current image for comparison; this matches the classic standard.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Set-OMEConfiguration",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "BackgroundColor": {
+      "type": "textField",
+      "label": "Background Color (hex, e.g. #ffffff)",
+      "omitWhenBlank": true,
+      "validators": {
+        "pattern": {
+          "value": "^#[0-9A-Fa-f]{6}$",
+          "message": "Must be a hex color like #FFFFFF"
+        }
+      }
+    },
+    "LogoUrl": {
+      "type": "textField",
+      "label": "Logo Image URL (max 40KB, 170x70px)",
+      "omitWhenBlank": true,
+      "validators": {
+        "pattern": {
+          "value": "^https?://.+$",
+          "message": "Must be a URL starting with http:// or https://"
+        }
+      }
+    },
+    "IntroductionText": {
+      "type": "textField",
+      "label": "Text next to the sender's name and address",
+      "omitWhenBlank": true
+    },
+    "ReadButtonText": {
+      "type": "textField",
+      "label": "Read Button Text",
+      "omitWhenBlank": true
+    },
+    "EmailText": {
+      "type": "textField",
+      "label": "Email text below the button",
+      "omitWhenBlank": true,
+      "validators": {
+        "maxLength": {
+          "value": 1024,
+          "message": "Maximum length is 1024 characters"
+        }
+      }
+    },
+    "PrivacyStatementUrl": {
+      "type": "textField",
+      "label": "Privacy Statement URL",
+      "omitWhenBlank": true,
+      "validators": {
+        "pattern": {
+          "value": "^https?://.+$",
+          "message": "Must be a URL starting with http:// or https://"
+        }
+      }
+    },
+    "DisclaimerText": {
+      "type": "textField",
+      "label": "Disclaimer Statement",
+      "omitWhenBlank": true,
+      "validators": {
+        "maxLength": {
+          "value": 1024,
+          "message": "Maximum length is 1024 characters"
+        }
+      }
+    },
+    "PortalText": {
+      "type": "textField",
+      "label": "Portal header text (max 128 chars)",
+      "omitWhenBlank": true,
+      "validators": {
+        "maxLength": {
+          "value": 128,
+          "message": "Maximum length is 128 characters"
+        }
+      }
+    },
+    "OTPEnabled": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "One-Time Pass Code sign-in",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Enabled",
+          "value": true
+        },
+        {
+          "label": "Disabled",
+          "value": false
+        }
+      ]
+    },
+    "SocialIdSignIn": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Social ID Sign-In",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Enabled",
+          "value": true
+        },
+        {
+          "label": "Disabled",
+          "value": false
+        }
+      ]
+    }
+  },
+  "read": {
+    "cacheType": "ExoOMEConfiguration"
+  },
+  "prepare": "Get-CIPPBaselineOMEBrandingState",
+  "remediate": {
+    "executor": "OMEBranding",
+    "backgroundColor": "%BackgroundColor%",
+    "logoUrl": "%LogoUrl%",
+    "introductionText": "%IntroductionText%",
+    "readButtonText": "%ReadButtonText%",
+    "emailText": "%EmailText%",
+    "privacyStatementUrl": "%PrivacyStatementUrl%",
+    "disclaimerText": "%DisclaimerText%",
+    "portalText": "%PortalText%",
+    "otpEnabled": "%OTPEnabled%",
+    "socialIdSignIn": "%SocialIdSignIn%"
+  }
+}

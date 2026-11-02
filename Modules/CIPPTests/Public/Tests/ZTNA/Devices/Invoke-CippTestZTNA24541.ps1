@@ -15,11 +15,11 @@ function Invoke-CippTestZTNA24541 {
             return
         }
 
-        $WindowsPolicies = @($IntunePolicies | Where-Object {
+        $WindowsPolicies = @($IntunePolicies.Where({
                 $_.'@odata.type' -in @('#microsoft.graph.windows10CompliancePolicy', '#microsoft.graph.windows11CompliancePolicy')
-            })
+            }))
 
-        $AssignedPolicies = @($WindowsPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $AssignedPolicies = @($WindowsPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
         $Passed = $AssignedPolicies.Count -gt 0
 
         if ($Passed) {

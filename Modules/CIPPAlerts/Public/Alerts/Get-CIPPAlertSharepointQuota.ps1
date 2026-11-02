@@ -15,7 +15,9 @@ function Get-CIPPAlertSharepointQuota {
         $extraHeaders = @{
             'Accept' = 'application/json'
         }
-        $sharepointQuota = (New-GraphGetRequest -extraHeaders $extraHeaders -scope "$($SharePointInfo.AdminUrl)/.default" -tenantid $TenantFilter -uri "$($SharePointInfo.AdminUrl)/_api/StorageQuotas()?api-version=1.3.2")
+        # Cert-based app-only auth: SPO admin REST 401s delegated client-secret tokens on
+        # tenants where the service account lacks SharePoint admin rights.
+        $sharepointQuota = (New-GraphGetRequest -extraHeaders $extraHeaders -scope "$($SharePointInfo.AdminUrl)/.default" -tenantid $TenantFilter -uri "$($SharePointInfo.AdminUrl)/_api/StorageQuotas()?api-version=1.3.2" -asapp $true -UseCertificate)
     } catch {
         return
     }
@@ -25,16 +27,19 @@ function Get-CIPPAlertSharepointQuota {
         } catch {
             $Value = 90
         }
-        $UsedStoragePercentage = [int](($sharepointQuota.GeoUsedStorageMB / $sharepointQuota.TenantStorageMB) * 100)
+        $GeoUsedStorageMB = ($sharepointQuota.GeoUsedStorageMB | Measure-Object -Sum).Sum
+        $TenantStorageMB = $sharepointQuota.TenantStorageMB | Select-Object -First 1
+        $UsedStoragePercentage = [int](($GeoUsedStorageMB / $TenantStorageMB) * 100)
         if ($UsedStoragePercentage -gt $Value) {
             $AlertData = [PSCustomObject]@{
+                Message               = "SharePoint storage is above the $Value% quota threshold"
                 UsedStoragePercentage = $UsedStoragePercentage
-                StorageUsed           = ([math]::Round($sharepointQuota.GeoUsedStorageMB / 1024, 2))
-                StorageQuota          = ([math]::Round($sharepointQuota.TenantStorageMB / 1024, 2))
+                StorageUsed           = ([math]::Round($GeoUsedStorageMB / 1024, 2))
+                StorageQuota          = ([math]::Round($TenantStorageMB / 1024, 2))
                 AlertQuotaThreshold   = $Value
                 Tenant                = $TenantFilter
             }
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     }
 }

@@ -6,7 +6,7 @@ function Set-HaloMapping {
         $Request
     )
     Get-CIPPAzDataTableEntity @CIPPMapping -Filter "PartitionKey eq 'HaloMapping'" | ForEach-Object {
-        Remove-AzDataTableEntity -Force @CIPPMapping -Entity $_
+        Remove-CIPPAzDataTableEntity -Force @CIPPMapping -Entity $_
     }
     foreach ($Mapping in $Request.Body) {
         if ($Mapping.TenantId) {

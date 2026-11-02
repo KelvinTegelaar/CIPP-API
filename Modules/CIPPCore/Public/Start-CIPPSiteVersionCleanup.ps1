@@ -75,6 +75,18 @@ function Start-CIPPSiteVersionCleanup {
     }
 
     if ($PSCmdlet.ShouldProcess($SiteUrl, 'Start file version batch delete job')) {
-        return New-GraphPostRequest -scope "$AdminUrl/.default" -tenantid $TenantFilter -Uri "$AdminUrl/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders
+        $Response = New-GraphPostRequest -scope "$AdminUrl/.default" -tenantid $TenantFilter -Uri "$AdminUrl/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders
+
+        # CSOM reports validation failures as HTTP 200 with a populated ErrorInfo on the first
+        # array element. Surface it instead of returning a silent "success" the caller can't see.
+        if ($Response -is [string]) {
+            $Response = $Response | ConvertFrom-Json
+        }
+        $ErrorInfo = $Response | Where-Object { $_.PSObject.Properties.Name -contains 'ErrorInfo' } | Select-Object -First 1
+        if ($ErrorInfo.ErrorInfo) {
+            throw "SharePoint rejected the version cleanup job for $SiteUrl : $($ErrorInfo.ErrorInfo.ErrorMessage)"
+        }
+
+        return $Response
     }
 }

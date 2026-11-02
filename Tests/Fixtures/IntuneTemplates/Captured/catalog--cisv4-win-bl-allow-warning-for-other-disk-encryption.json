@@ -1,0 +1,45 @@
+{
+  "DisplayName": "CISv4 - WIN - BL - Allow Warning For Other Disk Encryption",
+  "Description": "This setting allows Admin to disable all UI (notification for encryption and warning prompt for other disk encryption) and turn on encryption on the user machines silently.When you disable the warning prompt, the OS drive's recovery key will back up to the user's Microsoft Entra account. When you allow the warning prompt, the user who receives the prompt can select where to back up the OS drive's recovery key. The endpoint for a fixed data drive's backup is chosen in the following order:\n\n1. The user's Windows Server Active Directory Domain Services account.\n2. The user's Microsoft Entra account.\n3. The user's personal OneDrive (MDM/MAM only).\nEncryption will wait until one of these three locations backs up successfully.\n\nThe recommended state for this setting is: Disabled.",
+  "Type": "Catalog",
+  "Policy": {
+    "name": "CISv4 - WIN - BL - Allow Warning For Other Disk Encryption",
+    "description": "This setting allows Admin to disable all UI (notification for encryption and warning prompt for other disk encryption) and turn on encryption on the user machines silently.When you disable the warning prompt, the OS drive's recovery key will back up to the user's Microsoft Entra account. When you allow the warning prompt, the user who receives the prompt can select where to back up the OS drive's recovery key. The endpoint for a fixed data drive's backup is chosen in the following order:\n\n1. The user's Windows Server Active Directory Domain Services account.\n2. The user's Microsoft Entra account.\n3. The user's personal OneDrive (MDM/MAM only).\nEncryption will wait until one of these three locations backs up successfully.\n\nThe recommended state for this setting is: Disabled.",
+    "settings": [
+      {
+        "id": "0",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "device_vendor_msft_bitlocker_allowwarningforotherdiskencryption",
+          "settingInstanceTemplateReference": null,
+          "auditRuleInformation": null,
+          "choiceSettingValue": {
+            "settingValueTemplateReference": null,
+            "value": "device_vendor_msft_bitlocker_allowwarningforotherdiskencryption_0",
+            "children": [
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                "settingDefinitionId": "device_vendor_msft_bitlocker_allowstandarduserencryption",
+                "settingInstanceTemplateReference": null,
+                "auditRuleInformation": null,
+                "choiceSettingValue": {
+                  "settingValueTemplateReference": null,
+                  "value": "device_vendor_msft_bitlocker_allowstandarduserencryption_0",
+                  "children": []
+                }
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "platforms": "windows10",
+    "technologies": "mdm",
+    "templateReference": {
+      "templateId": "",
+      "templateFamily": "none",
+      "templateDisplayName": null,
+      "templateDisplayVersion": null
+    }
+  }
+}

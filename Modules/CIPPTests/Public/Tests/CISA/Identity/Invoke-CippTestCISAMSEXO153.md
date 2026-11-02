@@ -14,7 +14,7 @@ Set-SafeLinksPolicy -Identity "Default" -TrackUserClicks $false
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.15.3](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo153v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.15.3](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo153v1)
 - [Set up Safe Links policies](https://learn.microsoft.com/microsoft-365/security/office-365-security/safe-links-policies-configure)
 
 <!--- Results --->

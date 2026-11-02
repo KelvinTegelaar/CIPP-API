@@ -1,0 +1,107 @@
+{
+  "name": "IntuneTemplatePackage",
+  "label": "Intune Template Package",
+  "cat": "Templates",
+  "tag": ["HighImpact"],
+  "impact": "High Impact",
+  "helpText": "Deploys and drift-checks EVERY Intune template tagged with the selected package. Membership is resolved fresh on every run: tag a new template with the package and it joins this baseline automatically, untag it and it leaves. All templates in the package share the assignment options configured here - add a template individually instead when it needs different options.",
+  "executiveText": "Deploys a complete, named bundle of device management configurations in one step - for example an entire Windows security baseline - and keeps every policy in the bundle enforced as the bundle evolves.",
+  "recommendedBy": ["CIPP"],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "secureScoreImpact": 20,
+  "instanceIdentity": "intuneTemplatePackage",
+  "multiple": true,
+  "package": {
+    "memberStandard": "IntuneTemplate",
+    "memberVariable": "intuneTemplate",
+    "variable": "intuneTemplatePackage",
+    "templatePartition": "IntuneTemplate"
+  },
+  "variables": {
+    "intuneTemplatePackage": {
+      "type": "autoComplete",
+      "label": "Select a package of Intune Templates",
+      "required": true,
+      "api": {
+        "url": "/api/ListIntuneTemplates?mode=Tag",
+        "labelField": "label",
+        "valueField": "value",
+        "queryKey": "ListIntuneTemplates-tags",
+        "showRefresh": true
+      }
+    },
+    "assignTo": {
+      "type": "autoComplete",
+      "label": "Who should these templates be assigned to?",
+      "options": [
+        {
+          "label": "Do not assign",
+          "value": "On"
+        },
+        {
+          "label": "Assign to all users",
+          "value": "allLicensedUsers"
+        },
+        {
+          "label": "Assign to all devices",
+          "value": "AllDevices"
+        },
+        {
+          "label": "Assign to all users and devices",
+          "value": "AllDevicesAndUsers"
+        },
+        {
+          "label": "Assign to Custom Group",
+          "value": "customGroup"
+        }
+      ],
+      "default": "On"
+    },
+    "customGroup": {
+      "type": "textField",
+      "label": "Custom group name (if assigning to a custom group; wildcards allowed)",
+      "default": ""
+    },
+    "excludeGroup": {
+      "type": "textField",
+      "label": "Exclude groups (comma-separated, wildcards allowed)",
+      "default": ""
+    },
+    "assignmentFilter": {
+      "type": "textField",
+      "label": "Assignment filter name (optional, wildcards allowed)",
+      "default": ""
+    },
+    "assignmentFilterType": {
+      "type": "autoComplete",
+      "label": "Assignment filter mode",
+      "options": [
+        {
+          "label": "Include - assign to devices matching the filter",
+          "value": "include"
+        },
+        {
+          "label": "Exclude - assign to devices NOT matching the filter",
+          "value": "exclude"
+        }
+      ],
+      "default": "include"
+    },
+    "verifyAssignments": {
+      "type": "switch",
+      "label": "Verify policy assignments",
+      "default": false
+    },
+    "levenshteinDistance": {
+      "type": "number",
+      "label": "Fuzzy match distance (0 = exact name match only; values above 5 can match unrelated policies)",
+      "default": 0
+    }
+  }
+}

@@ -13,9 +13,17 @@ function Invoke-CippTestCIS_7_2_4 {
             return
         }
 
-        $Cfg = $SPO | Select-Object -First 1
-        $OneDrive = $Cfg.OneDriveSharingCapability
-        $SP       = $Cfg.SharingCapability
+        $Cfg = @($SPO)[0]
+        # CSOM exposes OneDriveSharingCapability as ODBSharingCapability, and both as numbers.
+        $OneDrive, $SP = foreach ($Value in $Cfg.ODBSharingCapability, $Cfg.SharingCapability) {
+            switch ("$Value") {
+                '0' { 'Disabled' }
+                '1' { 'ExternalUserSharingOnly' }
+                '2' { 'ExternalUserAndGuestSharing' }
+                '3' { 'ExistingExternalUserSharingOnly' }
+                default { "$Value" }
+            }
+        }
         $Allowed  = @('Disabled', 'ExistingExternalUserSharingOnly', 'ExternalUserSharingOnly')
 
         # OneDrive must be at least as restrictive as SharePoint

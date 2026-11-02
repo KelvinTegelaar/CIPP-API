@@ -1,0 +1,54 @@
+{
+  "name": "MessageExpiration",
+  "label": "Lower Transport Message Expiration to 12 hours",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the transport message configuration to timeout a message at 12 hours.",
+  "executiveText": "Expires undeliverable messages in the mail queue after 12 hours instead of the default 24, so senders are notified of failed deliveries faster and can act sooner.",
+  "docsDescription": "Expires messages in the transport queue after 12 hours. Makes the NDR for failed messages show up faster for users. Default is 24 hours.",
+  "impactColour": "info",
+  "addedDate": "2024-02-23",
+  "powershellEquivalent": "Set-TransportConfig -MessageExpirationTimeout 12.00:00:00",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "messageExpiration": {
+      "type": "textField",
+      "label": "Message expiration timeout (hh:mm:ss)",
+      "default": "12:00:00",
+      "recommended": "12:00:00",
+      "validators": {
+        "pattern": {
+          "value": "^(1\\.00:00:00|(0\\.)?(1[2-9]|2[0-3]):[0-5][0-9]:[0-5][0-9])$",
+          "message": "Must be a timespan between 12:00:00 (12 hours) and 1.00:00:00 (24 hours)"
+        }
+      }
+    }
+  },
+  "expected": {
+    "MessageExpiration": "%messageExpiration%"
+  },
+  "read": {
+    "cacheType": "ExoTransportConfig"
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-TransportConfig",
+        "params": {
+          "MessageExpiration": "%messageExpiration%"
+        }
+      }
+    ]
+  }
+}

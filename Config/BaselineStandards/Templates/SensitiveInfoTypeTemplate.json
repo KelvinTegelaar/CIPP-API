@@ -1,0 +1,46 @@
+{
+  "name": "SensitiveInfoTypeTemplate",
+  "label": "Sensitive Information Type Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Deploy custom Microsoft Purview Sensitive Information Types from CIPP templates. Existing custom SITs with the same name are overwritten in place.",
+  "executiveText": "Deploys custom Sensitive Information Types so DLP policies can detect organization-specific identifiers - employee IDs, project codenames, internal account numbers - across tenants consistently.",
+  "docsDescription": "Deploy custom Sensitive Information Types from CIPP templates. Supports the simple-mode template (Name + Pattern + Confidence - backend synthesizes the rule pack XML) and the advanced-mode template (caller-supplied FileDataBase64 rule pack). Each selected template is diffed against the live SIT's rule pack; missing and drifted SITs are remediated in place. Built-in Microsoft SITs cannot be modified and are reported as compliant. A template supplying neither a Pattern nor a rule pack is reported as invalid and is not deployed.",
+  "impactColour": "info",
+  "addedDate": "2026-05-10",
+  "powershellEquivalent": "New-DlpSensitiveInformationTypeRulePackage or Set-DlpSensitiveInformationTypeRulePackage",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "sensitiveInfoTypeTemplate",
+  "identity": {
+    "partition": "SensitiveInfoTypeTemplate",
+    "nameField": "name"
+  },
+  "variables": {
+    "sensitiveInfoTypeTemplate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select Sensitive Information Type Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListSensitiveInfoTypeTemplates",
+        "labelField": "name",
+        "valueField": "GUID",
+        "queryKey": "ListSensitiveInfoTypeTemplates"
+      }
+    }
+  },
+  "prepare": "Get-CIPPBaselineSensitiveInfoTypeTemplateState",
+  "remediate": {
+    "executor": "SensitiveInfoTypeTemplate"
+  }
+}

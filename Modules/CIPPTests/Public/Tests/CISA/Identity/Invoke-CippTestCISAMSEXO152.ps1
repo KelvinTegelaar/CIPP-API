@@ -23,7 +23,7 @@ function Invoke-CippTestCISAMSEXO152 {
             return
         }
 
-        $FailedPolicies = $SafeLinksPolicies | Where-Object { -not $_.ScanUrls }
+        $FailedPolicies = $SafeLinksPolicies.Where({ -not $_.ScanUrls })
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($SafeLinksPolicies.Count) Safe Links policy/policies have real-time URL scanning enabled.")

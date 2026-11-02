@@ -10,6 +10,7 @@ function Import-CommunityTemplate {
         $MigrationTable,
         $LocationData,
         $Source,
+        $Path,
         [switch]$Force
     )
 
@@ -32,6 +33,21 @@ function Import-CommunityTemplate {
             $Existing = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Template.RowKey)' and PartitionKey eq '$($Template.PartitionKey)'" -ErrorAction SilentlyContinue
 
             if ($Existing) {
+                # This write is a full replace keyed on RowKey, so an unchanged repo file would
+                # silently revert edits made in CIPP. Only write when the SHA moved, or when -Force
+                # makes the overwrite explicit.
+                if ($Existing.SHA -eq $SHA -and -not $Force) {
+                    $StatusMessage = "Template '$($Template.RowKey)' from source '$Source' is already up to date. Skipping import."
+                    Write-Information $StatusMessage
+                    return $StatusMessage
+                }
+
+                # Package membership is assigned in CIPP and never carried in the repo file, so the
+                # replace has to bring it across or the template drops out of its package.
+                if ($Existing.Package -and -not $Template.Package) {
+                    $Template | Add-Member -MemberType NoteProperty -Name Package -Value $Existing.Package -Force
+                }
+
                 if ($Existing.PartitionKey -eq 'StandardsTemplateV2') {
                     # Convert existing JSON to object for updates
                     if (Test-Json $Existing.JSON -ErrorAction SilentlyContinue) {
@@ -67,12 +83,19 @@ function Import-CommunityTemplate {
             $Template.JSON = $NewJSON
             $Template | Add-Member -MemberType NoteProperty -Name SHA -Value $SHA -Force
             $Template | Add-Member -MemberType NoteProperty -Name Source -Value $Source -Force
+            if ($Path) {
+                $Template | Add-Member -MemberType NoteProperty -Name SourcePath -Value $Path -Force
+            }
+            if ($Template.PartitionKey -eq 'StandardsTemplateV2') {
+                $Template | Add-Member -MemberType NoteProperty -Name ContentHash -Value (Get-CIPPTemplateContentHash -JSON $NewJSON) -Force
+            }
             Add-CIPPAzDataTableEntity @Table -Entity $Template -Force
 
             if ($Existing -and $Existing.SHA -ne $SHA) {
                 $StatusMessage = "Updated template '$($Template.RowKey)' from source '$Source' (SHA changed)."
             } elseif ($Existing) {
-                $StatusMessage = "Template '$($Template.RowKey)' from source '$Source' is already up to date."
+                # Only reachable with -Force; the unchanged case returned above.
+                $StatusMessage = "Overwrote template '$($Template.RowKey)' from source '$Source' (forced)."
             } else {
                 $StatusMessage = "Created template '$($Template.RowKey)' from source '$Source'."
             }
@@ -84,15 +107,6 @@ function Import-CommunityTemplate {
 
             switch -Wildcard ($Type) {
                 '*Group*' {
-                    $RawJsonObj = [PSCustomObject]@{
-                        Displayname     = $Template.displayName
-                        Description     = $Template.Description
-                        MembershipRules = $Template.membershipRule
-                        username        = $Template.mailNickname
-                        GUID            = $id
-                        groupType       = 'generic'
-                    } | ConvertTo-Json -Depth 100
-
                     # Check for duplicate template
                     $DuplicateFilter = "PartitionKey eq 'GroupTemplate'"
                     $ExistingTemplates = Get-CIPPAzDataTableEntity @Table -Filter $DuplicateFilter -ErrorAction SilentlyContinue
@@ -115,6 +129,19 @@ function Import-CommunityTemplate {
                         break
                     }
 
+                    # On update, reuse the existing GUID so the JSON-embedded GUID stays in
+                    # sync with the table RowKey (see the Intune path below for the full rationale).
+                    $TemplateGuid = if ($Duplicate) { $Duplicate.GUID } else { $id }
+
+                    $RawJsonObj = [PSCustomObject]@{
+                        Displayname     = $Template.displayName
+                        Description     = $Template.Description
+                        MembershipRules = $Template.membershipRule
+                        username        = $Template.mailNickname
+                        GUID            = $TemplateGuid
+                        groupType       = 'generic'
+                    } | ConvertTo-Json -Depth 100
+
                     if ($Duplicate) {
                         $StatusMessage = "Updating Group template '$($Template.displayName)' from source '$Source' (SHA changed)."
                         Write-Information $StatusMessage
@@ -126,10 +153,13 @@ function Import-CommunityTemplate {
                         JSON         = "$RawJsonObj"
                         PartitionKey = 'GroupTemplate'
                         SHA          = $SHA
-                        GUID         = if ($Duplicate) { $Duplicate.GUID } else { $id }
+                        GUID         = $TemplateGuid
                         RowKey       = if ($Duplicate) { $Duplicate.RowKey } else { $id }
                         Source       = $Source
                     }
+                    if ($Path) { $entity.SourcePath = $Path }
+                    # Full replace: keep the CIPP-assigned Package.
+                    if ($Duplicate -and $Duplicate.Package) { $entity.Package = $Duplicate.Package }
                     Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
                     break
                 }
@@ -202,6 +232,9 @@ function Import-CommunityTemplate {
                         RowKey       = if ($Duplicate) { $Duplicate.RowKey } else { $id }
                         Source       = $Source
                     }
+                    if ($Path) { $entity.SourcePath = $Path }
+                    # Full replace: keep the CIPP-assigned Package.
+                    if ($Duplicate -and $Duplicate.Package) { $entity.Package = $Duplicate.Package }
                     Write-Information "Final entity: $($entity | ConvertTo-Json -Depth 10)"
 
                     Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
@@ -239,13 +272,12 @@ function Import-CommunityTemplate {
                     #create a new template
                     $DisplayName = $Template.displayName ?? $template.Name
 
-                    $RawJsonObj = [PSCustomObject]@{
-                        Displayname = $DisplayName
-                        Description = $Template.Description
-                        RAWJson     = $RawJson
-                        Type        = $URLName
-                        GUID        = $id
-                    } | ConvertTo-Json -Depth 100 -Compress
+                    $Validation = Test-CIPPIntuneTemplate -RawJSON $RawJson -TemplateType $URLName -DisplayName $DisplayName
+                    if (-not $Validation.IsValid) {
+                        $StatusMessage = "Intune template '$DisplayName' from source '$Source' was not imported: $($Validation.Errors -join ' ')"
+                        Write-Warning $StatusMessage
+                        return $StatusMessage
+                    }
 
                     # Check for duplicate template
                     $DuplicateFilter = "PartitionKey eq 'IntuneTemplate'"
@@ -262,6 +294,21 @@ function Import-CommunityTemplate {
                             $false
                         }
                     } | Select-Object -First 1
+
+                    # On update, reuse the existing template's GUID so the GUID embedded
+                    # in the JSON blob stays in sync with the table RowKey. Minting a fresh
+                    # GUID here desyncs the two: the standards engine resolves templates by
+                    # RowKey, while the template picker surfaces the JSON GUID, so the drift
+                    # would point at a GUID that no longer matches any RowKey.
+                    $TemplateGuid = if ($Duplicate) { $Duplicate.GUID } else { $id }
+
+                    $RawJsonObj = [PSCustomObject]@{
+                        Displayname = $DisplayName
+                        Description = $Template.Description
+                        RAWJson     = $RawJson
+                        Type        = $URLName
+                        GUID        = $TemplateGuid
+                    } | ConvertTo-Json -Depth 100 -Compress
 
                     if ($Duplicate -and $Duplicate.SHA -eq $SHA -and -not $Force) {
                         $StatusMessage = "Intune template '$DisplayName' from source '$Source' is already up to date. Skipping import."
@@ -280,14 +327,11 @@ function Import-CommunityTemplate {
                         JSON         = "$RawJsonObj"
                         PartitionKey = 'IntuneTemplate'
                         SHA          = $SHA
-                        GUID         = if ($Duplicate) { $Duplicate.GUID } else { $id }
+                        GUID         = $TemplateGuid
                         RowKey       = if ($Duplicate) { $Duplicate.RowKey } else { $id }
                         Source       = $Source
                     }
-
-                    if ($Existing -and $Existing.Package) {
-                        $entity.Package = $Existing.Package
-                    }
+                    if ($Path) { $entity.SourcePath = $Path }
 
                     if ($Duplicate -and $Duplicate.Package) {
                         $entity.Package = $Duplicate.Package

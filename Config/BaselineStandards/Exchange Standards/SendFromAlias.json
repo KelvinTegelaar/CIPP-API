@@ -1,0 +1,51 @@
+{
+  "name": "SendFromAlias",
+  "label": "Set Send from alias state",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Enables or disables the ability for users to send from their alias addresses.",
+  "executiveText": "Allows employees to send emails from their alternative email addresses (aliases) rather than just their primary address. This is useful for employees who manage multiple roles or departments, enabling them to send emails from the most appropriate address for the context.",
+  "docsDescription": "Allows users to change the 'from' address to any set in their Azure AD Profile.",
+  "impactColour": "warning",
+  "addedDate": "2022-05-25",
+  "powershellEquivalent": "Set-Mailbox",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "switch",
+      "label": "Allow users to send from their alias addresses",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "expected": {
+    "SendFromAliasEnabled": "%state%"
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "writeTarget": "exoOrganizationConfig",
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "SendFromAliasEnabled": "%state%"
+        }
+      }
+    ]
+  }
+}

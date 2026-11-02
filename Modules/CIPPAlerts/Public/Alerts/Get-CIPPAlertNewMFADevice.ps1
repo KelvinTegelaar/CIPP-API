@@ -26,7 +26,7 @@ function Get-CIPPAlertNewMFADevice {
                     try {
                         $LocationData = Get-CIPPGeoIPLocation -IP $IPAddress
                     } catch {
-                        Write-Information "Could not enrich MFA audit IP ${$IPAddress}: $($_.Exception.Message)"
+                        Write-Information "Could not enrich MFA audit IP ${IPAddress}: $($_.Exception.Message)"
                     }
                 }
 
@@ -48,9 +48,7 @@ function Get-CIPPAlertNewMFADevice {
             }
         }
 
-        if ($AlertData) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

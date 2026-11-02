@@ -37,19 +37,31 @@ function Set-CIPPSPOSite {
         [Parameter(Mandatory = $true)]
         [string]$SiteUrl,
         [Parameter(Mandatory = $true)]
-        [hashtable]$Properties
+        [hashtable]$Properties,
+        # SharePoint app-only auth requires a certificate (secret app-only is rejected by SPO). When
+        # set, authenticate app-only with the SAM certificate instead of the delegated context.
+        [switch]$UseCertificate
     )
 
     $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
     $AdminUrl = $SharePointInfo.AdminUrl
 
-    $AllowedTypes = @('Boolean', 'String', 'Int32')
+    # Threaded onto the ProcessQuery call below; empty = unchanged delegated behaviour.
+    $AuthSplat = @{}
+    if ($UseCertificate) { $AuthSplat['AsApp'] = $true; $AuthSplat['UseCertificate'] = $true }
+
+    $AllowedTypes = @('Boolean', 'String', 'Int32', 'Int64')
+    # Properties that are CSOM enums; their (numeric) value must be sent as Type="Enum".
+    $EnumProperties = @('SharingCapability', 'DefaultSharingLinkType', 'DefaultLinkPermission', 'SharingDomainRestrictionMode', 'ConditionalAccessPolicy')
     $SetProperty = [System.Collections.Generic.List[string]]::new()
     $x = 106
     foreach ($Property in $Properties.Keys) {
         $PropertyType = $Properties[$Property].GetType().Name
-        if ($PropertyType -in $AllowedTypes) {
-            $PropertyToSet = if ($PropertyType -eq 'Boolean') { $Properties[$Property].ToString().ToLower() } else { $Properties[$Property] }
+        if ($Property -in $EnumProperties) {
+            $SetProperty.Add("<SetProperty Id=`"$x`" ObjectPathId=`"104`" Name=`"$Property`"><Parameter Type=`"Enum`">$([int]$Properties[$Property])</Parameter></SetProperty>")
+            $x++
+        } elseif ($PropertyType -in $AllowedTypes) {
+            $PropertyToSet = if ($PropertyType -eq 'Boolean') { $Properties[$Property].ToString().ToLower() } else { [System.Security.SecurityElement]::Escape([string]$Properties[$Property]) }
             $SetProperty.Add("<SetProperty Id=`"$x`" ObjectPathId=`"104`" Name=`"$Property`"><Parameter Type=`"$PropertyType`">$PropertyToSet</Parameter></SetProperty>")
             $x++
         }
@@ -70,6 +82,6 @@ function Set-CIPPSPOSite {
     }
 
     if ($PSCmdlet.ShouldProcess($SiteUrl, 'Set Site Properties')) {
-        New-GraphPostRequest -scope "$AdminUrl/.default" -tenantid $TenantFilter -Uri "$AdminUrl/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders
+        New-GraphPostRequest -scope "$AdminUrl/.default" -tenantid $TenantFilter -Uri "$AdminUrl/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders @AuthSplat
     }
 }

@@ -20,7 +20,7 @@ function Invoke-EditSafeLinksPolicy {
     $RuleName = $Request.Query.RuleName ?? $Request.Body.RuleName
 
     # Helper function to process array fields
-    function Process-ArrayField {
+    function ConvertTo-FieldArray {
         param (
             [Parameter(Mandatory = $false)]
             $Field
@@ -82,7 +82,7 @@ function Invoke-EditSafeLinksPolicy {
     $EnableForInternalSenders = $Request.Body.EnableForInternalSenders
     $DeliverMessageAfterScan = $Request.Body.DeliverMessageAfterScan
     $DisableUrlRewrite = $Request.Body.DisableUrlRewrite
-    $DoNotRewriteUrls = Process-ArrayField -Field $Request.Body.DoNotRewriteUrls
+    $DoNotRewriteUrls = ConvertTo-FieldArray -Field $Request.Body.DoNotRewriteUrls
     $AdminDisplayName = $Request.Body.AdminDisplayName
     $CustomNotificationText = $Request.Body.CustomNotificationText
     $EnableOrganizationBranding = $Request.Body.EnableOrganizationBranding
@@ -93,12 +93,12 @@ function Invoke-EditSafeLinksPolicy {
     $State = $Request.Body.State
 
     # Process recipient-related parameters
-    $SentTo = Process-ArrayField -Field $Request.Body.SentTo
-    $SentToMemberOf = Process-ArrayField -Field $Request.Body.SentToMemberOf
-    $RecipientDomainIs = Process-ArrayField -Field $Request.Body.RecipientDomainIs
-    $ExceptIfSentTo = Process-ArrayField -Field $Request.Body.ExceptIfSentTo
-    $ExceptIfSentToMemberOf = Process-ArrayField -Field $Request.Body.ExceptIfSentToMemberOf
-    $ExceptIfRecipientDomainIs = Process-ArrayField -Field $Request.Body.ExceptIfRecipientDomainIs
+    $SentTo = ConvertTo-FieldArray -Field $Request.Body.SentTo
+    $SentToMemberOf = ConvertTo-FieldArray -Field $Request.Body.SentToMemberOf
+    $RecipientDomainIs = ConvertTo-FieldArray -Field $Request.Body.RecipientDomainIs
+    $ExceptIfSentTo = ConvertTo-FieldArray -Field $Request.Body.ExceptIfSentTo
+    $ExceptIfSentToMemberOf = ConvertTo-FieldArray -Field $Request.Body.ExceptIfSentToMemberOf
+    $ExceptIfRecipientDomainIs = ConvertTo-FieldArray -Field $Request.Body.ExceptIfRecipientDomainIs
 
     $Results = [System.Collections.ArrayList]@()
     $hasPolicyParams = $false

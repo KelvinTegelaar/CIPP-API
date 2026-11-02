@@ -1,0 +1,41 @@
+{
+  "name": "OneDriveLicensedQuota",
+  "label": "Raise OneDrive storage quota for entitled users",
+  "cat": "SharePoint Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Raises the OneDrive storage quota to 5 TB for users whose license includes that entitlement. Microsoft provisions every OneDrive at 1 TB and does not apply the licensed entitlement automatically. Users already at or above 5 TB, for example raised further by Microsoft support, are left untouched.",
+  "executiveText": "Ensures employees receive the full OneDrive storage their licenses already include. Microsoft grants 5 TB of storage with most enterprise licenses but only provisions 1 TB by default, leaving paid-for capacity unused. Automatically correcting the allocation prevents storage shortages and support tickets without any additional licensing cost.",
+  "docsDescription": "Microsoft provisions every OneDrive with a 1 TB quota regardless of license. Users holding OneDrive for Business (Plan 2), SharePoint Online (Plan 2), or a bundle that includes one of these (Microsoft 365/Office 365 E3/E5, A3/A5, G3/G5) are entitled to 5 TB, but an admin has to raise the quota manually. Entitled users come from the Users cache (enabled accounts with an enabled qualifying service plan); their OneDrive quotas come from the OneDriveQuotas cache, which is refreshed when older than 3 hours and after every remediation. Every provisioned OneDrive below 5 TB is reported and raised to 5 TB with the warning level at 90%. Quotas already at or above 5 TB, for example increased to 25 TB by Microsoft support, are never lowered. Microsoft only permits quotas above 1 TB when the subscription has five or more users on a qualifying plan, so tenants below that threshold are reported as compliant and left unchanged.",
+  "impactColour": "info",
+  "addedDate": "2026-08-21",
+  "powershellEquivalent": "Set-SPOSite -Identity https://tenant-my.sharepoint.com/personal/user -StorageQuota 5242880",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "SHAREPOINTENTERPRISE_GOV",
+    "ONEDRIVEENTERPRISE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "OneDriveQuotas",
+    "requiredCaches": [
+      "OneDriveQuotas"
+    ]
+  },
+  "prepare": "Get-CIPPBaselineOneDriveLicensedQuotaState",
+  "remediate": {
+    "executor": "OneDriveLicensedQuota"
+  }
+}

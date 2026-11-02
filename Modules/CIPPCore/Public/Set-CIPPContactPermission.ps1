@@ -30,7 +30,7 @@ function Set-CIPPContactPermission {
 
         if ($RemoveAccess) {
             if ($PSCmdlet.ShouldProcess("$UserID\$FolderName", "Remove permissions for $LoggingName")) {
-                $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MailboxFolderPermission' -cmdParams @{Identity = "$($UserID):\$FolderName"; User = $RemoveAccess }
+                $null = Remove-CIPPFolderPermission -TenantFilter $TenantFilter -FolderIdentity "$($UserID):\$FolderName" -User $RemoveAccess -AccessRights ($Permissions -join ', ') -Anchor $UserID
                 $Result = "Successfully removed access for $LoggingName from contact folder $($ContactParam.Identity)"
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
             }
@@ -39,7 +39,14 @@ function Set-CIPPContactPermission {
                 try {
                     $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxFolderPermission' -cmdParams $ContactParam -Anchor $UserID
                 } catch {
-                    $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Add-MailboxFolderPermission' -cmdParams $ContactParam -Anchor $UserID
+                    # Set fails when there is no entry to update, so Add is the expected fallback.
+                    # Keep Set's error too, or an unrelated Add failure hides why Set failed.
+                    $SetError = $_
+                    try {
+                        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Add-MailboxFolderPermission' -cmdParams $ContactParam -Anchor $UserID
+                    } catch {
+                        throw "Set-MailboxFolderPermission failed ($($SetError.Exception.Message)) and Add-MailboxFolderPermission also failed: $($_.Exception.Message)"
+                    }
                 }
 
                 $Result = "Successfully set permissions on contact folder $($ContactParam.Identity). The user $LoggingName now has $Permissions permissions on this folder."

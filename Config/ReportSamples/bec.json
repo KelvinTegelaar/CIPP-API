@@ -1,0 +1,343 @@
+{
+  "userData": {
+    "displayName": "Sample User",
+    "userPrincipalName": "sample.user@example.com"
+  },
+  "becData": {
+    "ExtractedAt": "2026-08-05T09:00:00Z",
+    "ExtractResult": "Successfully extracted logs from auditlog",
+    "AnalysisWindowDays": 7,
+    "NewRules": [
+      {
+        "Name": "Sample forwarding rule",
+        "Description": "Move messages from billing@example.com to folder RSS Feeds",
+        "MoveToFolder": "RSS Feeds",
+        "RecentlyChanged": true
+      }
+    ],
+    "InboxRuleChanges": [
+      {
+        "Operation": "New-InboxRule",
+        "UserKey": "sample.user@example.com",
+        "RuleName": "Sample forwarding rule",
+        "Parameters": "MoveToFolder=RSS Feeds; MarkAsRead=True",
+        "Date": "2026-08-03T11:24:00Z",
+        "ClientIP": "203.0.113.10",
+        "Country": "NG",
+        "City": "Lagos",
+        "ForeignLocation": true
+      }
+    ],
+    "NewUsers": [
+      {
+        "displayName": "Sample Contractor",
+        "userPrincipalName": "sample.contractor@example.com",
+        "createdDateTime": "2026-08-02T08:00:00Z"
+      }
+    ],
+    "AddedApps": [
+      {
+        "displayName": "Sample OAuth app",
+        "appId": "00000000-0000-0000-0000-000000000001",
+        "publisher": "Sample Publisher",
+        "createdDateTime": "2026-08-01T10:00:00Z",
+        "MaliciousMatch": null
+      }
+    ],
+    "MaliciousSPs": [
+      {
+        "displayName": "Sample Mail Sync Tool",
+        "appId": "00000000-0000-0000-0000-000000000002",
+        "accountEnabled": true,
+        "createdDateTime": "2026-07-30T09:30:00Z",
+        "CatalogName": "Sample Mail Sync Tool",
+        "Categories": [
+          "Mailbox exfiltration",
+          "Business Email Compromise"
+        ],
+        "Description": "Sample catalog entry used for preview data."
+      }
+    ],
+    "MailboxPermissionChanges": [
+      {
+        "Operation": "Add-MailboxPermission",
+        "UserKey": "admin@example.com",
+        "ObjectId": "sample.user@example.com",
+        "Permissions": "FullAccess",
+        "TargetsSuspect": true
+      }
+    ],
+    "SentMessages": [
+      {
+        "MessageTraceId": "00000000-0000-0000-0000-000000000003",
+        "Status": "Delivered",
+        "Subject": "Sample invoice",
+        "RecipientAddress": "supplier@example.net",
+        "Received": "2026-08-04 15:02:11Z",
+        "FromIP": "203.0.113.10",
+        "Country": "NG",
+        "City": "Lagos",
+        "ForeignLocation": true
+      }
+    ],
+    "SentMessageAnalysis": {
+      "TotalMessages": 47,
+      "TotalRecipients": 212,
+      "RepeatedSubjects": [
+        {
+          "Subject": "Sample invoice",
+          "MessageCount": 38,
+          "RecipientCount": 190,
+          "FirstSent": "2026-08-04 14:55:00Z",
+          "LastSent": "2026-08-04 15:20:00Z",
+          "Flagged": true
+        }
+      ],
+      "FlaggedSubjectCount": 1,
+      "Bursts": [
+        {
+          "WindowStart": "2026-08-04 15:00:00Z",
+          "WindowMinutes": 10,
+          "MessageCount": 31,
+          "RecipientCount": 160,
+          "TopSubject": "Sample invoice"
+        }
+      ],
+      "Flagged": true
+    },
+    "MFADevices": [
+      {
+        "@odata.type": "#microsoft.graph.microsoftAuthenticatorAuthenticationMethod",
+        "displayName": "Sample phone",
+        "createdDateTime": "2026-08-03T12:00:00Z"
+      }
+    ],
+    "ChangedPasswords": [
+      {
+        "displayName": "Sample User",
+        "userPrincipalName": "sample.user@example.com",
+        "lastPasswordChangeDateTime": "2026-08-03T12:05:00Z"
+      }
+    ],
+    "TrustedSenders": [
+      "trusted@example.net",
+      "example-partner.com"
+    ],
+    "BlockedSenders": [
+      "security-alerts@example.org"
+    ],
+    "SafelistChanges": [
+      {
+        "Operation": "Set-MailboxJunkEmailConfiguration",
+        "UserKey": "sample.user@example.com",
+        "Date": "2026-08-03T11:30:00Z",
+        "ClientIP": "203.0.113.10",
+        "Country": "NG",
+        "City": "Lagos",
+        "ForeignLocation": true,
+        "Trusted": [
+          "attacker-domain.example"
+        ],
+        "Blocked": null
+      }
+    ],
+    "SharingChanges": [
+      {
+        "Operation": "AnonymousLinkCreated",
+        "UserKey": "sample.user@example.com",
+        "Date": "2026-08-04T10:15:00Z",
+        "Workload": "OneDrive",
+        "FileName": "Payroll Q3.xlsx",
+        "ItemUrl": "https://example-my.sharepoint.com/personal/sample_user/Documents/Payroll Q3.xlsx",
+        "Target": null,
+        "TargetType": null,
+        "ClientIP": "203.0.113.10",
+        "Country": "NG",
+        "City": "Lagos",
+        "ForeignLocation": true
+      }
+    ],
+    "IntuneDevices": [
+      {
+        "id": "00000000-0000-0000-0000-000000000004",
+        "deviceName": "SAMPLE-VM01",
+        "operatingSystem": "Windows",
+        "osVersion": "10.0.26100",
+        "complianceState": "noncompliant",
+        "enrolledDateTime": "2026-08-03T13:00:00Z",
+        "lastSyncDateTime": "2026-08-05T08:00:00Z",
+        "deviceEnrollmentType": "windowsAzureADJoin",
+        "serialNumber": "SAMPLE1234"
+      }
+    ],
+    "SuspectUserSignIns": [
+      {
+        "CreatedDateTime": "2026-08-04T22:14:00Z",
+        "AppDisplayName": "Office 365 Exchange Online",
+        "ClientAppUsed": "Browser",
+        "Status": "Success",
+        "IPAddress": "203.0.113.10",
+        "Country": "NG",
+        "City": "Lagos",
+        "ForeignLocation": true
+      },
+      {
+        "CreatedDateTime": "2026-08-04T09:02:00Z",
+        "AppDisplayName": "Microsoft Teams",
+        "ClientAppUsed": "Mobile Apps and Desktop clients",
+        "Status": "Success",
+        "IPAddress": "198.51.100.24",
+        "Country": "US",
+        "City": "Seattle",
+        "ForeignLocation": false
+      }
+    ],
+    "LocationAnalysis": {
+      "UsageLocation": "US",
+      "UserRegisteredCountry": "United States",
+      "SignInCountries": [
+        {
+          "Country": "US",
+          "Count": 41
+        },
+        {
+          "Country": "NG",
+          "Count": 9
+        }
+      ],
+      "ForeignSignInCount": 9,
+      "ForeignSuccessfulSignInCount": 8,
+      "ForeignRuleChangeCount": 1,
+      "ForeignSafelistChangeCount": 1,
+      "ForeignSharingChangeCount": 1,
+      "ForeignSentMessageCount": 1,
+      "Note": null
+    },
+    "UserPrincipalName": "sample.user@example.com",
+    "IPVerdicts": [
+      {
+        "IP": "198.51.100.23",
+        "Verdict": "LikelyAttacker",
+        "Score": 9,
+        "Source": "Heuristics",
+        "Reasons": [
+          {
+            "Code": "HostingOrProxy",
+            "Weight": 3,
+            "Text": "Proxy/VPN network"
+          },
+          {
+            "Code": "Foreign",
+            "Weight": 2,
+            "Text": "Outside the usage location"
+          },
+          {
+            "Code": "NewToUser",
+            "Weight": 2,
+            "Text": "Never used by the user"
+          }
+        ],
+        "Country": "NG",
+        "City": "Lagos",
+        "SuccessfulSignIns": 3,
+        "FailedSignIns": 1,
+        "Activities": 12
+      },
+      {
+        "IP": "203.0.113.10",
+        "Verdict": "LikelyUser",
+        "Score": -5,
+        "Source": "Heuristics",
+        "Reasons": [],
+        "Country": "US",
+        "City": "Chicago",
+        "SuccessfulSignIns": 40,
+        "FailedSignIns": 0,
+        "Activities": 3
+      }
+    ],
+    "AttackerMailActivity": [
+      {
+        "When": "2026-08-04T02:10:00Z",
+        "Operation": "MailItemsAccessed",
+        "AccessType": "Bind",
+        "Folder": "Inbox",
+        "Subject": "Invoice 4471 - updated bank details",
+        "InternetMessageId": "<a1@example.com>",
+        "MailboxOwner": "sample.user@example.com",
+        "IP": "198.51.100.23",
+        "IPVerdict": "LikelyAttacker"
+      },
+      {
+        "When": "2026-08-04T02:20:00Z",
+        "Operation": "Send",
+        "Folder": "Sent Items",
+        "Subject": "RE: Invoice 4471",
+        "InternetMessageId": "<a2@example.com>",
+        "MailboxOwner": "sample.user@example.com",
+        "IP": "198.51.100.23",
+        "IPVerdict": "LikelyAttacker"
+      }
+    ],
+    "AttackerFileActivity": [
+      {
+        "When": "2026-08-04T02:30:00Z",
+        "Operation": "FileDownloaded",
+        "File": "Payroll 2026.xlsx",
+        "Url": "https://example.sharepoint.com/sites/finance/Payroll 2026.xlsx",
+        "Site": "https://example.sharepoint.com/sites/finance",
+        "IP": "198.51.100.23",
+        "IPVerdict": "LikelyAttacker"
+      }
+    ],
+    "FormsActivity": [
+      {
+        "When": "2026-08-04T03:00:00Z",
+        "Operation": "CreateForm",
+        "FormName": "Microsoft 365 account verification",
+        "FormId": "form-1",
+        "IP": "198.51.100.23",
+        "IPVerdict": "LikelyAttacker",
+        "Flagged": true
+      }
+    ],
+    "FormsSummary": {
+      "FlaggedActions": 1,
+      "Forms": [
+        {
+          "FormId": "form-1",
+          "FormName": "Microsoft 365 account verification",
+          "Responses": 4,
+          "AnonymousResponses": 4,
+          "Views": 37,
+          "PhishingFlagged": false
+        }
+      ]
+    },
+    "DelegatedAccess": [
+      {
+        "Mailbox": "accounts@example.com",
+        "AccessRights": "FullAccess",
+        "KnownFrom": "Permission cache",
+        "AttackerOpened": 6,
+        "AttackerSynced": 0,
+        "AttackerSent": 0,
+        "Flagged": true
+      }
+    ],
+    "BlastRadius": [
+      {
+        "UserPrincipalName": "finance.lead@example.com",
+        "UserId": "22222222-2222-2222-2222-222222222222",
+        "Reached": true,
+        "AttackerIPs": "198.51.100.23",
+        "SuccessfulSignIns": 1,
+        "FailedSignIns": 2,
+        "Actions": 4,
+        "Operations": "MailItemsAccessed x4",
+        "FirstSeen": "2026-08-04T04:00:00Z",
+        "LastSeen": "2026-08-04T04:20:00Z"
+      }
+    ]
+  }
+}

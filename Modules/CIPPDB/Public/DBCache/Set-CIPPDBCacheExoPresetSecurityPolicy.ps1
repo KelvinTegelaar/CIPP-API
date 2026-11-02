@@ -22,6 +22,9 @@ function Set-CIPPDBCacheExoPresetSecurityPolicy {
         $MDOTestResult = Test-CIPPStandardLicense -StandardName 'ExoPresetSecurityPolicy' -TenantFilter $TenantFilter -Preset DefenderForOffice365 -SkipLog
         if ($MDOTestResult -eq $false) {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Skipping Preset Security Policy cache: tenant lacks Microsoft Defender for Office 365' -sev Debug
+            # A license skip is still a completed collection: record the authoritative empty set
+            # so collect-on-miss does not re-run this collector forever on unlicensed tenants.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoPresetSecurityPolicy' -Data @() -AddCount -ClearOnEmpty
             return
         }
 
@@ -40,6 +43,11 @@ function Set-CIPPDBCacheExoPresetSecurityPolicy {
         if ($AllRules.Count -gt 0) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoPresetSecurityPolicy' -Data $AllRules -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AllRules.Count) Preset Security Policy rules" -sev Debug
+        } else {
+            # Both cmdlets succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoPresetSecurityPolicy' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Preset Security Policy rules (none found)' -sev Debug
         }
         $EOPRules = $null
         $ATPRules = $null

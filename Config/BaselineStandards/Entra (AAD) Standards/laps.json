@@ -1,0 +1,44 @@
+{
+  "name": "laps",
+  "label": "Enable LAPS on the tenant",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CIS M365 7.0.0 (5.1.4.5)",
+    "SMB1001 (2.2)"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Enables the tenant to use LAPS. You must still create a policy for LAPS to be active on all devices. Use the template standards to deploy this by default.",
+  "executiveText": "Enables Local Administrator Password Solution (LAPS) capability, which automatically manages and rotates local administrator passwords on company computers. This significantly improves security by preventing the use of shared or static administrator passwords that could be exploited by attackers.",
+  "docsDescription": "Enables the LAPS functionality on the tenant. Prerequisite for using Windows LAPS via Azure AD.",
+  "impactColour": "info",
+  "addedDate": "2023-04-25",
+  "powershellEquivalent": "Portal or Graph API",
+  "appliesToTest": [
+    "CIS_5_1_4_5",
+    "SMB1001_2_2",
+    "ZTNA21953",
+    "ZTNA21955",
+    "ZTNA24560"
+  ],
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "localAdminPasswordEnabled": true
+  },
+  "read": {
+    "cacheType": "DeviceRegistrationPolicy"
+  },
+  "prepare": "Get-CIPPBaselineDeviceRegistrationPolicyState",
+  "writeTarget": "deviceRegistrationPolicy",
+  "remediate": {
+    "executor": "DeviceRegistrationPolicy",
+    "set": {
+      "localAdminPassword.isEnabled": true
+    }
+  }
+}

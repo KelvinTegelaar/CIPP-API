@@ -61,6 +61,28 @@ function Set-CIPPSSOEasyAuth {
         "https://login.microsoftonline.com/$TenantId/v2.0"
     }
 
+    # Used only for the initial full-overwrite write below. Steady-state ownership of
+    # excludedPaths belongs to Craft's ReconcileAuthPolicy, which enforces the
+    # App.Setup.ExcludedPaths list from the runtime appsettings on every warmup —
+    # so read the same file (it sits one level above CRAFT_ROOT in the container)
+    # and the initial write converges without a reconcile PUT on first boot.
+    $RequiredExcludedPaths = @()
+    try {
+        if ($env:CRAFT_ROOT) {
+            $AppSettingsPath = Join-Path (Split-Path $env:CRAFT_ROOT -Parent) 'appsettings.Production.json'
+            if (Test-Path $AppSettingsPath) {
+                $RequiredExcludedPaths = @((Get-Content $AppSettingsPath -Raw | ConvertFrom-Json).App.Setup.ExcludedPaths)
+            }
+        }
+    } catch {
+        Write-Information "[SSO-EasyAuth] Could not read ExcludedPaths from appsettings: $($_.Exception.Message)"
+    }
+    if ($RequiredExcludedPaths.Count -eq 0) {
+        # Fallback when the appsettings file is unavailable — minimal set the app needs
+        # to function (public webhooks in every emitted casing + the health probe).
+        $RequiredExcludedPaths = @('/api/Public*', '/API/Public*', '/api/public*', '/api/setup/health')
+    }
+
     # Read current app settings and merge AUTH_SECRET
     $CurrentSettings = Invoke-RestMethod -Uri "$BaseUri/config/appsettings/list?api-version=2024-11-01" -Method Post -Headers @{ Authorization = "Bearer $ArmToken" }
     $MergedSettings = @{}
@@ -71,8 +93,7 @@ function Set-CIPPSSOEasyAuth {
     # Set AUTH_SECRET as a KV reference when requested (initial setup)
     # Skip for implicit auth (no client secret needed — e.g. central migration app)
     if ($UseKvReferences -and -not $ImplicitAuth) {
-        $KV = $env:WEBSITE_DEPLOYMENT_ID
-        $VaultName = if ($KV) { ($KV -split '-')[0] } else { $null }
+        $VaultName = Get-CippKeyVaultName
         if ($VaultName) {
             $MergedSettings['AUTH_SECRET'] = "@Microsoft.KeyVault(VaultName=$VaultName;SecretName=SSOAppSecret)"
         }
@@ -135,10 +156,7 @@ function Set-CIPPSSOEasyAuth {
                 globalValidation  = @{
                     unauthenticatedClientAction = 'RedirectToLoginPage'
                     redirectToProvider          = 'azureactivedirectory'
-                    excludedPaths               = @(
-                        '/api/Public*'
-                        '/api/setup/health'
-                    )
+                    excludedPaths               = $RequiredExcludedPaths
                 }
                 identityProviders = @{
                     azureActiveDirectory = @{

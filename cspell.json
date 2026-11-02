@@ -4,6 +4,7 @@
   "dictionaryDefinitions": [],
   "dictionaries": [],
   "words": [
+    "SyncTest",
     "adminapi",
     "ADMS",
     "AITM",
@@ -67,7 +68,6 @@
     "CIPPAPI",
     "WCSS",
     "cacheusers",
-    "CIPPBPA",
     "CIPPCA",
     "MCAPI",
     "skuid",

@@ -1,0 +1,53 @@
+{
+  "name": "intuneDeviceRetirementDays",
+  "label": "Enable Device Retirement in Intune",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the number of days of inactivity before a device is automatically retired from Intune by the default cleanup rule.",
+  "executiveText": "Automatically removes long-inactive devices from management, keeping device inventory accurate and license consumption honest without manual cleanup.",
+  "docsDescription": "Grades the deviceInactivityBeforeRetirementInDays value on the default (all-platforms) managed device cleanup rule. A tenant with no cleanup rule grades as drift and remediation creates the rule; otherwise the existing rule is patched in place.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: POST or PATCH deviceManagement/managedDeviceCleanupRules",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "days": {
+      "type": "number",
+      "label": "Maximum days of inactivity before retirement (30-270)",
+      "required": true,
+      "validators": {
+        "min": {
+          "value": 30,
+          "message": "Intune only accepts a retirement window between 30 and 270 days"
+        },
+        "max": {
+          "value": 270,
+          "message": "Intune only accepts a retirement window between 30 and 270 days"
+        }
+      }
+    }
+  },
+  "read": {
+    "cacheType": "ManagedDeviceCleanupRules"
+  },
+  "prepare": "Get-CIPPBaselineIntuneDeviceRetirementDaysState",
+  "remediate": {
+    "executor": "IntuneDeviceRetirementDays",
+    "days": "%days%"
+  }
+}

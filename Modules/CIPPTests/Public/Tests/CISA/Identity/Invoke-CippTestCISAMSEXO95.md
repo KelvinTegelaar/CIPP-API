@@ -15,7 +15,7 @@ Set-MalwareFilterPolicy -Identity "Default" -EnableFileFilter $true -FileTypes @
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.9.5](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo95v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.9.5](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo95v1)
 - [Configure anti-malware policies](https://learn.microsoft.com/microsoft-365/security/office-365-security/anti-malware-protection-configure)
 
 <!--- Results --->

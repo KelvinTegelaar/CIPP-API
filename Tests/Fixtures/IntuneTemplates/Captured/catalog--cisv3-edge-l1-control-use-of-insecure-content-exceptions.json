@@ -1,0 +1,45 @@
+{
+  "DisplayName": "CISv3 - EDGE - L1 - Control use of insecure content exceptions",
+  "Description": "This policy setting allows for the configuration for users to add exceptions to allow mixed content for specific sites.\n",
+  "Type": "Catalog",
+  "Policy": {
+    "name": "CISv3 - EDGE - L1 - Control use of insecure content exceptions",
+    "description": "This policy setting allows for the configuration for users to add exceptions to allow mixed content for specific sites.\n",
+    "settings": [
+      {
+        "id": "0",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "device_vendor_msft_policy_config_microsoft_edgev80diff~policy~microsoft_edge~contentsettings_defaultinsecurecontentsetting",
+          "settingInstanceTemplateReference": null,
+          "auditRuleInformation": null,
+          "choiceSettingValue": {
+            "settingValueTemplateReference": null,
+            "value": "device_vendor_msft_policy_config_microsoft_edgev80diff~policy~microsoft_edge~contentsettings_defaultinsecurecontentsetting_1",
+            "children": [
+              {
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                "settingDefinitionId": "device_vendor_msft_policy_config_microsoft_edgev80diff~policy~microsoft_edge~contentsettings_defaultinsecurecontentsetting_defaultinsecurecontentsetting",
+                "settingInstanceTemplateReference": null,
+                "auditRuleInformation": null,
+                "choiceSettingValue": {
+                  "settingValueTemplateReference": null,
+                  "value": "device_vendor_msft_policy_config_microsoft_edgev80diff~policy~microsoft_edge~contentsettings_defaultinsecurecontentsetting_defaultinsecurecontentsetting_2",
+                  "children": []
+                }
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "platforms": "windows10",
+    "technologies": "mdm",
+    "templateReference": {
+      "templateId": "",
+      "templateFamily": "none",
+      "templateDisplayName": null,
+      "templateDisplayVersion": null
+    }
+  }
+}

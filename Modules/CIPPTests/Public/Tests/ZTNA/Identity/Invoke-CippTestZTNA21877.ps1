@@ -17,7 +17,7 @@ function Invoke-CippTestZTNA21877 {
             return
         }
 
-        $GuestsWithoutSponsors = $Guests | Where-Object { -not $_.sponsors -or $_.sponsors.Count -eq 0 }
+        $GuestsWithoutSponsors = $Guests.Where({ -not $_.sponsors -or $_.sponsors.Count -eq 0 })
 
         if ($GuestsWithoutSponsors.Count -eq 0) {
             $Status = 'Passed'
@@ -34,7 +34,7 @@ function Invoke-CippTestZTNA21877 {
             $ResultLines.Add('')
             $ResultLines.Add('**Top 10 guests without sponsors:**')
 
-            $Top10Guests = $GuestsWithoutSponsors | Select-Object -First 10
+            $Top10Guests = $GuestsWithoutSponsors.Where({ $true }, 'First', 10)
             foreach ($Guest in $Top10Guests) {
                 $ResultLines.Add("- $($Guest.displayName) ($($Guest.userPrincipalName))")
             }

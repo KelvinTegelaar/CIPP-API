@@ -18,11 +18,14 @@
     }
 
     try {
+        # EXO can only filter on when the message was received, not when release was requested, and users
+        # often ask days after the message was quarantined. Cover the full 30 days EXO allows so every
+        # pending request is seen; Write-AlertTrace keeps an already-alerted request from re-alerting.
         $cmdParams = @{
             PageSize          = 1000
             ReleaseStatus     = 'Requested'
-            StartReceivedDate = (Get-Date).AddHours(-6)
-            EndReceivedDate   = (Get-Date).AddHours(0)
+            StartReceivedDate = (Get-Date).AddDays(-30)
+            EndReceivedDate   = (Get-Date)
         }
         $RequestedReleases = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams $cmdParams -ErrorAction Stop | Select-Object -ExcludeProperty *data.type* | Sort-Object -Property ReceivedTime
 
@@ -47,11 +50,16 @@
                     Tenant            = $TenantFilter
                 }
             }
-
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
+
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "QuarantineReleaseRequests: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        # EXO throttling/timeouts are transient; don't page the MSP for a blip that clears on the next run.
+        if (Test-CippTransientError -Message $ErrorMessage.NormalizedError) {
+            Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "QuarantineReleaseRequests: $($ErrorMessage.NormalizedError) (transient, will retry next run)" -sev Warning -LogData $ErrorMessage
+        } else {
+            Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "QuarantineReleaseRequests: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        }
     }
 }

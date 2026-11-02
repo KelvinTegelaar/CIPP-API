@@ -14,15 +14,15 @@ function Invoke-CippTestCIS_5_2_3_3 {
             return
         }
 
-        $OrgCfg = $Org | Select-Object -First 1
+        $OrgCfg = @($Org)[0]
         if ($OrgCfg.onPremisesSyncEnabled -ne $true) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_2_3_3' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'Tenant is cloud-only — recommendation does not apply.' -Risk 'Medium' -Name 'Password protection is enabled for on-prem Active Directory' -UserImpact 'Low' -ImplementationEffort 'High' -Category 'Authentication'
             return
         }
 
-        $PwdSetting = $Settings | Where-Object { $_.displayName -eq 'Password Rule Settings' -or $_.templateId -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' } | Select-Object -First 1
-        $EnableForOnPrem = ($PwdSetting.values | Where-Object { $_.name -eq 'EnableBannedPasswordCheckOnPremises' }).value
-        $Mode = ($PwdSetting.values | Where-Object { $_.name -eq 'BannedPasswordCheckOnPremisesMode' }).value
+        $PwdSetting = $Settings.Where({ $_.displayName -eq 'Password Rule Settings' -or $_.templateId -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' }, 'First')[0]
+        $EnableForOnPrem = $(foreach ($Item in $PwdSetting.values) { if ($Item.name -eq 'EnableBannedPasswordCheckOnPremises') { $Item } }).value
+        $Mode = $(foreach ($Item in $PwdSetting.values) { if ($Item.name -eq 'BannedPasswordCheckOnPremisesMode') { $Item } }).value
 
         if ($EnableForOnPrem -eq 'True' -and $Mode -eq 'Enforce') {
             $Status = 'Passed'

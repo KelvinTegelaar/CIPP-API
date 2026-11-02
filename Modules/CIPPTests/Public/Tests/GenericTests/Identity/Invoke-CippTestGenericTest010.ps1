@@ -14,7 +14,7 @@ function Invoke-CippTestGenericTest010 {
             return
         }
 
-        $CapabilityProperties = $Capabilities.PSObject.Properties | Where-Object { $_.Value -eq $true }
+        $CapabilityProperties = $Capabilities.PSObject.Properties.Where({ $_.Value -eq $true })
 
         if (-not $CapabilityProperties -or $CapabilityProperties.Count -eq 0) {
             $Result = [System.Text.StringBuilder]::new("No active service plans were found for this tenant. This is unusual and may indicate a licensing issue.")
@@ -51,7 +51,7 @@ function Invoke-CippTestGenericTest010 {
         $AllPlanNames = @($CapabilityProperties | Select-Object -ExpandProperty Name)
 
         foreach ($CategoryName in $Categories.Keys) {
-            $CategoryPlans = @($AllPlanNames | Where-Object { $_ -in $Categories[$CategoryName] })
+            $CategoryPlans = @($AllPlanNames.Where({ $_ -in $Categories[$CategoryName] }))
             if ($CategoryPlans.Count -eq 0) { continue }
 
             $null = $Result.Append("### $CategoryName`n`n")
@@ -71,7 +71,7 @@ function Invoke-CippTestGenericTest010 {
         }
 
         # Any uncategorized plans
-        $Uncategorized = @($AllPlanNames | Where-Object { $_ -notin $CategorizedPlanNames })
+        $Uncategorized = @($AllPlanNames.Where({ $_ -notin $CategorizedPlanNames }))
         if ($Uncategorized.Count -gt 0) {
             $null = $Result.Append("### Other Capabilities`n`n")
             $null = $Result.Append("| Capability | Service Plan |`n")

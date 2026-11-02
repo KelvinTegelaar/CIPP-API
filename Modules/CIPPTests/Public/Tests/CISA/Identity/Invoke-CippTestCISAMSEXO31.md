@@ -20,7 +20,7 @@ Set-DkimSigningConfig -Identity "contoso.com" -Enabled $true
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.3.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo31v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.3.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo31v1)
 - [Use DKIM to validate outbound email](https://learn.microsoft.com/microsoft-365/security/office-365-security/email-authentication-dkim-configure)
 
 <!--- Results --->

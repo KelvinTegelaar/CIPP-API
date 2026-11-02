@@ -16,7 +16,9 @@ function Push-TableCleanupTask {
                     if ($Table) {
                         Write-Information "Deleting table $($Table.Context.TableName)"
                         try {
-                            Remove-AzDataTable -Context $Table.Context -Force
+                            Remove-AzDataTable -Context $Table.Context
+                            # Drop it from the Get-CIPPTable cache so it gets recreated on next use.
+                            Unregister-CIPPTable -TableName $Table.Context.TableName
                         } catch {
                             #Write-LogMessage -API 'TableCleanup' -message "Failed to delete table $($Table.Context.TableName)" -sev Error -LogData (Get-CippException -Exception $_)
                         }
@@ -45,7 +47,7 @@ function Push-TableCleanupTask {
                     if ($Entities) {
                         Write-Information "Removing $($Entities.Count) entities from $($Item.TableName)"
                         try {
-                            Remove-AzDataTableEntity @Table -Entity $Entities -Force
+                            Remove-CIPPAzDataTableEntity @Table -Entity $Entities -Force
                             $RowsRemoved += $Entities.Count
                             if ($DataTableProps.First -and $Entities.Count -lt $DataTableProps.First) {
                                 $CleanupCompleted = $true

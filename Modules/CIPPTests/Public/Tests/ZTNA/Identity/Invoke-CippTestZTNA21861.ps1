@@ -17,7 +17,7 @@ function Invoke-CippTestZTNA21861 {
         }
 
         # Filter for untriaged high-risk users (atRisk state with High risk level)
-        $UntriagedHighRiskUsers = $RiskyUsers | Where-Object { $_.riskState -eq 'atRisk' -and $_.riskLevel -eq 'high' }
+        $UntriagedHighRiskUsers = $RiskyUsers.Where({ $_.riskState -eq 'atRisk' -and $_.riskLevel -eq 'high' })
 
         $Passed = if ($UntriagedHighRiskUsers.Count -eq 0) { 'Passed' } else { 'Failed' }
 

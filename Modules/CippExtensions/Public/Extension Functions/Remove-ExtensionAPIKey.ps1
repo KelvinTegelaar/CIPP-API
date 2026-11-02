@@ -13,13 +13,13 @@ function Remove-ExtensionAPIKey {
         $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
         $DevSecretRows = Get-AzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq '$Extension'"
         if ($DevSecretRows) {
-            Remove-AzDataTableEntity @DevSecretsTable -Entity @($DevSecretRows) -Force -ErrorAction Stop
+            Remove-CIPPAzDataTableEntity @DevSecretsTable -Entity @($DevSecretRows) -Force -ErrorAction Stop
             Write-Information "Deleted $(@($DevSecretRows).Count) DevSecrets row(s) for '$Extension'."
         } else {
             Write-Information "No existing DevSecrets row found for '$Extension' to delete."
         }
     } else {
-        $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+        $keyvaultname = Get-CippKeyVaultName
         try {
             $null = Remove-CippKeyVaultSecret -VaultName $keyvaultname -Name $Extension
         } catch {

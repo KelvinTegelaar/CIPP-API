@@ -1,4 +1,21 @@
 function Get-CIPPAzDataTableEntity {
+    <#
+    .FUNCTIONALITY
+    Internal
+    .SYNOPSIS
+    Gets entities from an Azure Table, reassembling entities that were split for size.
+    .DESCRIPTION
+    Thin wrapper around Get-AzDataTableLargeEntity (AzBobbyTables >= 3.6.2), which
+    natively merges rows that were split across multiple properties or rows because
+    they exceeded the table service size limits.
+
+    Kept as a wrapper for backward compatibility with existing call sites, to
+    default MaxRetries to 3 for throttled requests, and to record entities the
+    module could not reassemble.
+
+    On TableNotFound, invalidates the CreateTable cache, recreates the table, and
+    retries once so a stale CIPPEnsuredTables entry cannot permanently break reads.
+    #>
     [CmdletBinding()]
     param(
         $Context,
@@ -7,97 +24,64 @@ function Get-CIPPAzDataTableEntity {
         $First,
         $Skip,
         $Sort,
-        $Count
+        [switch]$Count,
+        [int]$MaxRetries = 3
     )
 
-    $Results = Get-AzDataTableEntity @PSBoundParameters
-    $mergedResults = @{}
-    $rootEntities = @{} # Keyed by "$PartitionKey|$RowKey"
+    # ErrorAction and ErrorVariable are set below, so a caller that passed its own would collide
+    # with the splat. Real errors are re-emitted afterwards, which honours the caller's preference.
+    $Parameters = @{} + $PSBoundParameters
+    $Parameters['MaxRetries'] = $MaxRetries
+    $null = $Parameters.Remove('ErrorAction')
+    $null = $Parameters.Remove('ErrorVariable')
 
-    foreach ($entity in $Results) {
-        $partitionKey = $entity.PartitionKey
-        $rowKey = $entity.RowKey
-        $hasOriginalId = $entity.PSObject.Properties.Match('OriginalEntityId') -and $entity.OriginalEntityId
+    $Results = Get-AzDataTableLargeEntity @Parameters -ErrorAction SilentlyContinue -ErrorVariable TableErrors
 
-        if (-not $mergedResults.ContainsKey($partitionKey)) {
-            $mergedResults[$partitionKey] = @{}
+    # Do not pipe $null/$empty into Where-Object - PowerShell invokes the block once with $_ = $null.
+    $NotFoundErrors = [System.Collections.Generic.List[object]]::new()
+    foreach ($Candidate in @($TableErrors)) {
+        if ($null -ne $Candidate -and (Test-CIPPTableNotFound $Candidate)) {
+            $NotFoundErrors.Add($Candidate)
         }
+    }
+    if ($NotFoundErrors.Count -and -not $script:CIPPRepairingTable) {
+        $script:CIPPRepairingTable = $true
+        try {
+            Repair-CIPPTable -Context $Context
+            $TableErrors = $null
+            $Results = Get-AzDataTableLargeEntity @Parameters -ErrorAction SilentlyContinue -ErrorVariable TableErrors
+        } finally {
+            $script:CIPPRepairingTable = $false
+        }
+    }
 
-        if (-not $hasOriginalId) {
-            # It's a standalone root row
-            $rootEntities["$partitionKey|$rowKey"] = $true
-            $mergedResults[$partitionKey][$rowKey] = @{
-                Entity = $entity
-                Parts  = [System.Collections.Generic.List[object]]::new()
-            }
+    foreach ($TableError in $TableErrors) {
+        # An entity whose rows cannot be reassembled is skipped by the module and reported without
+        # failing the query, so one row orphaned by a pre-part-aware delete cannot empty a whole
+        # partition. Record which row so it can be removed; pass everything else through.
+        if ($TableError.FullyQualifiedErrorId -notlike 'IncompleteEntity*') {
+            Write-Error -ErrorRecord $TableError
             continue
         }
 
-        # It's a part of something else
-        $entityId = $entity.OriginalEntityId
+        if (-not $script:ReportedIncompleteEntities) {
+            $script:ReportedIncompleteEntities = [System.Collections.Generic.HashSet[string]]::new()
+        }
 
-        # Check if this entity's target has a "real" base
-        if ($rootEntities.ContainsKey("$partitionKey|$entityId")) {
-            # Root row exists → skip merging this part
+        # Write-LogMessage reads a table itself, so logging here re-enters this function. The guard
+        # stops that recursing, and the set reports each corrupt row once rather than on every read.
+        $RowIdentity = "$($TableError.TargetObject)"
+        if ($script:ReportingIncompleteEntity -or -not $script:ReportedIncompleteEntities.Add($RowIdentity)) {
             continue
         }
 
-        # Merge it as a part
-        if (-not $mergedResults[$partitionKey].ContainsKey($entityId)) {
-            $mergedResults[$partitionKey][$entityId] = @{
-                Parts = [System.Collections.Generic.List[object]]::new()
-            }
-        }
-        $mergedResults[$partitionKey][$entityId]['Parts'].Add($entity)
-    }
-
-    $finalResults = [System.Collections.Generic.List[object]]::new()
-    foreach ($partitionKey in $mergedResults.Keys) {
-        foreach ($entityId in $mergedResults[$partitionKey].Keys) {
-            $entityData = $mergedResults[$partitionKey][$entityId]
-            if (($entityData.Parts | Measure-Object).Count -gt 0) {
-                $fullEntity = [PSCustomObject]@{}
-                $parts = $entityData.Parts | Sort-Object PartIndex
-                foreach ($part in $parts) {
-                    foreach ($key in $part.PSObject.Properties.Name) {
-                        if ($key -notin @('OriginalEntityId', 'PartIndex', 'PartitionKey', 'RowKey', 'Timestamp')) {
-                            if ($fullEntity.PSObject.Properties[$key]) {
-                                $fullEntity | Add-Member -MemberType NoteProperty -Name $key -Value ($fullEntity.$key + $part.$key) -Force
-                            } else {
-                                $fullEntity | Add-Member -MemberType NoteProperty -Name $key -Value $part.$key
-                            }
-                        }
-                    }
-                }
-                $fullEntity | Add-Member -MemberType NoteProperty -Name 'PartitionKey' -Value $parts[0].PartitionKey -Force
-                $fullEntity | Add-Member -MemberType NoteProperty -Name 'RowKey' -Value $entityId -Force
-                $fullEntity | Add-Member -MemberType NoteProperty -Name 'Timestamp' -Value $parts[0].Timestamp -Force
-                $finalResults.Add($fullEntity)
-            } else {
-                $FinalResults.Add($entityData.Entity)
-            }
+        $script:ReportingIncompleteEntity = $true
+        try {
+            Write-LogMessage -API 'Table' -message "Skipped a corrupt table entity. $($TableError.Exception.Message) Delete the orphaned '-partN' rows for '$RowIdentity' to clear this." -Sev 'Error'
+        } finally {
+            $script:ReportingIncompleteEntity = $false
         }
     }
 
-    foreach ($entity in $finalResults) {
-        if ($entity.SplitOverProps) {
-            try {
-                $splitInfoList = $entity.SplitOverProps | ConvertFrom-Json -ErrorAction Stop
-                foreach ($splitInfo in $splitInfoList) {
-                    $mergedData = [string]::Join('', ($splitInfo.SplitHeaders | ForEach-Object { $entity.$_ }))
-                    $entity | Add-Member -NotePropertyName $splitInfo.OriginalHeader -NotePropertyValue $mergedData -Force
-                    $propsToRemove = $splitInfo.SplitHeaders
-                    foreach ($prop in $propsToRemove) {
-                        $entity.PSObject.Properties.Remove($prop)
-                    }
-                }
-            } catch {
-                Write-Warning "Failed to process SplitOverProps for entity with PartitionKey='$($entity.PartitionKey)' and RowKey='$($entity.RowKey)': $($_.Exception.Message)"
-            } finally {
-                $entity.PSObject.Properties.Remove('SplitOverProps')
-            }
-        }
-    }
-
-    return $finalResults
+    $Results
 }

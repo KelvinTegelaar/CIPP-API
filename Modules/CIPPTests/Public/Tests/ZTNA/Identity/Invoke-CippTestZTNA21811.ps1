@@ -13,15 +13,32 @@ function Invoke-CippTestZTNA21811 {
             return
         }
 
-        $misconfiguredDomains = $domains | Where-Object { $_.passwordValidityPeriodInDays -ne 2147483647 }
+        # Subdomains cannot carry their own password policy (Graph returns null and blocks updates),
+        # so evaluate root-level domains only — same derivation as Invoke-CIPPStandardPasswordExpireDisabled.
+        $DomainIds = @($domains.id)
+        $SubDomains = foreach ($id in $DomainIds) {
+            foreach ($parent in $DomainIds) {
+                if ($id -ne $parent -and $id.EndsWith(".$parent")) {
+                    $id; break
+                }
+            }
+        }
+        $misconfiguredDomains = $domains.Where({ $_.id -notin $SubDomains -and $null -ne $_.passwordValidityPeriodInDays -and $_.passwordValidityPeriodInDays -ne 2147483647 })
 
         $users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
         $misconfiguredUsers = @()
         if ($users) {
+            $DomainPolicies = [System.Collections.Generic.Dictionary[string, object]]::new()
             $misconfiguredUsers = foreach ($user in $users) {
                 $userDomain = $user.userPrincipalName.Split('@')[-1]
-                $domainPolicy = $misconfiguredDomains | Where-Object { $_.id -eq $userDomain }
+                if ($DomainPolicies.ContainsKey($userDomain)) {
+                    $domainPolicy = $DomainPolicies[$userDomain]
+                } else {
+                    # Subdomain UPNs inherit the root domain's policy, so match on the suffix too
+                    $domainPolicy = $misconfiguredDomains.Where({ $_.id -eq $userDomain -or $userDomain.EndsWith(".$($_.id)") })
+                    $DomainPolicies[$userDomain] = $domainPolicy
+                }
                 if (($user.passwordPolicies -notlike '*DisablePasswordExpiration*') -and ($domainPolicy)) {
                     [PSCustomObject]@{
                         id                     = $user.id

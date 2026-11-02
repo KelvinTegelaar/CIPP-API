@@ -82,25 +82,49 @@ function Set-CIPPSAMAdminRoles {
                 $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationID; ObjectId = $id; DisplayName = 'CIPP-SAM' } -Compliance -tenantid $TenantFilter -useSystemMailbox $true -AsApp
                 $ActionLogs.Add('Added Service Principal to Compliance Center')
             } catch {
-                $ActionLogs.Add('Service Principal already added to Compliance Center')
+                $SpError = $_.Exception.Message
+                switch ($SpError) {
+                    { $_ -match 'already exist' } { $ActionLogs.Add('Service Principal already added to Compliance Center') }
+                    { $_ -match 'New-ServicePrincipal is not present' } { $ActionLogs.Add('Tenant does not have a license to use Compliance Center features. Skipping.') }
+                    default { $ActionLogs.Add("Failed to add Service Principal to Compliance Center: $SpError"); $HasFailures = $true }
+                }
+
             }
             try {
                 $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationID; ObjectId = $id; DisplayName = 'CIPP-SAM' } -tenantid $TenantFilter -useSystemMailbox $true -AsApp
                 $ActionLogs.Add('Added Service Principal to Exchange Online')
             } catch {
-                $ActionLogs.Add('Service Principal already added to Exchange Online')
+                $SpError = $_.Exception.Message
+                switch ($SpError) {
+                    { $_ -match 'already exist' } { $ActionLogs.Add('Service Principal already added to Compliance Center') }
+                    { $_ -match 'Response status code does not indicate success' } { $ActionLogs.Add('Could not connect to Exchange, we received an access denied. This is expected if you do not have an exchange license.'); $HasFailures = $true }
+                    default { $ActionLogs.Add("Failed to add Service Principal to Compliance Center: $SpError"); $HasFailures = $true }
+                }
             }
 
             Write-Verbose ($Requests | ConvertTo-Json -Depth 5)
             $Results = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($Requests)
-            $Results | ForEach-Object {
-                if ($_.status -eq 204) {
-                    $ActionLogs.Add("Added service principal to directory role $($_.id)")
-                } elseif ($_.status -eq 404) {
-                    $ActionLogs.Add("Directory role $($_.id) does not exist in tenant, skipping")
+            $MissingRoles = [System.Collections.Generic.List[object]]::new()
+            foreach ($Result in $Results) {
+                if ($Result.status -eq 204) {
+                    $ActionLogs.Add("Added service principal to directory role $($Result.id)")
+                } elseif ($Result.status -eq 404) {
+                    # 404 means the role template was never activated in this tenant
+                    $Role = $SAMRoles | Where-Object { $_.label -eq $Result.id } | Select-Object -First 1
+                    if ($Role) { $MissingRoles.Add($Role) }
                 } else {
-                    $ActionLogs.Add("Failed to add service principal to directoryRole $($_.id):  $($_ | ConvertTo-Json -Depth 5)")
-                    Write-Verbose ($_ | ConvertTo-Json -Depth 5)
+                    $ActionLogs.Add("Failed to add service principal to directoryRole $($Result.id):  $($Result | ConvertTo-Json -Depth 5)")
+                    Write-Verbose ($Result | ConvertTo-Json -Depth 5)
+                    $HasFailures = $true
+                }
+            }
+            foreach ($Role in $MissingRoles) {
+                try {
+                    $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/directoryRoles' -tenantid $TenantFilter -body (@{ roleTemplateId = $Role.value } | ConvertTo-Json -Compress)
+                    $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/directoryRoles(roleTemplateId='$($Role.value)')/members/`$ref" -tenantid $TenantFilter -body (@{ '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$($id)" } | ConvertTo-Json -Compress)
+                    $ActionLogs.Add("Activated directory role $($Role.label) from its template and added service principal")
+                } catch {
+                    $ActionLogs.Add("Failed to activate directory role $($Role.label): $($_.Exception.Message)")
                     $HasFailures = $true
                 }
             }

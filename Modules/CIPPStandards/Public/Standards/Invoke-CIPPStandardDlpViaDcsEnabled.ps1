@@ -83,7 +83,6 @@ function Invoke-CIPPStandardDlpViaDcsEnabled {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'DlpViaDcsEnabled' -FieldValue $CurrentInfo -StoreAs bool -Tenant $Tenant
         $CurrentValue = @{ DlpViaDcsEnabled = $CurrentInfo }
         $ExpectedValue = @{ DlpViaDcsEnabled = $WantedState }
         Set-CIPPStandardsCompareField -FieldName 'standards.DlpViaDcsEnabled' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant

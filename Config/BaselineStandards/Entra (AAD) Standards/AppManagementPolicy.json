@@ -1,0 +1,73 @@
+{
+  "name": "AppManagementPolicy",
+  "label": "App Management Policy - Credential Restrictions",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Restricts how credentials can be added to applications and service principals: block password secrets, block custom passwords, and cap credential lifetimes.",
+  "executiveText": "Enforces modern credential hygiene on application registrations - blocking long-lived or user-chosen application passwords limits the blast radius of leaked app secrets, a common attack path.",
+  "docsDescription": "Grades and sets the tenant default app management policy. Configured settings build the restriction set the classic standard built - password addition mirrors onto symmetric key addition, day counts become ISO durations, and application restrictions mirror onto service principal restrictions. Settings left empty are not enforced.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Update-MgPolicyDefaultAppManagementPolicy",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "passwordCredentialsPasswordAddition": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Restrict Password Addition",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Enabled (block new password secrets)",
+          "value": "enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        }
+      ]
+    },
+    "passwordCredentialsCustomPasswordAddition": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Restrict Custom Passwords",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Enabled (block custom passwords)",
+          "value": "enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        }
+      ]
+    },
+    "passwordCredentialsMaxLifetime": {
+      "type": "number",
+      "label": "Password Credentials Max Lifetime (Days)",
+      "omitWhenBlank": true
+    },
+    "keyCredentialsMaxLifetime": {
+      "type": "number",
+      "label": "Key Credentials Max Lifetime (Days)",
+      "omitWhenBlank": true
+    }
+  },
+  "read": {
+    "cacheType": "DefaultAppManagementPolicy"
+  },
+  "prepare": "Get-CIPPBaselineAppManagementPolicyState",
+  "remediate": {
+    "executor": "AppManagementPolicy"
+  }
+}

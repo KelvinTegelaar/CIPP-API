@@ -1,0 +1,58 @@
+{
+  "method": "post",
+  "description": "Applies license changes to many users across many tenants in one call. The body is a JSON array; entries are grouped by tenantFilter internally, so a single call may span tenants.",
+  "requestBody": {
+    "required": true,
+    "content": {
+      "application/json": {
+        "schema": {
+          "type": "array",
+          "description": "One entry per user. Entries are grouped by tenantFilter before execution.",
+          "items": {
+            "type": "object",
+            "required": ["tenantFilter", "userIds"],
+            "properties": {
+              "tenantFilter": {
+                "type": "string",
+                "description": "Target tenant: the tenant's default domain, its tenant ID, or 'AllTenants'."
+              },
+              "userIds": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "User object IDs. Only the first entry is acted on per request object."
+              },
+              "LicenseOperation": {
+                "type": "string",
+                "description": "Which license change to perform for this entry."
+              },
+              "RemoveAllLicenses": {
+                "type": "boolean",
+                "description": "Strip every license from the user."
+              },
+              "ReplaceAllLicenses": {
+                "type": "boolean",
+                "description": "Replace the user's licenses with LicensesToReplace."
+              },
+              "Licenses": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/LabelValue" },
+                "description": "Licenses to add. The backend reads .value off each entry, so these must be objects, not bare SKU ID strings."
+              },
+              "LicensesToRemove": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/LabelValue" },
+                "description": "Licenses to remove. The backend reads .value off each entry."
+              },
+              "LicensesToReplace": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/LabelValue" },
+                "description": "Licenses to replace the current set with. The backend reads .value off each entry."
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-cipp-override-reason": "The body is piped through Group-Object -Property tenantFilter, so the element shape is only reachable through a GroupInfo and cannot be resolved from the AST."
+}

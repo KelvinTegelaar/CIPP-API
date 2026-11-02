@@ -18,8 +18,8 @@ function Invoke-CippTestCopilotReady011 {
             return
         }
 
-        $EnabledPolicies = @($CAPolicies | Where-Object { $_.state -eq 'enabled' })
-        $ReportOnlyPolicies = @($CAPolicies | Where-Object { $_.state -eq 'enabledForReportingButNotEnforced' })
+        $EnabledPolicies = @($CAPolicies.Where({ $_.state -eq 'enabled' }))
+        $ReportOnlyPolicies = @($CAPolicies.Where({ $_.state -eq 'enabledForReportingButNotEnforced' }))
 
         if ($EnabledPolicies.Count -gt 0) {
             $Status = 'Passed'

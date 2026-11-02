@@ -1,4 +1,12 @@
 function Set-CIPPIntuneTemplate {
+    <#
+    .SYNOPSIS
+        Stores an Intune policy template.
+
+    .PARAMETER PayloadChanged
+        Set when a new policy payload is being written. Validation errors then refuse the write; otherwise
+        they are only logged, so an already-broken template can still be renamed.
+    #>
     param (
         [Parameter(Mandatory = $true)]
         $RawJSON,
@@ -7,11 +15,23 @@ function Set-CIPPIntuneTemplate {
         $Description,
         $templateType,
         $Package,
-        $Headers
+        $Headers,
+        [switch]$PayloadChanged
     )
-    Write-Host "Received $DisplayName, $Description, $RawJSON, $templateType"
+    $APIName = 'Set-CIPPIntuneTemplate'
     if (!$DisplayName) { throw 'You must enter a displayname' }
-    if ($null -eq ($RawJSON | ConvertFrom-Json)) { throw 'the JSON is invalid' }
+
+    $Validation = Test-CIPPIntuneTemplate -RawJSON $RawJSON -TemplateType $templateType -DisplayName $DisplayName -IncludeCatalogChecks:$PayloadChanged
+    if (-not $Validation.IsValid) {
+        $Reason = $Validation.Errors -join ' '
+        if ($PayloadChanged) {
+            throw [System.ArgumentException]::new("The template was not saved because it would not deploy: $Reason")
+        }
+        Write-LogMessage -Headers $Headers -API $APIName -message "Saved template '$DisplayName' ($GUID) despite existing problems, because this edit did not change the policy: $Reason" -Sev 'Warning'
+    }
+    foreach ($Warning in $Validation.Warnings) {
+        Write-LogMessage -Headers $Headers -API $APIName -message "Template '$DisplayName' ($GUID): $Warning" -Sev 'Warning'
+    }
 
     $object = [PSCustomObject]@{
         Displayname = $DisplayName
@@ -29,7 +49,7 @@ function Set-CIPPIntuneTemplate {
         Package      = "$Package"
         PartitionKey = 'IntuneTemplate'
     }
-    Write-LogMessage -Headers $Headers -API $APINAME -message "Created intune policy template named $($Request.body.displayname) with GUID $GUID" -Sev 'Debug'
+    Write-LogMessage -Headers $Headers -API $APIName -message "Created intune policy template named $DisplayName with GUID $GUID" -Sev 'Debug'
 
     return 'Successfully added template'
 }

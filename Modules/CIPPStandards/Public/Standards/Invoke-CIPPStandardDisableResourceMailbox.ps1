@@ -130,6 +130,5 @@ function Invoke-CIPPStandardDisableResourceMailbox {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableResourceMailbox' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableResourceMailbox' -FieldValue $ResourceMailboxList -StoreAs json -Tenant $Tenant
     }
 }

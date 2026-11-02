@@ -18,19 +18,19 @@ function Invoke-CippTestZTNA21772 {
         $SPsWithSecrets = @()
 
         if ($Apps) {
-            $AppsWithSecrets = $Apps | Where-Object {
+            $AppsWithSecrets = $Apps.Where({
                 $_.passwordCredentials -and
                 $_.passwordCredentials.Count -gt 0 -and
                 $_.passwordCredentials -ne '[]'
-            }
+            })
         }
 
         if ($ServicePrincipals) {
-            $SPsWithSecrets = $ServicePrincipals | Where-Object {
+            $SPsWithSecrets = $ServicePrincipals.Where({
                 $_.passwordCredentials -and
                 $_.passwordCredentials.Count -gt 0 -and
                 $_.passwordCredentials -ne '[]'
-            }
+            })
         }
 
         $TotalWithSecrets = $AppsWithSecrets.Count + $SPsWithSecrets.Count

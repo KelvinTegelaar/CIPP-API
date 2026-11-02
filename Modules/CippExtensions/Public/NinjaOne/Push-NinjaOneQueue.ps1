@@ -7,9 +7,8 @@ function Push-NinjaOneQueue {
 
     Switch ($Item.NinjaAction) {
         'StartAutoMapping' { Invoke-NinjaOneOrgMapping }
-        'AutoMapTenant' { Invoke-NinjaOneOrgMappingTenant -QueueItem $Item }
-        'SyncTenant' { Invoke-NinjaOneTenantSync -QueueItem $Item }
-        'SyncTenants' { Invoke-NinjaOneSync }
+        'SyncTenant'       { Invoke-NinjaOneTenantSync -QueueItem $Item }
+        'SyncTenants'      { Invoke-NinjaOneSync }
     }
     return $true
 }

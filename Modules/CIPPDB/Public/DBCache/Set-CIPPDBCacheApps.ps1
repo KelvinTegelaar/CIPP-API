@@ -19,10 +19,8 @@ function Set-CIPPDBCacheApps {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching applications' -sev Debug
 
-        $Apps = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/applications?$top=999&expand=owners' -tenantid $TenantFilter
-        if (!$Apps) { $Apps = @() }
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Apps' -Data $Apps -AddCount
-        $Apps = $null
+        New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/applications?$top=999&expand=owners' -tenantid $TenantFilter -Stream |
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'Apps' -AddCount
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached applications successfully' -sev Debug
 

@@ -19,6 +19,7 @@ function Invoke-AddDefenderDeployment {
     $ASR = $Request.Body.ASR
     $EDR = $Request.Body.EDR
 
+    $Failed = 0
     $Results = foreach ($tenant in $Tenants) {
         try {
             if ($Compliance) {
@@ -37,6 +38,7 @@ function Invoke-AddDefenderDeployment {
                 Set-CIPPDefenderExclusionPolicy -TenantFilter $tenant -DefenderExclusions $DefenderExclusions -Headers $Headers -APIName $APIName
             }
         } catch {
+            $Failed++
             "Failed to add policy for $($tenant): $($_.Exception.Message)"
             Write-LogMessage -headers $Headers -API $APIName -tenant $tenant -message "Failed adding Defender policy. Error: $($_.Exception.Message)" -Sev 'Error'
             continue
@@ -44,7 +46,7 @@ function Invoke-AddDefenderDeployment {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Tenants).Count -Failed $Failed
             Body       = @{'Results' = @($Results) }
         })
 

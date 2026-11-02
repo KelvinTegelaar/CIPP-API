@@ -4,10 +4,20 @@ function Invoke-GetCippAlerts {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Returns the CIPP dashboard banner notifications: any hosted maintenance notice, a legacy infrastructure warning for instances still on Function Apps, today's most recent entries from the alert log, and warnings for an out-of-date or misconfigured deployment.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $Alerts = [System.Collections.Generic.List[object]]::new()
+
+    # Hosted maintenance notice, set as a JSON blob in CIPP_MAINTENANCE_NOTICE. Added first so it
+    # sorts to the top of the banner stack. Self-suppresses once its end time has passed.
+    $MaintenanceNotice = Get-CIPPMaintenanceNotice
+    if ($MaintenanceNotice) { $Alerts.Add($MaintenanceNotice) }
+    $LegacyNotice = Get-CIPPLegacyInfrastructureNotice
+    if ($LegacyNotice) { $Alerts.Add($LegacyNotice) }
+
     $Table = Get-CippTable -tablename CippAlerts
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
     $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
@@ -16,42 +26,72 @@ function Invoke-GetCippAlerts {
 
     $CIPPVersion = $Request.Query.localversion
     $Version = Assert-CippVersion -CIPPVersion $CIPPVersion
+    # a container instance with auto-restart on updates itself at its scheduled restart time
+    $UpdateAction = 'Please update to the latest version.'
+    if (($Version.OutOfDateCIPP -or $Version.OutOfDateCIPPAPI) -and $env:CIPPNG -eq 'true') {
+        try {
+            $UpdateSettings = Sync-CippContainerUpdateState
+            if ($UpdateSettings.AutoUpdate -eq 'true' -and $UpdateSettings.CheckInterval -ne '0' -and -not [string]::IsNullOrWhiteSpace([string]$UpdateSettings.CheckTime)) {
+                $UpdateAction = "It will update automatically at the instance's scheduled restart time, {0:d2}:00 ({1})." -f [int]$UpdateSettings.CheckTime, ($env:CIPP_TIMEZONE ?? 'UTC')
+            }
+        } catch {
+            Write-Information "Could not read the container restart schedule: $($_.Exception.Message)"
+        }
+    }
     if ($Version.OutOfDateCIPP) {
         $Alerts.Add(@{
                 title = 'CIPP Frontend Out of Date'
-                Alert = 'Your CIPP Frontend is out of date. Please update to the latest version. Find more on the following '
+                Alert = "Your CIPP Frontend is out of date. $UpdateAction Find more on the following "
                 link  = 'https://docs.cipp.app/setup/self-hosting-guide/updating'
                 type  = 'warning'
             })
-        Write-LogMessage -message 'Your CIPP Frontend is out of date. Please update to the latest version' -API 'Updates' -tenant 'All Tenants' -sev Alert
+        Write-LogMessage -message "Your CIPP Frontend is out of date. $UpdateAction" -API 'Updates' -tenant 'All Tenants' -sev Alert
 
     }
     if ($Version.OutOfDateCIPPAPI) {
         $Alerts.Add(@{
                 title = 'CIPP API Out of Date'
-                Alert = 'Your CIPP API is out of date. Please update to the latest version. Find more on the following'
+                Alert = "Your CIPP API is out of date. $UpdateAction Find more on the following"
                 link  = 'https://docs.cipp.app/setup/self-hosting-guide/updating'
                 type  = 'warning'
             })
-        Write-LogMessage -message 'Your CIPP API is out of date. Please update to the latest version' -API 'Updates' -tenant 'All Tenants' -sev Alert
+        Write-LogMessage -message "Your CIPP API is out of date. $UpdateAction" -API 'Updates' -tenant 'All Tenants' -sev Alert
     }
 
-    if ($env:ApplicationID -eq 'LongApplicationID' -or $null -eq $env:ApplicationID) {
-        $Alerts.Add(@{
-                title          = 'SAM Setup Incomplete'
-                Alert          = 'You have not yet completed your setup. Please go to the Setup Wizard in Application Settings to connect CIPP to your tenants.'
-                link           = '/cipp/setup'
-                type           = 'warning'
-                setupCompleted = $false
-            })
-    }
-    if ($role -like '*superadmin*') {
+    if ($role -contains 'superadmin') {
         $Alerts.Add(@{
                 title = 'Superadmin Account Warning'
                 Alert = 'You are logged in under a superadmin account. This account should not be used for normal usage.'
                 link  = 'https://docs.cipp.app/setup/installation/owntenant'
                 type  = 'error'
             })
+    }
+
+    # Outstanding SAM permissions are only visible by opening the permissions page, so an
+    # instance can sit needing consent without anyone noticing. Surface it here like the other
+    # instance health warnings. Only shown to roles that can actually grant the consent.
+    if ($Role | Where-Object { $_ -in @('admin', 'superadmin') }) {
+        try {
+            # Cached result only - this endpoint runs on every page load, and running the
+            # permissions check itself makes a Graph call per service principal.
+            $AccessTable = Get-CIPPTable -TableName 'AccessChecks'
+            $PermissionCache = Get-CIPPAzDataTableEntity @AccessTable -Filter "PartitionKey eq 'AccessCheck' and RowKey eq 'AccessPermissions'"
+            if ($PermissionCache.Data) {
+                $MissingPermissions = ($PermissionCache.Data | ConvertFrom-Json -ErrorAction Stop).MissingPermissions
+                $MissingCount = ($MissingPermissions | Measure-Object).Count
+                if ($MissingCount -gt 0) {
+                    $Alerts.Add(@{
+                            title = 'Permissions to Apply'
+                            Alert = ('CIPP has {0} new permission(s) to apply. Review and apply them on the permissions page: ' -f $MissingCount)
+                            link  = '/cipp/settings/permissions'
+                            type  = 'warning'
+                        })
+                }
+            }
+        } catch {
+            # A missing or unreadable cache just means no banner - never break the alert list.
+            Write-Information "Could not read the cached permissions check: $($_.Exception.Message)"
+        }
     }
     $PSMinVersion = [Version]'7.4.0'
     if ($PSVersionTable.PSVersion -lt $PSMinVersion) {

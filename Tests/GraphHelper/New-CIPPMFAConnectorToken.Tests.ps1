@@ -1,0 +1,246 @@
+# New-CIPPMFAConnectorToken caches a long-lived connector secret per tenant so the expensive provisioning
+# (adding a credential to the MFA client SP) only runs when no usable cached secret exists. These tests pin
+# that a cached secret is reused without provisioning, and that a cache miss provisions and stores one.
+
+BeforeAll {
+    $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+
+    function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
+    function New-GraphPostRequest { param($uri, $tenantid, $type, $body, $AsApp) }
+    function Update-AppManagementPolicy { param($TenantFilter, $ApplicationId, [switch]$ServicePrincipal, $PolicyName, [switch]$ExemptPasswordLifetime, $headers) }
+    function Get-CIPPTable { param($tablename) }
+    function Get-CIPPAzDataTableEntity { param($Filter) }
+    function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
+    function Get-Tenants { param($TenantFilter) }
+    function Get-CippKeyVaultSecret { param($Name, [switch]$AsPlainText) }
+    function Set-CippKeyVaultSecret { param($Name, $SecretValue) }
+    function Write-LogMessage { param($headers, $API, $tenant, $message, $sev) }
+
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/New-CIPPMFAConnectorToken.ps1')
+
+    $script:TenantGuid = '11111111-1111-1111-1111-111111111111'
+    $script:MFAAppID = '981f26a1-7f43-403b-a875-f8b09b8cd720'
+}
+
+Describe 'New-CIPPMFAConnectorToken secret caching' {
+    BeforeEach {
+        # Force the dev (DevSecrets table) storage path so the assertions are deterministic.
+        $env:NonLocalHostAzurite = 'true'
+        Mock Get-CIPPTable { @{ Context = 'stub' } }
+        Mock Add-CIPPAzDataTableEntity {}
+        Mock Update-AppManagementPolicy {}
+        Mock Write-LogMessage {}
+        # Token exchange
+        Mock Invoke-RestMethod { [pscustomobject]@{ access_token = 'TOKEN123' } }
+        # SP lookup returns the MFA client SP so provisioning finds it (no SP create)
+        Mock New-GraphGetRequest { @([pscustomobject]@{ id = 'mfa-sp-id'; appId = $script:MFAAppID }) }
+        # addPassword returns a fresh secret
+        Mock New-GraphPostRequest { [pscustomobject]@{ secretText = 'NEWSECRET' } }
+    }
+
+    AfterEach {
+        Remove-Item env:NonLocalHostAzurite -ErrorAction SilentlyContinue
+    }
+
+    It 'reuses a cached secret without provisioning' {
+        Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ SecretValue = 'CACHEDSECRET' } }
+
+        $result = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        $result.AccessToken | Should -Be 'TOKEN123'
+        # No provisioning: neither the SP lookup nor addPassword should run on a cache hit.
+        Should -Not -Invoke New-GraphGetRequest
+        Should -Not -Invoke New-GraphPostRequest
+        Should -Not -Invoke Add-CIPPAzDataTableEntity
+    }
+
+    It 'provisions and stores a new secret on a cache miss' {
+        Mock Get-CIPPAzDataTableEntity { $null }
+
+        $result = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        $result.AccessToken | Should -Be 'TOKEN123'
+        # addPassword is the only New-GraphPostRequest here (the SP already exists), and the new secret is cached.
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly
+    }
+
+    It 'surfaces the Entra error description when the token exchange keeps failing' {
+        Mock Get-CIPPAzDataTableEntity { $null }
+        Mock Start-Sleep {}
+        Mock Invoke-RestMethod {
+            $Record = [System.Management.Automation.ErrorRecord]::new([System.Exception]::new('Response status code does not indicate success: 400 (Bad Request).'), 'Token', 'InvalidOperation', $null)
+            $Record.ErrorDetails = [System.Management.Automation.ErrorDetails]::new('{"error":"invalid_request","error_description":"AADSTS53003: Access has been blocked by Conditional Access policies."}')
+            throw $Record
+        }
+
+        { New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid } | Should -Throw -ExpectedMessage '*AADSTS53003*'
+        Should -Not -Invoke Add-CIPPAzDataTableEntity
+    }
+
+    It 'names the disabled app and the baseline for <Code>, without reprovisioning or retrying' -TestCases @(
+        @{ Code = 'AADSTS7000112'; Expected = 'The Azure Multi-Factor Auth Client app (981f26a1-7f43-403b-a875-f8b09b8cd720) is disabled in this tenant. Enable it with the ''Azure MFA push notification apps'' baseline standard, or in Entra under Enterprise applications.' }
+        @{ Code = 'AADSTS500014'; Expected = 'The Azure Multi-Factor Auth Connector app (1f5530b3-261a-47a9-b357-ded261e17918) is disabled in this tenant. Enable it with the ''Azure MFA push notification apps'' baseline standard, or in Entra under Enterprise applications.' }
+    ) {
+        param($Code, $Expected)
+        Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ SecretValue = 'CACHEDSECRET' } }
+        Mock Start-Sleep {}
+        Mock Invoke-RestMethod {
+            $Record = [System.Management.Automation.ErrorRecord]::new([System.Exception]::new('400 (Bad Request).'), 'Token', 'InvalidOperation', $null)
+            $Record.ErrorDetails = [System.Management.Automation.ErrorDetails]::new((@{ error = 'unauthorized_client'; error_description = "${Code}: Application is disabled. Trace ID: abc Correlation ID: def Timestamp: 2026-10-06 04:15:04Z" } | ConvertTo-Json))
+            throw $Record
+        }
+
+        { New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid } | Should -Throw -ExpectedMessage $Expected
+        Should -Invoke Invoke-RestMethod -Times 1 -Exactly
+        Should -Not -Invoke New-GraphPostRequest
+    }
+
+    It 'strips the Entra trace trailer from an unmapped error' {
+        Mock Get-CIPPAzDataTableEntity { $null }
+        Mock Start-Sleep {}
+        Mock Invoke-RestMethod {
+            $Record = [System.Management.Automation.ErrorRecord]::new([System.Exception]::new('400 (Bad Request).'), 'Token', 'InvalidOperation', $null)
+            $Record.ErrorDetails = [System.Management.Automation.ErrorDetails]::new('{"error":"invalid_request","error_description":"AADSTS53003: Access has been blocked by Conditional Access policies. Trace ID: abc\r\nCorrelation ID: def\r\nTimestamp: 2026-10-06 04:15:04Z"}')
+            throw $Record
+        }
+
+        { New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid } | Should -Throw -ExpectedMessage 'Failed to get a token for the Azure Multi-Factor Auth Client app: AADSTS53003: Access has been blocked by Conditional Access policies.'
+    }
+}
+
+Describe 'New-CIPPMFAConnectorToken Key Vault (production) storage path' {
+    BeforeEach {
+        # Production path: no dev-storage markers, so the secret is read from and written to Key Vault.
+        $script:SavedStorage = [Environment]::GetEnvironmentVariable('AzureWebJobsStorage')
+        Remove-Item env:AzureWebJobsStorage -ErrorAction SilentlyContinue
+        Remove-Item env:NonLocalHostAzurite -ErrorAction SilentlyContinue
+        Mock Set-CippKeyVaultSecret {}
+        Mock Update-AppManagementPolicy {}
+        Mock Invoke-RestMethod { [pscustomobject]@{ access_token = 'TOKEN123' } }
+        Mock New-GraphGetRequest { @([pscustomobject]@{ id = 'mfa-sp-id'; appId = $script:MFAAppID }) }
+        Mock New-GraphPostRequest { [pscustomobject]@{ secretText = 'NEWSECRET' } }
+    }
+
+    AfterEach {
+        if ($null -ne $script:SavedStorage) { $env:AzureWebJobsStorage = $script:SavedStorage }
+    }
+
+    It 'provisions when Key Vault has no cached secret yet (404) instead of failing' {
+        # The Key Vault helper throws on a missing secret rather than returning nothing; the first call for a
+        # tenant must treat that as a cache miss and provision, not surface the 404 to the user.
+        Mock Get-CippKeyVaultSecret { throw "Failed to retrieve secret 'NPS-x' from vault 'cippx': Response status code does not indicate success: 404" }
+
+        $result = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        $result.AccessToken | Should -Be 'TOKEN123'
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly
+        Should -Invoke Set-CippKeyVaultSecret -Times 1 -Exactly
+    }
+
+    It 'reuses a cached Key Vault secret without provisioning' {
+        Mock Get-CippKeyVaultSecret { 'CACHEDSECRET' }
+
+        $result = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        $result.AccessToken | Should -Be 'TOKEN123'
+        Should -Not -Invoke New-GraphPostRequest
+        Should -Not -Invoke Set-CippKeyVaultSecret
+    }
+
+    It 'surfaces a non-404 Key Vault failure rather than silently reprovisioning' {
+        Mock Get-CippKeyVaultSecret { throw "Failed to retrieve secret 'NPS-x' from vault 'cippx': Response status code does not indicate success: 403" }
+
+        { New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid } | Should -Throw -ExpectedMessage '*403*'
+        Should -Not -Invoke New-GraphPostRequest
+    }
+}
+
+Describe 'New-CIPPMFAConnectorToken provisioning hygiene' {
+    BeforeEach {
+        $env:NonLocalHostAzurite = 'true'
+        Mock Get-CIPPTable { @{ Context = 'stub' } }
+        Mock Get-CIPPAzDataTableEntity { $null }
+        Mock Add-CIPPAzDataTableEntity {}
+        Mock Write-LogMessage {}
+        Mock Start-Sleep {}
+        Mock Invoke-RestMethod { [pscustomobject]@{ access_token = 'TOKEN123' } }
+        Mock Update-AppManagementPolicy {}
+        $script:Posts = [System.Collections.Generic.List[object]]::new()
+        Mock New-GraphPostRequest {
+            $script:Posts.Add([pscustomobject]@{ uri = $uri; body = $body })
+            [pscustomobject]@{ secretText = 'NEWSECRET' }
+        }
+    }
+
+    AfterEach {
+        Remove-Item env:NonLocalHostAzurite -ErrorAction SilentlyContinue
+    }
+
+    It 'removes only expired CIPP secrets, and only after a secret add fails' {
+        Mock New-GraphGetRequest {
+            [pscustomobject]@{ id = 'mfa-sp-id'; passwordCredentials = @(
+                    [pscustomobject]@{ keyId = 'expired-current'; displayName = 'CIPP MFA Connector'; endDateTime = (Get-Date).AddDays(-1).ToString('o') }
+                    [pscustomobject]@{ keyId = 'expired-legacy'; displayName = 'MFA Temporary Password'; endDateTime = (Get-Date).AddDays(-300).ToString('o') }
+                    [pscustomobject]@{ keyId = 'active'; displayName = 'CIPP MFA Connector'; endDateTime = (Get-Date).AddDays(100).ToString('o') }
+                    [pscustomobject]@{ keyId = 'customer'; displayName = 'Something else'; endDateTime = (Get-Date).AddDays(-300).ToString('o') }
+                ) }
+        }
+        $script:AddCount = 0
+        Mock New-GraphPostRequest {
+            $script:Posts.Add([pscustomobject]@{ uri = $uri; body = $body })
+            if ($uri -like '*/addPassword') {
+                $script:AddCount++
+                if ($script:AddCount -eq 1) { throw 'Too many credentials on this object.' }
+            }
+            [pscustomobject]@{ secretText = 'NEWSECRET' }
+        }
+
+        $result = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        $result.AccessToken | Should -Be 'TOKEN123'
+        $Removed = @($script:Posts | Where-Object { $_.uri -like '*/removePassword' } | ForEach-Object { ($_.body | ConvertFrom-Json).keyId })
+        $Removed | Should -Be @('expired-current', 'expired-legacy')
+        $script:AddCount | Should -Be 2
+        Should -Not -Invoke Start-Sleep
+    }
+
+    It 'leaves expired secrets alone when the secret add succeeds' {
+        Mock New-GraphGetRequest {
+            [pscustomobject]@{ id = 'mfa-sp-id'; passwordCredentials = @([pscustomobject]@{ keyId = 'expired'; displayName = 'CIPP MFA Connector'; endDateTime = (Get-Date).AddDays(-1).ToString('o') }) }
+        }
+
+        $null = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        $script:Posts | Where-Object { $_.uri -like '*/removePassword' } | Should -BeNullOrEmpty
+    }
+
+    It 'asks for its own exemption policy covering the password lifetime cap' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = 'mfa-sp-id'; passwordCredentials = @() } }
+
+        $null = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        Should -Invoke Update-AppManagementPolicy -Times 1 -Exactly -ParameterFilter { $PolicyName -eq 'CIPP MFA Connector Exemption Policy' -and $ExemptPasswordLifetime -and $ServicePrincipal }
+    }
+
+    It 'retries with the tenant maximum when the secret lifetime is rejected' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = 'mfa-sp-id'; passwordCredentials = @() } }
+        Mock Update-AppManagementPolicy {
+            [pscustomobject]@{ DefaultPolicy = [pscustomobject]@{ applicationRestrictions = [pscustomobject]@{ passwordCredentials = @([pscustomobject]@{ restrictionType = 'passwordLifetime'; state = 'enabled'; maxLifetime = 'P90D' }) } } }
+        }
+        Mock New-GraphPostRequest {
+            $script:Posts.Add([pscustomobject]@{ uri = $uri; body = $body })
+            $Credential = ($body | ConvertFrom-Json).passwordCredential
+            if (([datetime]$Credential.endDateTime - [datetime]$Credential.startDateTime).TotalDays -gt 90) {
+                throw "Credential lifetime exceeds the max value allowed as per assigned policy 'default'."
+            }
+            [pscustomobject]@{ secretText = 'NEWSECRET' }
+        }
+
+        $result = New-CIPPMFAConnectorToken -TenantFilter $script:TenantGuid
+
+        $result.AccessToken | Should -Be 'TOKEN123'
+        ($script:Posts | Where-Object { $_.uri -like '*/addPassword' }).Count | Should -Be 2
+        Should -Not -Invoke Start-Sleep
+    }
+}

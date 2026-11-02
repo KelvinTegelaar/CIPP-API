@@ -29,8 +29,9 @@ function Set-CIPPDBCacheAppRoleAssignments {
                 $AppRoleAssignments = $SP.appRoleAssignments
                 foreach ($Assignment in $AppRoleAssignments) {
                     # Enrich with service principal info
-                    $Assignment | Add-Member -NotePropertyName 'servicePrincipalDisplayName' -NotePropertyValue $SP.displayName -Force
-                    $Assignment | Add-Member -NotePropertyName 'servicePrincipalAppId' -NotePropertyValue $SP.appId -Force
+                    $Props = $Assignment.PSObject.Properties
+                    $Props.Remove('servicePrincipalDisplayName'); $Props.Add([psnoteproperty]::new('servicePrincipalDisplayName', $SP.displayName))
+                    $Props.Remove('servicePrincipalAppId'); $Props.Add([psnoteproperty]::new('servicePrincipalAppId', $SP.appId))
                     $AllAppRoleAssignments.Add($Assignment)
                 }
             } catch {
@@ -41,6 +42,11 @@ function Set-CIPPDBCacheAppRoleAssignments {
         if ($AllAppRoleAssignments.Count -gt 0) {
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AppRoleAssignments' -Data $AllAppRoleAssignments -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AllAppRoleAssignments.Count) app role assignments" -sev Debug
+        } else {
+            # The service principal read succeeded and no assignments exist: write the authoritative
+            # empty set so the Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'AppRoleAssignments' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 app role assignments (none found)' -sev Debug
         }
         $AllAppRoleAssignments = $null
 

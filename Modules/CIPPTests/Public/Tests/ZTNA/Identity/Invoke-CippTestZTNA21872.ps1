@@ -25,10 +25,10 @@ function Invoke-CippTestZTNA21872 {
         $MfaRequiredInDeviceSettings = $DeviceRegistrationPolicy.multiFactorAuthConfiguration -eq 'required'
 
         # Filter for enabled device registration CA policies
-        $DeviceRegistrationPolicies = $CAPolicies | Where-Object {
+        $DeviceRegistrationPolicies = $CAPolicies.Where({
             ($_.state -eq 'enabled') -and
             ($_.conditions.applications.includeUserActions -eq 'urn:user:registerdevice')
-        }
+        })
 
         # Check each policy to see if it properly requires MFA
         $ValidPolicies = [System.Collections.Generic.List[object]]::new()

@@ -14,6 +14,15 @@ function Invoke-ExecRunTenantGroupRule {
 
     $GroupId = $Request.Body.groupId ?? $Request.Query.groupId
 
+    # Same gate as Invoke-ExecTenantGroup: group management requires unrestricted group scope
+    $AllowedGroups = Test-CippAccess -Request $Request -GroupList
+    if ($AllowedGroups -notcontains 'AllGroups') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ Results = 'You do not have permission to manage tenant groups.' }
+            })
+    }
+
     try {
         $GroupTable = Get-CippTable -tablename 'TenantGroups'
         $Group = Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$GroupId'"
@@ -22,7 +31,9 @@ function Invoke-ExecRunTenantGroupRule {
 
         $null = Start-TenantDynamicGroupOrchestrator -GroupId $GroupId
 
-        $Body = @{ Results = "Dynamic rules executed successfully for group '$($Group.Name)'. Processing will continue in the background. Check the logbook for details." }
+        $Result = "Dynamic rules executed successfully for group '$($Group.Name)'. Processing will continue in the background. Check the logbook for details."
+        Write-LogMessage -API 'TenantGroups' -tenant 'Global' -headers $Request.Headers -message $Result -Sev 'Info'
+        $Body = @{ Results = $Result }
 
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
@@ -30,7 +41,7 @@ function Invoke-ExecRunTenantGroupRule {
             })
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'TenantGroups' -message "Failed to execute tenant group rules: $ErrorMessage" -sev Error
+        Write-LogMessage -API 'TenantGroups' -tenant 'Global' -message "Failed to execute tenant group rules: $ErrorMessage" -sev Error
         $Body = @{ Results = "Failed to execute dynamic rules: $ErrorMessage" }
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::InternalServerError

@@ -31,11 +31,9 @@ function Add-CIPPApplicationPermission {
     } else {
         if (!$RequiredResourceAccess -and $TemplateId) {
             Write-Information "Adding application permissions for template $TemplateId"
-            $TemplateTable = Get-CIPPTable -TableName 'templates'
-            $Filter = "RowKey eq '$TemplateId' and PartitionKey eq 'AppApprovalTemplate'"
-            $Template = (Get-CIPPAzDataTableEntity @TemplateTable -Filter $Filter).JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
-            $ApplicationId = $Template.AppId
-            $Permissions = $Template.Permissions
+            $TemplatePermissions = Get-CIPPAppApprovalPermissions -TemplateId $TemplateId
+            $ApplicationId = $TemplatePermissions.ApplicationId
+            $Permissions = $TemplatePermissions.Permissions
             $RequiredResourceAccess = [System.Collections.Generic.List[object]]::new()
             foreach ($AppId in $Permissions.PSObject.Properties.Name) {
                 $AppPermissions = @($Permissions.$AppId.applicationPermissions)
@@ -60,14 +58,19 @@ function Add-CIPPApplicationPermission {
     $ServicePrincipalList = [System.Collections.Generic.List[object]]::new()
     $SPList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $TenantFilter -NoAuthCheck $true
     foreach ($SP in $SPList) { $ServicePrincipalList.Add($SP) }
-    $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId
+    $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId | Select-Object -First 1
+    foreach ($Delay in 0, 2, 4, 8, 16) {
+        if ($ourSVCPrincipal) { break }
+        # A service principal created moments ago can take a while to replicate.
+        Start-Sleep -Seconds $Delay
+        try {
+            $ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$ApplicationId')?`$select=appId,id,displayName" -tenantid $TenantFilter -skipTokenCache $true -NoAuthCheck $true
+        } catch {
+            Write-Information "Service principal for $ApplicationId not found in $TenantFilter yet: $($_.Exception.Message)"
+        }
+    }
     if (!$ourSVCPrincipal) {
-        #Our Service Principal isn't available yet. We do a sleep and reexecute after 3 seconds.
-        Start-Sleep -Seconds 5
-        $ServicePrincipalList.Clear()
-        $SPList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $TenantFilter -NoAuthCheck $true
-        foreach ($SP in $SPList) { $ServicePrincipalList.Add($SP) }
-        $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId
+        throw "Service principal for application $ApplicationId was not found in tenant $TenantFilter"
     }
 
     $Results = [System.Collections.Generic.List[string]]::new()
@@ -122,7 +125,7 @@ function Add-CIPPApplicationPermission {
         if (!$svcPrincipalId) { continue }
 
         foreach ($SingleResource in $App.ResourceAccess | Where-Object -Property Type -EQ 'Role') {
-            if ($SingleResource.id -in $CurrentRoles.appRoleId) { continue }
+            if ($CurrentRoles | Where-Object { $_.appRoleId -eq $SingleResource.id -and $_.resourceId -eq $svcPrincipalId.id }) { continue }
             [pscustomobject]@{
                 principalId = $($ourSVCPrincipal.id)
                 resourceId  = $($svcPrincipalId.id)
@@ -162,6 +165,16 @@ function Add-CIPPApplicationPermission {
         } catch {
             $Results.add("Failed to grant permissions in bulk: $(Get-NormalizedError -message $_.Exception.Message)")
         }
+    }
+    if ($counter -gt 0) {
+        # App-only scopes changed; a cached client_credentials token still carries the old
+        # roles, so drop it rather than wait out its TTL.
+        $null = Clear-CippTokenCache -TenantFilter $TenantFilter
+        Write-LogMessage -API 'Add-CIPPApplicationPermission' -tenant $TenantFilter -message "Added $counter application permission(s) to $($ourSVCPrincipal.displayName)" -Sev 'Info'
+    }
+    $Failures = @($Results | Where-Object { $_ -match '^Failed to' })
+    if ($Failures.Count -gt 0) {
+        Write-LogMessage -API 'Add-CIPPApplicationPermission' -tenant $TenantFilter -message "Failed during application permission update for $($ourSVCPrincipal.displayName): $($Failures.Count) error(s)" -Sev 'Warning' -LogData @{ Failures = $Failures }
     }
     "Added $counter Application permissions to $($ourSVCPrincipal.displayName)"
     return $Results

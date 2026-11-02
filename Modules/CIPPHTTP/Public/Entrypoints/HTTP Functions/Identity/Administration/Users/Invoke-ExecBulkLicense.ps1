@@ -15,6 +15,7 @@ function Invoke-ExecBulkLicense {
     $Headers = $Request.Headers
     $Results = [System.Collections.Generic.List[string]]::new()
     $StatusCode = [HttpStatusCode]::OK
+    $Failed = 0
 
     try {
         $UserRequests = $Request.Body
@@ -85,12 +86,14 @@ function Invoke-ExecBulkLicense {
             foreach ($UserRequest in $TenantRequests) {
                 $UserId = @($UserRequest.userIds | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1)
                 if ($UserId.Count -eq 0) {
+                    $Failed++
                     $Results.Add("No valid user ID found in request for tenant $TenantFilter")
                     continue
                 }
                 $UserId = $UserId[0]
                 $User = $UserLookup[$UserId]
                 if ($null -eq $User) {
+                    $Failed++
                     $Results.Add("User $UserId not found in tenant $TenantFilter")
                     continue
                 }
@@ -144,9 +147,11 @@ function Invoke-ExecBulkLicense {
                 try {
                     $BulkResults = Set-CIPPUserLicense -LicenseRequests $LicenseRequests -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
                     foreach ($Result in $BulkResults) {
-                        $Results.Add($Result)
+                        $Results.Add($Result.resultText)
                     }
+                    $Failed = $Failed + @(@($BulkResults).Where({ $_.state -eq 'error' }) | Select-Object -ExpandProperty UserId -Unique).Count
                 } catch {
+                    $Failed = $Failed + $LicenseRequests.Count
                     $ErrorMessage = Get-CippException -Exception $_
                     $Results.Add("Failed to process bulk license operation for tenant $TenantFilter. Error: $($ErrorMessage.NormalizedError)")
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to process bulk license operation. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
@@ -157,9 +162,10 @@ function Invoke-ExecBulkLicense {
         $Body = @{
             Results = @($Results)
         }
+        $StatusCode = Get-CippBulkStatusCode -Total @($UserRequests).Count -Failed $Failed
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{
             Results = @("Failed to process bulk license operation: $($ErrorMessage.NormalizedError)")
         }

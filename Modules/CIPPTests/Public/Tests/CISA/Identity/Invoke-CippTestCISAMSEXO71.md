@@ -13,7 +13,7 @@ Set-ExternalInOutlook -Enabled $true
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.7.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo71v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.7.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo71v1)
 - [External sender warnings](https://learn.microsoft.com/microsoft-365/security/office-365-security/external-email-forwarding)
 
 <!--- Results --->

@@ -37,7 +37,7 @@ function Invoke-CippTestCIS_5_2_3_4 {
         } else {
             $Status = 'Failed'
             $Result = "$($NotCapable.Count) of $($Members.Count) enabled member user(s) are not MFA capable.`n`n"
-            $Result += ($NotCapable | Select-Object -First 25 | ForEach-Object { "- $($_.userPrincipalName)" }) -join "`n"
+            $Result += ($NotCapable.Where({ $true }, 'First', 25) | ForEach-Object { "- $($_.userPrincipalName)" }) -join "`n"
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_2_3_4' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name "All member users are 'MFA capable'" -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Authentication'

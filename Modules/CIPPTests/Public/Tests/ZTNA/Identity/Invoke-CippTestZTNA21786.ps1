@@ -13,7 +13,7 @@ function Invoke-CippTestZTNA21786 {
             return
         }
 
-        $TokenProtectionPolicies = $CAPolicies | Where-Object {
+        $TokenProtectionPolicies = $CAPolicies.Where({
             $_.state -eq 'enabled' -and
             $_.conditions.clientAppTypes.Count -eq 1 -and
             $_.conditions.clientAppTypes[0] -eq 'mobileAppsAndDesktopClients' -and
@@ -22,7 +22,7 @@ function Invoke-CippTestZTNA21786 {
             $_.conditions.platforms.includePlatforms.Count -eq 1 -and
             $_.conditions.platforms.includePlatforms -eq 'windows' -and
             $_.sessionControls.secureSignInSession.isEnabled -eq $true
-        }
+        })
 
         if ($TokenProtectionPolicies.Count -gt 0) {
             $Status = 'Passed'

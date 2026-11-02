@@ -12,7 +12,7 @@ function Invoke-NinjaOneDeviceWebhook {
             $MappedFields | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue $($_.IntegrationId)
         }
 
-        if ($MappedFields.DeviceCompliance) {
+        if ($MappedFields.DeviceCompliance -or $MappedFields.DeviceNonCompliantSettings) {
             Write-LogMessage -Headers $Headers -API 'NinjaDeviceCompliance' -message "Webhook Received - Updating NinjaOne Device compliance for $($Data.resourceData.id) in $($Data.tenantId)" -Sev 'Info' -tenant $TenantFilter
             $tenantfilter = $Data.tenantId
             $M365DeviceID = $Data.resourceData.id
@@ -32,17 +32,36 @@ function Invoke-NinjaOneDeviceWebhook {
                         return
                     }
 
-                    if ($DeviceM365.isCompliant -eq $True) {
-                        $Compliant = 'Compliant'
-                    } else {
-                        $Compliant = 'Non-Compliant'
+                    $ComplianceBody = @{}
+
+                    if ($MappedFields.DeviceCompliance) {
+                        if ($DeviceM365.isCompliant -eq $True) {
+                            $Compliant = 'Compliant'
+                        } else {
+                            $Compliant = 'Non-Compliant'
+                        }
+                        $ComplianceBody[$MappedFields.DeviceCompliance] = $Compliant
                     }
 
-                    $ComplianceBody = @{
-                        "$($MappedFields.DeviceCompliance)" = $Compliant
-                    } | ConvertTo-Json
+                    if ($MappedFields.DeviceNonCompliantSettings) {
+                        # A compliant device clears the field. A non-compliant one gets its failing settings looked up in Intune.
+                        $NonCompliantSettings = $null
+                        if ($DeviceM365.isCompliant -ne $True) {
+                            $ManagedDeviceId = $Device.M365ID
+                            if (-not $ManagedDeviceId) {
+                                # Device map rows written before the Intune id was stored: resolve it from the Entra device id.
+                                $ManagedDeviceId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices?`$filter=azureADDeviceId eq '$($DeviceM365.deviceId)'&`$select=id" -Tenantid $tenantfilter | Select-Object -First 1).id
+                            }
+                            if ($ManagedDeviceId) {
+                                $NonCompliantSettings = (Get-NinjaOneDeviceNonCompliantSettings -TenantFilter $tenantfilter -ManagedDeviceIds @($ManagedDeviceId))["$ManagedDeviceId"]
+                            }
+                        }
+                        $ComplianceBody[$MappedFields.DeviceNonCompliantSettings] = $NonCompliantSettings
+                    }
 
-                    $Null = Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/device/$($Device.NinjaOneID)/custom-fields" -Method PATCH -Body $ComplianceBody -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json'
+                    $ComplianceBodyJson = $ComplianceBody | ConvertTo-Json
+
+                    $Null = Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/device/$($Device.NinjaOneID)/custom-fields" -Method PATCH -Body $ComplianceBodyJson -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8'
 
                     Write-Host 'Updated NinjaOne Device Compliance'
                 } catch {

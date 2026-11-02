@@ -1,7 +1,7 @@
 Function Invoke-AddSpamFilter {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Exchange.SpamFilter.ReadWrite
     #>
@@ -17,6 +17,16 @@ Function Invoke-AddSpamFilter {
     $RequestPriority = $Request.Body.Priority
 
     $Tenants = ($Request.body.selectedTenants).value
+
+    # AnyTenant: narrow to the caller's allowed tenants (same as Invoke-AddTransportRule)
+    $AllowedTenants = Test-CippAccess -Request $Request -TenantList
+    if ($AllowedTenants -ne 'AllTenants') {
+        $AllTenants = Get-Tenants -IncludeErrors
+        $AllowedTenantList = $AllTenants | Where-Object { $_.customerId -in $AllowedTenants }
+        $Tenants = $Tenants | Where-Object { $_ -in $AllowedTenantList.defaultDomainName }
+    }
+
+    $Failed = 0
     $Result = foreach ($TenantFilter in $tenants) {
         try {
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-HostedContentFilterPolicy' -cmdParams $RequestParams
@@ -32,6 +42,7 @@ Function Invoke-AddSpamFilter {
             "Successfully created spamfilter for $TenantFilter."
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully created spamfilter for $TenantFilter." -sev Info
         } catch {
+            $Failed++
             $ErrorMessage = Get-CippException -Exception $_
             "Could not create spamfilter rule for $($TenantFilter): $($ErrorMessage.NormalizedError)"
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Could not create spamfilter rule for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
@@ -39,7 +50,7 @@ Function Invoke-AddSpamFilter {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Tenants).Count -Failed $Failed
             Body       = @{Results = @($Result) }
         })
 

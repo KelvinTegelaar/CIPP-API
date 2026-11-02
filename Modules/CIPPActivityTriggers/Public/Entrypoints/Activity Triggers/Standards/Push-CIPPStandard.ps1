@@ -11,6 +11,27 @@ function Push-CIPPStandard {
 
     $Tenant = $Item.Tenant
     $Standard = $Item.Standard
+
+    # FUTURE USE - ZAC
+    # Grouped Conditional Access batch: deploy all of a tenant's CA templates in one sequential
+    # pass. Per-template rerun checks and standard-info context are handled inside the batch
+    # function, so we bypass the generic per-item dispatch below.
+    # if ($Item.BatchTemplates) {
+    #     $TemplateCount = @($Item.BatchTemplates).Count
+    #     Write-Information "Received Conditional Access batch for $Tenant with $TemplateCount template(s)."
+    #     Set-CippUserAgentContext -Source 'standard' -TemplateId $Item.TemplateId
+    #     $QueuedTime = if ($Item.QueuedTime) { [int64]$Item.QueuedTime } else { 0 }
+    #     try {
+    #         Invoke-CIPPCATemplateBatch -Tenant $Tenant -Templates $Item.BatchTemplates -QueuedTime $QueuedTime
+    #         Write-Information "Conditional Access batch completed for tenant $Tenant"
+    #     } catch {
+    #         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Error running Conditional Access batch for tenant $Tenant - $($_.Exception.Message)" -sev Error -LogData (Get-CippException -Exception $_)
+    #         Write-Warning "Error running Conditional Access batch for tenant $Tenant - $($_.Exception.Message)"
+    #         throw $_.Exception.Message
+    #     }
+    #     return
+    # }
+
     $FunctionName = 'Invoke-CIPPStandard{0}' -f $Standard
 
     Write-Information "We'll be running $FunctionName"
@@ -46,12 +67,13 @@ function Push-CIPPStandard {
         return
     }
 
-    # Initialize AsyncLocal storage for thread-safe per-invocation context
-    # Uses $global: so Write-LogMessage (CIPPCore module) can read it across module boundaries
-    if (-not $global:CippStandardInfoStorage) {
-        $global:CippStandardInfoStorage = [System.Threading.AsyncLocal[object]]::new()
-    }
-    $global:CippStandardInfoStorage.Value = $StandardInfo
+    # Store standard info in CIPPCore module-scoped AsyncLocal storage so Write-LogMessage and
+    # Set-CIPPStandardsCompareField can read it - global vars are unreliable in Azure Functions
+    Set-CippStandardInfoContext -StandardInfo $StandardInfo
+
+    # Store action source + template id for outbound User-Agent attribution
+    # Tiers merged into one GroupTemplate run carry several template ids
+    Set-CippUserAgentContext -Source 'standard' -TemplateId @($Item.TemplateId)[0]
 
     # ---- Standard execution telemetry ----
     $runId = [guid]::NewGuid().ToString()
@@ -78,28 +100,20 @@ function Push-CIPPStandard {
     # -------------------------------------
 
     try {
-        # Convert settings to JSON, replace %variables%, then convert back to object
-        $SettingsJSON = $Item.Settings | ConvertTo-Json -Depth 10 -Compress
+        # Convert settings to JSON, replace %variables%, then convert back to object.
+        #
+        # Two things have to hold for that round trip to be safe. The template picker's rawData
+        # snapshot is dropped first: it is a second copy of the selected template that no standard
+        # reads, and being a JSON document nested inside a JSON document it needs a different amount
+        # of escaping than the text around it. And because replacement runs against serialized JSON,
+        # values are escaped for that context - a variable holding a logon banner that reads
+        # 'property of "Contoso"' otherwise closes the string it lands in and the reparse fails.
+        $SettingsForRun = Remove-CIPPStandardSettingsRawData -Settings $Item.Settings
+        $SettingsJSON = $SettingsForRun | ConvertTo-Json -Depth 10 -Compress
         if ($SettingsJSON -match '%') {
-            $Settings = Get-CIPPTextReplacement -TenantFilter $Item.Tenant -Text $SettingsJSON | ConvertFrom-Json
+            $Settings = Get-CIPPTextReplacement -TenantFilter $Item.Tenant -Text $SettingsJSON -EscapeForJson | ConvertFrom-Json
         } else {
-            $Settings = $Item.Settings
-        }
-
-        # Prepare telemetry metadata for standard execution
-        $metadata = @{
-            Standard     = $Standard
-            Tenant       = $Tenant
-            TemplateId   = $Item.TemplateId
-            FunctionName = $FunctionName
-            TriggerType  = 'Standard'
-        }
-
-        if ($Standard -eq 'IntuneTemplate' -and $Item.Settings.TemplateList.value) {
-            $metadata['IntuneTemplateId'] = $Item.Settings.TemplateList.value
-        }
-        if ($Standard -eq 'ConditionalAccessTemplate' -and $Item.Settings.TemplateList.value) {
-            $metadata['CATemplateId'] = $Item.Settings.TemplateList.value
+            $Settings = $SettingsForRun
         }
 
         & $FunctionName -Tenant $Item.Tenant -Settings $Settings -ErrorAction Stop
@@ -131,8 +145,6 @@ function Push-CIPPStandard {
                 Error        = $err
             } | ConvertTo-Json -Compress)
 
-        if ($global:CippStandardInfoStorage) {
-            $global:CippStandardInfoStorage.Value = $null
-        }
+        Set-CippStandardInfoContext -StandardInfo $null
     }
 }

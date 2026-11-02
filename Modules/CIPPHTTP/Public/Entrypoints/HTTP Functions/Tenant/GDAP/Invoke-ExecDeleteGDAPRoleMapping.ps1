@@ -18,16 +18,18 @@ Function Invoke-ExecDeleteGDAPRoleMapping {
     try {
         $Filter = "PartitionKey eq 'Roles' and RowKey eq '{0}'" -f $GroupId
         $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-        Remove-AzDataTableEntity -Force @Table -Entity $Entity
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entity
         $Results = [pscustomobject]@{'Results' = 'Success. GDAP relationship mapping deleted' }
         Write-LogMessage -headers $Headers -API $APIName -message "GDAP relationship mapping deleted for $($GroupId)" -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
 
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 

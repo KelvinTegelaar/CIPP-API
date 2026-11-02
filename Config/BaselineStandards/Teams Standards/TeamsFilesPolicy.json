@@ -1,0 +1,115 @@
+{
+  "name": "TeamsFilesPolicy",
+  "label": "Global Files Policy for Microsoft Teams",
+  "cat": "Teams Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the properties of the Global Teams files policy, including file sharing in external (federated) chats.",
+  "executiveText": "Controls whether employees can attach files directly in Microsoft Teams chats with people outside the organization. Microsoft is enabling this by default for all tenants, including those that had turned it off, so managing it as a standard keeps the organization's chosen external sharing posture in place.",
+  "docsDescription": "Sets the properties of the Global Teams files policy. File sharing in external chats controls whether users can attach files in 1:1, group and meeting chats with people from other organizations. Native file entry points controls the OneDrive and SharePoint attach options in chats and channels, and SharePoint channel files tab controls the SharePoint Files tab in channels.",
+  "impactColour": "info",
+  "addedDate": "2026-09-28",
+  "powershellEquivalent": "Set-CsTeamsFilesPolicy -Identity Global -FileSharingInChatsWithExternalUsers Disabled",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "FileSharingInChatsWithExternalUsers": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "File sharing in external chats",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Don't change",
+          "value": ""
+        },
+        {
+          "label": "Enabled",
+          "value": "Enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "Disabled"
+        }
+      ],
+      "default": "Disabled",
+      "recommended": "Disabled"
+    },
+    "NativeFileEntryPoints": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "OneDrive and SharePoint file entry points",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Don't change",
+          "value": ""
+        },
+        {
+          "label": "Enabled",
+          "value": "Enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "Disabled"
+        }
+      ],
+      "default": ""
+    },
+    "SPChannelFilesTab": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "SharePoint channel files tab",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "label": "Don't change",
+          "value": ""
+        },
+        {
+          "label": "Enabled",
+          "value": "Enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "Disabled"
+        }
+      ],
+      "default": ""
+    }
+  },
+  "expected": {
+    "FileSharingInChatsWithExternalUsers": "%FileSharingInChatsWithExternalUsers%",
+    "NativeFileEntryPoints": "%NativeFileEntryPoints%",
+    "SPChannelFilesTab": "%SPChannelFilesTab%"
+  },
+  "read": {
+    "cacheType": "CsTeamsFilesPolicy"
+  },
+  "remediate": {
+    "executor": "TeamsRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-CsTeamsFilesPolicy",
+        "params": {
+          "FileSharingInChatsWithExternalUsers": "%FileSharingInChatsWithExternalUsers%",
+          "NativeFileEntryPoints": "%NativeFileEntryPoints%",
+          "SPChannelFilesTab": "%SPChannelFilesTab%"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "name": "CopilotLimitedMode",
+  "disabled": true,
+  "label": "Set Copilot Limited Mode",
+  "cat": "Copilot (M365) Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Enables or disables Copilot limited mode, scoped to a named group when enabling.",
+  "executiveText": "Restricts what Copilot will discuss for a chosen population - limiting responses on sensitive topics while the organization builds its AI governance posture.",
+  "docsDescription": "Grades the Copilot limited mode flag and, when enabling, that the scoping group matches the configured name. The Copilot admin settings API is delegated-only. An enabled posture whose group cannot resolve reports No Data rather than grading against nothing.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: PATCH copilot/admin/settings/limitedMode",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "LimitedModeEnabled": {
+      "label": "Enable limited mode",
+      "type": "switch",
+      "default": false
+    },
+    "GroupName": {
+      "label": "Scoping group name (required when enabling)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    }
+  },
+  "read": {
+    "requiredCaches": [
+      "CopilotAdminSettings",
+      "Groups"
+    ],
+    "cacheType": "CopilotAdminSettings"
+  },
+  "prepare": "Get-CIPPBaselineCopilotLimitedModeState",
+  "remediate": {
+    "executor": "CopilotLimitedMode",
+    "limitedModeEnabled": "%LimitedModeEnabled%"
+  }
+}

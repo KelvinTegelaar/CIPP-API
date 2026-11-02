@@ -13,16 +13,16 @@ function Invoke-CippTestZTNA21796 {
             return
         }
 
-        $BlockPolicies = $CAPolicies | Where-Object {
+        $BlockPolicies = $CAPolicies.Where({
             $_.grantControls.builtInControls -contains 'block' -and
             $_.conditions.clientAppTypes -contains 'exchangeActiveSync' -and
             $_.conditions.clientAppTypes -contains 'other'
-        }
+        })
 
-        $EnabledBlockPolicies = $BlockPolicies | Where-Object {
+        $EnabledBlockPolicies = $BlockPolicies.Where({
             $_.conditions.users.includeUsers -contains 'All' -and
             $_.state -eq 'enabled'
-        }
+        })
 
         if ($EnabledBlockPolicies.Count -ge 1) {
             $Status = 'Passed'

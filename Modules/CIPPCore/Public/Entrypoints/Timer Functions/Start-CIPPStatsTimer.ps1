@@ -5,6 +5,7 @@ function Start-CIPPStatsTimer {
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param()
+
     #These stats are sent to a central server to help us understand how many tenants are using the product, and how many are using the latest version, this information allows the CIPP team to make decisions about what features to support, and what features to deprecate.
 
 
@@ -15,7 +16,11 @@ function Start-CIPPStatsTimer {
         $TenantCount = (Get-Tenants -IncludeAll).count
 
 
-        $APIVersion = Get-Content (Join-Path $env:CIPPRootPath 'version_latest.txt') | Out-String
+        $APIVersion = if ($env:CIPPNG -eq 'true') {
+            $env:APP_VERSION
+        } else {
+            Get-Content (Join-Path $env:CIPPRootPath 'version_latest.txt') | Out-String
+        }
         $Table = Get-CIPPTable -TableName Extensionsconfig
         try {
             $RawExt = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10 -ErrorAction Stop
@@ -27,6 +32,7 @@ function Start-CIPPStatsTimer {
         $FunctionOffloading = (Get-CIPPAzDataTableEntity @ConfigTable -Filter "RowKey eq 'OffloadFunctions' and PartitionKey eq 'OffloadFunctions'").state
         $OffloadingEnabled = $false
         [bool]::TryParse($FunctionOffloading, [ref]$OffloadingEnabled) | Out-Null
+        $CIPPNG = $env:CIPPNG -eq 'true'
 
         # Get counts of various entities across all tenants
         $counts = Get-CIPPDbItem -TenantFilter AllTenants -CountsOnly
@@ -35,30 +41,75 @@ function Start-CIPPStatsTimer {
         $groupsCount = ($counts | Where-Object { $_.RowKey -eq 'Groups-Count' } | Measure-Object -Property DataCount -Sum).Sum
         $managedDevicesCount = ($counts | Where-Object { $_.RowKey -eq 'ManagedDevices-Count' } | Measure-Object -Property DataCount -Sum).Sum
         $policyCount = ($counts | Where-Object { $_.RowKey -match 'Intune' -and $_.RowKey -match 'Policies|Policy' } | Measure-Object -Property DataCount -Sum).Sum
+        $deployedApps = ($counts | Where-Object { $_.RowKey -eq 'IntuneApplications-Count' } | Measure-Object -Property DataCount -Sum).Sum
+        $ReportsTable = Get-CippTable -tablename 'ReportBuilderTemplates'
+        $CustomReportCount = (Get-CIPPAzDataTableEntity @ReportsTable -Filter "PartitionKey eq 'ReportBuilderTemplates'").count
+        $uniqueStandardsApplied = Get-CIPPStatsUniqueStandardsApplied
+        $driftStandardsCount = Get-CIPPStatsDriftStandardsCount
+        $mobileEnrollment = Get-CIPPStatsMobileEnrollment
+        $baselineStats = Get-CIPPStatsBaselines
+
+        # Feature flags
+        $FeatureFlags = @{}
+        Get-CIPPFeatureFlag | Select-Object -Property Id, Enabled | ForEach-Object {
+            $FeatureFlags[$_.Id] = $_.Enabled
+        }
+
+        # SSO migration status
+        $MigrationTable = Get-CIPPTable -tablename 'SSOMigration'
+        $MigrationConfig = Get-CIPPAzDataTableEntity @MigrationTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'MigrationConfig'" -ErrorAction SilentlyContinue
+        $MigrationStatus = $MigrationConfig.Status
+        # SSO provisioned outside the setup wizard (ARM-level during NG migration) never writes a
+        # migration row. Live EasyAuth is authoritative: when it's active and the row is missing or
+        # points at a different app, report complete — same rule as Invoke-ExecSSOSetup's Status action.
+        if ($CIPPNG -and $env:WEBSITE_AUTH_ENABLED -eq 'True' -and $env:WEBSITE_AUTH_V2_CONFIG_JSON) {
+            try {
+                $LiveConfig = $env:WEBSITE_AUTH_V2_CONFIG_JSON | ConvertFrom-Json -ErrorAction Stop
+                $LiveAppId = $LiveConfig.identityProviders.azureActiveDirectory.registration.clientId
+                if ($LiveAppId -and $MigrationConfig.AppId -ne $LiveAppId) {
+                    $MigrationStatus = 'complete'
+                }
+            } catch {
+                Write-Information "Could not parse EasyAuth config for SSO stats: $($_.Exception.Message)"
+            }
+        }
 
         $SendingObject = [PSCustomObject]@{
-            rgid                = $env:WEBSITE_SITE_NAME
-            SetupComplete       = $SetupComplete
-            Hosted              = $env:CIPP_HOSTED -eq 'true'
-            OffloadingEnabled   = $OffloadingEnabled
-            RunningVersionAPI   = $APIVersion.trim()
-            CountOfTotalTenants = $TenantCount
-            uid                 = $env:TenantID
-            UserCount           = $userCount
-            DeviceCount         = $deviceCount
-            GroupsCount         = $groupsCount
-            ManagedDevicesCount = $managedDevicesCount
-            PolicyCount         = $policyCount
-            CIPPAPI             = $RawExt.CIPPAPI.Enabled
-            Hudu                = $RawExt.Hudu.Enabled
-            Sherweb             = $RawExt.Sherweb.Enabled
-            Gradient            = $RawExt.Gradient.Enabled
-            NinjaOne            = $RawExt.NinjaOne.Enabled
-            haloPSA             = $RawExt.haloPSA.Enabled
-            HIBP                = $RawExt.HIBP.Enabled
-            PWPush              = $RawExt.PWPush.Enabled
-            CFZTNA              = $RawExt.CFZTNA.Enabled
-            GitHub              = $RawExt.GitHub.Enabled
+            rgid                   = $env:WEBSITE_SITE_NAME
+            SetupComplete          = $SetupComplete
+            Hosted                 = $env:CIPP_HOSTED -eq 'true'
+            CIPPNG                 = $CIPPNG
+            OffloadingEnabled      = $OffloadingEnabled
+            RunningVersionAPI      = $APIVersion.trim()
+            CountOfTotalTenants    = $TenantCount
+            uid                    = $env:TenantID
+            UserCount              = $userCount
+            DeviceCount            = $deviceCount
+            GroupsCount            = $groupsCount
+            ManagedDevicesCount    = $managedDevicesCount
+            PolicyCount            = $policyCount
+            UniqueStandardsApplied = $uniqueStandardsApplied
+            DriftStandardsCount    = $driftStandardsCount
+            MobileEnrollment       = $mobileEnrollment
+            DeployedApps           = $deployedApps
+            CustomReportCount      = $CustomReportCount
+            CIPPAPI                = $RawExt.CIPPAPI.Enabled
+            Hudu                   = $RawExt.Hudu.Enabled
+            Sherweb                = $RawExt.Sherweb.Enabled
+            Gradient               = $RawExt.Gradient.Enabled
+            NinjaOne               = $RawExt.NinjaOne.Enabled
+            haloPSA                = $RawExt.haloPSA.Enabled
+            HIBP                   = $RawExt.HIBP.Enabled
+            PWPush                 = $RawExt.PWPush.Enabled
+            CFZTNA                 = $RawExt.CFZTNA.Enabled
+            GitHub                 = $RawExt.GitHub.Enabled
+            SuperAdminNG           = $FeatureFlags.SuperAdminNG
+            MCPServer              = $FeatureFlags.MCPServer
+            SSOMigrationStatus     = $MigrationStatus
+            FeatureFlags           = ($FeatureFlags | ConvertTo-Json -Compress)
+            BaselineCount          = $baselineStats.BaselineCount
+            BaselineTenantCount    = $baselineStats.BaselineTenantCount
+            BaselineStandardsCount = $baselineStats.BaselineStandardsCount
         } | ConvertTo-Json
 
         try {

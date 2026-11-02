@@ -17,7 +17,11 @@ function Get-CIPPMailboxForwardingReport {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+
+        # Rows already read by the AllTenants path, keyed by cache type
+        [Parameter(DontShow = $true)]
+        [hashtable]$DbItems
     )
 
     try {
@@ -26,16 +30,14 @@ function Get-CIPPMailboxForwardingReport {
         # Handle AllTenants
         if ($TenantFilter -eq 'AllTenants') {
             # Get all tenants that have mailbox data
-            $AllMailboxItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'Mailboxes'
-            $Tenants = @($AllMailboxItems | Where-Object { $_.RowKey -ne 'Mailboxes-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
-
-            $TenantList = Get-Tenants -IncludeErrors
-            $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
+            $ItemsByTenant = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'Mailboxes' -ByTenant
 
             $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
-            foreach ($Tenant in $Tenants) {
+            foreach ($Tenant in @($ItemsByTenant.Keys)) {
+                # Hand each tenant its rows and drop them here so they can be freed once processed
+                $TenantItems = $ItemsByTenant[$Tenant]; $ItemsByTenant[$Tenant] = $null
                 try {
-                    $TenantResults = Get-CIPPMailboxForwardingReport -TenantFilter $Tenant
+                    $TenantResults = Get-CIPPMailboxForwardingReport -TenantFilter $Tenant -DbItems @{ Mailboxes = $TenantItems }
                     foreach ($Result in $TenantResults) {
                         $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
                         $AllResults.Add($Result)
@@ -48,7 +50,7 @@ function Get-CIPPMailboxForwardingReport {
         }
 
         # Get mailboxes from reporting DB
-        $MailboxItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' | Where-Object { $_.RowKey -ne 'Mailboxes-Count' }
+        $MailboxItems = $(if ($DbItems) { $DbItems['Mailboxes'] } else { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Mailboxes' }) | Where-Object { $_.RowKey -ne 'Mailboxes-Count' }
         if (-not $MailboxItems) {
             throw 'No mailbox data found in reporting database. Sync the mailbox data first.'
         }

@@ -1,4 +1,3 @@
-
 function Invoke-ListIntunePolicy {
     <#
     .FUNCTIONALITY
@@ -15,14 +14,25 @@ function Invoke-ListIntunePolicy {
     $id = $Request.Query.ID
     $URLName = $Request.Query.URLName
     $DefinitionIds = $Request.Query.DefinitionIds
-    $UseReportDB = $Request.Query.UseReportDB
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     $IncludeSettingDefinitions = [System.Convert]::ToBoolean($Request.Query.IncludeSettingDefinitions ?? 'false')
     $IsGroupPolicyDefinitionLookup = ($URLName -ieq 'GroupPolicyDefinitions') -and -not [string]::IsNullOrWhiteSpace($DefinitionIds)
 
     try {
         # Return cached report data when AllTenants is requested or UseReportDB is set
-        if (-not $IsGroupPolicyDefinitionLookup -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true')) {
+        if (-not $IsGroupPolicyDefinitionLookup -and ($TenantFilter -eq 'AllTenants' -or $UseReportDB)) {
             try {
+                # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
+                if ($Request.Query.manualPagination -eq $true) {
+                    # Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.
+                    $PageSize = $Request.Query.PageSize -as [int]
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::OK
+                            # Continuation token from the previous page's Metadata.nextLink; opaque to callers.
+                            Body       = Get-CIPPReportPage -TenantFilter $TenantFilter -Type @(Get-CIPPIntunePolicyListDefinitions).CacheType -PageSize $PageSize -ContinuationToken $Request.Query.nextLink -Report { param($Tenant) Get-CIPPIntunePolicyReport -TenantFilter $Tenant -ErrorAction Stop }
+                        })
+                }
                 $GraphRequest = Get-CIPPIntunePolicyReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK
             } catch {
@@ -170,107 +180,40 @@ function Invoke-ListIntunePolicy {
                 $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($URLName)('$ID')" -tenantid $TenantFilter
             }
         } else {
-            $BulkRequests = [PSCustomObject]@(
-                @{
+            $PolicyDefinitions = @(Get-CIPPIntunePolicyListDefinitions)
+            $BulkRequests = [System.Collections.Generic.List[object]]::new()
+            # Fetch group names in the same batch snapshot used to render policy assignments.
+            $BulkRequests.Add([PSCustomObject]@{
                     id     = 'Groups'
                     method = 'GET'
                     url    = '/groups?$top=999&$select=id,displayName'
-                }
-                @{
-                    id     = 'DeviceConfigurations'
-                    method = 'GET'
-                    url    = "/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName,description&`$expand=assignments&`$top=1000"
-                }
-                @{
-                    id     = 'WindowsDriverUpdateProfiles'
-                    method = 'GET'
-                    url    = "/deviceManagement/windowsDriverUpdateProfiles?`$expand=assignments&`$top=200"
-                }
-                @{
-                    id     = 'WindowsFeatureUpdateProfiles'
-                    method = 'GET'
-                    url    = "/deviceManagement/windowsFeatureUpdateProfiles?`$expand=assignments&`$top=200"
-                }
-                @{
-                    id     = 'windowsQualityUpdatePolicies'
-                    method = 'GET'
-                    url    = "/deviceManagement/windowsQualityUpdatePolicies?`$expand=assignments&`$top=200"
-                }
-                @{
-                    id     = 'windowsQualityUpdateProfiles'
-                    method = 'GET'
-                    url    = "/deviceManagement/windowsQualityUpdateProfiles?`$expand=assignments&`$top=200"
-                }
-                @{
-                    id     = 'GroupPolicyConfigurations'
-                    method = 'GET'
-                    url    = "/deviceManagement/groupPolicyConfigurations?`$expand=assignments&`$top=1000"
-                }
-                @{
-                    id     = 'MobileAppConfigurations'
-                    method = 'GET'
-                    url    = "/deviceAppManagement/mobileAppConfigurations?`$expand=assignments&`$filter=microsoft.graph.androidManagedStoreAppConfiguration/appSupportsOemConfig%20eq%20true"
-                }
-                @{
-                    id     = 'ConfigurationPolicies'
-                    method = 'GET'
-                    url    = "/deviceManagement/configurationPolicies?`$expand=assignments&`$top=1000"
-                }
-            )
+                })
+            foreach ($Definition in $PolicyDefinitions) {
+                $BulkRequests.Add([PSCustomObject]@{
+                        id     = $Definition.Id
+                        method = 'GET'
+                        url    = $Definition.GraphUri
+                    })
+            }
 
-            $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
+            $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -tenantid $TenantFilter
 
-            # Extract groups for resolving assignment names
-            $Groups = ($BulkResults | Where-Object { $_.id -eq 'Groups' }).body.value
+            $GroupLookup = @{}
+            $GroupResult = $BulkResults | Where-Object { $_.id -eq 'Groups' } | Select-Object -First 1
+            foreach ($Group in @($GroupResult.body.value)) {
+                if ($Group.id) { $GroupLookup[$Group.id] = $Group.displayName }
+            }
 
-            $GraphRequest = $BulkResults | Where-Object { $_.id -ne 'Groups' } | ForEach-Object {
-                $URLName = $_.Id
-                $_.body.Value | ForEach-Object {
-                    $policyTypeName = switch -Wildcard ($_.'assignments@odata.context') {
-                        '*microsoft.graph.windowsIdentityProtectionConfiguration*' { 'Identity Protection' }
-                        '*microsoft.graph.windows10EndpointProtectionConfiguration*' { 'Endpoint Protection' }
-                        '*microsoft.graph.windows10CustomConfiguration*' { 'Custom' }
-                        '*microsoft.graph.windows10DeviceFirmwareConfigurationInterface*' { 'Firmware Configuration' }
-                        '*groupPolicyConfigurations*' { 'Administrative Templates' }
-                        '*windowsDomainJoinConfiguration*' { 'Domain Join configuration' }
-                        '*windowsUpdateForBusinessConfiguration*' { 'Update Configuration' }
-                        '*windowsHealthMonitoringConfiguration*' { 'Health Monitoring' }
-                        '*microsoft.graph.macOSGeneralDeviceConfiguration*' { 'MacOS Configuration' }
-                        '*microsoft.graph.macOSEndpointProtectionConfiguration*' { 'MacOS Endpoint Protection' }
-                        '*microsoft.graph.androidWorkProfileGeneralDeviceConfiguration*' { 'Android Configuration' }
-                        '*windowsFeatureUpdateProfiles*' { 'Feature Update' }
-                        '*windowsQualityUpdatePolicies*' { 'Quality Update' }
-                        '*windowsQualityUpdateProfiles*' { 'Quality Update' }
-                        '*iosUpdateConfiguration*' { 'iOS Update Configuration' }
-                        '*windowsDriverUpdateProfiles*' { 'Driver Update' }
-                        '*configurationPolicies*' { 'Device Configuration' }
-                        default { $_.'assignments@odata.context' }
-                    }
-                    $Assignments = $_.assignments.target | Select-Object -Property '@odata.type', groupId
-                    $PolicyAssignment = [System.Collections.Generic.List[string]]::new()
-                    $PolicyExclude = [System.Collections.Generic.List[string]]::new()
-                    foreach ($target in $Assignments) {
-                        switch ($target.'@odata.type') {
-                            '#microsoft.graph.allDevicesAssignmentTarget' { $PolicyAssignment.Add('All Devices') }
-                            '#microsoft.graph.exclusionallDevicesAssignmentTarget' { $PolicyExclude.Add('All Devices') }
-                            '#microsoft.graph.allUsersAssignmentTarget' { $PolicyAssignment.Add('All Users') }
-                            '#microsoft.graph.allLicensedUsersAssignmentTarget' { $PolicyAssignment.Add('All Licenced Users') }
-                            '#microsoft.graph.exclusionallUsersAssignmentTarget' { $PolicyExclude.Add('All Users') }
-                            '#microsoft.graph.groupAssignmentTarget' { $PolicyAssignment.Add($Groups.Where({ $_.id -eq $target.groupId }).displayName) }
-                            '#microsoft.graph.exclusionGroupAssignmentTarget' { $PolicyExclude.Add($Groups.Where({ $_.id -eq $target.groupId }).displayName) }
-                            default {
-                                $PolicyAssignment.Add($null)
-                                $PolicyExclude.Add($null)
-                            }
-                        }
-                    }
-                    if ($null -eq $_.displayname) { $_ | Add-Member -NotePropertyName displayName -NotePropertyValue $_.name }
-                    $_ | Add-Member -NotePropertyName PolicyTypeName -NotePropertyValue $policyTypeName
-                    $_ | Add-Member -NotePropertyName URLName -NotePropertyValue $URLName
-                    $_ | Add-Member -NotePropertyName PolicyAssignment -NotePropertyValue ($PolicyAssignment -join ', ')
-                    $_ | Add-Member -NotePropertyName PolicyExclude -NotePropertyValue ($PolicyExclude -join ', ')
-                    $_
-                } | Where-Object { $null -ne $_.DisplayName }
+            $GraphRequest = foreach ($Definition in $PolicyDefinitions) {
+                $Result = $BulkResults | Where-Object { $_.id -eq $Definition.Id } | Select-Object -First 1
+                if (-not $Result) { continue }
+                if ($null -ne $Result.status -and ($Result.status -lt 200 -or $Result.status -ge 300)) { continue }
+
+                foreach ($Policy in @($Result.body.value)) {
+                    # @($null) contains one null element, so guard before parameter binding.
+                    if ($null -eq $Policy) { continue }
+                    ConvertTo-CIPPIntunePolicyListItem -Policy $Policy -URLName $Definition.Id -DefaultPolicyTypeName $Definition.PolicyTypeName -GroupLookup $GroupLookup
+                }
             }
         }
 
@@ -279,7 +222,7 @@ function Invoke-ListIntunePolicy {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
     return ([HttpResponseContext]@{

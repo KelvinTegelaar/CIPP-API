@@ -1,0 +1,60 @@
+{
+  "name": "DisableSecurityGroupUsers",
+  "label": "Disable Security Group creation by users",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CIS M365 7.0.0 (5.1.3.1)",
+    "CISA (MS.AAD.20.1v1)",
+    "NIST CSF 2.0 (PR.AA-05)",
+    "SMB1001 (2.8)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Completely disables the creation of security groups by users. This also breaks the ability to manage groups themselves, or create Teams",
+  "executiveText": "Restricts the creation of security groups to IT administrators only, preventing employees from creating unauthorized access groups that could bypass security controls. This ensures proper governance of access permissions and maintains centralized control over who can access what resources.",
+  "impactColour": "warning",
+  "addedDate": "2022-07-17",
+  "powershellEquivalent": "Update-MgBetaPolicyAuthorizationPolicy",
+  "appliesToTest": [
+    "CIS_5_1_3_1",
+    "SMB1001_2_8",
+    "ZTNA21868"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "allowSecurityGroupCreation": {
+      "type": "switch",
+      "label": "Allow users to create security groups",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "allowedToCreateSecurityGroups": "%allowSecurityGroupCreation%"
+  },
+  "read": {
+    "cacheType": "AuthorizationPolicy",
+    "object": "defaultUserRolePermissions"
+  },
+  "writeTarget": "authorizationPolicy",
+  "writeTargetProperties": {
+    "defaultUserRolePermissions.allowedToCreateSecurityGroups": "%allowSecurityGroupCreation%"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "asApp": false,
+        "uri": "policies/authorizationPolicy/authorizationPolicy",
+        "body": {
+          "defaultUserRolePermissions": {
+            "allowedToCreateSecurityGroups": "%allowSecurityGroupCreation%"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -14,32 +14,54 @@ function Invoke-RemoveScheduledItem {
     $Headers = $Request.Headers
 
     $RowKey = $Request.Query.id ? $Request.Query.id : $Request.Body.id
+    if (-not $RowKey) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'Task id is required.' }
+            })
+    }
     $task = @{
         RowKey       = $RowKey
         PartitionKey = 'ScheduledTask'
     }
     try {
         $Table = Get-CIPPTable -TableName 'ScheduledTasks'
-        Remove-AzDataTableEntity -Force @Table -Entity $task
+
+        # AnyTenant: restricted callers may only remove tasks for tenants in scope
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+        if ($AllowedTenants -notcontains 'AllTenants') {
+            $SafeRowKey = ConvertTo-CIPPODataFilterValue -Value $RowKey -Type String
+            $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ScheduledTask' and RowKey eq '$SafeRowKey'"
+            if (-not $Existing.Tenant -or -not (Get-Tenants -TenantFilter $Existing.Tenant)) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::Forbidden
+                        Body       = @{ Results = 'Access to this scheduled task is not allowed' }
+                    })
+            }
+        }
+
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity $task
 
         $DetailTable = Get-CIPPTable -TableName 'ScheduledTaskDetails'
         $Details = Get-CIPPAzDataTableEntity @DetailTable -Filter "PartitionKey eq '$($RowKey)'" -Property RowKey, PartitionKey, ETag
 
         if ($Details) {
-            Remove-AzDataTableEntity -Force @DetailTable -Entity $Details
+            Remove-CIPPAzDataTableEntity -Force @DetailTable -Entity $Details
         }
 
         Write-LogMessage -Headers $Headers -API $APIName -message "Task removed: $($task.RowKey)" -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
+        $Result = 'Task removed successfully.'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -Headers $Headers -API $APIName -message "Failed to remove task: $($task.RowKey). $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
+        $Result = "Failed to remove task: $($ErrorMessage.NormalizedError)"
     }
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @{ Results = 'Task removed successfully.' }
+            Body       = @{ Results = $Result }
         })
 
 }

@@ -18,10 +18,17 @@ function Set-CIPPDBCacheManagedDevices {
 
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching managed devices' -sev Debug
-        $ManagedDevices = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/managedDevices?$top=999' -tenantid $TenantFilter
-        if (!$ManagedDevices) { $ManagedDevices = @() }
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ManagedDevices' -Data $ManagedDevices -AddCount
-        $ManagedDevices = $null
+        New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/managedDevices?$top=999' -tenantid $TenantFilter -Stream |
+            ForEach-Object {
+                # Windows 365 Cloud PCs never report BitLocker (isEncrypted stays false) although
+                # their disks are platform-encrypted by Azure; the marker is stamped on every row
+                # so it is always available as a report column, not only when the first cached
+                # device happens to be a Cloud PC.
+                $Props = $_.PSObject.Properties
+                $Props.Remove('isCloudPC'); $Props.Add([psnoteproperty]::new('isCloudPC', [bool](Test-CIPPCloudPCDevice -Device $_)))
+                $_
+            } |
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ManagedDevices' -AddCount
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached managed devices successfully' -sev Debug
 
     } catch {

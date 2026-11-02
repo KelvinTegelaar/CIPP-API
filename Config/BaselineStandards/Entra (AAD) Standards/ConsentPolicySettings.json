@@ -1,0 +1,49 @@
+{
+  "name": "ConsentPolicySettings",
+  "label": "Consent policy settings (risky app consent, admin consent requests)",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "EIDSCA.CP03",
+    "EIDSCA.CP04"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Sets the two values on the Consent Policy Settings directory setting: block user consent when Microsoft detects a risky request, and let users request admin consent for apps they cannot consent to themselves. The EIDSCA recommendation is on for both.",
+  "executiveText": "Stops employees from approving an application that Microsoft has flagged as risky, and gives them a request-to-admin path instead of a dead end, so IT keeps control over which apps get access to company data.",
+  "docsDescription": "Grades BlockUserConsentForRiskyApps and EnableAdminConsentRequests on the Consent Policy Settings directory setting (template dffd5d46-495d-40a9-8e21-954ff55e198a). Directory setting values are strings on the wire, so both sides grade as strings; a tenant without the setting object grades as drift and remediation instantiates it from the template. Maps to EIDSCA CP03 and CP04. The admin consent workflow itself (reviewers, notifications, request duration) is managed by Enable App Consent Admin Requests. Group owner consent (EIDSCA CP01) is no longer a value on this template; it is governed by the permission grant policies on the authorization policy, which the OAuth consent standards replace.",
+  "impactColour": "info",
+  "addedDate": "2026-10-10",
+  "powershellEquivalent": "Graph: PATCH settings (directory setting dffd5d46)",
+  "appliesToTest": [
+    "EIDSCACP03",
+    "EIDSCACP04"
+  ],
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "BlockUserConsentForRiskyApps": {
+      "type": "switch",
+      "label": "Block user consent for risky apps",
+      "default": true,
+      "recommended": true
+    },
+    "EnableAdminConsentRequests": {
+      "type": "switch",
+      "label": "Users can request admin consent to apps they are unable to consent to",
+      "default": true,
+      "recommended": true
+    }
+  },
+  "read": {
+    "cacheType": "Settings"
+  },
+  "prepare": "Get-CIPPBaselineConsentPolicySettingsState",
+  "remediate": {
+    "executor": "ConsentPolicySettings",
+    "blockUserConsentForRiskyApps": "%BlockUserConsentForRiskyApps%",
+    "enableAdminConsentRequests": "%EnableAdminConsentRequests%"
+  }
+}

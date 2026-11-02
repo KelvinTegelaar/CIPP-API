@@ -1,0 +1,64 @@
+{
+  "name": "MDMScope",
+  "label": "Configure MDM user scope",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the Intune MDM enrollment URLs to Microsoft defaults and the automatic enrollment user scope: everyone, no one, or a custom group.",
+  "executiveText": "Controls which users devices auto-enroll into Intune management when they join Entra, keeping device management coverage deliberate.",
+  "docsDescription": "Grades the three fixed Intune enrollment URLs, the appliesTo scope, and - for the custom-group scope - that the configured group is among the included groups. Remediation patches the URLs and scope in the separate requests Graph requires, and assigns the custom group by reference.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: PATCH policies/mobileDeviceManagementPolicies",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "appliesTo": {
+      "label": "MDM User Scope",
+      "required": true,
+      "creatable": false,
+      "type": "autoComplete",
+      "options": [
+        {
+          "value": "all",
+          "label": "All"
+        },
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "selected",
+          "label": "Custom Group"
+        }
+      ]
+    },
+    "customGroup": {
+      "label": "Custom Group Name (custom scope only)",
+      "omitWhenBlank": true,
+      "type": "textField"
+    }
+  },
+  "read": {
+    "cacheType": "MobileDeviceManagementPolicies"
+  },
+  "prepare": "Get-CIPPBaselineMDMScopeState",
+  "remediate": {
+    "executor": "MDMScope",
+    "appliesTo": "%appliesTo%",
+    "customGroup": "%customGroup%"
+  }
+}

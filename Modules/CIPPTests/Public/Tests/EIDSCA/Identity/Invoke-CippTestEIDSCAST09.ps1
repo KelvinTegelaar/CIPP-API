@@ -13,7 +13,7 @@ function Invoke-CippTestEIDSCAST09 {
             return
         }
 
-        $SettingValue = ($Settings.values | Where-Object { $_.name -eq 'AllowGuestsToAccessGroups' }).value
+        $SettingValue = $Settings.values.Where({ $_.name -eq 'AllowGuestsToAccessGroups' }).value
 
         if ($SettingValue -eq 'True') {
             $Status = 'Passed'

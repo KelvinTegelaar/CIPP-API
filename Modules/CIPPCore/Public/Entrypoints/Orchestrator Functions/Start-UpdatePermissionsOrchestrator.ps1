@@ -61,11 +61,24 @@ function Start-UpdatePermissionsOrchestrator {
             $TenantBatch = $Tenants | Select-Object defaultDomainName, customerId, displayName, @{n = 'FunctionName'; exp = { 'UpdatePermissionsQueue' } }, @{n = 'QueueId'; exp = { $Queue.RowKey } }
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'UpdatePermissionsOrchestrator'
+                AllowCollision   = $false
                 Batch            = @($TenantBatch)
             }
-            Start-CIPPOrchestrator -InputObject $InputObject
+            $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
+            $Message = if ("$InstanceId" -like '*-Skipped') {
+                "Skipped CPV permissions refresh for $TenantCount tenant(s): a refresh is still running"
+            } else {
+                "Started CPV permissions refresh for $TenantCount tenant(s). QueueId=$($Queue.RowKey)"
+            }
+            Write-LogMessage -API 'CPVRefresh' -tenant 'Global' -message $Message -Sev 'Info'
+            return $InstanceId
         } else {
             Write-Information 'No tenants require permissions update'
+            Write-LogMessage -API 'CPVRefresh' -tenant 'Global' -message 'CPV permissions refresh triggered; no tenants required an update' -Sev 'Info'
+            return $null
         }
-    } catch {}
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'CPVRefresh' -tenant 'Global' -message "Failed to start CPV permissions refresh: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+    }
 }

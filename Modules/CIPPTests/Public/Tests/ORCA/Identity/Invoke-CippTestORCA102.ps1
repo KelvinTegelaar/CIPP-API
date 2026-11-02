@@ -35,7 +35,7 @@ function Invoke-CippTestORCA102 {
                 $Policy.MarkAsSpamSpfRecordHardFail
             )
 
-            $EnabledASF = $ASFSettings | Where-Object { $_ -eq 'On' }
+            $EnabledASF = $ASFSettings.Where({ $_ -eq 'On' })
 
             if ($EnabledASF.Count -eq 0) {
                 $PassedPolicies.Add($Policy) | Out-Null

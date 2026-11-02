@@ -11,7 +11,7 @@ function Invoke-ListWorkerHealth {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Action = $Request.Query.Action ?? 'Snapshot'
+    $Action = $Request.Query.Action ?? $Request.Body.Action ?? 'Snapshot'
 
     try {
         switch ($Action) {

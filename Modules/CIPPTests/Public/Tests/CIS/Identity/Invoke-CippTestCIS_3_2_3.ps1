@@ -13,12 +13,12 @@ function Invoke-CippTestCIS_3_2_3 {
             return
         }
 
-        $CopilotDlp = $Dlp | Where-Object {
+        $CopilotDlp = $Dlp.Where({
             $_.Mode -eq 'Enable' -and $_.Enabled -eq $true -and (
                 $_.EnforcementPlanes -match 'CopilotExperiences' -or
                 $_.Workload -match 'Copilot'
             )
-        }
+        })
 
         if ($CopilotDlp.Count -gt 0) {
             $Status = 'Passed'

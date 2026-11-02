@@ -11,7 +11,6 @@ Function Invoke-ExecEmailForward {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -headers $Headers -API $APINAME-message 'Accessed this API' -Sev 'Debug'
 
 
     $TenantFilter = $Request.Body.tenantFilter
@@ -23,7 +22,7 @@ Function Invoke-ExecEmailForward {
     }
     $ForwardingSMTPAddress = $Request.Body.ForwardExternal
     $ForwardOption = $Request.Body.forwardOption
-    [bool]$KeepCopy = if ($Request.Body.KeepCopy -eq 'true') { $true } else { $false }
+    [bool]$KeepCopy = if ($Request.Body.KeepCopy -eq $true) { $true } else { $false }
 
     # Process the forwarding option based on the type selected
     switch ($ForwardOption) {

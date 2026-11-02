@@ -7,24 +7,35 @@ function Invoke-CippTestORCA227 {
 
     try {
         $AcceptedDomains = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAcceptedDomains'
-        $SafeAttachmentPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoSafeAttachmentPolicies'
+        $SafeAttachmentRules = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoSafeAttachmentRules'
 
         if (-not $AcceptedDomains) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA227' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No accepted domains found in database.' -Risk 'High' -Name 'Each domain has a Safe Attachments policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Safe Attachments'
             return
         }
 
-        if (-not $SafeAttachmentPolicies) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA227' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'No Safe Attachments policies found. Each domain should have a Safe Attachments policy.' -Risk 'High' -Name 'Each domain has a Safe Attachments policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Safe Attachments'
+        if (-not $SafeAttachmentRules) {
+            if (-not (Test-CIPPStandardLicense -StandardName 'ORCA227' -TenantFilter $Tenant -Preset DefenderForOffice365 -SkipLog)) {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA227' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Microsoft Defender for Office 365 (ATP). Required capabilities: ATP_ENTERPRISE, ATP_ENTERPRISE_GOV, THREAT_INTELLIGENCE, THREAT_INTELLIGENCE_GOV.' -Risk 'High' -Name 'Each domain has a Safe Attachments policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Safe Attachments'
+            } else {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA227' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'No Safe Attachments rules found. Each domain should have a Safe Attachments policy.' -Risk 'High' -Name 'Each domain has a Safe Attachments policy' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Safe Attachments'
+            }
             return
         }
 
-        # Get all recipient domains from policies
+        # Get all recipient domains from rules
         $CoveredDomains = [System.Collections.Generic.List[string]]::new()
-        foreach ($Policy in $SafeAttachmentPolicies) {
-            if ($Policy.RecipientDomainIs) {
-                foreach ($Domain in $Policy.RecipientDomainIs) {
-                    $CoveredDomains.Add($Domain) | Out-Null
+        foreach ($Rule in $SafeAttachmentRules) {
+            if (
+                $Rule.State -eq 'Enabled' -and
+                $Rule.RecipientDomainIs -and
+                -not $Rule.ExceptIfSentTo -and
+                -not $Rule.ExceptIfSentToMemberOf
+            ) {
+                foreach ($Domain in $Rule.RecipientDomainIs) {
+                    if ($Rule.ExceptIfRecipientDomainIs -notcontains $Domain) {
+                        $CoveredDomains.Add($Domain) | Out-Null
+                    }
                 }
             }
         }
@@ -40,11 +51,11 @@ function Invoke-CippTestORCA227 {
             $Status = 'Passed'
             $Result = [System.Text.StringBuilder]::new("All accepted domains are covered by Safe Attachments policies.`n`n")
             $null = $Result.Append("**Total Accepted Domains:** $($AcceptedDomains.Count)`n")
-            $null = $Result.Append("**Total Safe Attachments Policies:** $($SafeAttachmentPolicies.Count)")
+            $null = $Result.Append("**Total Safe Attachments Rules:** $($SafeAttachmentRules.Count)")
         } else {
             $Status = 'Failed'
-            $Result = [System.Text.StringBuilder]::new("$($DomainsWithoutPolicy.Count) domains do not have a Safe Attachments policy.`n`n")
-            $null = $Result.Append("**Domains Without Policy:**`n`n")
+            $Result = [System.Text.StringBuilder]::new("$($DomainsWithoutPolicy.Count) domains are not fully covered by a Safe Attachments policy.`n`n")
+            $null = $Result.Append("**Domains Without Full Policy Coverage:**`n`n")
             foreach ($Domain in $DomainsWithoutPolicy) {
                 $null = $Result.Append("- $Domain`n")
             }

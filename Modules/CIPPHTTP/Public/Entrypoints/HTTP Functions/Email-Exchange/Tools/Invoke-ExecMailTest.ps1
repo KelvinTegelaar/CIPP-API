@@ -4,6 +4,8 @@ Function Invoke-ExecMailTest {
         Entrypoint
     .ROLE
         CIPP.Core.Read
+    .DESCRIPTION
+        Checks the mailbox configuration behind CIPP's message trace tooling. Action=CheckConfig reports whether the CIPP-SAM app holds the delegated Mail.Read permission and which mailbox the current token resolves to.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -71,7 +73,7 @@ Function Invoke-ExecMailTest {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = [PSCustomObject]@{
             Results = @($ErrorMessage)
         }

@@ -1,0 +1,60 @@
+{
+  "name": "DisableExchangeOnlinePowerShell",
+  "label": "Disable Exchange Online PowerShell for non-admin users",
+  "cat": "Exchange Standards",
+  "tag": [
+    "Security",
+    "NIST CSF 2.0 (PR.AA-05)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Disables Exchange Online PowerShell access for non-admin users by setting the RemotePowerShellEnabled property to false for each user. Users holding a directory role, directly or through a group, are automatically excluded.",
+  "executiveText": "Restricts PowerShell access to Exchange Online for regular employees while maintaining access for administrators, significantly reducing security risks from compromised accounts. This prevents attackers from using PowerShell to execute malicious commands or distribute ransomware while preserving necessary administrative capabilities.",
+  "docsDescription": "Disables Exchange Online PowerShell access for non-admin users by setting the RemotePowerShellEnabled property to false for each user. This security measure follows a least privileged access approach. Users holding a directory role - directly or through a group - are automatically excluded so administrators retain PowerShell access.",
+  "impactColour": "warning",
+  "addedDate": "2025-06-19",
+  "powershellEquivalent": "Set-User -Identity $user -RemotePowerShellEnabled $false",
+  "recommendedBy": [
+    "CIS",
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "Mailboxes",
+    "collectorArgs": {
+      "Types": "None"
+    }
+  },
+  "prepare": "Get-CIPPBaselineDisableExchangeOnlinePowerShellState",
+  "remediate": {
+    "executor": "ExoBulkSweep",
+    "refreshCache": [
+      "Mailboxes"
+    ],
+    "refreshCacheArgs": {
+      "Mailboxes": {
+        "Types": "None"
+      }
+    },
+    "writes": [
+      {
+        "cmdlet": "Set-User",
+        "params": {
+          "Identity": "%id%",
+          "RemotePowerShellEnabled": false
+        }
+      }
+    ]
+  }
+}

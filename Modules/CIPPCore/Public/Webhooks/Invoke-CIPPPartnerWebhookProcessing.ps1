@@ -6,7 +6,15 @@ function Invoke-CippPartnerWebhookProcessing {
 
     try {
         if ($Data.AuditUri) {
-            $AuditLog = New-GraphGetRequest -uri $Data.AuditUri -tenantid $env:TenantID -NoAuthCheck $true -scope 'https://api.partnercenter.microsoft.com/.default'
+            $ParsedAuditUri = $null
+            if ([System.Uri]::TryCreate([string]$Data.AuditUri, [System.UriKind]::Absolute, [ref]$ParsedAuditUri) -and
+                $ParsedAuditUri.Scheme -eq 'https' -and
+                $ParsedAuditUri.Host -eq 'api.partnercenter.microsoft.com') {
+                $AuditLog = New-GraphGetRequest -uri $ParsedAuditUri.AbsoluteUri -tenantid $env:TenantID -NoAuthCheck $true -scope 'https://api.partnercenter.microsoft.com/.default'
+            } else {
+                Write-LogMessage -API 'Webhooks' -message "Partner Center webhook rejected: AuditUri is not a Partner Center API URL ($($Data.AuditUri))" -Sev 'Alert'
+                return
+            }
         }
 
         switch ($Data.EventName) {

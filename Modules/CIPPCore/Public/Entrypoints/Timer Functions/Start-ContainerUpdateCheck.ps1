@@ -12,10 +12,15 @@ function Start-ContainerUpdateCheck {
 
     if ($PSCmdlet.ShouldProcess('Start-ContainerUpdateCheck', 'Check for container image updates')) {
         $SettingsTable = Get-CippTable -tablename 'ContainerUpdateSettings'
-        $Settings = Get-CIPPAzDataTableEntity @SettingsTable -Filter "PartitionKey eq 'Settings' and RowKey eq 'UpdateConfig'" | Select-Object -First 1
+        # Reconcile the stored check result with the running build first — a restart may
+        # have applied a previously detected update, and this must clear the stale
+        # "update available" flag even when checks are disabled or not yet due. Sync also
+        # resolves defaults for never-saved fields (auto-restart on, hourly, 23:00), so
+        # only an explicitly saved interval of '0' disables checking.
+        $Settings = Sync-CippContainerUpdateState
 
-        if (-not $Settings -or $Settings.CheckInterval -eq '0' -or [string]::IsNullOrWhiteSpace($Settings.CheckInterval)) {
-            Write-Information 'Container update check: disabled or not configured'
+        if (-not $Settings -or $Settings.CheckInterval -eq '0') {
+            Write-Information 'Container update check: disabled'
             return
         }
 
@@ -86,12 +91,11 @@ function Start-ContainerUpdateCheck {
             # Resolve ARM site details
             $Subscription = Get-CIPPAzFunctionAppSubId
             $SiteName = $env:WEBSITE_SITE_NAME
-            $RGName = $env:WEBSITE_RESOURCE_GROUP
-            if (-not $RGName) {
-                $Owner = $env:WEBSITE_OWNER_NAME
-                if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
-                    $RGName = $Matches.RGName
-                }
+            try {
+                $RGName = Get-CIPPFunctionAppResourceGroup -SiteName $SiteName
+            } catch {
+                Write-Information "Could not determine resource group: $($_.Exception.Message)"
+                $RGName = $null
             }
 
             $ImageTag = $env:IMAGE_TAG ?? 'unknown'
@@ -120,70 +124,84 @@ function Start-ContainerUpdateCheck {
 
             $CheckTag = if ($CurrentImage -match ':([^:]+)$') { $Matches[1] } else { $ImageTag }
 
-            # Parse image path for GHCR
             $imagePath = $CurrentImage -replace '^ghcr\.io/', '' -replace ':.*$', ''
             if (-not $imagePath) {
                 Write-LogMessage -API 'ContainerUpdateCheck' -message 'Could not parse image path from reference' -sev Warning
                 return
             }
 
-            # Get anonymous GHCR token
-            $tokenUri = "https://ghcr.io/token?scope=repository:${imagePath}:pull"
-            $tokenResp = Invoke-RestMethod -Uri $tokenUri -Method GET -ErrorAction Stop
-            $token = $tokenResp.token
+            $tokenResp = Invoke-RestMethod -Uri "https://ghcr.io/token?scope=repository:${imagePath}:pull" -Method GET -ErrorAction Stop
+            $authHeader = @{ Authorization = "Bearer $($tokenResp.token)" }
+            $manifestAccept = 'application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json'
 
-            $digestHeaders = @{
-                Authorization = "Bearer $token"
-                Accept        = 'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json'
+            # PS7's Invoke-WebRequest returns .Content as byte[] when the response lacks a charset
+            # (GHCR manifest media types omit it), so piping straight to ConvertFrom-Json yields
+            # an int array — leaving RemoteVersion null and UpdateAvailable always false. Decode bytes first.
+            function ConvertFrom-RawJson($Content) {
+                if ($Content -is [byte[]]) { $Content = [System.Text.Encoding]::UTF8.GetString($Content) }
+                return $Content | ConvertFrom-Json
             }
 
-            # Get remote digest for the configured channel tag
-            $manifestUri = "https://ghcr.io/v2/$imagePath/manifests/$CheckTag"
-            $resp = Invoke-WebRequest -Uri $manifestUri -Method HEAD -Headers $digestHeaders -ErrorAction Stop
+            # GET the channel tag's manifest — extract digest + version label set by CI
+            # (org.opencontainers.image.version mirrors $env:APP_VERSION in the running container).
+            $manifestHeaders = $authHeader + @{ Accept = $manifestAccept }
+            $resp = Invoke-WebRequest -Uri "https://ghcr.io/v2/$imagePath/manifests/$CheckTag" -Method GET -Headers $manifestHeaders -ErrorAction Stop
             $RemoteDigest = $resp.Headers['Docker-Content-Digest']
             if ($RemoteDigest -is [array]) { $RemoteDigest = $RemoteDigest[0] }
+            $manifest = ConvertFrom-RawJson $resp.Content
 
-            # Get running digest for the baked-in image tag
-            $RunningDigest = $null
-            try {
-                $runningUri = "https://ghcr.io/v2/$imagePath/manifests/$ImageTag"
-                $runResp = Invoke-WebRequest -Uri $runningUri -Method HEAD -Headers $digestHeaders -ErrorAction Stop
-                $RunningDigest = $runResp.Headers['Docker-Content-Digest']
-                if ($RunningDigest -is [array]) { $RunningDigest = $RunningDigest[0] }
-            } catch {
-                Write-Information "Could not get running digest for tag $ImageTag"
+            if ($manifest.manifests) {
+                $child = $manifest.manifests | Where-Object { $_.platform.architecture -eq 'amd64' -and $_.platform.os -eq 'linux' } | Select-Object -First 1
+                if (-not $child) { $child = $manifest.manifests | Select-Object -First 1 }
+                $childResp = Invoke-WebRequest -Uri "https://ghcr.io/v2/$imagePath/manifests/$($child.digest)" -Method GET -Headers $manifestHeaders -ErrorAction Stop
+                $manifest = ConvertFrom-RawJson $childResp.Content
             }
 
+            $RemoteVersion = $manifest.annotations.'org.opencontainers.image.version'
+            $RemoteBuildDate = $manifest.annotations.'org.opencontainers.image.created'
+            if ((-not $RemoteVersion -or -not $RemoteBuildDate) -and $manifest.config.digest) {
+                try {
+                    $config = Invoke-RestMethod -Uri "https://ghcr.io/v2/$imagePath/blobs/$($manifest.config.digest)" -Method GET -Headers $authHeader -ErrorAction Stop
+                    if (-not $RemoteVersion) { $RemoteVersion = $config.config.Labels.'org.opencontainers.image.version' }
+                    if (-not $RemoteBuildDate) { $RemoteBuildDate = $config.config.Labels.'org.opencontainers.image.created' }
+                } catch {
+                    Write-Information "Could not read image config labels: $($_.Exception.Message)"
+                }
+            }
+
+            $RunningVersion = $env:APP_VERSION
             $UpdateAvailable = $false
-            if ($RemoteDigest -and $RunningDigest -and $RemoteDigest -ne $RunningDigest) {
+            if ($RemoteVersion -and $RunningVersion -and $RemoteVersion -ne $RunningVersion) {
                 $UpdateAvailable = $true
             }
 
-            # Update the settings row with results (preserve user settings)
             $UpdateEntity = @{
                 PartitionKey    = 'Settings'
                 RowKey          = 'UpdateConfig'
-                AutoUpdate      = [string]($Settings.AutoUpdate ?? 'false')
-                CheckInterval   = [string]($Settings.CheckInterval ?? '0')
-                CheckTime       = [string]($Settings.CheckTime ?? '')
+                AutoUpdate      = [string]($Settings.AutoUpdate ?? 'true')
+                CheckInterval   = [string]($Settings.CheckInterval ?? '1h')
+                CheckTime       = [string]($Settings.CheckTime ?? '23')
                 LastCheck       = [string][int64](([DateTimeOffset]::UtcNow).ToUnixTimeSeconds())
                 UpdateAvailable = [string]$UpdateAvailable
-                RunningDigest   = [string]($RunningDigest ?? '')
+                RunningVersion  = [string]($RunningVersion ?? '')
+                RemoteVersion   = [string]($RemoteVersion ?? '')
                 RemoteDigest    = [string]($RemoteDigest ?? '')
+                RemoteBuildDate = [string]($RemoteBuildDate ?? '')
+                CheckedTag      = [string]($CheckTag ?? '')
             }
             Add-CIPPAzDataTableEntity @SettingsTable -Entity $UpdateEntity -Force | Out-Null
 
             if ($UpdateAvailable -and $Settings.AutoUpdate -eq 'true') {
-                Write-LogMessage -API 'ContainerUpdateCheck' -message "Auto-update: new container image detected (running: $RunningDigest, remote: $RemoteDigest). Restarting." -sev Info
+                Write-LogMessage -API 'ContainerUpdateCheck' -message "Auto-update: new container version detected (running: $RunningVersion, remote: $RemoteVersion). Restarting." -sev Info
                 try {
-                    Request-CIPPRestart -Reason 'Auto-update: new container image available'
+                    Request-CIPPRestart -Reason 'Auto-update: new container version available'
                 } catch {
-                    Write-LogMessage -API 'ContainerUpdateCheck' -message 'Auto-restart requested but AppLifecycleBridge is not available' -sev Warning
+                    Write-LogMessage -API 'ContainerUpdateCheck' -message 'Auto-restart requested but restart bridge is not available' -sev Warning
                 }
             } elseif ($UpdateAvailable) {
-                Write-LogMessage -API 'ContainerUpdateCheck' -message "Container update available (running: $RunningDigest, remote: $RemoteDigest)" -sev Info
+                Write-LogMessage -API 'ContainerUpdateCheck' -message "Container update available (running: $RunningVersion, remote: $RemoteVersion)" -sev Info
             } else {
-                Write-Information "Container is up to date. Digest: $RunningDigest"
+                Write-Information "Container is up to date. Version: $RunningVersion"
             }
         } catch {
             $ErrorMessage = Get-CippException -Exception $_

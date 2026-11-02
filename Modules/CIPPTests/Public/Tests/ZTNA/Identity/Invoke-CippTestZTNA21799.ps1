@@ -17,19 +17,19 @@ function Invoke-CippTestZTNA21799 {
         $matchedPolicies = $null
 
         if (($authMethodPolicy.authenticationMethodConfigurations.state -eq 'enabled').count -gt 0) {
-            $matchedPolicies = $allCAPolicies | Where-Object {
+            $matchedPolicies = $allCAPolicies.Where({
                 $_.conditions.signInRiskLevels -eq 'high' -and
                 ($_.conditions.users.includeUsers -contains 'All') -and
                 ($_.grantControls.builtInControls -contains 'block' -or $_.grantControls.builtInControls -contains 'mfa' -or $null -ne $_.grantControls.authenticationStrength) -and
                 ($_.state -eq 'enabled')
-            }
+            })
         } else {
-            $matchedPolicies = $allCAPolicies | Where-Object {
+            $matchedPolicies = $allCAPolicies.Where({
                 $_.conditions.signInRiskLevels -eq 'high' -and
                 ($_.conditions.users.includeUsers -contains 'All') -and
                 ($_.grantControls.builtInControls -contains 'block') -and
                 ($_.state -eq 'enabled')
-            }
+            })
         }
 
         $testResultMarkdown = ''

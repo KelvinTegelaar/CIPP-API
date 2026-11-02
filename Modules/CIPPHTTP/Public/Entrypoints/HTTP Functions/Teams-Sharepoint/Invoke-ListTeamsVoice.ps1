@@ -11,10 +11,21 @@ function Invoke-ListTeamsVoice {
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
-    $UseReportDB = $Request.Query.UseReportDB
+    # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
+    $UseReportDB = $Request.Query.UseReportDB -eq $true
     try {
-        if ($TenantFilter -eq 'AllTenants' -or $UseReportDB -eq 'true') {
+        if ($TenantFilter -eq 'AllTenants' -or $UseReportDB) {
             try {
+                # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
+                if ($Request.Query.manualPagination -eq $true) {
+                    # Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.
+                    $PageSize = $Request.Query.PageSize -as [int]
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::OK
+                            # Continuation token from the previous page's Metadata.nextLink; opaque to callers.
+                            Body       = Get-CIPPReportPage -TenantFilter $TenantFilter -Type 'TeamsVoice' -PageSize $PageSize -ContinuationToken $Request.Query.nextLink -Report { param($Tenant) Get-CIPPTeamsVoiceReport -TenantFilter $Tenant -ErrorAction Stop }
+                        })
+                }
                 $GraphRequest = Get-CIPPTeamsVoiceReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK
             } catch {
@@ -29,13 +40,19 @@ function Invoke-ListTeamsVoice {
 
         $TenantId = (Get-Tenants -TenantFilter $TenantFilter).customerId
         $Users = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=id,userPrincipalName,displayName" -tenantid $TenantFilter)
+        # The number list only carries LocationId GUIDs; resolve them to a readable label.
+        $LocationLookup = Get-CippTeamsLocationLookup -TenantFilter $TenantFilter
         $Skip = 0
         $GraphRequest = do {
             Write-Host "Getting page $Skip"
-            $Results = New-TeamsAPIGetRequest -uri "https://api.interfaces.records.teams.microsoft.com/Skype.TelephoneNumberMgmt/Tenants/$($TenantId)/telephone-numbers?skip=$($Skip)&locale=en-US&top=999" -tenantid $TenantFilter
+            $Results = New-TeamsRequestV2 -TenantFilter $TenantFilter -Path "Skype.TelephoneNumberMgmt/Tenants/$TenantId/telephone-numbers" `
+                -QueryParameters @{ skip = $Skip; locale = 'en-US'; top = 999 } `
+                -AdditionalHeaders @{ 'x-ms-tnm-applicationid' = '045268c0-445e-4ac1-9157-d58f67b167d9' }
             #Write-Information ($Results | ConvertTo-Json -Depth 10)
             $data = $Results.TelephoneNumbers | ForEach-Object {
-                $CompleteRequest = $_ | Select-Object *, @{Name = 'AssignedTo'; Expression = { $users | Where-Object -Property id -EQ $_.TargetId } }
+                $CompleteRequest = $_ | Select-Object *,
+                @{Name = 'AssignedTo'; Expression = { $users | Where-Object -Property id -EQ $_.TargetId } },
+                @{Name = 'EmergencyLocation'; Expression = { if ($_.LocationId) { $LocationLookup[[string]$_.LocationId] } } }
                 if ($CompleteRequest.AcquisitionDate) {
                     $CompleteRequest.AcquisitionDate = $_.AcquisitionDate -split 'T' | Select-Object -First 1
                 } else {
@@ -50,7 +67,7 @@ function Invoke-ListTeamsVoice {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
     Write-Host "Graph request is: $($GraphRequest)"

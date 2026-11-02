@@ -4,8 +4,8 @@ function Remove-CIPPGroupMember {
     Removes members from a Microsoft 365 group.
 
     .DESCRIPTION
-    Removes one or more members from Security Groups, Distribution Groups, or Mail-Enabled Security Groups.
-    Uses bulk request operations for Exchange groups to improve performance.
+    Removes directory objects (users, groups, etc.) from Security Groups, Distribution
+    Groups, or Mail-Enabled Security Groups. Resolves identities via Resolve-CIPPDirectoryId.
 
     .PARAMETER Headers
     The headers for the API request, typically containing authentication information.
@@ -14,29 +14,22 @@ function Remove-CIPPGroupMember {
     The tenant identifier for the target tenant.
 
     .PARAMETER GroupType
-    The type of group. Valid values: 'Distribution list', 'Mail-Enabled Security', or standard security groups.
+    Optional fallback type when Graph/Exchange cannot classify the target group.
 
     .PARAMETER GroupId
     The unique identifier (GUID or name) of the group.
 
     .PARAMETER Member
-    An array of member identifiers (user GUIDs or UPNs) to remove from the group.
+    An array of member identifiers (object ids, UPNs, or mail addresses).
 
     .PARAMETER APIName
     The API operation name for logging purposes. Default: 'Remove Group Member'.
-
-    .EXAMPLE
-    Remove-CIPPGroupMember -Headers $Headers -TenantFilter 'contoso.onmicrosoft.com' -GroupType 'Distribution list' -GroupId 'Sales-DL' -Member @('user1@contoso.com', 'user2@contoso.com') -APIName 'Remove DL Members'
-
-    .EXAMPLE
-    Remove-CIPPGroupMember -Headers $Headers -TenantFilter 'contoso.onmicrosoft.com' -GroupType 'Security' -GroupId '12345-guid' -Member @('user1-guid')
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
 
-        [Parameter(Mandatory = $true)]
         [string]$GroupType,
 
         [Parameter(Mandatory = $true)]
@@ -52,74 +45,105 @@ function Remove-CIPPGroupMember {
     )
 
     try {
-        $Requests = foreach ($m in $Member) {
-            if ($m -like '*#EXT#*') { $m = [System.Web.HttpUtility]::UrlEncode($m) }
-            @{
-                id     = $m
-                url    = "users/$($m)?`$select=id,userPrincipalName"
-                method = 'GET'
+        $Group = Get-CIPPGroupType -GroupId $GroupId -TenantFilter $TenantFilter -FallbackGroupType $GroupType
+        $GroupName = $Group.DisplayName
+        $ResolvedMembers = @(Resolve-CIPPDirectoryId -Identity $Member -TenantFilter $TenantFilter)
+
+        $SuccessfulMembers = [System.Collections.Generic.List[string]]::new()
+        $FailedMembers = [System.Collections.Generic.List[string]]::new()
+
+        foreach ($Entry in $ResolvedMembers) {
+            if (-not $Entry.Resolved -or -not $Entry.Id) {
+                $FailedMembers.Add("$($Entry.Label) (directory object not found)")
             }
         }
-        $Users = New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter
+        $ValidMembers = @($ResolvedMembers | Where-Object { $_.Resolved -and $_.Id })
 
-        if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
+        if ($Group.IsExchangeBacked) {
             $ExoBulkRequests = [System.Collections.Generic.List[object]]::new()
             $ExoLogs = [System.Collections.Generic.List[object]]::new()
 
-            foreach ($User in $Users) {
-                $Params = @{ Identity = $GroupId; Member = $User.body.userPrincipalName; BypassSecurityGroupManagerCheck = $true }
+            foreach ($Entry in $ValidMembers) {
+                $OperationGuid = [Guid]::NewGuid().ToString()
+                $ExoMember = $Entry.ExchangeIdentity ?? $Entry.Id
+                $Params = @{ Identity = $GroupId; Member = $ExoMember; BypassSecurityGroupManagerCheck = $true }
                 $ExoBulkRequests.Add(@{
-                        CmdletInput = @{
+                        CmdletInput   = @{
                             CmdletName = 'Remove-DistributionGroupMember'
                             Parameters = $Params
                         }
+                        OperationGuid = $OperationGuid
                     })
                 $ExoLogs.Add(@{
-                        message = "Removed member $($User.body.userPrincipalName) from $($GroupId) group"
-                        target  = $User.body.userPrincipalName
+                        message       = "Removed member $($Entry.Label) from group $($GroupName)"
+                        target        = $ExoMember
+                        OperationGuid = $OperationGuid
                     })
             }
 
             if ($ExoBulkRequests.Count -gt 0) {
                 $RawExoRequest = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($ExoBulkRequests)
-                $LastError = $RawExoRequest | Select-Object -Last 1
+                $ExoResults = Resolve-CippExoBulkResult -Response $RawExoRequest -Operations $ExoLogs
 
-                foreach ($ExoError in $LastError.error) {
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoError -Sev 'Error'
-                    throw $ExoError
-                }
-
-                foreach ($ExoLog in $ExoLogs) {
-                    $ExoError = $LastError | Where-Object { $ExoLog.target -in $_.target -and $_.error }
-                    if (!$LastError -or ($LastError.error -and $LastError.target -notcontains $ExoLog.target)) {
-                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoLog.message -Sev 'Info'
+                foreach ($ExoResult in $ExoResults) {
+                    $Entry = $ValidMembers | Where-Object {
+                        ($_.ExchangeIdentity ?? $_.Id) -eq $ExoResult.Operation.target
+                    } | Select-Object -First 1
+                    $Label = $Entry.Label ?? $ExoResult.Operation.target
+                    if ($ExoResult.Success) {
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $ExoResult.Operation.message -Sev 'Info'
+                        $SuccessfulMembers.Add($Label)
+                    } else {
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to remove member $Label from group $($GroupName): $($ExoResult.ErrorMessage)" -Sev 'Error'
+                        $FailedMembers.Add("$Label ($($ExoResult.ErrorMessage))")
                     }
                 }
             }
         } else {
-            $RemovalRequests = foreach ($User in $Users) {
+            $RemovalRequests = foreach ($Entry in $ValidMembers) {
                 @{
-                    id     = $User.body.id
+                    id     = $Entry.Id
                     method = 'DELETE'
-                    url    = "/groups/$($GroupId)/members/$($User.body.id)/`$ref"
+                    url    = "/groups/$($GroupId)/members/$($Entry.Id)/`$ref"
                 }
             }
-            $RemovalResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($RemovalRequests)
-            foreach ($Result in $RemovalResults) {
-                if ($Result.status -ne 204) {
-                    throw "Failed to remove member $($Result.id): $($Result.body.error.message)"
+            if (@($RemovalRequests).Count -gt 0) {
+                $RemovalResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($RemovalRequests)
+                foreach ($Result in $RemovalResults) {
+                    $Entry = $ValidMembers | Where-Object { $_.Id -eq $Result.id } | Select-Object -First 1
+                    $Label = $Entry.Label ?? $Result.id
+                    if ($Result.status -lt 200 -or $Result.status -gt 299) {
+                        $ErrorText = Get-NormalizedError -message ($Result.body.error.message ?? "Request failed with status $($Result.status)") | Select-Object -First 1
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to remove member $Label from group $($GroupName): $ErrorText" -Sev 'Error'
+                        $FailedMembers.Add("$Label ($ErrorText)")
+                    } else {
+                        $SuccessfulMembers.Add($Label)
+                    }
                 }
             }
         }
-        $UserList = ($Users.body.userPrincipalName -join ', ')
-        $Results = "Successfully removed user $UserList from $($GroupId)."
+        $Messages = [System.Collections.Generic.List[string]]::new()
+        if ($SuccessfulMembers.Count -gt 0) {
+            $Messages.Add("Successfully removed $($SuccessfulMembers -join ', ') from group $($GroupName).")
+        }
+        if ($FailedMembers.Count -gt 0) {
+            $Messages.Add("Failed to remove $($FailedMembers -join '; ').")
+        }
+        $Results = $Messages -join ' '
+        if ($SuccessfulMembers.Count -eq 0 -and $FailedMembers.Count -gt 0) {
+            throw $Results
+        }
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev Info
         return $Results
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $UserList = if ($Users) { ($Users.body.userPrincipalName -join ', ') } else { ($Member -join ', ') }
-        $Results = "Failed to remove user $UserList from $($GroupId): $($ErrorMessage.NormalizedError)"
+        $MemberList = if ($ResolvedMembers) {
+            ($ResolvedMembers | ForEach-Object { $_.Label ?? $_.Input }) -join ', '
+        } else {
+            ($Member -join ', ')
+        }
+        $Results = "Failed to remove $MemberList from group $($GroupName ?? $GroupId): $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev Error -LogData $ErrorMessage
         throw $Results
     }

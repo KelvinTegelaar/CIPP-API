@@ -1,12 +1,13 @@
 function Push-CIPPDBCacheApplyBatch {
     <#
     .SYNOPSIS
-        Aggregate cache tasks from all tenants and start a flat execution orchestrator (Phase 2)
+        Aggregate cache tasks from all tenants and start the execution orchestrators (Phase 2)
 
     .DESCRIPTION
         PostExecution function for the DBCache pipeline. Receives aggregated results from the
-        per-tenant CIPPDBCacheData list activities, flattens them into a single batch, and starts
-        one orchestrator to execute all cache collection tasks across all tenants in parallel.
+        per-tenant CIPPDBCacheData list activities and starts one execution run per tenant, each
+        running at most two of that tenant's collection groups at once, for a nightly or a
+        single-tenant refresh alike.
 
     .FUNCTIONALITY
         Entrypoint
@@ -34,26 +35,54 @@ function Push-CIPPDBCacheApplyBatch {
 
         Write-Information "Aggregated $($AllTasks.Count) cache tasks from all tenants"
 
-        # Start a single flat orchestrator to execute all cache tasks
-        $TenantSuffix = if ($Item.Parameters.TenantFilter) { "_$($Item.Parameters.TenantFilter)" } else { '' }
-        $InputObject = [PSCustomObject]@{
-            OrchestratorName = "CIPPDBCacheExecute$TenantSuffix"
-            Batch            = @($AllTasks)
-            SkipLog          = $true
-        }
+        # A test run chains the tests after its tenant's run, so Intune stays in that run and the tests wait for it.
+        $TestRun = $Item.Parameters.TestRun -eq $true -and $Item.Parameters.TenantFilter
 
-        # Add test run post-execution if flagged
-        if ($Item.Parameters -and $Item.Parameters.TestRun -eq $true -and $Item.Parameters.TenantFilter) {
-            $InputObject | Add-Member -NotePropertyName PostExecution -NotePropertyValue @{
-                FunctionName = 'CIPPDBTestsRun'
-                Parameters   = @{
-                    TenantFilter = $Item.Parameters.TenantFilter
-                }
+        # Intune runs a band ahead so it reads the report exports before their downloads expire
+        if (-not $TestRun) {
+            $IntuneTasks = @($AllTasks | Where-Object { $_.CollectionType -eq 'Intune' })
+            if ($IntuneTasks.Count -gt 0) {
+                $OpContext = Get-Variable -Name 'CraftOperationContext' -Scope Global -ValueOnly -ErrorAction SilentlyContinue
+                $IntunePriority = [math]::Max(0, (Resolve-CIPPOrchestratorPriority -InputObject $null -OpContext $OpContext) - 1)
+                $IntuneId = Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
+                        OrchestratorName = 'CIPPDBCacheExecuteIntune'
+                        AllowCollision   = $false
+                        Batch            = $IntuneTasks
+                        Priority         = $IntunePriority
+                        SkipLog          = $true
+                    })
+                Write-Information "Started Intune cache execution orchestrator with ID = '$IntuneId' for $($IntuneTasks.Count) tasks at P$IntunePriority"
+                $AllTasks = [System.Collections.Generic.List[object]]@($AllTasks | Where-Object { $_.CollectionType -ne 'Intune' })
+                if ($AllTasks.Count -eq 0) { return @{ Success = $true; TaskCount = $IntuneTasks.Count; InstanceId = $IntuneId } }
             }
         }
 
-        $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
-        Write-Information "Started flat cache execution orchestrator with ID = '$InstanceId' for $($AllTasks.Count) tasks"
+        $TenantGroups = [ordered]@{}
+        foreach ($Task in $AllTasks) {
+            $Tenant = [string]$Task.TenantFilter
+            if (-not $TenantGroups.Contains($Tenant)) { $TenantGroups[$Tenant] = [System.Collections.Generic.List[object]]::new() }
+            $TenantGroups[$Tenant].Add($Task)
+        }
+
+        # One run per tenant, capped, so the background slots spread across tenants instead of
+        # several collection groups hitting the same tenant's Graph/EXO/SPO budget at once.
+        $InstanceId = foreach ($Tenant in $TenantGroups.Keys) {
+            $InputObject = [PSCustomObject]@{
+                OrchestratorName = "CIPPDBCacheExecute-$Tenant"
+                AllowCollision   = $false
+                Batch            = @($TenantGroups[$Tenant])
+                MaxConcurrency   = 2
+                SkipLog          = $true
+            }
+            if ($TestRun) {
+                $InputObject | Add-Member -NotePropertyName PostExecution -NotePropertyValue @{
+                    FunctionName = 'CIPPDBTestsRun'
+                    Parameters   = @{ TenantFilter = $Tenant }
+                }
+            }
+            Start-CIPPOrchestrator -InputObject $InputObject
+        }
+        Write-Information "Started $(@($InstanceId).Count) per-tenant cache execution orchestrators for $($AllTasks.Count) tasks"
 
         return @{
             Success    = $true

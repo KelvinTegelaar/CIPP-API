@@ -1,0 +1,43 @@
+{
+  "name": "SPSyncButtonState",
+  "label": "Set SharePoint sync button state",
+  "cat": "SharePoint Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "If disabled, users in the tenant will no longer be able to use the Sync button to sync SharePoint content on all sites. However, existing synced content will remain functional on the user's computer.",
+  "executiveText": "Controls whether employees can synchronize SharePoint files to their local devices, balancing productivity benefits with data security concerns. This setting helps manage data distribution while maintaining access to cloud-based collaboration when sync is disabled.",
+  "impactColour": "warning",
+  "addedDate": "2024-07-26",
+  "powershellEquivalent": "Set-SPOTenant -HideSyncButtonOnTeamSite $true or $false",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "hideSyncButton": {
+      "type": "switch",
+      "label": "Disable the Sync button (hide it on all sites)",
+      "default": true
+    }
+  },
+  "expected": {
+    "HideSyncButtonOnDocLib": "%hideSyncButton%"
+  },
+  "read": {
+    "cacheType": "SPOTenant"
+  },
+  "writeTarget": "spoTenant",
+  "remediate": {
+    "executor": "SPOTenant",
+    "properties": {
+      "HideSyncButtonOnDocLib": "%hideSyncButton%"
+    }
+  }
+}

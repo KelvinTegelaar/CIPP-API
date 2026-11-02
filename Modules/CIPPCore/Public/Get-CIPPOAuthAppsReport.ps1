@@ -12,21 +12,23 @@ function Get-CIPPOAuthAppsReport {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+
+        # Rows already read by the AllTenants path, keyed by cache type
+        [Parameter(DontShow = $true)]
+        [hashtable]$DbItems
     )
 
     try {
         if ($TenantFilter -eq 'AllTenants') {
-            $AllOAuthItems = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'OAuth2PermissionGrants'
-            $Tenants = @($AllOAuthItems | Where-Object { $_.RowKey -ne 'OAuth2PermissionGrants-Count' } | Select-Object -ExpandProperty PartitionKey -Unique)
-
-            $TenantList = Get-Tenants -IncludeErrors
-            $Tenants = $Tenants | Where-Object { $TenantList.defaultDomainName -contains $_ }
+            $ItemsByTenant = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'OAuth2PermissionGrants' -ByTenant
 
             $AllResults = [System.Collections.Generic.List[PSCustomObject]]::new()
-            foreach ($Tenant in $Tenants) {
+            foreach ($Tenant in @($ItemsByTenant.Keys)) {
+                # Hand each tenant its rows and drop them here so they can be freed once processed
+                $TenantItems = $ItemsByTenant[$Tenant]; $ItemsByTenant[$Tenant] = $null
                 try {
-                    $TenantResults = Get-CIPPOAuthAppsReport -TenantFilter $Tenant
+                    $TenantResults = Get-CIPPOAuthAppsReport -TenantFilter $Tenant -DbItems @{ OAuth2PermissionGrants = $TenantItems }
                     foreach ($Result in $TenantResults) {
                         $Result | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $Tenant -Force
                         $AllResults.Add($Result)
@@ -38,7 +40,9 @@ function Get-CIPPOAuthAppsReport {
             return $AllResults
         }
 
-        $OAuthGrants = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'OAuth2PermissionGrants')
+        # The count row is kept: its timestamp is the cache time reported below
+        $GrantItems = $(if ($DbItems) { $DbItems['OAuth2PermissionGrants']; Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'OAuth2PermissionGrants' -CountsOnly } else { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'OAuth2PermissionGrants' })
+        $OAuthGrants = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'OAuth2PermissionGrants' -Rows $GrantItems)
         if (-not $OAuthGrants) {
             throw 'No OAuth2 permission grant data found in reporting database. Sync the report data first.'
         }
@@ -51,7 +55,7 @@ function Get-CIPPOAuthAppsReport {
             }
         }
 
-        $CacheTimestamp = (Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'OAuth2PermissionGrants' | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
+        $CacheTimestamp = ($GrantItems | Where-Object { $_.Timestamp } | Sort-Object Timestamp -Descending | Select-Object -First 1).Timestamp
 
         $Results = [System.Collections.Generic.List[PSCustomObject]]::new()
         foreach ($Grant in $OAuthGrants) {

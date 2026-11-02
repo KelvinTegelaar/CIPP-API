@@ -13,9 +13,9 @@ function Invoke-CippTestZTNA24552 {
             return
         }
 
-        $MacOSPolicies = $ConfigurationPolicies | Where-Object {
+        $MacOSPolicies = $ConfigurationPolicies.Where({
             $_.platforms -match 'macOS'
-        }
+        })
 
         $MacOSFirewallPolicies = [System.Collections.Generic.List[object]]::new()
         foreach ($MacOSPolicy in $MacOSPolicies) {
@@ -41,9 +41,9 @@ function Invoke-CippTestZTNA24552 {
             }
         }
 
-        $AssignedPolicies = $MacOSFirewallPolicies | Where-Object {
+        $AssignedPolicies = $MacOSFirewallPolicies.Where({
             $_.assignments -and $_.assignments.Count -gt 0
-        }
+        })
 
         if ($AssignedPolicies.Count -gt 0) {
             $Status = 'Passed'

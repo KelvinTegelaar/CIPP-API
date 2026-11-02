@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_7_3_1 {
             return
         }
 
-        $Cfg = $SPO | Select-Object -First 1
+        $Cfg = @($SPO)[0]
 
         if ($Cfg.DisallowInfectedFileDownload -eq $true) {
             $Status = 'Passed'

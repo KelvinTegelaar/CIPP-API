@@ -13,7 +13,7 @@ function Invoke-CippTestEIDSCACP04 {
             return
         }
 
-        $SettingValue = ($Settings.values | Where-Object { $_.name -eq 'EnableAdminConsentRequests' }).value
+        $SettingValue = $Settings.values.Where({ $_.name -eq 'EnableAdminConsentRequests' }).value
 
         if ($SettingValue -eq 'true') {
             $Status = 'Passed'

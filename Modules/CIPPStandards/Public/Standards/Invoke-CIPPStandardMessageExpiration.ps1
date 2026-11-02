@@ -80,6 +80,5 @@ function Invoke-CIPPStandardMessageExpiration {
             MessageExpiration = '12:00:00'
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MessageExpiration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'messageExpiration' -FieldValue $MessageExpiration -StoreAs bool -Tenant $tenant
     }
 }

@@ -1,0 +1,48 @@
+{
+  "name": "SecurityDefaults",
+  "label": "Enable Security Defaults",
+  "cat": "Entra (AAD) Standards",
+  "tag": [
+    "CISA (MS.AAD.11.1v1)",
+    "SMB1001 (2.5)",
+    "SMB1001 (2.6)",
+    "SMB1001 (2.9)",
+    "BlockLegacyAuthentication"
+  ],
+  "impact": "High Impact",
+  "helpText": "Enables security defaults for the tenant, for newer tenants this is enabled by default. Do not enable this feature if you use Conditional Access. Microsoft refuses to enable security defaults while any Conditional Access policy exists ('Conditional access policies are enabled. Please disable and try again.'), so remediation always fails on tenants that have CA policies.",
+  "executiveText": "Activates Microsoft's baseline security configuration that requires multi-factor authentication and blocks legacy authentication methods. This provides essential security protection for organizations without complex conditional access policies, significantly improving security posture with minimal configuration.",
+  "docsDescription": "Enables SD for the tenant, which disables all forms of basic authentication and enforces users to configure MFA. Users are only prompted for MFA when a logon is considered 'suspect' by Microsoft.",
+  "impactColour": "danger",
+  "addedDate": "2021-11-19",
+  "powershellEquivalent": "[Read more here](https://www.cyberdrain.com/automating-with-powershell-enabling-secure-defaults-and-sd-explained/)",
+  "appliesToTest": [
+    "SMB1001_2_5",
+    "SMB1001_2_6",
+    "SMB1001_2_9",
+    "ZTNA21843"
+  ],
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 8,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "isEnabled": true
+  },
+  "read": {
+    "cacheType": "SecurityDefaults"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "uri": "policies/identitySecurityDefaultsEnforcementPolicy",
+        "body": {
+          "isEnabled": true
+        }
+      }
+    ]
+  }
+}

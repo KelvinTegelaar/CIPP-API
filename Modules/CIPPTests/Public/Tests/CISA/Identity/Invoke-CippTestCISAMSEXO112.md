@@ -19,7 +19,7 @@ Set-AntiPhishPolicy -Identity "Standard Preset Security Policy" `
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.11.2](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo112v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.11.2](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo112v1)
 - [Safety tips in email messages](https://learn.microsoft.com/microsoft-365/security/office-365-security/anti-phishing-protection-about#safety-tips-in-email-messages)
 
 <!--- Results --->

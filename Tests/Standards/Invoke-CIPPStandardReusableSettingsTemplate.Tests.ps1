@@ -3,9 +3,15 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $StandardPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Standards/Invoke-CIPPStandardReusableSettingsTemplate.ps1'
+    # Resolve by name under Modules/ so the test survives the function moving between modules.
+    $StandardPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-CIPPStandardReusableSettingsTemplate.ps1' -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $StandardPath) { throw 'Could not locate Invoke-CIPPStandardReusableSettingsTemplate.ps1 under Modules/' }
 
-    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $RequiredCapabilities) }
+    # Stubs mirror the real signatures and are advanced functions on purpose: strict
+    # parameter binding makes signature drift in the standard fail loudly here instead
+    # of silently landing in $args and leaving the captured value $null.
+    function Test-CIPPStandardLicense { [CmdletBinding()] param($StandardName, $TenantFilter, $RequiredCapabilities, $Preset, [switch]$SkipLog) }
     function Get-CippTable { param($tablename) }
     function New-GraphGETRequest { param($uri, $tenantid) }
     function Get-CippAzDataTableEntity { param($Table, $Filter) }
@@ -13,7 +19,7 @@ BeforeAll {
     function New-GraphPOSTRequest { param($uri, $tenantid, $type, $body) }
     function Write-LogMessage { param($API, $tenant, $message, $sev) }
     function Write-StandardsAlert { param($message, $object, $tenant, $standardName, $standardId) }
-    function Set-CIPPStandardsCompareField { param($FieldName, $FieldValue, $TenantFilter) }
+    function Set-CIPPStandardsCompareField { [CmdletBinding()] param($FieldName, $FieldValue, $CurrentValue, $ExpectedValue, $TenantFilter, [bool]$LicenseAvailable = $true, [array]$BulkFields) }
     function Get-NormalizedError { param($Message) $Message }
 
     . $StandardPath
@@ -54,8 +60,15 @@ Describe 'Invoke-CIPPStandardReusableSettingsTemplate' {
             $script:alerts += @{ Message = $message; Object = $object; Standard = $standardName; Id = $standardId }
         }
         Mock -CommandName Set-CIPPStandardsCompareField -MockWith {
-            param($FieldName, $FieldValue, $TenantFilter)
-            $script:compareFields += @{ Field = $FieldName; Value = $FieldValue; Tenant = $TenantFilter }
+            param($FieldName, $FieldValue, $CurrentValue, $ExpectedValue, $TenantFilter, $LicenseAvailable)
+            $script:compareFields += @{
+                Field            = $FieldName
+                Value            = $FieldValue
+                Current          = $CurrentValue
+                Expected         = $ExpectedValue
+                Tenant           = $TenantFilter
+                LicenseAvailable = $LicenseAvailable
+            }
         }
     }
 
@@ -146,7 +159,125 @@ Describe 'Invoke-CIPPStandardReusableSettingsTemplate' {
 
         $logs.Where({ $_.Message -like '*is compliant.*' }).Count | Should -Be 1
         $compareFields | Should -HaveCount 1
-        $compareFields[0].Value | Should -BeTrue
+        # The report branch reports through CurrentValue/ExpectedValue, not the legacy FieldValue.
+        $compareFields[0].Current.isCompliant | Should -BeTrue
+        $compareFields[0].Current.displayName | Should -Be 'Reusable A'
+        $compareFields[0].Expected.isCompliant | Should -BeTrue
         Should -Invoke -CommandName Write-StandardsAlert -Times 0
+    }
+
+    # Alignment emits a key for every selected id. A key with no compare row reports NOT FOUND, and
+    # stays in ValidDriftKeys, which the drift prune skips - so it could never be cleared.
+    Context 'compare rows always cover every selected template' {
+        It 'writes a compare row for a template whose row no longer exists' {
+            Mock -CommandName Get-CippAzDataTableEntity -MockWith { @() }
+
+            $settings = @(
+                [pscustomobject]@{ TemplateList = [pscustomobject]@{ value = 'template-deleted' }; remediate = $false; alert = $false; report = $true }
+            )
+
+            Invoke-CIPPStandardReusableSettingsTemplate -Tenant $tenant -Settings $settings
+
+            $compareFields.Field | Should -Contain 'standards.ReusableSettingsTemplate.template-deleted'
+            ($compareFields | Where-Object Field -EQ 'standards.ReusableSettingsTemplate.template-deleted').Current.isCompliant |
+                Should -BeFalse
+        }
+
+        It 'writes a compare row for a template whose stored JSON is empty' {
+            Mock -CommandName Get-CippAzDataTableEntity -MockWith {
+                @([pscustomobject]@{ RowKey = 'template-empty'; JSON = ''; DisplayName = 'Empty' })
+            }
+
+            $settings = @(
+                [pscustomobject]@{ TemplateList = [pscustomobject]@{ value = 'template-empty' }; remediate = $false; alert = $false; report = $true }
+            )
+
+            Invoke-CIPPStandardReusableSettingsTemplate -Tenant $tenant -Settings $settings
+
+            $compareFields.Field | Should -Contain 'standards.ReusableSettingsTemplate.template-empty'
+        }
+
+        It 'covers the resolvable ids when only some of a selection resolve' {
+            # The unresolved id used to produce nothing at all, which is harder to spot.
+            Mock -CommandName Get-CippAzDataTableEntity -MockWith {
+                @([pscustomobject]@{
+                        RowKey      = 'template-good'
+                        JSON        = '{"DisplayName":"Reusable Good","RawJSON":"{\"displayName\":\"Reusable Good\"}"}'
+                        DisplayName = 'Reusable Good'
+                    })
+            }
+
+            $settings = @(
+                [pscustomobject]@{ TemplateList = [pscustomobject]@{ value = @('template-good', 'template-missing') }; remediate = $false; alert = $false; report = $true }
+            )
+
+            Invoke-CIPPStandardReusableSettingsTemplate -Tenant $tenant -Settings $settings
+
+            $compareFields.Field | Should -Contain 'standards.ReusableSettingsTemplate.template-good'
+            $compareFields.Field | Should -Contain 'standards.ReusableSettingsTemplate.template-missing'
+        }
+
+        It 'never pushes an empty body for an unresolved template' {
+            Mock -CommandName Get-CippAzDataTableEntity -MockWith { @() }
+
+            $settings = @(
+                [pscustomobject]@{ TemplateList = [pscustomobject]@{ value = 'template-deleted' }; remediate = $true; alert = $false; report = $false }
+            )
+
+            Invoke-CIPPStandardReusableSettingsTemplate -Tenant $tenant -Settings $settings
+
+            Should -Invoke -CommandName New-GraphPOSTRequest -Times 0
+        }
+    }
+
+    Context 'compare key matches the id the picker sent' {
+        It 'keys off TemplateList.value, not the GUID inside the stored JSON' {
+            # The JSON blob's GUID matches the RowKey for CIPP-created templates but not for
+            # imported rows, where it wrote the row under a key nobody reads.
+            Mock -CommandName Get-CippAzDataTableEntity -MockWith {
+                @([pscustomobject]@{
+                        RowKey      = 'row-key-id'
+                        JSON        = '{"DisplayName":"Reusable A","GUID":"a-different-guid","RawJSON":"{\"displayName\":\"Reusable A\"}"}'
+                        DisplayName = 'Reusable A'
+                    })
+            }
+            Mock -CommandName New-GraphGETRequest -MockWith {
+                @([pscustomobject]@{ id = 'existing-9'; displayName = 'Reusable A' })
+            }
+            Mock -CommandName Compare-CIPPIntuneObject -MockWith { $null }
+
+            $settings = @(
+                [pscustomobject]@{ TemplateList = [pscustomobject]@{ value = 'row-key-id' }; remediate = $false; alert = $false; report = $true }
+            )
+
+            Invoke-CIPPStandardReusableSettingsTemplate -Tenant $tenant -Settings $settings
+
+            $compareFields.Field | Should -Contain 'standards.ReusableSettingsTemplate.row-key-id'
+            $compareFields.Field | Should -Not -Contain 'standards.ReusableSettingsTemplate.a-different-guid'
+        }
+
+        It 'raises its alert against the picker id too' {
+            Mock -CommandName Get-CippAzDataTableEntity -MockWith {
+                @([pscustomobject]@{
+                        RowKey      = 'row-key-id'
+                        JSON        = '{"DisplayName":"Reusable A","GUID":"a-different-guid","RawJSON":"{\"displayName\":\"Reusable A\"}"}'
+                        DisplayName = 'Reusable A'
+                    })
+            }
+            Mock -CommandName New-GraphGETRequest -MockWith {
+                @([pscustomobject]@{ id = 'existing-9'; displayName = 'Reusable A' })
+            }
+            # [pscustomobject] to match what Compare-CIPPIntuneObject really returns.
+            Mock -CommandName Compare-CIPPIntuneObject -MockWith { [pscustomobject]@{ Difference = 'drift' } }
+
+            $settings = @(
+                [pscustomobject]@{ TemplateList = [pscustomobject]@{ value = 'row-key-id' }; remediate = $false; alert = $true; report = $false }
+            )
+
+            Invoke-CIPPStandardReusableSettingsTemplate -Tenant $tenant -Settings $settings
+
+            $alerts | Should -HaveCount 1
+            $alerts[0].Id | Should -BeExactly 'row-key-id'
+        }
     }
 }

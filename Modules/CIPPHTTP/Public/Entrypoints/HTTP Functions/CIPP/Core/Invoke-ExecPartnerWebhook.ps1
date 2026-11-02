@@ -29,11 +29,30 @@ function Invoke-ExecPartnerWebhook {
             } catch {}
             if (!$Results) {
                 $Results = [PSCustomObject]@{
-                    webhoookUrl           = 'None'
+                    webhookUrl            = 'None'
                     lastModifiedTimestamp = 'Never'
                     webhookEvents         = @()
                     enabled               = $false
                 }
+            }
+
+            # The URL that would be registered if the subscription were saved right now, so the UI can
+            # flag a subscription still pointing at a previous CIPP URL. Resolved from the custom
+            # domain bound to the instance rather than the host the admin browsed in on - otherwise
+            # visiting the *.azurewebsites.net URL tells you to re-register against it, which is the
+            # opposite of what warmup reconciles the stored URL to.
+            $CurrentHostname = Get-CIPPHostname -Headers $Request.Headers -PreferCustomDomain
+            if ($CurrentHostname) {
+                $Results | Add-Member -MemberType NoteProperty -Name 'expectedWebhookUrl' -Value "https://$CurrentHostname/api/PublicWebhooks?CIPPID=$($env:TenantID)&Type=PartnerCenter" -Force
+                $Results | Add-Member -MemberType NoteProperty -Name 'instanceHostname' -Value $CurrentHostname -Force
+            }
+
+            # Surfaced so the UI can explain which domain was picked when several are bound.
+            try {
+                $SiteState = Get-CIPPSiteHostname -IncludeStatus -NoFallback
+                $Results | Add-Member -MemberType NoteProperty -Name 'customDomains' -Value @($SiteState.CustomHostnames) -Force
+            } catch {
+                Write-Information "ExecPartnerWebhook: custom domain lookup failed: $($_.Exception.Message)"
             }
         }
         'CreateSubscription' {
@@ -41,7 +60,10 @@ function Invoke-ExecPartnerWebhook {
                 $Request.Body.EventType = $Request.Body.EventType.value
             }
 
-            $BaseURL = ([System.Uri]$Request.Headers.'x-ms-original-url').Host
+            # Resolve the URL CIPP is published on and store it for background jobs. The bound custom
+            # domain wins over the request host so a save made from the *.azurewebsites.net URL does
+            # not register Partner Center against a hostname warmup will reconcile away again.
+            $BaseURL = Get-CIPPHostname -Headers $Request.Headers -PreferCustomDomain -Save
             $Webhook = @{
                 TenantFilter  = $env:TenantID
                 PartnerCenter = $true
@@ -60,6 +82,8 @@ function Invoke-ExecPartnerWebhook {
                 StandardsExcludeAllTenants = $Request.Body.standardsExcludeAllTenants
             }
             Add-CIPPAzDataTableEntity @ConfigTable -Entity $PartnerWebhookOnboarding -Force | Out-Null
+            # Subscription create/update is logged by New-CIPPGraphSubscription; log the onboarding config write here.
+            Write-LogMessage -headers $Request.Headers -API ($Request.Params.CIPPEndpoint) -tenant 'Global' -message "Partner webhook onboarding config saved (Enabled=$([bool]$Request.Body.enabled))" -Sev 'Info'
         }
         'SendTest' {
             $Results = New-GraphPOSTRequest -uri 'https://api.partnercenter.microsoft.com/webhooks/v1/registration/validationEvents' -tenantid $env:TenantID -NoAuthCheck $true -scope 'https://api.partnercenter.microsoft.com/.default'
@@ -84,3 +108,4 @@ function Invoke-ExecPartnerWebhook {
         Body       = $Body
     }
 }
+

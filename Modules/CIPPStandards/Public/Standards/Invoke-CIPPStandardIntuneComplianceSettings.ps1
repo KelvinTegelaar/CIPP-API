@@ -49,7 +49,7 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
             Select-Object secureByDefault, deviceComplianceCheckinThresholdDays
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the intuneDeviceReg state for $Tenant. Error: $ErrorMessage" -Sev Error
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the IntuneComplianceSettings state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
@@ -107,6 +107,5 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.IntuneComplianceSettings' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'IntuneComplianceSettings' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

@@ -49,6 +49,7 @@ function Get-CippAlertSecureScore {
                     if ($DropPercentage -ge $InputValue.InputValue) {
                         $SecureScoreResult = [PSCustomObject]@{
                             Message        = "Secure Score dropped by $DropPercentage% (from $($PreviousScore.currentScore) to $($SecureScore.currentScore))"
+                            Id             = 'SecureScoreDrop' # stable identity; Message carries live numbers
                             Tenant         = $TenantFilter
                             CurrentScore   = $SecureScore.currentScore
                             PreviousScore  = $PreviousScore.currentScore
@@ -67,9 +68,7 @@ function Get-CippAlertSecureScore {
             }
         }
 
-        if ($SecureScoreResult) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $SecureScoreResult -PartitionKey SecureScore
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $SecureScoreResult
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Could not get Secure Score for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

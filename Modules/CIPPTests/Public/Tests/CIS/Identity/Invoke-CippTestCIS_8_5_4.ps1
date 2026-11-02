@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_8_5_4 {
             return
         }
 
-        $Cfg = $MP | Select-Object -First 1
+        $Cfg = @($MP)[0]
 
         if ($Cfg.AllowPSTNUsersToBypassLobby -eq $false) {
             $Status = 'Passed'

@@ -17,6 +17,10 @@ function Invoke-AddPolicy {
     $description = $Request.Body.Description
     $AssignTo = if ($Request.Body.AssignTo -ne 'on') { $Request.Body.AssignTo }
     $ExcludeGroup = $Request.Body.excludeGroup
+    # Sent by the deploy drawer when a single tenant is selected and groups were picked by id.
+    # customGroup/excludeGroup still carry the display names for logging and as a fallback.
+    $GroupIds = @($Request.Body.GroupIds | Where-Object { $_ })
+    $ExcludeGroupIds = @($Request.Body.ExcludeGroupIds | Where-Object { $_ })
     $AssignmentFilterSelection = $Request.Body.AssignmentFilterName ?? $Request.Body.assignmentFilter
     $AssignmentFilterType = $Request.Body.AssignmentFilterType ?? $Request.Body.assignmentFilterType
     $AssignmentFilterName = switch ($AssignmentFilterSelection) {
@@ -29,6 +33,7 @@ function Invoke-AddPolicy {
     $Request.Body.customGroup ? ($AssignTo = $Request.Body.customGroup) : $null
     $RawJSON = $Request.Body.RAWJson
 
+    $Failed = 0
     $Results = foreach ($Tenant in $Tenants) {
         if ($Request.Body.replacemap.$Tenant) {
             ([pscustomobject]$Request.Body.replacemap.$Tenant).PSObject.Properties | ForEach-Object { $RawJSON = $RawJSON -replace $_.name, $_.value }
@@ -38,7 +43,13 @@ function Invoke-AddPolicy {
         if (-not $reusableSettings -or $reusableSettings.Count -eq 0) {
             try {
                 $templatesTable = Get-CippTable -tablename 'templates'
-                $templateEntity = Get-CIPPAzDataTableEntity @templatesTable -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$($Request.Body.TemplateID ?? $Request.Body.TemplateId ?? $Request.Body.TemplateGuid ?? $Request.Body.TemplateGUID)'" | Select-Object -First 1
+                # The deploy drawer and wizard send the chosen row's GUID as TemplateList.value, not
+                # as TemplateID. Template display names are not unique - re-imports create same-named
+                # twins - so resolving by display name below can land on a different row than the one
+                # the user picked. The selected RowKey must win whenever the request carries one.
+                # String rather than Guid: built-in templates are stored with their filename as RowKey.
+                $SelectedTemplateId = ConvertTo-CIPPODataFilterValue -Value ($Request.Body.TemplateID ?? $Request.Body.TemplateId ?? $Request.Body.TemplateGuid ?? $Request.Body.TemplateGUID ?? $Request.Body.TemplateList.value) -Type String
+                $templateEntity = Get-CIPPAzDataTableEntity @templatesTable -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$SelectedTemplateId'" | Select-Object -First 1
                 if (-not $templateEntity -and $DisplayName) {
                     $templateEntity = Get-CIPPAzDataTableEntity @templatesTable -Filter "PartitionKey eq 'IntuneTemplate'" | Where-Object { ($_.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue).Displayname -eq $DisplayName } | Select-Object -First 1
                 }
@@ -68,9 +79,16 @@ function Invoke-AddPolicy {
         }
 
         try {
+            # Per tenant, because the replacemap above rewrites the payload.
+            $Validation = Test-CIPPIntuneTemplate -RawJSON $RawJSON -TemplateType $Request.Body.TemplateType -DisplayName $DisplayName
+            if (-not $Validation.IsValid) {
+                throw "Not deployed to $Tenant : $($Validation.Errors -join ' ')"
+            }
+
             Write-Host 'Calling Adding policy'
             $params = @{
-                TemplateType     = $Request.Body.TemplateType
+                # Resolved type: a template stored before Type was recorded arrives with none.
+                TemplateType     = $Validation.Type
                 Description      = $description
                 DisplayName      = $DisplayName
                 RawJSON          = $RawJSON
@@ -81,6 +99,8 @@ function Invoke-AddPolicy {
                 Headers          = $Headers
                 APIName          = $APIName
             }
+            if ($GroupIds.Count -gt 0) { $params.GroupIds = $GroupIds }
+            if ($ExcludeGroupIds.Count -gt 0) { $params.ExcludeGroupIds = $ExcludeGroupIds }
 
             if (-not [string]::IsNullOrWhiteSpace($AssignmentFilterName)) {
                 $params.AssignmentFilterName = $AssignmentFilterName
@@ -89,13 +109,14 @@ function Invoke-AddPolicy {
 
             Set-CIPPIntunePolicy @params
         } catch {
+            $Failed++
             "$($_.Exception.Message)"
             continue
         }
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = Get-CippBulkStatusCode -Total @($Tenants).Count -Failed $Failed
             Body       = @{'Results' = @($Results) }
         })
 }

@@ -124,7 +124,7 @@ function Invoke-AddDefenderTemplate {
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $FullError = "Failed to create template: $($ErrorMessage.NormalizedMessage) | $($_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber) | $($_.Exception.GetType().FullName)"
+        $FullError = "Failed to create template: $($ErrorMessage.NormalizedError) | $($_.InvocationInfo.ScriptName):$($_.InvocationInfo.ScriptLineNumber) | $($_.Exception.GetType().FullName)"
         $Results.Add($FullError)
         Write-LogMessage -headers $Headers -API $APIName -message $FullError -Sev 'Error' -LogData $ErrorMessage
     }

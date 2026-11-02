@@ -14,15 +14,28 @@ function Invoke-ExecDomainAction {
     $DomainName = $Request.Body.domain
     $Action = $Request.Body.Action
 
+    if ([string]::IsNullOrWhiteSpace($DomainName)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{'Results' = @{ resultText = 'Domain name is required'; state = 'error' } }
+            })
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Action)) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{'Results' = @{ resultText = 'Action is required'; state = 'error' } }
+            })
+    }
+
+    if ($Action -notin @('verify', 'delete', 'setDefault')) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{'Results' = @{ resultText = "Invalid action: $Action"; state = 'error' } }
+            })
+    }
+
     try {
-        if ([string]::IsNullOrWhiteSpace($DomainName)) {
-            throw 'Domain name is required'
-        }
-
-        if ([string]::IsNullOrWhiteSpace($Action)) {
-            throw 'Action is required'
-        }
-
         switch ($Action) {
             'verify' {
                 Write-Information "Verifying domain $DomainName for tenant $TenantFilter"
@@ -68,9 +81,6 @@ function Invoke-ExecDomainAction {
 
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Set domain $DomainName as default" -Sev 'Info'
             }
-            default {
-                throw "Invalid action: $Action"
-            }
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
@@ -79,7 +89,7 @@ function Invoke-ExecDomainAction {
             state      = 'error'
         }
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to perform action on domain $DomainName`: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

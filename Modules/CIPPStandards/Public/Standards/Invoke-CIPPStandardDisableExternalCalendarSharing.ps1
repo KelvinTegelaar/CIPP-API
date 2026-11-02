@@ -104,6 +104,5 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableExternalCalendarSharing' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'ExternalCalendarSharingDisabled' -FieldValue $CurrentStatus -StoreAs bool -Tenant $tenant
     }
 }

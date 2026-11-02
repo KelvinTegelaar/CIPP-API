@@ -13,7 +13,7 @@ function Invoke-CippTestEIDSCAPR01 {
             return
         }
 
-        $SettingValue = ($Settings.values | Where-Object { $_.name -eq 'BannedPasswordCheckOnPremisesMode' }).value
+        $SettingValue = $Settings.values.Where({ $_.name -eq 'BannedPasswordCheckOnPremisesMode' }).value
 
         if ($SettingValue -eq 'Enforce') {
             $Status = 'Passed'

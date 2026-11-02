@@ -11,9 +11,9 @@ function Invoke-CippTestCIS_5_1_5_4 {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_5_1_5_4' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'DefaultAppManagementPolicy cache not found. Please refresh the cache for this tenant.' -Risk 'Medium' -Name 'Password lifetime for applications does not exceed 180 days' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'
             return
         }
-        $Cfg = $Policy | Select-Object -First 1
+        $Cfg = @($Policy)[0]
 
-        $Restriction = $Cfg.applicationRestrictions.passwordCredentials | Where-Object { $_.restrictionType -eq 'passwordLifetime' } | Select-Object -First 1
+        $Restriction = $Cfg.applicationRestrictions.passwordCredentials.Where({ $_.restrictionType -eq 'passwordLifetime' }, 'First')[0]
 
         if (-not $Cfg.isEnabled) {
             $Status = 'Failed'

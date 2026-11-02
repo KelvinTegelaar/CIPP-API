@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_5_1_2_3 {
             return
         }
 
-        $Cfg = $Auth | Select-Object -First 1
+        $Cfg = @($Auth)[0]
 
         if ($Cfg.defaultUserRolePermissions.allowedToCreateTenants -eq $false) {
             $Status = 'Passed'

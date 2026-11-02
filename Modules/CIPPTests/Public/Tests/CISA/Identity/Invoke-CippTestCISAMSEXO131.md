@@ -12,7 +12,7 @@ Set-OrganizationConfig -AuditDisabled $false
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.13.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo131v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.13.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo131v1)
 - [Manage mailbox auditing](https://learn.microsoft.com/purview/audit-mailboxes)
 
 <!--- Results --->

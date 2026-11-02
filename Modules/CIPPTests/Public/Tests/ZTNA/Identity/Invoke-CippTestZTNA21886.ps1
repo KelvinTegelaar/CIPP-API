@@ -12,11 +12,11 @@ function Invoke-CippTestZTNA21886 {
             return
         }
 
-        $AppsWithSSO = $ServicePrincipals | Where-Object {
+        $AppsWithSSO = $ServicePrincipals.Where({
             $null -ne $_.preferredSingleSignOnMode -and
             $_.preferredSingleSignOnMode -in @('password', 'saml', 'oidc') -and
             $_.accountEnabled -eq $true
-        }
+        })
 
         if (-not $AppsWithSSO) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21886' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No applications configured for SSO found' -Risk 'Medium' -Name 'Applications are configured for automatic user provisioning' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Applications management'
@@ -34,7 +34,7 @@ function Invoke-CippTestZTNA21886 {
         foreach ($Group in $SSOByType) {
             $ResultLines.Add('')
             $ResultLines.Add("**$($Group.Name.ToUpper()) SSO** ($($Group.Count) app(s)):")
-            $Top5 = $Group.Group | Select-Object -First 5
+            $Top5 = $Group.Group.Where({ $true }, 'First', 5)
             foreach ($App in $Top5) {
                 $ResultLines.Add("- $($App.displayName)")
             }

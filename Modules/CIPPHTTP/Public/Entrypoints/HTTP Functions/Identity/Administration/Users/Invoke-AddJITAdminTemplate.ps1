@@ -18,9 +18,11 @@ function Invoke-AddJITAdminTemplate {
 
         # Validate required fields
         if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw 'tenantFilter is required'
         }
         if ([string]::IsNullOrWhiteSpace($TemplateName)) {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw 'templateName is required'
         }
 
@@ -42,6 +44,7 @@ function Invoke-AddJITAdminTemplate {
         }
 
         if ($ExistingNames) {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw "A template with name '$TemplateName' already exists for tenant '$TenantFilter'"
         }
 
@@ -69,6 +72,7 @@ function Invoke-AddJITAdminTemplate {
         # Validate user action fields
         $DefaultUserAction = $Request.Body.defaultUserAction
         if ($TenantFilter -eq 'AllTenants' -and $DefaultUserAction -eq 'select') {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw 'defaultUserAction cannot be "select" when tenantFilter is "AllTenants"'
         }
 
@@ -86,6 +90,9 @@ function Invoke-AddJITAdminTemplate {
             defaultNotificationActions  = $Request.Body.defaultNotificationActions
             generateTAPByDefault        = [bool]$Request.Body.generateTAPByDefault
             reasonTemplate              = $Request.Body.reasonTemplate
+            defaultVacationMode         = [bool]$Request.Body.defaultVacationMode
+            defaultVacationCAPolicy     = $Request.Body.defaultVacationCAPolicy
+            defaultVacationExcludeAuditAlerts = [bool]$Request.Body.defaultVacationExcludeAuditAlerts
             createdBy                   = $UserDetails
             createdDate                 = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
         }
@@ -151,7 +158,7 @@ function Invoke-AddJITAdminTemplate {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to create JIT Admin Template: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

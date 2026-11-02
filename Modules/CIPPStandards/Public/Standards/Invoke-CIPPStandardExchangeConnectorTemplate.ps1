@@ -34,7 +34,7 @@ function Invoke-CIPPStandardExchangeConnectorTemplate {
         https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'ExConnector' -TenantFilter $Tenant -Preset Exchange #No Foundation because that does not allow powershell access
+    $TestResult = Test-CIPPStandardLicense -StandardName 'ExchangeConnectorTemplate' -TenantFilter $Tenant -Preset Exchange #No Foundation because that does not allow powershell access
 
     if ($TestResult -eq $false) {
         return $true
@@ -123,6 +123,5 @@ function Invoke-CIPPStandardExchangeConnectorTemplate {
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.ExchangeConnectorTemplates' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'ExchangeConnectorTemplatesDeployed' -FieldValue ($DeployedConnectors.Identity) -StoreAs StringArray -Tenant $tenant
     }
 }

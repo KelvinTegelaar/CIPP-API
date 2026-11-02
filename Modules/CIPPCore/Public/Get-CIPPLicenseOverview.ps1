@@ -5,7 +5,8 @@ function Get-CIPPLicenseOverview {
         $TenantFilter,
         $APIName = 'Get License Overview',
         $Headers,
-        [switch]$AlertMode
+        [switch]$AlertMode,
+        [switch]$IncludeExcluded
     )
 
     $Requests = @(
@@ -52,7 +53,9 @@ function Get-CIPPLicenseOverview {
         Tenant   = $TenantFilter
         Licenses = $LicRequest
     }
-    $ConvertTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
+    # GUID -> display name, last row wins
+    $SkuNames = @{}
+    foreach ($Row in [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv) { $SkuNames[$Row.GUID] = $Row.Product_Display_Name }
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
 
@@ -72,6 +75,7 @@ function Get-CIPPLicenseOverview {
             $null -eq $_.ExcludedEverywhere -or $_.ExcludedEverywhere -eq $true
         } | ForEach-Object { $_.GUID })
     }
+    $HiddenFromDropdownGuids = @($ExcludedSkuList | Where-Object { $_.ShowInLicenseDropdown -eq $false } | ForEach-Object { $_.GUID })
 
     $AllLicensedUsers = @(($Results | Where-Object { $_.id -eq 'licensedUsers' }).body.value) | Sort-Object -Property displayName
     $UsersBySku = @{}
@@ -120,9 +124,11 @@ function Get-CIPPLicenseOverview {
     $GraphRequest = foreach ($singleReq in $RawGraphRequest) {
         $skuId = $singleReq.Licenses
         foreach ($sku in $skuId) {
-            if ($sku.skuId -in $EffectiveExcludedGuids) { continue }
+            if ($sku.skuId -in $EffectiveExcludedGuids) {
+                if (!$IncludeExcluded -or $sku.skuId -in $HiddenFromDropdownGuids) { continue }
+            }
             $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.aadSkuId -eq $sku.skuId } | Select-Object -ExpandProperty displayName -First 1
-            $PrettyNameCSV = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
+            $PrettyNameCSV = $SkuNames[[string]$sku.skuid]
             $PrettyName = $PrettyNameAdmin ?? $PrettyNameCSV ?? $sku.skuPartNumber
 
             # Initialize $Term with the default value
@@ -172,4 +178,3 @@ function Get-CIPPLicenseOverview {
     }
     return ($GraphRequest | Sort-Object -Property License)
 }
-

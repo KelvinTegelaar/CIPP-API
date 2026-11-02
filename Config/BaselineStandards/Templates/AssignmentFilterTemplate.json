@@ -1,0 +1,56 @@
+{
+  "name": "AssignmentFilterTemplate",
+  "label": "Assignment Filter Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Deploy Intune assignment filters from CIPP templates. An existing filter with the same name is updated field-by-field.",
+  "executiveText": "Deploys standardized Intune assignment filters that control which devices and users policies apply to. Consistent filters across tenants keep policy targeting predictable and auditable.",
+  "docsDescription": "Deploy an Intune assignment filter from a CIPP template. The standard grades presence by display name plus the filter's writable fields - description, platform, rule and management type - and remediation creates the filter or patches only the fields that drifted.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: POST or PATCH deviceManagement/assignmentFilters",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "assignmentFilterTemplate",
+  "identity": {
+    "partition": "AssignmentFilterTemplate",
+    "nameField": "displayName"
+  },
+  "variables": {
+    "assignmentFilterTemplate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select Assignment Filter Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListAssignmentFilterTemplates",
+        "labelField": "Displayname",
+        "altLabelField": "displayName",
+        "valueField": "GUID",
+        "queryKey": "ListAssignmentFilterTemplates"
+      }
+    }
+  },
+  "read": {
+    "cacheType": "IntuneAssignmentFilters"
+  },
+  "prepare": "Get-CIPPBaselineAssignmentFilterTemplateState",
+  "remediate": {
+    "executor": "AssignmentFilterTemplate"
+  }
+}

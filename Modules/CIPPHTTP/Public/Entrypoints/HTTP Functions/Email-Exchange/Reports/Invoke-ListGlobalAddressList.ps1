@@ -18,7 +18,7 @@ Function Invoke-ListGlobalAddressList {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GAL = $ErrorMessage.NormalizedError
     }
 

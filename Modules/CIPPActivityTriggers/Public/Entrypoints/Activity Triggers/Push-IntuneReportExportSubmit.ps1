@@ -17,44 +17,7 @@ function Push-IntuneReportExportSubmit {
     }
 
     try {
-        $Select = switch ($ReportName) {
-            'AppInvRawData' {
-                @(
-                    'ApplicationKey', 'ApplicationName', 'ApplicationPublisher', 'ApplicationVersion',
-                    'DeviceId', 'DeviceName', 'OSDescription', 'OSVersion', 'Platform',
-                    'UserId', 'UserName', 'EmailAddress'
-                )
-            }
-            default { throw "Unknown Intune report '$ReportName'" }
-        }
-
-        $Body = @{
-            reportName       = $ReportName
-            format           = 'json'
-            localizationType = 'replaceLocalizableValues'
-            select           = $Select
-        } | ConvertTo-Json -Depth 5
-
-        $Job = New-GraphPOSTRequest `
-            -uri 'https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs' `
-            -tenantid $TenantFilter `
-            -body $Body
-
-        if (-not $Job.id) { throw "Intune returned no job id for $ReportName" }
-
-        $JobsTable = Get-CIPPTable -tablename 'IntuneReportJobs'
-        $Existing = Get-CIPPAzDataTableEntity @JobsTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$ReportName'"
-        if ($Existing) {
-            Remove-AzDataTableEntity @JobsTable -Entity $Existing -Force -ErrorAction SilentlyContinue
-        }
-
-        Add-CIPPAzDataTableEntity @JobsTable -Entity @{
-            PartitionKey = $TenantFilter
-            RowKey       = $ReportName
-            JobId        = $Job.id
-            ReportName   = $ReportName
-            SubmittedAt  = ([DateTime]::UtcNow).ToString('o')
-        } -Force
+        $Job = New-CIPPIntuneReportExportJob -TenantFilter $TenantFilter -ReportName $ReportName
 
         Write-LogMessage -API 'IntuneReportExport' -tenant $TenantFilter -message "Submitted $ReportName export job $($Job.id)" -sev Info
         return @{ Status = 'Submitted'; JobId = $Job.id; ReportName = $ReportName; TenantFilter = $TenantFilter }

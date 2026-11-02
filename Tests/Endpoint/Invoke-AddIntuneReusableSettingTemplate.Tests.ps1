@@ -3,8 +3,14 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Entrypoints/HTTP Functions/Endpoint/MEM/Invoke-AddIntuneReusableSettingTemplate.ps1'
-    $MetadataPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Remove-CIPPReusableSettingMetadata.ps1'
+    # Resolve by name under Modules/ so the tests survive functions moving between modules.
+    $ModulesRoot = Join-Path $RepoRoot 'Modules'
+    $FunctionPath = Get-ChildItem -Path $ModulesRoot -Recurse -Filter 'Invoke-AddIntuneReusableSettingTemplate.ps1' -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $FunctionPath) { throw 'Could not locate Invoke-AddIntuneReusableSettingTemplate.ps1 under Modules/' }
+    $MetadataPath = Get-ChildItem -Path $ModulesRoot -Recurse -Filter 'Remove-CIPPReusableSettingMetadata.ps1' -File -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $MetadataPath) { throw 'Could not locate Remove-CIPPReusableSettingMetadata.ps1 under Modules/' }
 
     class HttpResponseContext {
         [int]$StatusCode

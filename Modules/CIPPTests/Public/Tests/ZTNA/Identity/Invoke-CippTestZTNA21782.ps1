@@ -7,7 +7,7 @@ function Invoke-CippTestZTNA21782 {
 
     try {
         $UserRegistrationDetails = Get-CIPPTestData -TenantFilter $Tenant -Type 'UserRegistrationDetails'
-        $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
+        $Roles = Get-CippDbRole -TenantFilter $Tenant -IncludePrivilegedRoles
         $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
 
         if ($null -eq $UserRegistrationDetails -or $null -eq $Roles) {
@@ -17,17 +17,19 @@ function Invoke-CippTestZTNA21782 {
 
         $PhishResistantMethods = @('passKeyDeviceBound', 'passKeyDeviceBoundAuthenticator', 'windowsHelloForBusiness')
 
+        # RoleAssignmentScheduleInstances.roleDefinitionId is a role template ID, so key the privileged role set by template ID.
         $PrivilegedRoleIds = [System.Collections.Generic.HashSet[string]]::new()
         $RoleNamesById = @{}
-        foreach ($Role in @($Roles.Where({ $_.isPrivileged -eq $true }))) {
-            if ($Role.id) {
-                [void]$PrivilegedRoleIds.Add([string]$Role.id)
-                $RoleNamesById[[string]$Role.id] = $Role.displayName
+        foreach ($Role in @($Roles)) {
+            $RoleTemplateId = if ($Role.roleTemplateId) { [string]$Role.roleTemplateId } elseif ($Role.RoletemplateId) { [string]$Role.RoletemplateId } else { $null }
+            if ($RoleTemplateId) {
+                [void]$PrivilegedRoleIds.Add($RoleTemplateId)
+                $RoleNamesById[$RoleTemplateId] = $Role.displayName
             }
         }
 
         $PrivilegedPrincipalsById = @{}
-        foreach ($Role in @($Roles.Where({ $_.isPrivileged -eq $true }))) {
+        foreach ($Role in @($Roles)) {
             foreach ($Member in @($Role.members)) {
                 if (-not $Member.id) { continue }
                 $principalId = [string]$Member.id

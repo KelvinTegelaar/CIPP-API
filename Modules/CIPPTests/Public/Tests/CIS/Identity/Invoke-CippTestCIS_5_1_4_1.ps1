@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_5_1_4_1 {
             return
         }
 
-        $Cfg = $DRP | Select-Object -First 1
+        $Cfg = @($DRP)[0]
         $JoinType = $Cfg.azureADJoin.allowedToJoin.'@odata.type'
 
         if ($JoinType -in @('#microsoft.graph.enumeratedDeviceRegistrationMembership', '#microsoft.graph.noDeviceRegistrationMembership')) {

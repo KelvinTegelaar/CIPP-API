@@ -16,7 +16,7 @@ function Invoke-CIPPStandardFIDO2PasskeyProfiles {
         EXECUTIVETEXT
             Configures the default passkey (FIDO2) profile that controls which authenticators users can register for phishing-resistant MFA. Supports allowlisting specific hardware keys (e.g., YubiKey models), password managers (e.g., 1Password), and Microsoft Authenticator by AAGUID, with control over attestation enforcement and passkey types.
         ADDEDCOMPONENT
-            [{"type":"select","multiple":false,"name":"standards.FIDO2PasskeyProfiles.PasskeyTypes","label":"Allowed Passkey Types","options":[{"label":"Device-bound only","value":"deviceBound"},{"label":"Synced only","value":"synced"},{"label":"Both device-bound and synced","value":"deviceBound,synced"}],"required":true},{"type":"select","multiple":false,"name":"standards.FIDO2PasskeyProfiles.AttestationEnforcement","label":"Attestation Enforcement","options":[{"label":"Disabled (required for synced passkeys)","value":"disabled"},{"label":"Registration only","value":"registrationOnly"}],"required":true},{"type":"switch","name":"standards.FIDO2PasskeyProfiles.EnforceKeyRestrictions","label":"Enforce AAGUID Key Restrictions"},{"type":"select","multiple":false,"name":"standards.FIDO2PasskeyProfiles.EnforcementType","label":"Key Restriction Type","options":[{"label":"Allow listed AAGUIDs only","value":"allow"},{"label":"Block listed AAGUIDs","value":"block"}]},{"type":"textField","name":"standards.FIDO2PasskeyProfiles.AAGUIDs","label":"AAGUIDs (comma-separated list of authenticator AAGUIDs)"}]
+            [{"type":"select","multiple":false,"name":"standards.FIDO2PasskeyProfiles.PasskeyTypes","label":"Allowed Passkey Types","options":[{"label":"Device-bound only","value":"deviceBound"},{"label":"Synced only","value":"synced"},{"label":"Both device-bound and synced","value":"deviceBound,synced"}],"required":true},{"type":"select","multiple":false,"name":"standards.FIDO2PasskeyProfiles.AttestationEnforcement","label":"Attestation Enforcement","options":[{"label":"Disabled (required for synced passkeys)","value":"disabled"},{"label":"Registration only","value":"registrationOnly"}],"required":true},{"type":"switch","name":"standards.FIDO2PasskeyProfiles.EnforceKeyRestrictions","label":"Enforce AAGUID Key Restrictions"},{"type":"select","multiple":false,"name":"standards.FIDO2PasskeyProfiles.EnforcementType","label":"Key Restriction Type","options":[{"label":"Allow listed AAGUIDs only","value":"allow"},{"label":"Block listed AAGUIDs","value":"block"}],"required":false},{"type":"textField","name":"standards.FIDO2PasskeyProfiles.AAGUIDs","label":"AAGUIDs (comma-separated list of authenticator AAGUIDs)","required":false}]
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -55,6 +55,16 @@ function Invoke-CIPPStandardFIDO2PasskeyProfiles {
         return
     }
 
+    # An AAGUID allow/block list only takes effect while key restrictions are enforced
+    # (keyRestrictions.isEnforced = $true). With the 'Enforce AAGUID Key Restrictions' switch left off,
+    # isEnforced was $false, so AAGUIDs an operator added were stored but never applied - the profile
+    # kept no active key restriction and any authenticator could still register, which reads as "the
+    # AAGUIDs did not add to the profile". Supplying AAGUIDs is an implicit request to restrict to them,
+    # so enable enforcement whenever AAGUIDs are present. (Confirmed live against Graph beta.)
+    if ($AAGUIDs.Count -gt 0) {
+        $EnforceKeyRestrictions = $true
+    }
+
     # Get current FIDO2 configuration
     try {
         $CurrentConfig = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/Fido2' -tenantid $Tenant -AsApp $true
@@ -91,11 +101,11 @@ function Invoke-CIPPStandardFIDO2PasskeyProfiles {
             try {
                 # Update the default profile in the profiles array, preserve all others
                 $ExistingProfiles = @($CurrentConfig.passkeyProfiles)
-                $UpdatedProfiles = foreach ($Profile in $ExistingProfiles) {
-                    if ($Profile.id -eq $DefaultProfileId) {
+                $UpdatedProfiles = foreach ($PasskeyProfile in $ExistingProfiles) {
+                    if ($PasskeyProfile.id -eq $DefaultProfileId) {
                         @{
-                            id                     = $Profile.id
-                            name                   = $Profile.name
+                            id                     = $PasskeyProfile.id
+                            name                   = $PasskeyProfile.name
                             passkeyTypes           = $PasskeyTypes
                             attestationEnforcement = $AttestationEnforcement
                             keyRestrictions        = @{
@@ -105,7 +115,7 @@ function Invoke-CIPPStandardFIDO2PasskeyProfiles {
                             }
                         }
                     } else {
-                        $Profile
+                        $PasskeyProfile
                     }
                 }
 
@@ -154,6 +164,5 @@ function Invoke-CIPPStandardFIDO2PasskeyProfiles {
             AAGUIDs                = $AAGUIDs -join ', '
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.FIDO2PasskeyProfiles' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'FIDO2PasskeyProfiles' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

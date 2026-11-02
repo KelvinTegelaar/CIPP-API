@@ -1,0 +1,76 @@
+{
+  "name": "TeamsFederationConfiguration",
+  "label": "Federation Configuration for Microsoft Teams",
+  "cat": "Teams Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Controls external Teams communication: allow or block all external domains, allow or block a specific list, and whether unmanaged consumer Teams users can communicate with the organization.",
+  "executiveText": "Governs who employees can reach over Teams outside the organization. Restricting federation to trusted partners reduces phishing and impersonation exposure through external chat.",
+  "docsDescription": "Grades the tenant federation configuration - federation on/off, consumer access, and the allow/block domain lists - against the selected communication mode. An allow-all posture reads as AllowAllKnownDomains. Remediation writes the full federation posture through the Teams ConfigAPI in one call.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Set-CsTenantFederationConfiguration",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "MCOSTANDARD",
+    "MCOEV",
+    "MCOIMP",
+    "TEAMS1",
+    "Teams_Room_Standard"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "DomainControl": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Communication Mode",
+      "required": true,
+      "options": [
+        {
+          "label": "Allow all external domains",
+          "value": "AllowAllExternal"
+        },
+        {
+          "label": "Block all external domains",
+          "value": "BlockAllExternal"
+        },
+        {
+          "label": "Allow specific external domains",
+          "value": "AllowSpecificExternal"
+        },
+        {
+          "label": "Block specific external domains",
+          "value": "BlockSpecificExternal"
+        }
+      ]
+    },
+    "DomainList": {
+      "type": "textField",
+      "label": "Domains, comma separated (Specific modes only)",
+      "omitWhenBlank": true
+    },
+    "AllowTeamsConsumer": {
+      "type": "switch",
+      "label": "Allow communication with unmanaged Teams users",
+      "default": false
+    },
+    "AllowTeamsConsumerInbound": {
+      "type": "switch",
+      "label": "Allow unmanaged Teams users to initiate contact",
+      "default": false
+    }
+  },
+  "read": {
+    "cacheType": "CsTenantFederationConfiguration"
+  },
+  "prepare": "Get-CIPPBaselineTeamsFederationConfigurationState",
+  "remediate": {
+    "executor": "TeamsFederationConfiguration"
+  }
+}

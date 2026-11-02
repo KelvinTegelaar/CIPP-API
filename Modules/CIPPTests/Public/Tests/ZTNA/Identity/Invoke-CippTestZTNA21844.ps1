@@ -13,7 +13,7 @@ function Invoke-CippTestZTNA21844 {
 
         # Query for the Azure AD PowerShell service principal
         $ServicePrincipals = Get-CIPPTestData -TenantFilter $Tenant -Type 'ServicePrincipals'
-        $ServicePrincipal = $ServicePrincipals | Where-Object { $_.appId -eq $AzureADPowerShellAppId }
+        $ServicePrincipal = $ServicePrincipals.Where({ $_.appId -eq $AzureADPowerShellAppId })
 
         $InvestigateStatus = $false
         $AppName = 'Azure AD PowerShell'

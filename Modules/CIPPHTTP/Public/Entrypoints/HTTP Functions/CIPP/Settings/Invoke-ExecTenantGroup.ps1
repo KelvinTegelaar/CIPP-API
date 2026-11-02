@@ -26,8 +26,8 @@ function Invoke-ExecTenantGroup {
 
     # Validate dynamic rules to prevent code injection
     if ($groupType -eq 'dynamic' -and $dynamicRules) {
-        $AllowedDynamicOperators = @('eq', 'ne', 'like', 'notlike', 'in', 'notin', 'contains', 'notcontains')
-        $AllowedDynamicProperties = @('delegatedAccessStatus', 'availableLicense', 'availableServicePlan', 'tenantGroupMember', 'customVariable')
+        $AllowedDynamicOperators = @('eq', 'ne', 'like', 'notlike', 'in', 'notin', 'contains', 'notcontains', 'gt', 'ge', 'lt', 'le')
+        $AllowedDynamicProperties = @('delegatedAccessStatus', 'availableLicense', 'availableServicePlan', 'tenantGroupMember', 'customVariable', 'gdapRelationshipAge')
         foreach ($rule in $dynamicRules) {
             if ($rule.operator -and $rule.operator.ToLower() -notin $AllowedDynamicOperators) {
                 return ([HttpResponseContext]@{
@@ -119,7 +119,7 @@ function Invoke-ExecTenantGroup {
                 if ($CurrentMembers -and $null -ne $members) {
                     foreach ($CurrentMember in $CurrentMembers) {
                         if ($members.value -notcontains $CurrentMember.customerId) {
-                            Remove-AzDataTableEntity @MembersTable -Entity $CurrentMember -Force
+                            Remove-CIPPAzDataTableEntity @MembersTable -Entity $CurrentMember -Force
                             $Removes.Add('Removed member {0}' -f $CurrentMember.customerId)
                         }
                     }
@@ -144,14 +144,17 @@ function Invoke-ExecTenantGroup {
                     })
             }
 
+            Write-LogMessage -API 'TenantGroups' -tenant 'Global' -headers $Request.Headers -message "Group '$groupName' saved successfully" -Sev 'Info'
             $Body = @{ Results = $Results }
         }
         'Delete' {
             # Delete group
             $GroupEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$groupId'"
             if ($GroupEntity) {
-                Remove-AzDataTableEntity @Table -Entity $GroupEntity -Force
-                $Body = @{ Results = "Group '$($GroupEntity.Name)' deleted successfully" }
+                Remove-CIPPAzDataTableEntity @Table -Entity $GroupEntity -Force
+                $Result = "Group '$($GroupEntity.Name)' deleted successfully"
+                Write-LogMessage -API 'TenantGroups' -tenant 'Global' -headers $Request.Headers -message $Result -Sev 'Info'
+                $Body = @{ Results = $Result }
             } else {
                 $Body = @{ Results = "Group '$groupId' not found" }
             }
@@ -159,6 +162,12 @@ function Invoke-ExecTenantGroup {
         default {
             $Body = @{ Results = 'Invalid action' }
         }
+    }
+
+    # Roles can be scoped to a tenant group, so changing membership changes what those roles
+    # resolve to and the cached scope rules have to be rebuilt
+    if ($Action -in @('AddEdit', 'Delete')) {
+        Clear-CippAccessScopeCache
     }
 
     return ([HttpResponseContext]@{

@@ -35,7 +35,7 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
     #>
 
     param ($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DeletedUserRentention' -TenantFilter $Tenant -RequiredCapabilities @('RMS_S_PREMIUM2')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'SharePointMassDeletionAlert' -TenantFilter $Tenant -RequiredCapabilities @('RMS_S_PREMIUM2')
 
     if ($TestResult -eq $false) {
         return $true
@@ -48,7 +48,7 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
             Where-Object { $_.Name -eq $PolicyName }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the sharingCapability state for $Tenant. Error: $ErrorMessage" -Sev Error
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the SharePointMassDeletionAlert state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
@@ -125,6 +125,5 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
             NotifyUser = @($Settings.NotifyUser.value)
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SharePointMassDeletionAlert' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'SharePointMassDeletionAlert' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

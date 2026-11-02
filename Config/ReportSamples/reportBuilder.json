@@ -1,0 +1,259 @@
+{
+  "blocks": [
+    {
+      "type": "cover",
+      "title": "Quarterly Security",
+      "coverAccent": "Review",
+      "subtitle": "How the tenant stood this quarter, what changed, and what comes next.",
+      "coverLabel": "Security Review",
+      "static": true
+    },
+    {
+      "id": "sample-1",
+      "type": "blank",
+      "title": "Summary",
+      "static": true,
+      "content": "<p>This preview uses <strong>sample data</strong> so you can see how your branding lands before running a report against a real tenant.</p>"
+    },
+    {
+      "type": "infobox",
+      "title": "Why this matters",
+      "content": "Identity is the perimeter: **every** control in this report starts with who can sign in, and from where.",
+      "static": true
+    },
+    {
+      "type": "richbullets",
+      "title": "Key points",
+      "items": [
+        {
+          "label": "MFA is enforced.",
+          "text": "All 128 licensed users are covered by a Conditional Access policy."
+        },
+        {
+          "label": "Legacy authentication is blocked.",
+          "text": "No sign-ins over IMAP, POP or SMTP AUTH in the last 30 days."
+        }
+      ],
+      "static": true
+    },
+    {
+      "type": "note",
+      "content": "Figures are taken from the last completed sync, not read live.",
+      "static": true
+    },
+    {
+      "type": "page",
+      "title": "Findings in detail",
+      "subtitle": "What we found, and what to do about it",
+      "static": true
+    },
+    {
+      "id": "sample-2",
+      "type": "scorecard",
+      "title": "Environment Overview",
+      "static": true,
+      "stats": [
+        {
+          "label": "Licensed Users",
+          "value": "128"
+        },
+        {
+          "label": "Devices",
+          "value": "96"
+        },
+        {
+          "label": "Global Admins",
+          "value": "3",
+          "caption": "Target: 2–4"
+        },
+        {
+          "label": "Guests",
+          "value": "9"
+        }
+      ]
+    },
+    {
+      "id": "sample-3",
+      "type": "chart",
+      "title": "Device Compliance",
+      "static": true,
+      "chartKind": "donut",
+      "chartCentreLabel": "Devices",
+      "chartData": [
+        {
+          "label": "Compliant",
+          "value": 78
+        },
+        {
+          "label": "Non-compliant",
+          "value": 14
+        },
+        {
+          "label": "Not evaluated",
+          "value": 4
+        }
+      ]
+    },
+    {
+      "id": "sample-4",
+      "type": "chart",
+      "title": "Secure Score Trend",
+      "static": true,
+      "chartKind": "trend",
+      "chartMax": 100,
+      "chartCaption": "Current: 61 / 100 (61%)",
+      "chartData": [
+        {
+          "label": "Jul 29",
+          "value": 50
+        },
+        {
+          "label": "Jul 31",
+          "value": 55
+        },
+        {
+          "label": "Aug 2",
+          "value": 58
+        },
+        {
+          "label": "Aug 4",
+          "value": 61
+        }
+      ]
+    },
+    {
+      "id": "sample-5",
+      "type": "progress",
+      "title": "Control Coverage",
+      "static": true,
+      "items": [
+        {
+          "label": "MFA enforced",
+          "value": 92,
+          "max": 100
+        },
+        {
+          "label": "Disk encryption",
+          "value": 78,
+          "max": 100
+        },
+        {
+          "label": "Defender onboarded",
+          "value": 64,
+          "max": 100
+        }
+      ]
+    },
+    {
+      "type": "richtable",
+      "title": "Top findings",
+      "columns": [
+        {
+          "header": "Finding",
+          "key": "c1"
+        },
+        {
+          "header": "Impact",
+          "key": "c2"
+        },
+        {
+          "header": "Owner",
+          "key": "c3"
+        }
+      ],
+      "rows": [
+        {
+          "c1": "3 stale guest accounts",
+          "c2": "Medium",
+          "c3": "IT"
+        },
+        {
+          "c1": "2 devices out of compliance",
+          "c2": "Low",
+          "c3": "Service desk"
+        }
+      ],
+      "static": true
+    },
+    {
+      "type": "infoboxcolumns",
+      "columns": 2,
+      "items": [
+        {
+          "title": "Done this quarter",
+          "content": "Passwordless sign-in rolled out to 40% of staff."
+        },
+        {
+          "title": "Next quarter",
+          "content": "Extend it to the remaining sites and the shared mailboxes."
+        }
+      ],
+      "static": true
+    },
+    {
+      "id": "sample-6",
+      "type": "pagebreak",
+      "title": "",
+      "static": true
+    },
+    {
+      "id": "sample-7",
+      "type": "hero",
+      "title": "seconds",
+      "static": true,
+      "heroHighlight": "39",
+      "heroSubText": "a business falls victim to ransomware",
+      "heroFooterText": "Proactive defense beats reactive recovery",
+      "heroImage": "/reportImages/working.jpg"
+    },
+    {
+      "id": "sample-8",
+      "type": "test",
+      "title": "Multi-factor authentication",
+      "status": "Failed",
+      "static": false,
+      "content": "14 of 128 accounts can still sign in without a second factor.\n\n## Results\n\n| Account | Method | Last sign-in |\n| --- | --- | --- |\n| sample.one@example.com | None | 2 days ago |\n| sample.two@example.com | None | 9 days ago |\n"
+    },
+    {
+      "id": "sample-9",
+      "type": "chart",
+      "title": "Devices by Platform",
+      "static": true,
+      "chartKind": "bar",
+      "chartData": [
+        {
+          "label": "Windows",
+          "value": 62
+        },
+        {
+          "label": "macOS",
+          "value": 18
+        },
+        {
+          "label": "iOS",
+          "value": 12
+        },
+        {
+          "label": "Android",
+          "value": 4
+        }
+      ]
+    },
+    {
+      "id": "sample-10",
+      "type": "database",
+      "title": "Query Results",
+      "static": true,
+      "format": "text",
+      "content": "| Policy | Identifier | State |\n| --- | --- | --- |\n| Baseline | 8f2a1c4e-6b3d-4f5a-9e7c-1d2b3a4c5e6f | Enabled |\n| Hardened | Microsoft_Defender_for_Business_Servers | Report only |\n"
+    },
+    {
+      "id": "sample-11",
+      "type": "database",
+      "title": "Raw Response",
+      "static": true,
+      "format": "json",
+      "content": "{\n  \"tenant\": \"contoso.com\",\n  \"policies\": 191,\n  \"enabled\": 5\n}"
+    }
+  ]
+}

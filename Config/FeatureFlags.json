@@ -1,31 +1,8 @@
 [
   {
-    "Id": "BestPracticeAnalyser",
-    "Name": "Best Practice Analyser",
-    "Description": "The Best Practice Analyser has been deprecated and will be removed in a future release.",
-    "Enabled": false,
-    "AllowUserToggle": true,
-    "Timers": [
-      "80070b4f-95ed-4e5f-be4c-9e339306d4aa"
-    ],
-    "Endpoints": [
-      "BestPracticeAnalyser_List",
-      "ExecBPA",
-      "ListBPA",
-      "ListBPATemplates",
-      "RemoveBPATemplate"
-    ],
-    "Pages": [
-      "/tenant/standards/bpa-report",
-      "/tenant/standards/bpa-report/builder",
-      "/tenant/standards/bpa-report/view"
-    ],
-    "Hidden": false
-  },
-  {
     "Id": "SuperAdminNG",
     "Name": "Super Admin",
-    "Description": "Additional super admin pages for CIPP instances (CIPP Users, SSO, Container management).",
+    "Description": "Additional super admin pages for CIPP instances (CIPP Users, Container Management, Custom Domains, Container Logs, Worker Health).",
     "Enabled": false,
     "AllowUserToggle": false,
     "Timers": [],
@@ -33,14 +10,16 @@
       "ExecCIPPUsers",
       "ListCIPPUsers",
       "ExecContainerManagement",
+      "ExecAppServiceDomains",
       "ListContainerLogs",
       "ListWorkerHealth"
     ],
     "Pages": [
-      "/cipp/advanced/super-admin/cipp-users",
-      "/cipp/advanced/super-admin/container",
-      "/cipp/advanced/container-logs",
-      "/cipp/advanced/worker-health"
+      "/cipp/advanced/authentication/cipp-users",
+      "/cipp/advanced/container-management/status",
+      "/cipp/advanced/container-management/custom-domains",
+      "/cipp/advanced/container-management/logs",
+      "/cipp/advanced/container-management/worker-health"
     ],
     "Hidden": true
   },
@@ -51,10 +30,83 @@
     "Enabled": false,
     "AllowUserToggle": true,
     "Timers": [],
-    "Endpoints": [
-      "ExecMcp"
-    ],
+    "Endpoints": ["ExecMcp"],
     "Pages": [],
     "Hidden": false
+  },
+  {
+    "Id": "AppInsights",
+    "Name": "App Insights",
+    "Description": "App Insights page not used in NG",
+    "Enabled": true,
+    "AllowUserToggle": false,
+    "Timers": [],
+    "Endpoints": ["ExecAppInsightsQuery"],
+    "Pages": ["/cipp/advanced/diagnostics"],
+    "Hidden": true
+  },
+  {
+    "Id": "BackendSettings",
+    "Name": "Backend Settings",
+    "Description": "Backend settings page showing Azure resource URLs. Hidden on hosted instances.",
+    "Enabled": true,
+    "AllowUserToggle": false,
+    "Timers": [],
+    "Endpoints": ["ExecBackendURLs"],
+    "Pages": ["/cipp/settings/backend"],
+    "Hidden": true
+  },
+  {
+    "Id": "FunctionOffloading",
+    "Name": "Function Offloading",
+    "Description": "Function offloading configuration page. Hidden in CIPP-NG.",
+    "Enabled": true,
+    "AllowUserToggle": false,
+    "Timers": [],
+    "Endpoints": ["ExecOffloadFunctions"],
+    "Pages": ["/cipp/advanced/super-admin/function-offloading"],
+    "Hidden": true
+  },
+  {
+    "Id": "Baselines",
+    "Name": "Baselines",
+    "Description": "This is currently an opt-in feature. The drift-first baseline engine that replaces classic Standards and Drift. Enables the scheduled baseline run and the Baselines menu, hides the classic Standards and Drift pages, and skips the scheduled classic Standards and Drift runs - the two systems never run side by side. On by default for installs that have no classic Standards templates.",
+    "Enabled": false,
+    "EnabledWhen": "NoClassicStandards",
+    "AllowUserToggle": true,
+    "Timers": ["9f2c7b1e-4a6d-4c3f-8b9a-5e1d2f7c0a44"],
+    "Endpoints": [],
+    "Pages": ["/tenant/baselines"],
+    "HidesPages": [
+      "/tenant/standards/alignment",
+      "/tenant/manage/drift",
+      "/tenant/manage/applied-standards",
+      "/tenant/manage/policies-deployed"
+    ],
+    "Hidden": false
+  },
+  {
+    "Id": "SecuritySimulations",
+    "Name": "Security Simulations",
+    "Description": "This is currently in public beta. Play security events (a stolen token, an admin on an unmanaged device, a mass deletion, an anonymous sharing link) against a tenant to see what an attacker would experience today and which standards close each gap, plus a live Conditional Access gap analysis. Read-only: nothing is changed in the tenant. On by default for installs that have no classic Standards templates.",
+    "Enabled": false,
+    "EnabledWhen": "NoClassicStandards",
+    "AllowUserToggle": true,
+    "Timers": [],
+    "Endpoints": [],
+    "Pages": ["/tenant/security-simulator"],
+    "HidesPages": [],
+    "Hidden": false
+  },
+  {
+    "Id": "CertificateAuthentication",
+    "Name": "Certificate Authentication",
+    "Description": "Authenticate CIPP's SAM application with the SAM certificate instead of the client secret for every Graph and Exchange Online call (app-only and delegated). Managed from the Setup Wizard - enable it for an existing install (the client secret is kept as a rollback) or provision a secret-less install from scratch.",
+    "Enabled": false,
+    "AllowUserToggle": false,
+    "Timers": [],
+    "Endpoints": [],
+    "Pages": [],
+    "Hidden": true
   }
 ]

@@ -1,0 +1,220 @@
+{
+  "name": "EnrollmentWindowsHelloForBusinessConfiguration",
+  "label": "Enrollment Windows Hello for Business configuration",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Configures the default Windows Hello for Business enrollment settings, including PIN complexity and biometric unlock.",
+  "executiveText": "Sets how employees sign in to Windows devices with a PIN or biometrics instead of a password, which is both faster for them and harder for an attacker to steal.",
+  "docsDescription": "Sets the default Windows Hello for Business device enrollment configuration.",
+  "impactColour": "warning",
+  "addedDate": "2024-06-05",
+  "powershellEquivalent": "Graph API",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "Windows Hello for Business state",
+      "required": true,
+      "options": [
+        {
+          "label": "enabled",
+          "value": "enabled"
+        },
+        {
+          "label": "disabled",
+          "value": "disabled"
+        },
+        {
+          "label": "notConfigured",
+          "value": "notConfigured"
+        }
+      ],
+      "default": "enabled"
+    },
+    "pinMinimumLength": {
+      "type": "number",
+      "label": "PIN minimum length",
+      "required": true,
+      "default": 6
+    },
+    "pinMaximumLength": {
+      "type": "number",
+      "label": "PIN maximum length",
+      "required": true,
+      "default": 127
+    },
+    "pinUppercaseCharactersUsage": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "PIN uppercase characters",
+      "required": true,
+      "options": [
+        {
+          "label": "allowed",
+          "value": "allowed"
+        },
+        {
+          "label": "required",
+          "value": "required"
+        },
+        {
+          "label": "disallowed",
+          "value": "disallowed"
+        }
+      ],
+      "default": "disallowed"
+    },
+    "pinLowercaseCharactersUsage": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "PIN lowercase characters",
+      "required": true,
+      "options": [
+        {
+          "label": "allowed",
+          "value": "allowed"
+        },
+        {
+          "label": "required",
+          "value": "required"
+        },
+        {
+          "label": "disallowed",
+          "value": "disallowed"
+        }
+      ],
+      "default": "disallowed"
+    },
+    "pinSpecialCharactersUsage": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "PIN special characters",
+      "required": true,
+      "options": [
+        {
+          "label": "allowed",
+          "value": "allowed"
+        },
+        {
+          "label": "required",
+          "value": "required"
+        },
+        {
+          "label": "disallowed",
+          "value": "disallowed"
+        }
+      ],
+      "default": "disallowed"
+    },
+    "securityDeviceRequired": {
+      "type": "switch",
+      "label": "Require a TPM",
+      "default": true
+    },
+    "unlockWithBiometricsEnabled": {
+      "type": "switch",
+      "label": "Allow biometric unlock",
+      "default": true
+    },
+    "remotePassportEnabled": {
+      "type": "switch",
+      "label": "Allow remote passport (phone sign-in)",
+      "default": true
+    },
+    "pinPreviousBlockCount": {
+      "type": "number",
+      "label": "Remember PIN history",
+      "required": true,
+      "default": 0
+    },
+    "pinExpirationInDays": {
+      "type": "number",
+      "label": "PIN expiration in days",
+      "required": true,
+      "default": 0
+    },
+    "enhancedBiometricsState": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "Enhanced anti-spoofing for facial recognition",
+      "required": true,
+      "options": [
+        {
+          "label": "enabled",
+          "value": "enabled"
+        },
+        {
+          "label": "disabled",
+          "value": "disabled"
+        },
+        {
+          "label": "notConfigured",
+          "value": "notConfigured"
+        }
+      ],
+      "default": "notConfigured"
+    },
+    "enhancedSignInSecurity": {
+      "type": "number",
+      "label": "Enhanced sign-in security",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "securityKeyForSignIn": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "Security key for sign-in",
+      "omitWhenBlank": true,
+      "default": "",
+      "options": [
+        {
+          "label": "Enabled",
+          "value": "enabled"
+        },
+        {
+          "label": "Disabled",
+          "value": "disabled"
+        },
+        {
+          "label": "Not configured",
+          "value": "notConfigured"
+        }
+      ]
+    }
+  },
+  "read": {
+    "cacheType": "DeviceEnrollmentConfigurations"
+  },
+  "prepare": "Get-CIPPBaselineEnrollmentWindowsHelloForBusinessConfigurationState",
+  "remediate": {
+    "executor": "DeviceEnrollmentConfiguration",
+    "body": {
+      "@odata.type": "#microsoft.graph.deviceEnrollmentWindowsHelloForBusinessConfiguration",
+      "state": "%state%",
+      "pinMinimumLength": "%pinMinimumLength%",
+      "pinMaximumLength": "%pinMaximumLength%",
+      "pinUppercaseCharactersUsage": "%pinUppercaseCharactersUsage%",
+      "pinLowercaseCharactersUsage": "%pinLowercaseCharactersUsage%",
+      "pinSpecialCharactersUsage": "%pinSpecialCharactersUsage%",
+      "securityDeviceRequired": "%securityDeviceRequired%",
+      "unlockWithBiometricsEnabled": "%unlockWithBiometricsEnabled%",
+      "remotePassportEnabled": "%remotePassportEnabled%",
+      "pinPreviousBlockCount": "%pinPreviousBlockCount%",
+      "pinExpirationInDays": "%pinExpirationInDays%",
+      "enhancedBiometricsState": "%enhancedBiometricsState%",
+      "enhancedSignInSecurity": "%enhancedSignInSecurity%",
+      "securityKeyForSignIn": "%securityKeyForSignIn%"
+    }
+  }
+}

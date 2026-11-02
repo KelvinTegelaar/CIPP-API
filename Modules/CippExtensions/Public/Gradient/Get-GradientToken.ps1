@@ -3,8 +3,7 @@ function Get-GradientToken {
         $Configuration
     )
     if ($Configuration.vendorKey) {
-        $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
-        $partnerApiKey = (Get-CippKeyVaultSecret -VaultName $keyvaultname -Name 'Gradient' -AsPlainText)
+        $partnerApiKey = Get-ExtensionAPIKey -Extension 'Gradient'
         $authorizationToken = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$($configuration.vendorKey):$($partnerApiKey)"))
 
         $headers = [hashtable]@{

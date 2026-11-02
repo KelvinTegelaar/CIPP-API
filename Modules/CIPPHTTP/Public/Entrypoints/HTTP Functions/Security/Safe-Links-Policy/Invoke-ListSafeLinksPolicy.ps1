@@ -80,8 +80,10 @@ Function Invoke-ListSafeLinksPolicy {
                 ExceptIfSentToMemberOf = $associatedRule.ExceptIfSentToMemberOf
                 ExceptIfRecipientDomainIs = $associatedRule.ExceptIfRecipientDomainIs
                 Description = $policy.AdminDisplayName
-                IsBuiltIn = ($matchingBuiltInRule -ne $null)
+                IsBuiltIn = ($null -ne $matchingBuiltInRule)
                 IsValid = $policy.IsValid
+                WhenCreated = $policy.WhenCreated
+                WhenChanged = $policy.WhenChanged
                 ConfigurationStatus = if ($associatedRule) { "Complete" } else { "Policy Only (Missing Rule)" }
             }
             $Output.Add($OutputItem)
@@ -121,6 +123,9 @@ Function Invoke-ListSafeLinksPolicy {
                     ExceptIfRecipientDomainIs = $rule.ExceptIfRecipientDomainIs
                     Description = $rule.Comments
                     IsBuiltIn = $false
+                    IsValid = $rule.IsValid
+                    WhenCreated = $rule.WhenCreated
+                    WhenChanged = $rule.WhenChanged
                     ConfigurationStatus = "Rule Only (Missing Policy: $($rule.SafeLinksPolicy))"
                 }
                 $Output.Add($OutputItem)
@@ -162,6 +167,9 @@ Function Invoke-ListSafeLinksPolicy {
                         ExceptIfRecipientDomainIs = $builtInRule.ExceptIfRecipientDomainIs
                         Description = $builtInRule.Comments
                         IsBuiltIn = $true
+                        IsValid = $builtInRule.IsValid
+                        WhenCreated = $builtInRule.WhenCreated
+                        WhenChanged = $builtInRule.WhenChanged
                         ConfigurationStatus = "Built-In Rule Only (No Associated Policy)"
                     }
                     $Output.Add($OutputItem)
@@ -188,7 +196,7 @@ Function Invoke-ListSafeLinksPolicy {
     catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -headers $Headers -API $APIName -message "Error retrieving Safe Links policies: $ErrorMessage" -Sev 'Error'
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $FinalOutput = $ErrorMessage
     }
 

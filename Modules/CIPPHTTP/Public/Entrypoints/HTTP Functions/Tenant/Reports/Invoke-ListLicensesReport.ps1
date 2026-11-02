@@ -66,6 +66,13 @@ function Invoke-ListLicensesReport {
         }
     }
 
+    # Strip the Term property from each TermInfo entry before returning
+    foreach ($Result in $GraphRequest) {
+        if ($Result.TermInfo) {
+            $Result.TermInfo = @($Result.TermInfo | Select-Object -Property * -ExcludeProperty Term)
+        }
+    }
+
     $Body = [PSCustomObject]@{
         Results  = @($GraphRequest)
         Metadata = $Metadata

@@ -18,27 +18,31 @@ function Invoke-CippTestZTNA21813 {
         $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
         $RoleEligibilitySchedules = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleEligibilitySchedules'
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
+        $UserById = [CIPP.CippIndex]::Build($Users, @(foreach ($U in $Users) { , ($($U.id) ?? $null) }))
+        $AssignmentsByRole = [CIPP.CippIndex]::Build($RoleAssignmentScheduleInstances, @(foreach ($A in $RoleAssignmentScheduleInstances) { , ($($A.roleDefinitionId) ?? $null) }))
+        $EligibilitiesByRole = [CIPP.CippIndex]::Build($RoleEligibilitySchedules, @(foreach ($E in $RoleEligibilitySchedules) { , ($($E.roleDefinitionId) ?? $null) }))
 
         $AllGAUsers = @{}
         $AllPrivilegedUsers = @{}
         $UserRoleMap = @{}
 
         foreach ($Role in $PrivilegedRoles) {
-            $ActiveAssignments = $RoleAssignmentScheduleInstances | Where-Object {
-                $_.roleDefinitionId -eq $Role.templateId -and $_.assignmentType -eq 'Assigned'
-            }
-            $EligibleAssignments = $RoleEligibilitySchedules | Where-Object {
-                $_.roleDefinitionId -eq $Role.templateId
-            }
+            # 'roleTemplateId', not 'templateId' — the Roles cache has no templateId field at all
+            # (description, displayName, id, memberCount, members, roleTemplateId), so both filters
+            # below compared against $null and matched nothing.
+            $ActiveAssignments = ($AssignmentsByRole.Find($Role.roleTemplateId)).Where({ $_.assignmentType -eq 'Assigned' })
+            $EligibleAssignments = $EligibilitiesByRole.Find($Role.roleTemplateId)
 
             $AllAssignments = @($ActiveAssignments) + @($EligibleAssignments)
 
             foreach ($Assignment in $AllAssignments) {
-                $User = $Users | Where-Object { $_.id -eq $Assignment.principalId } | Select-Object -First 1
+                $User = $UserById.First($Assignment.principalId)
                 if (-not $User) { continue }
 
                 $UserId = $User.id
-                $IsGARole = $Role.templateId -eq $GlobalAdminRoleId
+                # roleTemplateId — $Role.templateId does not exist, so this was always false and
+                # no user was ever classed as a Global Administrator.
+                $IsGARole = $Role.roleTemplateId -eq $GlobalAdminRoleId
 
                 if ($IsGARole) {
                     $AllGAUsers[$UserId] = $User
@@ -108,7 +112,7 @@ function Invoke-CippTestZTNA21813 {
             $User = $UserEntry.User
             $IsGA = if ($UserEntry.IsGA) { 'Yes' } else { 'No' }
 
-            $OtherRoles = $UserEntry.Roles | Where-Object { $_ -ne 'Global Administrator' } | Sort-Object
+            $OtherRoles = $UserEntry.Roles.Where({ $_ -ne 'Global Administrator' }) | Sort-Object
             $RolesList = if ($OtherRoles.Count -gt 0) { ($OtherRoles -join ', ') } else { '-' }
 
             $UserLink = "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/AdministrativeRole/userId/$($User.id)/hidePreviewBanner~/true"

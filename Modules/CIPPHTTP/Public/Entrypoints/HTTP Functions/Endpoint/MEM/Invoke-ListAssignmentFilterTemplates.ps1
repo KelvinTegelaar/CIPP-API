@@ -4,6 +4,8 @@ function Invoke-ListAssignmentFilterTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Endpoint.MEM.Read
+    .DESCRIPTION
+        Lists the saved Intune assignment filter templates, each with its platform, filter rule and management type. Pass ID to return a single template. These are CIPP templates, not a tenant's deployed filters.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -29,7 +31,6 @@ function Invoke-ListAssignmentFilterTemplates {
     if ($ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $ID }
 
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Templates)

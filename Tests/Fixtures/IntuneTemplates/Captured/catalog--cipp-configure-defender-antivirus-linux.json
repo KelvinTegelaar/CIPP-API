@@ -1,0 +1,395 @@
+{
+  "DisplayName": "CIPP: Configure Defender Antivirus - Linux",
+  "Description": "Antivirus Policies curated by Bezalu for Linux.\nIntune Endpoint security Antivirus policies can help security admins focus on managing the discrete group of antivirus settings for managed devices. Antivirus policy includes several profiles. Each profile contains only the settings that are relevant for Microsoft Defender for Endpoint antivirus for Linux devices.",
+  "Type": "Catalog",
+  "Policy": {
+    "name": "CIPP: Configure Defender Antivirus - Linux",
+    "description": "Antivirus Policies curated by Bezalu for Linux.\nIntune Endpoint security Antivirus policies can help security admins focus on managing the discrete group of antivirus settings for managed devices. Antivirus policy includes several profiles. Each profile contains only the settings that are relevant for Microsoft Defender for Endpoint antivirus for Linux devices.",
+    "settings": [
+      {
+        "id": "0",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_cloudservice_enabled",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "ad8554ce-16d5-44a5-9686-d286844755b0"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_cloudservice_enabled_true",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "f43ea7cb-baa1-4c05-87a7-b11e0c94becc",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "1",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_cloudservice_automaticsamplesubmissionconsent",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "53041276-320f-4218-8ad6-c722da38c3b8"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_cloudservice_automaticsamplesubmissionconsent_all",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "e0d01c97-88a2-4c0b-acf0-4e22334012e4",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "2",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_cloudservice_diagnosticlevel",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "94284249-9ac1-4f5f-95f9-6660763f495e"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_cloudservice_diagnosticlevel_0",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "222df582-4c28-453e-85a0-8932d4747034",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "3",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_cloudservice_automaticdefinitionupdateenabled",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "5a10dd94-e9ea-439c-8d2d-daf2a5af942f"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_cloudservice_automaticdefinitionupdateenabled_true",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "695c7907-d2e1-4950-8cb2-e3607f0d3f77",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "4",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_cloudservice_cloudblocklevel",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "03ade319-3e8a-4cfc-af8f-962b247c948c"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_cloudservice_cloudblocklevel_normal",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "c467c7e3-fc63-421a-89fa-311efdf99c11",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "5",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_antivirusengine_exclusionsmergepolicy",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "a3bedec3-1d7e-4bfc-a39b-74797c1cfb32"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_antivirusengine_exclusionsmergepolicy_1",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "f76cec1a-9350-4e56-8478-9c0d2229dbf9",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "6",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationGroupSettingCollectionInstance",
+          "settingDefinitionId": "linux_mdatp_managed_antivirusengine_threattypesettings",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "2e407734-2d3a-4cc2-9a81-4d1c54718096"
+          },
+          "groupSettingCollectionValue": [
+            {
+              "settingValueTemplateReference": null,
+              "children": [
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "linux_mdatp_managed_antivirusengine_threattypesettings_item_key",
+                  "auditRuleInformation": null,
+                  "settingInstanceTemplateReference": {
+                    "settingInstanceTemplateId": "f6f8e649-43e8-4c00-b0be-7b5aec9cc96b"
+                  },
+                  "choiceSettingValue": {
+                    "value": "linux_mdatp_managed_antivirusengine_threattypesettings_item_key_0",
+                    "settingValueTemplateReference": {
+                      "settingValueTemplateId": "7bcb7b41-778c-4fbd-812d-391bbf27de5d",
+                      "useTemplateDefault": false
+                    },
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "linux_mdatp_managed_antivirusengine_threattypesettings_item_value",
+                  "auditRuleInformation": null,
+                  "settingInstanceTemplateReference": {
+                    "settingInstanceTemplateId": "e639a747-d49e-49ac-a93b-cec8fcb1d747"
+                  },
+                  "choiceSettingValue": {
+                    "value": "linux_mdatp_managed_antivirusengine_threattypesettings_item_value_1",
+                    "settingValueTemplateReference": {
+                      "settingValueTemplateId": "0c4f59ce-56ad-420c-bb5c-ad9beabce574",
+                      "useTemplateDefault": false
+                    },
+                    "children": []
+                  }
+                }
+              ]
+            },
+            {
+              "settingValueTemplateReference": null,
+              "children": [
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "linux_mdatp_managed_antivirusengine_threattypesettings_item_key",
+                  "auditRuleInformation": null,
+                  "settingInstanceTemplateReference": {
+                    "settingInstanceTemplateId": "40d2d7e0-79fa-4b94-8eb9-35d2aac10771"
+                  },
+                  "choiceSettingValue": {
+                    "value": "linux_mdatp_managed_antivirusengine_threattypesettings_item_key_1",
+                    "settingValueTemplateReference": {
+                      "settingValueTemplateId": "acf49530-de9d-4d4b-b9fc-e215e1e18adc",
+                      "useTemplateDefault": false
+                    },
+                    "children": []
+                  }
+                },
+                {
+                  "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                  "settingDefinitionId": "linux_mdatp_managed_antivirusengine_threattypesettings_item_value",
+                  "auditRuleInformation": null,
+                  "settingInstanceTemplateReference": {
+                    "settingInstanceTemplateId": "970928e2-2293-4c5a-b1ab-1fe699f4a0f9"
+                  },
+                  "choiceSettingValue": {
+                    "value": "linux_mdatp_managed_antivirusengine_threattypesettings_item_value_1",
+                    "settingValueTemplateReference": {
+                      "settingValueTemplateId": "0fee281d-85eb-4844-96a2-378c5ecd195a",
+                      "useTemplateDefault": false
+                    },
+                    "children": []
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "7",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_antivirusengine_threattypesettingsmergepolicy",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "a8d21df4-18c9-4441-bab1-0dc8ad0aa4e7"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_antivirusengine_threattypesettingsmergepolicy_1",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "d016b769-202c-40a4-bffa-ddb53f9287fb",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "8",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance",
+          "settingDefinitionId": "linux_mdatp_managed_antivirusengine_disallowedthreatactions",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "d1673a55-f037-4eca-b037-89392341d1b8"
+          },
+          "simpleSettingCollectionValue": [
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "allow"
+            },
+            {
+              "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+              "settingValueTemplateReference": null,
+              "value": "restore"
+            }
+          ]
+        }
+      },
+      {
+        "id": "9",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_antivirusengine_scanarchives",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "c10d108c-791b-466d-a644-496ffb91ad4e"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_antivirusengine_scanarchives_true",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "bec9915b-f42e-43c0-91c5-31eec7477174",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "10",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_antivirusengine_scanafterdefinitionupdate",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "5b971075-325b-4082-829f-7dc3b024a287"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_antivirusengine_scanafterdefinitionupdate_true",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "7b98572e-b14b-47b6-b564-0d22dd730fcf",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "11",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_antivirusengine_enablefilehashcomputation",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "cb7adfaa-20d9-4125-ad34-a4e2fb7d3c28"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_antivirusengine_enablefilehashcomputation_true",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "cba77fe5-f9c7-42a9-bbef-78cd29eaf1ab",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "12",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_antivirusengine_behaviormonitoring",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "5a28a1d5-cb9f-4e49-8a65-fbe480f848b1"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_antivirusengine_behaviormonitoring_1",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "56268401-a42d-4340-863b-cec0a2d2f967",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "13",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_antivirusengine_nonexecmountpolicy",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "876336dd-093a-41f2-9497-e6293479c72c"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_antivirusengine_nonexecmountpolicy_0",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "65939d65-ff28-46d9-82bb-7aea489ad4d7",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "14",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_antivirusengine_enforcementlevel",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "2c5e7db8-5f1f-4e80-91c4-25cdc0841410"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_antivirusengine_enforcementlevel_0",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "82914380-18f6-4c77-9ffd-9758a48bd0a7",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      },
+      {
+        "id": "15",
+        "settingInstance": {
+          "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+          "settingDefinitionId": "linux_mdatp_managed_networkprotection_enforcementlevel",
+          "auditRuleInformation": null,
+          "settingInstanceTemplateReference": {
+            "settingInstanceTemplateId": "57282368-36da-46e8-b835-569cfc010928"
+          },
+          "choiceSettingValue": {
+            "value": "linux_mdatp_managed_networkprotection_enforcementlevel_2",
+            "settingValueTemplateReference": {
+              "settingValueTemplateId": "b2b9fddb-c0c4-4a56-bcae-534c93d49b76",
+              "useTemplateDefault": false
+            },
+            "children": []
+          }
+        }
+      }
+    ],
+    "platforms": "linux",
+    "technologies": "microsoftSense",
+    "templateReference": {
+      "templateId": "4cfd164c-5e8a-4ea9-b15d-9aa71e4ffff4_1",
+      "templateFamily": "endpointSecurityAntivirus",
+      "templateDisplayName": "Microsoft Defender Antivirus",
+      "templateDisplayVersion": "Version 1"
+    }
+  }
+}

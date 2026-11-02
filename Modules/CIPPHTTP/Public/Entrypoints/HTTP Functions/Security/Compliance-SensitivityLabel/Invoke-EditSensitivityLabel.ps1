@@ -23,6 +23,13 @@ Function Invoke-EditSensitivityLabel {
             }
         }
 
+        # PswsHashtable parameters need the Exchange.GenericHashTable odata type to bind over the AdminApi.
+        foreach ($HashtableParam in @('AdvancedSettings', 'Settings')) {
+            if ($Params.ContainsKey($HashtableParam)) {
+                $Params[$HashtableParam] = ConvertTo-CIPPExoHashtable -InputObject $Params[$HashtableParam]
+            }
+        }
+
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Label' -cmdParams $Params -Compliance -useSystemMailbox $true
         $Result = "Updated sensitivity label $Identity"
         Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Info
@@ -31,7 +38,7 @@ Function Invoke-EditSensitivityLabel {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed updating sensitivity label $Identity. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

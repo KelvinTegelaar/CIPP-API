@@ -10,6 +10,7 @@ Function Invoke-ExecManageRetentionTags {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Results = [System.Collections.Generic.List[string]]::new()
+    $Succeeded = 0
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
     $CmdletArray = [System.Collections.ArrayList]::new()
     $CmdletMetadataArray = [System.Collections.ArrayList]::new()
@@ -151,7 +152,7 @@ Function Invoke-ExecManageRetentionTags {
                     $cmdParams.Comment = $Tag.Comment
                 }
 
-                if ($Tag.RetentionEnabled -ne $null) {
+                if ($null -ne $Tag.RetentionEnabled) {
                     $cmdParams.RetentionEnabled = $Tag.RetentionEnabled
                 }
 
@@ -210,7 +211,7 @@ Function Invoke-ExecManageRetentionTags {
                     $cmdParams.Comment = $Tag.Comment
                 }
 
-                if ($Tag.RetentionEnabled -ne $null) {
+                if ($null -ne $Tag.RetentionEnabled) {
                     $cmdParams.RetentionEnabled = $Tag.RetentionEnabled
                 }
 
@@ -274,6 +275,7 @@ Function Invoke-ExecManageRetentionTags {
                                     Write-LogMessage -headers $Request.Headers -API $APINAME -message $Message -Sev 'Error' -tenant $TenantFilter
                                     $Results.Add($Message)
                                 } else {
+                                    $Succeeded++
                                     Write-LogMessage -headers $Request.Headers -API $APINAME -message $metadata.ExpectedResult -Sev 'Info' -tenant $TenantFilter
                                     $Results.Add($metadata.ExpectedResult)
                                 }
@@ -288,6 +290,7 @@ Function Invoke-ExecManageRetentionTags {
 
                 try {
                     $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $CmdletObj.CmdletInput.CmdletName -cmdParams $CmdletObj.CmdletInput.Parameters
+                    $Succeeded++
                     Write-LogMessage -headers $Request.Headers -API $APINAME -message $CmdletMetadata.ExpectedResult -Sev 'Info' -tenant $TenantFilter
                     $Results.Add($CmdletMetadata.ExpectedResult)
                 } catch {
@@ -305,6 +308,7 @@ Function Invoke-ExecManageRetentionTags {
         if ($CreateTags -or $ModifyTags -or $DeleteTags) {
             # For any operations, return the results messages
             $GraphRequest = @($Results)
+            $StatusCode = Get-CippBulkStatusCode -Total $Results.Count -Failed ($Results.Count - $Succeeded)
         } else {
             # For listing, return all tags or specific tag - wrapped in try-catch
             try {
@@ -338,7 +342,7 @@ Function Invoke-ExecManageRetentionTags {
         $Message = "Failed to manage retention tags: $ErrorMessage"
         Write-LogMessage -headers $Request.Headers -API $APINAME -message $Message -Sev 'Error' -tenant $TenantFilter
         $Results.Add($Message)
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = @($Results)
     }
 

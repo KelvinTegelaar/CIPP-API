@@ -1,0 +1,42 @@
+{
+  "name": "AutoExpandArchive",
+  "label": "Enable Auto-expanding archives",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Enables auto-expanding archives for the tenant. Exchange Online cannot turn this back off once enabled, so this standard only ever enables it.",
+  "executiveText": "Enables automatic expansion of email archive storage when users approach their archive limits, ensuring continuous email retention without manual intervention. This prevents email storage issues and maintains compliance with data retention policies without requiring ongoing administrative management.",
+  "docsDescription": "Enables auto-expanding archives for the tenant. Does not enable archives for users. Auto-expanding archiving is a one-way switch in Exchange Online - Set-OrganizationConfig -AutoExpandingArchive:$false is rejected by the service - so this standard has no disable direction and enforces the enabled state only.",
+  "impactColour": "info",
+  "addedDate": "2021-11-16",
+  "powershellEquivalent": "Set-OrganizationConfig -AutoExpandingArchive",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {},
+  "expected": {
+    "AutoExpandingArchiveEnabled": true
+  },
+  "read": {
+    "cacheType": "ExoOrganizationConfig"
+  },
+  "writeTarget": "exoOrganizationConfig",
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OrganizationConfig",
+        "params": {
+          "AutoExpandingArchive": true
+        }
+      }
+    ]
+  }
+}

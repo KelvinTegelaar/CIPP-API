@@ -4,17 +4,29 @@ function Get-CIPPSPOTenant {
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
         [string]$SharepointPrefix,
-        [switch]$SkipCache
+        # Only meaningful alongside SharepointPrefix. Sovereign clouds are not on sharepoint.com
+        # (see Get-SharePointAdminLink), so a prefix on its own cannot build the admin URL.
+        [string]$SharepointDomain = 'sharepoint.com',
+        [switch]$SkipCache,
+        # SharePoint app-only auth requires a certificate (secret app-only is rejected by SPO with
+        # 'Unsupported app only token'). When set, authenticate app-only with the SAM certificate
+        # instead of the default delegated (refresh-token) context.
+        [switch]$UseCertificate
     )
+
+    # Threaded onto every SPO admin call below; empty = unchanged delegated behaviour.
+    $AuthSplat = @{}
+    if ($UseCertificate) { $AuthSplat['AsApp'] = $true; $AuthSplat['UseCertificate'] = $true }
 
     if (!$SharepointPrefix) {
         # get sharepoint admin site
         $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
         $tenantName = $SharePointInfo.TenantName
         $AdminUrl = $SharePointInfo.AdminUrl
+        $SharepointDomain = $SharePointInfo.SharePointDomain
     } else {
         $tenantName = $SharepointPrefix
-        $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
+        $AdminUrl = "https://$($tenantName)-admin.$SharepointDomain"
     }
 
     $Table = Get-CIPPTable -tablename 'cachespotenant'
@@ -24,7 +36,12 @@ function Get-CIPPSPOTenant {
         $CachedTenant = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         if ($CachedTenant -and (Test-Json $CachedTenant.JSON)) {
             $Results = $CachedTenant.JSON | ConvertFrom-Json
-            return $Results
+            # Rows written before SharepointDomain existed carry only the prefix, and everything
+            # downstream (Set-CIPPSPOTenant via the pipeline) would rebuild a sharepoint.com URL
+            # from it - wrong on sovereign clouds. Treat those rows as stale and re-resolve.
+            if ($Results.PSObject.Properties.Name -contains 'SharepointDomain') {
+                return $Results
+            }
         }
     }
 
@@ -36,9 +53,26 @@ function Get-CIPPSPOTenant {
         'Accept' = 'application/json;odata=verbose'
     }
 
-    $Results = New-GraphPostRequest -scope "$($AdminUrl)/.default" -tenantid $TenantFilter -Uri "$($SharePointInfo.AdminUrl)/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders
+    # $AdminUrl, not $SharePointInfo.AdminUrl - the latter is empty when a prefix was supplied.
+    try {
+        $Results = New-GraphPostRequest -scope "$($AdminUrl)/.default" -tenantid $TenantFilter -Uri "$($AdminUrl)/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml' -AddedHeaders $AdditionalHeaders @AuthSplat
+    } catch {
+        # The admin endpoint answers a bare 401 when the CIPP service principal holds no SharePoint
+        # app-only consent in the tenant - the token is issued fine, SharePoint just refuses it. That
+        # is a standing configuration state, not a transient fault: every retry and every nightly run
+        # gets the same answer until someone resets the CPV permissions. Flag it so callers can tell
+        # it apart from a real failure, and say what fixes it - 'Failed: 401 UNAUTHORIZED' does not.
+        if ($_.Exception.Message -match '\b401\b|unauthorized') {
+            $AccessDenied = [System.Exception]::new("SharePoint admin access denied for $TenantFilter ($AdminUrl returned 401). The CIPP service principal is missing SharePoint app-only consent in this tenant - reset its CPV permissions to restore it.", $_.Exception)
+            $AccessDenied.Data['SPOAccessDenied'] = $true
+            throw $AccessDenied
+        }
+        throw
+    }
 
-    $Results = $Results | Select-Object -Last 1 *, @{n = 'SharepointPrefix'; e = { $tenantName } }, @{n = 'TenantFilter'; e = { $TenantFilter } }
+    # SharepointDomain rides along with the prefix so Set-CIPPSPOTenant can rebuild the same
+    # admin URL from the pipeline (and from this cache row) without assuming .com.
+    $Results = $Results | Select-Object -Last 1 *, @{n = 'SharepointPrefix'; e = { $tenantName } }, @{n = 'SharepointDomain'; e = { $SharepointDomain } }, @{n = 'TenantFilter'; e = { $TenantFilter } }
 
     # Cache result
     $Entity = @{

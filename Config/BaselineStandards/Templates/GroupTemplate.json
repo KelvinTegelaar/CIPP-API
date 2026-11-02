@@ -1,0 +1,55 @@
+{
+  "name": "GroupTemplate",
+  "label": "Group Template",
+  "cat": "Templates",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Deploy groups from CIPP templates. An existing group with the same name is updated in place on every remediation run.",
+  "executiveText": "Deploys standardized groups - security, Microsoft 365, dynamic and distribution - so access control and communication structures stay consistent across tenants.",
+  "docsDescription": "Deploy a group from a CIPP template. The standard grades whether the group exists by display name - dynamic distribution groups are checked in Exchange, everything else in Entra - and remediation creates the group or updates its description, membership rule and external-sender settings in place, matching the classic standard.",
+  "impactColour": "warning",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "New-CIPPGroup, Set-DistributionGroup or Set-DynamicDistributionGroup",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "checkBeforeRun": false,
+  "multiple": true,
+  "instanceIdentity": "groupTemplate",
+  "identity": {
+    "partition": "GroupTemplate",
+    "nameField": "displayName"
+  },
+  "variables": {
+    "groupTemplate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select Group Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListGroupTemplates",
+        "labelField": "Displayname",
+        "altLabelField": "displayName",
+        "valueField": "GUID",
+        "queryKey": "ListGroupTemplates"
+      }
+    }
+  },
+  "read": {
+    "cacheType": "Groups",
+    "requiredCaches": [
+      "Groups",
+      "ExoDynamicDistributionGroup"
+    ]
+  },
+  "prepare": "Get-CIPPBaselineGroupTemplateState",
+  "remediate": {
+    "executor": "GroupTemplate"
+  }
+}

@@ -137,7 +137,6 @@ function Invoke-CIPPStandardDefaultSharingLink {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'DefaultSharingLink' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {

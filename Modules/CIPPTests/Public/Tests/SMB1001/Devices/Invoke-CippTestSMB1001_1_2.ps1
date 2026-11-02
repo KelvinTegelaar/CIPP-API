@@ -21,16 +21,16 @@ function Invoke-CippTestSMB1001_1_2 {
             return
         }
 
-        $FirewallPolicies = @($ConfigurationPolicies | Where-Object {
+        $FirewallPolicies = @($ConfigurationPolicies.Where({
                 $_.templateReference -and $_.templateReference.templateFamily -eq 'endpointSecurityFirewall'
-            })
+            }))
 
         if ($FirewallPolicies.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No endpoint security firewall configuration policies found in Intune.' -Risk 'High' -Name $Name -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 
-        $AssignedPolicies = @($FirewallPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $AssignedPolicies = @($FirewallPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
 
         if ($AssignedPolicies.Count -gt 0) {
             $Status = 'Passed'

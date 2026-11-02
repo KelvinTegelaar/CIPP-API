@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_8_1_1 {
             return
         }
 
-        $Cfg = $Client | Select-Object -First 1
+        $Cfg = @($Client)[0]
         $Enabled = [System.Collections.Generic.List[string]]::new()
         if ($Cfg.AllowDropbox)     { $Enabled.Add('Dropbox') }
         if ($Cfg.AllowBox)         { $Enabled.Add('Box') }

@@ -16,8 +16,8 @@ function Invoke-CippTestZTNA24543 {
             return
         }
 
-        $iOSPolicies = @($IntunePolicies | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.iosCompliancePolicy' })
-        $AssignedPolicies = @($iOSPolicies | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $iOSPolicies = @($IntunePolicies.Where({ $_.'@odata.type' -eq '#microsoft.graph.iosCompliancePolicy' }))
+        $AssignedPolicies = @($iOSPolicies.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
         $Passed = $AssignedPolicies.Count -gt 0
 
         if ($Passed) {

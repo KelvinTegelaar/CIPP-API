@@ -23,7 +23,7 @@ function Invoke-CippTestCISAMSEXO173 {
             return
         }
 
-        $AuditConfigObject = $AuditConfig | Select-Object -First 1
+        $AuditConfigObject = @($AuditConfig)[0]
 
         if ($AuditConfigObject.AdminAuditLogEnabled -eq $true) {
             $Result = [System.Text.StringBuilder]::new("✅ **Pass**: Admin audit log is enabled (provides 1 year retention).`n`n")

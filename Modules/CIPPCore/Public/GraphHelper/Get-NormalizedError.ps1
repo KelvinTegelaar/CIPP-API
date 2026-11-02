@@ -10,9 +10,12 @@ function Get-NormalizedError {
     )
 
     #Check if the message is valid JSON.
-    try {
-        $JSONMsg = $message | ConvertFrom-Json
-    } catch {
+    $JSONMsg = $null
+    if ($message -and $message.TrimStart().StartsWith('{')) {
+        try {
+            $JSONMsg = $message | ConvertFrom-Json
+        } catch {
+        }
     }
     #if the message is valid JSON, there can be multiple fields in which the error resides. These are:
     # $message.error.Innererror.Message
@@ -21,7 +24,9 @@ function Get-NormalizedError {
     # $message.error.innererror.internalException.message
 
     #We need to check if the message is in one of these fields, and if so, return it.
-    if ($JSONMsg.error.innererror.message) {
+    if ($JSONMsg.error.innererror.message -like '*See details*' -and $JSONMsg.error.innererror.details.message) {
+        $message = $JSONMsg.error.innererror.details.message -join ' '
+    } elseif ($JSONMsg.error.innererror.message) {
         Write-Information "innererror.message found: $($JSONMsg.error.innererror.message)"
         $message = $JSONMsg.error.innererror.message
     } elseif ($JSONMsg.error.message) {
@@ -73,7 +78,7 @@ function Get-NormalizedError {
         '*AADSTS9002313*' { 'The credentials used to connect to the Graph API are not available, please retry. If this issue persists you may need to execute the SAM wizard.' }
         '*One or more platform(s) is/are not configured for the customer. Please configure the platform before trying to purchase a SKU.*' { 'One or more platform(s) is/are not configured for the customer. Please configure the platform before trying to purchase a SKU.' }
         "One or more added object references already exist for the following modified properties: 'members'." { 'This user is already a member of the selected group.' }
-        '*is not present in the role definition of the current user*' { 'We do not have permissions to access this resource, try performing a CPV refresh in Application Settings -> Permissions. ' }
+        '*is not present in the role definition of the current user*' { 'We do not have permissions to access this resource, try performing a CPV refresh in Application Settings -> Permissions or Try with AsApp: true' }
         default { $message }
 
     }

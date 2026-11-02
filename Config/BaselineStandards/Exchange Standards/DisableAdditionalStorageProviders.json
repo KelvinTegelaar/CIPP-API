@@ -1,0 +1,64 @@
+{
+  "name": "DisableAdditionalStorageProviders",
+  "label": "Disable additional storage providers in OWA",
+  "cat": "Exchange Standards",
+  "tag": [
+    "CIS M365 7.0.0 (6.5.3)",
+    "exo_storageproviderrestricted"
+  ],
+  "impact": "Low Impact",
+  "helpText": "Disables the ability for users to open files in Outlook on the Web, from other providers such as Box, Dropbox, Facebook, Google Drive, OneDrive Personal, etc.",
+  "executiveText": "Prevents employees from accessing personal cloud storage services like Dropbox or Google Drive through Outlook on the web, reducing data security risks and ensuring company information stays within approved corporate systems. This helps maintain data governance and prevents accidental data leaks.",
+  "docsDescription": "Disables additional storage providers in OWA. This is to prevent users from using personal storage providers like Dropbox, Google Drive, etc. Usually this has little user impact.",
+  "impactColour": "info",
+  "addedDate": "2024-01-17",
+  "powershellEquivalent": "Get-OwaMailboxPolicy | Set-OwaMailboxPolicy -AdditionalStorageProvidersEnabled $False",
+  "appliesToTest": [
+    "CIS_6_5_3",
+    "ZTNA21817"
+  ],
+  "recommendedBy": [
+    "CIS"
+  ],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 5,
+  "compare": "subset",
+  "variables": {
+    "storageProvidersAvailable": {
+      "type": "switch",
+      "label": "Additional storage providers available in OWA",
+      "default": false,
+      "recommended": false
+    }
+  },
+  "expected": {
+    "AdditionalStorageProvidersAvailable": "%storageProvidersAvailable%"
+  },
+  "read": {
+    "cacheType": "OwaMailboxPolicy",
+    "filter": [
+      {
+        "property": "Identity",
+        "value": "OwaMailboxPolicy-Default"
+      }
+    ]
+  },
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-OwaMailboxPolicy",
+        "params": {
+          "Identity": "OwaMailboxPolicy-Default",
+          "AdditionalStorageProvidersAvailable": "%storageProvidersAvailable%"
+        }
+      }
+    ]
+  }
+}

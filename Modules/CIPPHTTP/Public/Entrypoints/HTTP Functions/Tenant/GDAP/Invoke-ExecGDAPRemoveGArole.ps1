@@ -8,6 +8,7 @@ Function Invoke-ExecGDAPRemoveGArole {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
     $GDAPID = $Request.Query.GDAPId ?? $Request.Body.GDAPId
 
     try {
@@ -27,7 +28,9 @@ Function Invoke-ExecGDAPRemoveGArole {
 
             $Message = "Removed Global Administrator from $($GDAPID)"
             Write-LogMessage -headers $Request.Headers -API $APINAME -message $Message -Sev 'Info'
+            $StatusCode = [HttpStatusCode]::OK
         } else {
+            $StatusCode = [HttpStatusCode]::BadRequest
             if ($CheckActive.status -ne 'active') {
                 $Message = "Relationship status is currently $($CheckActive.status), it is not possible to remove the Global Administrator role in this state."
             }
@@ -39,13 +42,14 @@ Function Invoke-ExecGDAPRemoveGArole {
         $Message = "Unexpected error patching GDAP relationship: $($_.Exception.Message)"
         Write-Host "GDAP ERROR: $($_.Exception.Message)"
         Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error'
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $body = @{
         Message = $Message
     }
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 }

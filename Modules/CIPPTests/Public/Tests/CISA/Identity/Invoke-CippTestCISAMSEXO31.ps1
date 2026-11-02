@@ -25,7 +25,7 @@ function Invoke-CippTestCISAMSEXO31 {
         }
 
         # Filter to non-internal accepted domains
-        $SendingDomains = $AcceptedDomains | Where-Object { -not $_.SendingFromDomainDisabled }
+        $SendingDomains = $AcceptedDomains.Where({ -not $_.SendingFromDomainDisabled })
 
         if (($SendingDomains | Measure-Object).Count -eq 0) {
             Add-CippTestResult -Status 'Passed' -ResultMarkdown '✅ **Pass**: No sending domains found to check DKIM configuration.' -Risk 'Medium' -Name 'DKIM SHOULD be enabled for all domains' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Email Authentication' -TestId 'CISAMSEXO31' -TenantFilter $Tenant
@@ -35,7 +35,7 @@ function Invoke-CippTestCISAMSEXO31 {
         $FailedDomains = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Domain in $SendingDomains) {
-            $DkimConfig = $DkimConfigs | Where-Object { $_.Domain -eq $Domain.DomainName }
+            $DkimConfig = $DkimConfigs.Where({ $_.Domain -eq $Domain.DomainName })
 
             if (-not $DkimConfig -or -not $DkimConfig.Enabled) {
                 $FailedDomains.Add([PSCustomObject]@{

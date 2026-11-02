@@ -66,8 +66,22 @@ function New-GraphDeltaQuery {
             SkipLog          = $true
         }
         Write-Information "Starting delta query orchestration for $($Tenants.Count) tenants."
-        Write-Information "Orchestration Input: $($InputObject | ConvertTo-Json -Compress -Depth 5)"
-        $Orchestration = Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+        if ($env:CIPPNG -eq 'true') {
+            # Craft runtime: go through Start-CIPPOrchestrator like every other fan-out, so this gets
+            # the streamed batch handoff instead of one whole-batch string.
+            #
+            # This was the only orchestration start in the codebase that reached past that wrapper
+            # straight to Start-NewOrchestration, which is a Durable Functions cmdlet - it does not
+            # exist in the Craft runtime, so on CIPPNG this branch could never have worked.
+            #
+            # The batch-as-JSON log below is deliberately not repeated here: it serialises the entire
+            # batch purely to print it, which for AllTenants is the exact allocation this change exists
+            # to remove. The tenant count above is the part worth logging.
+            $Orchestration = Start-CIPPOrchestrator -InputObject ([PSCustomObject]$InputObject)
+        } else {
+            Write-Information "Orchestration Input: $($InputObject | ConvertTo-Json -Compress -Depth 5)"
+            $Orchestration = Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+        }
 
     } else {
         $Table = Get-CIPPTable -TableName 'DeltaQueries'
@@ -146,6 +160,12 @@ function New-GraphDeltaQuery {
             if ($DeltaError) {
                 throw "Delta Query failed for tenant '$TenantFilter'."
             }
+            # Never persist a row without a delta link. A blank DeltaUrl is not "start over", it is a
+            # row that every later evaluation reads and then fails to bind, so the trigger silently
+            # stops working until someone rebuilds it.
+            if ([string]::IsNullOrWhiteSpace($deltaLink)) {
+                throw "Graph returned no deltaLink for the '$($DeltaQuery.Resource ?? $Resource)' delta query on tenant '$TenantFilter'. The delta query row was not updated."
+            }
             $DeltaQuery.RowKey = $TenantFilter
             $DeltaQuery.DeltaUrl = $deltaLink
 
@@ -163,8 +183,8 @@ function New-GraphDeltaQuery {
             # Always return full response with deltaLink
             return $result
         } catch {
-            Write-Error "Failed to create Delta Query: $(Get-NormalizedError -Message $_.Exception.message)"
             Write-Warning $_.InvocationInfo.PositionMessage
+            throw "Failed to create Delta Query: $(Get-NormalizedError -Message $_.Exception.message)"
         }
     }
 }

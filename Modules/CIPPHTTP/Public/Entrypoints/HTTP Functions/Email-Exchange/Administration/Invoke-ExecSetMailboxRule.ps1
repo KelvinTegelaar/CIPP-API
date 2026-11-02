@@ -10,7 +10,6 @@ Function Invoke-ExecSetMailboxRule {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with the query or body of the request
     $TenantFilter = $Request.Body.TenantFilter

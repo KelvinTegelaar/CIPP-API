@@ -1,0 +1,37 @@
+{
+  "name": "CollaborationDomainRestriction",
+  "label": "Restrict B2B Collaboration to Allowed Domains",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Restricts B2B guest invitations to an allow-list of domains. Setting an allow-list clears any block-list, matching portal behaviour.",
+  "executiveText": "Limits which external organizations employees can invite as guests, reducing data exposure to unsanctioned partners while keeping approved collaboration frictionless.",
+  "docsDescription": "Grades the sorted allowed-domains list on the B2B management policy. Remediation rebuilds the domain policy on top of the existing definition so sibling settings such as AutoRedeemPolicy survive.",
+  "impactColour": "error",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: PATCH policies/b2bManagementPolicies",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "allowedDomains": {
+      "label": "Allowed domains (comma separated)",
+      "required": true,
+      "type": "textField"
+    }
+  },
+  "read": {
+    "cacheType": "B2BManagementPolicy"
+  },
+  "prepare": "Get-CIPPBaselineCollaborationDomainRestrictionState",
+  "remediate": {
+    "executor": "CollaborationDomainRestriction",
+    "allowedDomains": "%allowedDomains%"
+  }
+}

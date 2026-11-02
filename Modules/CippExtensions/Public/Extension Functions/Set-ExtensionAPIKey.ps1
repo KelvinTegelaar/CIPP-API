@@ -23,7 +23,7 @@ function Set-ExtensionAPIKey {
             }
             Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
         } else {
-            $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+            $keyvaultname = Get-CippKeyVaultName
             $null = Set-CippKeyVaultSecret -VaultName $keyvaultname -Name $Extension -SecretValue (ConvertTo-SecureString -AsPlainText -Force -String $APIKey)
         }
         Set-Item -Path "env:$Var" -Value $APIKey -Force -ErrorAction SilentlyContinue

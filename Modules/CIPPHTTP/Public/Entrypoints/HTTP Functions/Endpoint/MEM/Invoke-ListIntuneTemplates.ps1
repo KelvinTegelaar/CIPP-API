@@ -4,6 +4,8 @@ function Invoke-ListIntuneTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Endpoint.MEM.Read
+    .DESCRIPTION
+        Lists the saved Intune policy templates. On first call the templates shipped with CIPP are imported into the templates table. These are CIPP templates, not a tenant's deployed policies.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -31,20 +33,36 @@ function Invoke-ListIntuneTemplates {
     $RawTemplates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
     if ($Request.query.View) {
         $Templates = $RawTemplates | ForEach-Object {
+            $Row = $_
             try {
-                $JSONData = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+                $JSONData = $Row.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
                 $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
-                $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
-                $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
-                $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
-                $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
-                $data | Add-Member -NotePropertyName 'package' -NotePropertyValue $_.Package -Force
-                $data | Add-Member -NotePropertyName 'isSynced' -NotePropertyValue (![string]::IsNullOrEmpty($_.SHA)) -Force
-                $data | Add-Member -NotePropertyName 'source' -NotePropertyValue $_.Source -Force
-                $data | Add-Member -NotePropertyName 'reusableSettings' -NotePropertyValue $JSONData.ReusableSettings -Force
+                if ($null -eq $data) { throw 'RAWJson is empty or not valid JSON' }
+                $data | Add-Member -NotePropertyMembers ([ordered]@{
+                        displayName      = $JSONData.Displayname
+                        description      = $JSONData.Description
+                        Type             = $JSONData.Type
+                        GUID             = $Row.RowKey
+                        package          = $Row.Package
+                        isSynced         = (![string]::IsNullOrEmpty($Row.SHA))
+                        source           = $Row.Source
+                        reusableSettings = $JSONData.ReusableSettings
+                    }) -Force
                 $data
             } catch {
-
+                # A row that fails to parse used to be dropped from this list entirely, so a corrupt
+                # template stayed selectable in the deploy pickers (which use the raw list) while
+                # being invisible here. Surface a stub so the broken row can be found and deleted.
+                [PSCustomObject]@{
+                    displayName = "$($JSONData.Displayname ?? $Row.RowKey) [corrupt template: $($_.Exception.Message)]"
+                    description = 'This template row failed to parse and cannot be deployed. Delete it from the template list and recreate it.'
+                    Type        = $JSONData.Type
+                    GUID        = $Row.RowKey
+                    package     = $Row.Package
+                    isSynced    = (![string]::IsNullOrEmpty($Row.SHA))
+                    source      = $Row.Source
+                    corrupt     = $true
+                }
             }
 
         } | Sort-Object -Property displayName
@@ -121,14 +139,16 @@ function Invoke-ListIntuneTemplates {
                                 try {
                                     $JSONData = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
                                     $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
-                                    $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
-                                    $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
-                                    $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
-                                    $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
-                                    $data | Add-Member -NotePropertyName 'package' -NotePropertyValue $_.Package -Force
-                                    $data | Add-Member -NotePropertyName 'source' -NotePropertyValue $_.Source -Force
-                                    $data | Add-Member -NotePropertyName 'isSynced' -NotePropertyValue (![string]::IsNullOrEmpty($_.SHA)) -Force
-                                    $data | Add-Member -NotePropertyName 'reusableSettings' -NotePropertyValue $JSONData.ReusableSettings -Force
+                                    $data | Add-Member -NotePropertyMembers ([ordered]@{
+                                            displayName      = $JSONData.Displayname
+                                            description      = $JSONData.Description
+                                            Type             = $JSONData.Type
+                                            GUID             = $_.RowKey
+                                            package          = $_.Package
+                                            source           = $_.Source
+                                            isSynced         = (![string]::IsNullOrEmpty($_.SHA))
+                                            reusableSettings = $JSONData.ReusableSettings
+                                        }) -Force
                                     $data
                                 } catch {
 
@@ -137,7 +157,16 @@ function Invoke-ListIntuneTemplates {
                     }
                 } | Sort-Object -Property label)
         } else {
-            $Templates = $RawTemplates.JSON | ForEach-Object { try { ConvertFrom-Json -InputObject $_ -Depth 100 -ErrorAction SilentlyContinue } catch {} }
+            # Force GUID to the table RowKey (the authoritative key the standards engine
+            # resolves against). The JSON-embedded GUID can drift out of sync with the
+            # RowKey after a community-repo re-sync, so never surface it as the selectable value.
+            $Templates = $RawTemplates | ForEach-Object {
+                try {
+                    $Parsed = ConvertFrom-Json -InputObject $_.JSON -Depth 100 -ErrorAction SilentlyContinue
+                    if ($Parsed) { $Parsed | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force }
+                    $Parsed
+                } catch {}
+            }
 
         }
     }

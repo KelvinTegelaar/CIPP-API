@@ -15,7 +15,7 @@ Get-RemoteDomain | Set-RemoteDomain -AutoForwardEnabled $false
 ```
 
 **Links:**
-- [CISA SCubaGear EXO Baseline - MS.EXO.1.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo11v1)
+- [CISA ScubaGear EXO Baseline - MS.EXO.1.1](https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md#msexo11v1)
 - [Configure remote domain settings](https://learn.microsoft.com/exchange/mail-flow-best-practices/remote-domains/remote-domains)
 
 <!--- Results --->

@@ -1,0 +1,44 @@
+{
+  "name": "ExcludedfileExt",
+  "label": "Exclude File Extensions from Syncing",
+  "cat": "SharePoint Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Sets the file extensions the OneDrive sync client refuses to sync. The list replaces the tenant list, matching admin center behaviour.",
+  "executiveText": "Keeps dangerous or unwanted file types (executables, scripts) out of OneDrive sync, reducing malware spread through synced libraries.",
+  "docsDescription": "Grades the excluded-extension set exactly - extensions removed from the baseline come off the tenant on remediation, matching the admin center's replace semantics. Bare extensions gain the *. prefix the admin center adds.",
+  "impactColour": "error",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: PATCH admin/sharepoint/settings",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "ext": {
+      "type": "textField",
+      "label": "Extensions, comma separated (e.g. exe, bat, js)",
+      "required": true
+    }
+  },
+  "read": {
+    "cacheType": "SharePointAdminSettings"
+  },
+  "prepare": "Get-CIPPBaselineExcludedfileExtState",
+  "remediate": {
+    "executor": "ExcludedfileExt",
+    "ext": "%ext%"
+  }
+}

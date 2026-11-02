@@ -13,7 +13,7 @@ function Invoke-CippTestCIS_3_2_1 {
             return
         }
 
-        $Enabled = $Dlp | Where-Object { $_.Mode -eq 'Enable' -and $_.Enabled -eq $true }
+        $Enabled = $Dlp.Where({ $_.Mode -eq 'Enable' -and $_.Enabled -eq $true })
 
         if ($Enabled.Count -gt 0) {
             $Status = 'Passed'

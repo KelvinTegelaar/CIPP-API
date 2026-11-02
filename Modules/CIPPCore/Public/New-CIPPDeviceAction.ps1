@@ -11,6 +11,9 @@ function New-CIPPDeviceAction {
     try {
         if ($Action -eq 'delete') {
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices/$DeviceFilter" -type DELETE -tenantid $TenantFilter
+        } elseif ($Action -eq 'offboardMDEDevice') {
+            # DeviceFilter carries the Entra device id here, not the Intune managedDevice id
+            $Result = Invoke-CIPPMDEOffboard -AzureADDeviceId $DeviceFilter -TenantFilter $TenantFilter
         } elseif ($Action -eq 'users') {
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices('$DeviceFilter')/$($Action)/`$ref" -type POST -tenantid $TenantFilter -body $ActionBody
             $regex = "(?<=\(')([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?='|\))"

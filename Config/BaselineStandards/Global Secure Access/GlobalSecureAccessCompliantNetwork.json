@@ -1,0 +1,150 @@
+{
+  "name": "GlobalSecureAccessCompliantNetwork",
+  "label": "Require a compliant network (Global Secure Access)",
+  "cat": "Global Secure Access",
+  "tag": [
+    "HighImpact"
+  ],
+  "impact": "High Impact",
+  "helpText": "Makes stolen sign-in tokens useless off company devices using Entra ID P1: onboards the tenant to Global Secure Access, enables the Microsoft 365 traffic profile for all users, deploys the client through Intune (Windows and macOS) and creates a Conditional Access policy that blocks every sign-in not coming from the compliant network. The policy is created in report-only mode until 'Enforce the policy' is switched on. Admin roles, your break-glass accounts, Intune and Explicit Forward Proxy are excluded.",
+  "executiveText": "Routes staff sign-ins through Microsoft's secure edge, installs Microsoft's network client on company Windows and Mac computers, and blocks every sign-in that does not come from one of those computers, so a stolen password or sign-in token cannot be used from an attacker's machine. Starts in a monitoring mode.",
+  "docsDescription": "Grades the tenant setup (onboarded, Microsoft 365 profile enabled and assigned to all users, signaling on, compliant network location present), the Intune objects for the selected platforms and the policy (present, state, excluded roles and accounts). The client objects carry a configuration fingerprint and are redeployed only when it changes, so the standard runs checkBeforeRun false. It never disables signaling and refuses to enable the policy when no break-glass exclusion resolves.",
+  "impactColour": "error",
+  "addedDate": "2026-10-10",
+  "powershellEquivalent": "Update-MgBetaNetworkAccessForwardingProfile; Update-MgBetaNetworkAccessSettingConditionalAccess; Add-CIPPW32ScriptApplication; New-CIPPCAPolicy",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    [
+      "AAD_PREMIUM",
+      "AAD_PREMIUM_P2"
+    ],
+    [
+      "INTUNE_A",
+      "MDM_Services",
+      "EMS",
+      "SCCM",
+      "MICROSOFTINTUNEPLAN1"
+    ]
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "deployWindows": {
+      "type": "switch",
+      "label": "Deploy the client to Windows",
+      "default": true
+    },
+    "deployMacOS": {
+      "type": "switch",
+      "label": "Deploy the client to macOS",
+      "default": true
+    },
+    "assignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Which devices get the client?",
+      "default": "AllDevices",
+      "options": [
+        {
+          "value": "AllDevices",
+          "label": "All devices"
+        },
+        {
+          "value": "AllUsers",
+          "label": "All users"
+        },
+        {
+          "value": "AllDevicesAndUsers",
+          "label": "All users and devices"
+        },
+        {
+          "value": "customGroup",
+          "label": "A custom group (pilot)"
+        }
+      ]
+    },
+    "customGroup": {
+      "type": "textField",
+      "label": "Custom group name (when 'A custom group' is selected, wildcards allowed)",
+      "omitWhenBlank": true
+    },
+    "excludeGroup": {
+      "type": "textField",
+      "label": "Group name(s) to exclude from the client, comma separated (wildcards allowed)",
+      "omitWhenBlank": true
+    },
+    "preferIPv4": {
+      "type": "switch",
+      "label": "Windows: prefer IPv4 over IPv6 (Microsoft's recommendation; the client tunnels IPv4 only; needs a restart)",
+      "default": true
+    },
+    "lockDownClient": {
+      "type": "switch",
+      "label": "Lock down the client (hide Disable, Pause, Sign out and Disable Private Access; Windows also requires admin rights to disable)",
+      "default": true
+    },
+    "enforce": {
+      "type": "switch",
+      "label": "Enforce the policy (off = report-only mode)",
+      "default": false,
+      "recommended": true
+    },
+    "excludeAdminRoles": {
+      "type": "AdminRolesMultiSelect",
+      "multiple": true,
+      "label": "Admin roles to exclude from the policy",
+      "default": [
+        "62e90394-69f5-4237-9190-012177145e10",
+        "194ae4cb-b126-40b2-bd5b-6091b380977d",
+        "b1be1c3e-b65d-4f19-8427-f6fa0d97feb9",
+        "ac434307-12b9-4fa1-a708-88bf58caabc1"
+      ]
+    },
+    "excludeUsers": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Break-glass accounts to exclude (user principal names or display names)",
+      "omitWhenBlank": true
+    },
+    "excludeGroups": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Groups to exclude from the policy (display names)",
+      "omitWhenBlank": true
+    },
+    "useDetectedBreakGlass": {
+      "type": "switch",
+      "label": "Also exclude the break-glass account CIPP detects from your existing policies",
+      "default": true
+    }
+  },
+  "read": {
+    "cacheType": "NetworkAccess"
+  },
+  "prepare": "Get-CIPPBaselineGlobalSecureAccessCompliantNetworkState",
+  "remediate": {
+    "executor": "GlobalSecureAccessCompliantNetwork",
+    "deployWindows": "%deployWindows%",
+    "deployMacOS": "%deployMacOS%",
+    "assignTo": "%assignTo%",
+    "customGroup": "%customGroup%",
+    "excludeGroup": "%excludeGroup%",
+    "preferIPv4": "%preferIPv4%",
+    "lockDownClient": "%lockDownClient%",
+    "enforce": "%enforce%",
+    "excludeAdminRoles": "%excludeAdminRoles%",
+    "excludeUsers": "%excludeUsers%",
+    "excludeGroups": "%excludeGroups%",
+    "useDetectedBreakGlass": "%useDetectedBreakGlass%"
+  },
+  "checkBeforeRun": false
+}

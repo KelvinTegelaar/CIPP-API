@@ -23,7 +23,7 @@ function Invoke-CippTestCISAMSEXO122 {
             return
         }
 
-        $FailedPolicies = $SpamPolicies | Where-Object { $_.EnableSafeList -eq $true }
+        $FailedPolicies = $SpamPolicies.Where({ $_.EnableSafeList -eq $true })
 
         if ($FailedPolicies.Count -eq 0) {
             $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($SpamPolicies.Count) anti-spam policy/policies have safe lists disabled.")

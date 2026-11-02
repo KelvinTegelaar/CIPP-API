@@ -23,15 +23,16 @@ function Invoke-CippTestSMB1001_2_12 {
             return
         }
 
-        $Sending = @($Accepted | Where-Object { -not $_.SendingFromDomainDisabled -and $_.DomainName -notlike '*onmicrosoft.com' })
+        $Sending = @($Accepted.Where({ -not $_.SendingFromDomainDisabled -and $_.DomainName -notlike '*onmicrosoft.com' }))
 
         $Failures = @(
             foreach ($D in $Sending) {
-                $A = $Analyser | Where-Object { $_.Domain -eq $D.DomainName } | Select-Object -First 1
-                $K = $Dkim | Where-Object { $_.Domain -eq $D.DomainName } | Select-Object -First 1
+                $A = $Analyser.Where({ $_.Domain -eq $D.DomainName }, 'First')[0]
+                $K = $Dkim.Where({ $_.Domain -eq $D.DomainName }, 'First')[0]
                 $Spf = $A.ActualSPFRecord -match 'v=spf1'
-                $Dmarc = $A.DMARCRecord -match 'v=DMARC1'
-                $DmarcStrong = $A.DMARCRecord -match 'p=(reject|quarantine)'
+                # Domain Analyser exposes DMARC as DMARCPresent / DMARCFullPolicy / DMARCActionPolicy - there is no DMARCRecord property
+                $Dmarc = ($A.DMARCPresent -eq $true) -or ($A.DMARCFullPolicy -match 'v=DMARC1')
+                $DmarcStrong = ($A.DMARCActionPolicy -in @('Reject', 'Quarantine')) -or ($A.DMARCFullPolicy -match 'p\s*=\s*(reject|quarantine)')
                 $DkimEnabled = ($K -and $K.Enabled -eq $true)
                 $DomainIssues = @(
                     if (-not $Spf) { 'no SPF' }
@@ -59,7 +60,7 @@ function Invoke-CippTestSMB1001_2_12 {
             $Result = "All $($Sending.Count) sending domain(s) have SPF, DKIM, and DMARC (p=reject or p=quarantine) configured."
         } else {
             $Status = 'Failed'
-            $TableRows = foreach ($F in ($Failures | Select-Object -First 25)) {
+            $TableRows = foreach ($F in ($Failures.Where({ $true }, 'First', 25))) {
                 "| $($F.Domain) | $($F.SPF) | $($F.DKIM) | $($F.DMARC) | $($F.Issues) |"
             }
             $Result = (@(

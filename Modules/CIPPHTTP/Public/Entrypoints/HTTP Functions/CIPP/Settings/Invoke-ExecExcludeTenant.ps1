@@ -17,6 +17,7 @@ Function Invoke-ExecExcludeTenant {
     Write-Host ($Username | ConvertTo-Json -Depth 10)
     $Date = (Get-Date).ToString('yyyy-MM-dd')
     $TenantsTable = Get-CippTable -tablename Tenants
+    $StatusCode = [HttpStatusCode]::OK
 
     if ($Request.Query.List) {
         $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
@@ -33,6 +34,7 @@ Function Invoke-ExecExcludeTenant {
         $Name = $Request.Query.tenantFilter
         if ($Request.Query.AddExclusion) {
             $Tenants = Get-Tenants -IncludeAll | Where-Object { $Request.body.value -contains $_.customerId }
+            $Name = $Tenants.defaultDomainName -join ','
 
             $Excluded = foreach ($Tenant in $Tenants) {
                 $Tenant.Excluded = $true
@@ -47,24 +49,26 @@ Function Invoke-ExecExcludeTenant {
 
         if ($Request.Query.RemoveExclusion) {
             $Tenants = Get-Tenants -IncludeAll | Where-Object { $Request.body.value -contains $_.customerId }
+            $Name = $Tenants.defaultDomainName -join ','
             foreach ($Tenant in $Tenants) {
                 $Tenant.Excluded = $false
                 $Tenant.ExcludeUser = ''
                 $Tenant.ExcludeDate = ''
                 Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
             }
-            Write-LogMessage -API $APIName -tenant $($Name) -headers $Headers -message "Removed exclusion for customer $($Name)" -Sev 'Info'
+            Write-LogMessage -API $APIName -tenant $($Name) -headers $Headers -message "Removed exclusion for customer(s): $($Name)" -Sev 'Info'
             $body = [pscustomobject]@{'Results' = "Success. We've removed $Name from the excluded tenants." }
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $($Name) -headers $Headers -message "Exclusion API failed. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed. $($ErrorMessage.NormalizedError)" }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     if (!$body) { $body = @() }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 

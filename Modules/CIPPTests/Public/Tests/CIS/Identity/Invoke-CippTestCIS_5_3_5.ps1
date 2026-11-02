@@ -14,12 +14,12 @@ function Invoke-CippTestCIS_5_3_5 {
             return
         }
 
-        $PRA = $Roles | Where-Object { $_.displayName -eq 'Privileged Role Administrator' } | Select-Object -First 1
+        $PRA = $Roles.Where({ $_.displayName -eq 'Privileged Role Administrator' }, 'First')[0]
 
-        $ApprovalPolicy = $Policies | Where-Object {
+        $ApprovalPolicy = $Policies.Where({
             $_.scopeId -eq '/' -and $_.scopeType -eq 'DirectoryRole' -and
-            ($_.rules | Where-Object { $_.id -eq 'Approval_EndUser_Assignment' -and $_.setting.isApprovalRequired -eq $true })
-        }
+            ($_.rules.Where({ $_.id -eq 'Approval_EndUser_Assignment' -and $_.setting.isApprovalRequired -eq $true }))
+        })
 
         if ($ApprovalPolicy) {
             $Status = 'Passed'

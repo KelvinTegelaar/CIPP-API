@@ -25,6 +25,7 @@ function Get-CIPPAlertEntraConnectSyncStatus {
             if ($LastSync -lt (Get-Date).AddHours(-$Hours).ToUniversalTime()) {
 
                 $AlertData = @{
+                    Id                = "EntraConnectSync-$Cause" # stable identity; Message carries live hours
                     Message           = "Entra Connect $Cause for $($TenantFilter) has not run for over $Hours hours. Last sync was at $($LastSync.ToString('o'))"
                     LastSync          = $LastSync
                     Cause             = $Cause
@@ -32,9 +33,9 @@ function Get-CIPPAlertEntraConnectSyncStatus {
                     LastDirectorySync = $SyncDateTime
                     Tenant            = $TenantFilter
                 }
-                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }
         }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Could not get Entra Connect Sync Status for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

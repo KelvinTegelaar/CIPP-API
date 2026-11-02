@@ -37,19 +37,72 @@ function Set-CIPPStandardsCompareField {
         return $JsonString
     }
 
-    if ($CurrentValue -and $CurrentValue -isnot [string]) {
-        $CurrentValue = [string](ConvertTo-Json -InputObject $CurrentValue -Depth 10 -Compress)
-    }
-    if ($ExpectedValue -and $ExpectedValue -isnot [string]) {
-        $ExpectedValue = [string](ConvertTo-Json -InputObject $ExpectedValue -Depth 10 -Compress)
+        function ConvertTo-SortedObject {
+        param($Value)
+
+        if ($null -eq $Value) { return $null }
+
+        if ($Value -is [string] -or $Value -is [bool] -or $Value -is [System.ValueType]) {
+            return $Value
+        }
+
+        if ($Value -is [System.Collections.IDictionary]) {
+            $Sorted = [ordered]@{}
+            foreach ($Key in ($Value.Keys | Sort-Object)) {
+                $Sorted[$Key] = ConvertTo-SortedObject -Value $Value[$Key]
+            }
+            return $Sorted
+        }
+
+        if ($Value -is [System.Management.Automation.PSCustomObject]) {
+            $Sorted = [ordered]@{}
+            foreach ($Name in ($Value.PSObject.Properties.Name | Sort-Object)) {
+                $Sorted[$Name] = ConvertTo-SortedObject -Value $Value.$Name
+            }
+            return $Sorted
+        }
+
+        if ($Value -is [System.Collections.IEnumerable]) {
+            $Carriers = foreach ($Item in $Value) {
+                $SortedItem = ConvertTo-SortedObject -Value $Item
+                [PSCustomObject]@{
+                    SortKey = [string](ConvertTo-Json -InputObject $SortedItem -Depth 10 -Compress)
+                    Item    = $SortedItem
+                }
+            }
+            $Result = [System.Collections.Generic.List[object]]::new()
+            foreach ($Carrier in @($Carriers | Sort-Object -Property SortKey)) {
+                $Result.Add($Carrier.Item)
+            }
+            return , $Result.ToArray()
+        }
+
+        return $Value
     }
 
-    # Normalize both values for consistent comparison (handle quoted numbers)
+    function ConvertTo-CanonicalJsonString {
+        param($Value)
+
+        if ($null -eq $Value) { return $Value }
+
+        $ToSort = $Value
+        if ($Value -is [string]) {
+            try {
+                $ToSort = ConvertFrom-Json -InputObject $Value -ErrorAction Stop
+            } catch {
+                return $Value
+            }
+        }
+
+        $Json = [string](ConvertTo-Json -InputObject (ConvertTo-SortedObject -Value $ToSort) -Depth 10 -Compress)
+        return ConvertTo-NormalizedJson -JsonString $Json
+    }
+
     if ($CurrentValue) {
-        $CurrentValue = ConvertTo-NormalizedJson -JsonString $CurrentValue
+        $CurrentValue = ConvertTo-CanonicalJsonString -Value $CurrentValue
     }
     if ($ExpectedValue) {
-        $ExpectedValue = ConvertTo-NormalizedJson -JsonString $ExpectedValue
+        $ExpectedValue = ConvertTo-CanonicalJsonString -Value $ExpectedValue
     }
 
     # Handle bulk operations
@@ -70,16 +123,18 @@ function Set-CIPPStandardsCompareField {
             if ($ExistingHash.ContainsKey($Field.FieldName)) {
                 $Entity = $ExistingHash[$Field.FieldName]
                 $Entity.Value = $NormalizedValue
-                $Entity | Add-Member -NotePropertyName TemplateId -NotePropertyValue ([string]$global:CippStandardInfoStorage.Value.StandardTemplateId) -Force
-                $Entity | Add-Member -NotePropertyName LicenseAvailable -NotePropertyValue ([bool]$Field.LicenseAvailable) -Force
-                $Entity | Add-Member -NotePropertyName CurrentValue -NotePropertyValue ([string]$Field.CurrentValue) -Force
-                $Entity | Add-Member -NotePropertyName ExpectedValue -NotePropertyValue ([string]$Field.ExpectedValue) -Force
+                $Entity | Add-Member -NotePropertyMembers ([ordered]@{
+                        TemplateId       = ([string]$script:CippStandardInfoStorage.Value.StandardTemplateId)
+                        LicenseAvailable = ([bool]$Field.LicenseAvailable)
+                        CurrentValue     = ([string]$Field.CurrentValue)
+                        ExpectedValue    = ([string]$Field.ExpectedValue)
+                    }) -Force
             } else {
                 $Entity = [PSCustomObject]@{
                     PartitionKey     = [string]$TenantName.defaultDomainName
                     RowKey           = [string]$Field.FieldName
                     Value            = $NormalizedValue
-                    TemplateId       = [string]$global:CippStandardInfoStorage.Value.StandardTemplateId
+                    TemplateId       = [string]$script:CippStandardInfoStorage.Value.StandardTemplateId
                     LicenseAvailable = [bool]$Field.LicenseAvailable
                     CurrentValue     = [string]$Field.CurrentValue
                     ExpectedValue    = [string]$Field.ExpectedValue
@@ -106,7 +161,7 @@ function Set-CIPPStandardsCompareField {
             try {
                 if ($Existing) {
                     $Existing.Value = $NormalizedValue
-                    $Existing | Add-Member -NotePropertyName TemplateId -NotePropertyValue ([string]$global:CippStandardInfoStorage.Value.StandardTemplateId) -Force
+                    $Existing | Add-Member -NotePropertyName TemplateId -NotePropertyValue ([string]$script:CippStandardInfoStorage.Value.StandardTemplateId) -Force
                     $Existing | Add-Member -NotePropertyName LicenseAvailable -NotePropertyValue ([bool]$LicenseAvailable) -Force
                     $Existing | Add-Member -NotePropertyName CurrentValue -NotePropertyValue ([string]$CurrentValue) -Force
                     $Existing | Add-Member -NotePropertyName ExpectedValue -NotePropertyValue ([string]$ExpectedValue) -Force
@@ -116,7 +171,7 @@ function Set-CIPPStandardsCompareField {
                         PartitionKey     = [string]$TenantName.defaultDomainName
                         RowKey           = [string]$FieldName
                         Value            = $NormalizedValue
-                        TemplateId       = [string]$global:CippStandardInfoStorage.Value.StandardTemplateId
+                        TemplateId       = [string]$script:CippStandardInfoStorage.Value.StandardTemplateId
                         LicenseAvailable = [bool]$LicenseAvailable
                         CurrentValue     = [string]$CurrentValue
                         ExpectedValue    = [string]$ExpectedValue

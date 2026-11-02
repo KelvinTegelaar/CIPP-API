@@ -12,9 +12,17 @@ function New-ExoBulkRequest {
         $NoAuthCheck,
         $Select,
         $ReturnWithCommand,
+        [int]$MaxConcurrency = 1,
+        [int]$TimeoutSec = 100,
         [switch]$Compliance,
-        [switch]$AsApp
+        [switch]$AsApp,
+        # Routes each cmdlet to its Identity (a UPN): mailbox-store writes such as audit settings fail when proxied.
+        # NOTE: this forces the batch size to 1 (one POST per cmdlet), so tune the fan-out with -MaxConcurrency.
+        [switch]$AnchorPerMailbox
     )
+
+    # Measured on EXO: past 32 batches in flight a tenant's requests only get slower.
+    $MaxConcurrency = [Math]::Clamp($MaxConcurrency, 1, 32)
 
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
         if ($Compliance.IsPresent) {
@@ -24,7 +32,7 @@ function New-ExoBulkRequest {
         }
         $Token = Get-GraphToken -Tenantid $tenantid -scope "$Resource/.default" -AsApp:$AsApp.IsPresent
 
-        $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $tenantid -or $_.customerId -eq $tenantid }
+        $Tenant = Get-Tenants -IncludeErrors -TenantFilter $tenantid
         $Headers = @{
             Authorization             = $Token.Authorization
             Prefer                    = 'odata.maxpagesize = 1000;odata.continue-on-error'
@@ -47,16 +55,16 @@ function New-ExoBulkRequest {
             $IdToBatchRequest = @{}   # Original sub-requests, reused for nextLink continuations
 
             # Split the cmdletArray into batches of 10
+            $BatchSize = if ($AnchorPerMailbox) { 1 } else { 10 }
             $batches = [System.Collections.Generic.List[object]]::new()
-            for ($i = 0; $i -lt $cmdletArray.Length; $i += 10) {
-                $batches.Add($cmdletArray[$i..[math]::Min($i + 9, $cmdletArray.Length - 1)])
+            for ($i = 0; $i -lt $cmdletArray.Length; $i += $BatchSize) {
+                $batches.Add($cmdletArray[$i..[math]::Min($i + $BatchSize - 1, $cmdletArray.Length - 1)])
             }
 
             $ReturnedData = [System.Collections.Generic.List[object]]::new()
+            $BatchPayloads = [System.Collections.Generic.List[object]]::new()
             foreach ($batch in $batches) {
-                $BatchBodyObj = @{
-                    requests = @()
-                }
+                $BatchRequests = [System.Collections.Generic.List[object]]::new()
                 foreach ($cmd in $batch) {
                     $cmdparams = $cmd.CmdletInput.Parameters
                     if ($cmdparams.Identity) { $Anchor = $cmdparams.Identity }
@@ -66,7 +74,7 @@ function New-ExoBulkRequest {
                         $OnMicrosoft = $Tenant.initialDomainName
                         $Anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
                     }
-                    $Headers['X-AnchorMailbox'] = "APP:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($tenant.customerId)"
+                    $Headers['X-AnchorMailbox'] = if ($AnchorPerMailbox) { "UPN:$($Anchor -replace '^UPN:')" } else { "APP:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($tenant.customerId)" }
                     $Headers['X-CmdletName'] = $cmd.CmdletInput.CmdletName
                     $Headers['Accept'] = 'application/json; odata.metadata=minimal'
                     $Headers['Accept-Encoding'] = 'gzip'
@@ -90,7 +98,7 @@ function New-ExoBulkRequest {
                         headers = $Headers.Clone()
                         id      = $RequestId
                     }
-                    $BatchBodyObj['requests'] = $BatchBodyObj['requests'] + $BatchRequest
+                    $BatchRequests.Add($BatchRequest)
 
                     # Map the Request ID to the Cmdlet Name and Operation GUID (if provided)
                     $IdToCmdletName[$RequestId] = $cmd.CmdletInput.CmdletName
@@ -99,14 +107,106 @@ function New-ExoBulkRequest {
                         $IdToOperationGuid[$RequestId] = $cmd.OperationGuid
                     }
                 }
-                $BatchBodyJson = ConvertTo-Json -InputObject $BatchBodyObj -Depth 10
+                $BatchBodyObj = @{ requests = $BatchRequests.ToArray() }
+                $BatchBodyJson = [CIPP.CippJson]::ToJson($BatchBodyObj, 10) ?? (ConvertTo-Json -InputObject $BatchBodyObj -Depth 10)
                 $BatchBodyJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $BatchBodyJson
-                $Results = Invoke-CIPPRestMethod $BatchURL -ResponseHeadersVariable responseHeaders -Method POST -Body $BatchBodyJson -Headers $Headers -ContentType 'application/json; charset=utf-8'
-                foreach ($Response in $Results.responses) {
-                    $ReturnedData.Add($Response)
+                # Clone the headers as they stood for this batch's POST (X-AnchorMailbox/X-CmdletName are
+                # mutated per sub-request above); the $batch envelope also carries per-request headers.
+                $BatchPayloads.Add(@{ Json = $BatchBodyJson; Headers = $Headers.Clone(); Ids = @($BatchRequests.id) })
+            }
+
+            # Dispatch a set of batch payloads and return the flattened sub-responses. -MaxConcurrency 1
+            # (default) keeps the sequential Invoke-CIPPRestMethod loop; >1 fans out via
+            # CIPP.CIPPRestClient.SendConcurrent, which bounds concurrency and retries a fully-429'd/5xx
+            # POST honouring Retry-After (its backoff is separate from the per-request -TimeoutSec, so a
+            # rate-limit wait never trips the timeout). EXO caps each $batch at 10 sub-requests.
+            function Send-BatchPayloadSet {
+                param($Payloads, $DispatchUrl, $Concurrency, $Timeout)
+                $Out = [System.Collections.Generic.List[object]]::new()
+                if ($Concurrency -gt 1 -and @($Payloads).Count -gt 1) {
+                    $ConcRequests = [System.Collections.Generic.List[CIPP.CIPPConcurrentRequest]]::new()
+                    foreach ($Payload in $Payloads) {
+                        $ConcRequest = [CIPP.CIPPConcurrentRequest]::new()
+                        $ConcRequest.Uri = $DispatchUrl
+                        $ConcRequest.Method = 'POST'
+                        $ConcRequest.Body = $Payload.Json
+                        $ConcRequest.ContentType = 'application/json; charset=utf-8'
+                        $ConcRequest.TimeoutSec = $Timeout
+                        $ConcHeaders = [System.Collections.Generic.Dictionary[string, string]]::new()
+                        foreach ($HeaderKey in $Payload.Headers.Keys) { $ConcHeaders[$HeaderKey] = [string]$Payload.Headers[$HeaderKey] }
+                        $ConcRequest.Headers = $ConcHeaders
+                        $ConcRequests.Add($ConcRequest)
+                    }
+                    foreach ($ConcResult in [CIPP.CIPPRestClient]::SendConcurrent($ConcRequests, $Concurrency, 3)) {
+                        $Parsed = $null
+                        if (-not $ConcResult.Error -and $ConcResult.IsSuccess) {
+                            try { $Parsed = [CIPP.CippJson]::ConvertFromResponse($ConcResult.Result) } catch { $Parsed = $null }
+                        }
+                        if ($Parsed.responses) {
+                            foreach ($Response in $Parsed.responses) { $Out.Add($Response) }
+                            continue
+                        }
+                        # A batch that failed as a whole still answers for each of its sub-requests, so a 429 reaches the
+                        # retry loop below and anything else reaches the caller as a per-item error instead of vanishing.
+                        $RetryAfter = if ($ConcResult.Result) { @($ConcResult.Result.ResponseHeaders['Retry-After'])[0] }
+                        $Detail = if ($ConcResult.Error) { $ConcResult.Error } elseif ($ConcResult.Result.HasContent) { $ConcResult.Result.Content.Substring(0, [Math]::Min(300, $ConcResult.Result.Content.Length)) }
+                        Write-Host "EXO bulk batch failed (HTTP $($ConcResult.StatusCode), $($ConcResult.Attempts) attempt(s), Retry-After $RetryAfter): $Detail"
+                        $Status = if ($ConcResult.StatusCode -eq 429) { 429 } elseif ($ConcResult.TimedOut) { 504 } elseif ($ConcResult.StatusCode -ge 400) { $ConcResult.StatusCode } else { 502 }
+                        foreach ($Id in $Payloads[$ConcResult.Index].Ids) {
+                            $Out.Add([pscustomobject]@{
+                                    id      = $Id
+                                    status  = $Status
+                                    headers = [pscustomobject]@{ 'Retry-After' = $RetryAfter }
+                                    body    = [pscustomobject]@{ error = [pscustomobject]@{ code = "HTTP$Status"; message = "Exchange batch request failed (HTTP $Status): $Detail" } }
+                                })
+                        }
+                    }
+                } else {
+                    foreach ($Payload in $Payloads) {
+                        $Results = Invoke-CIPPRestMethod $DispatchUrl -ResponseHeadersVariable responseHeaders -Method POST -Body $Payload.Json -Headers $Payload.Headers -ContentType 'application/json; charset=utf-8' -TimeoutSec $Timeout
+                        foreach ($Response in $Results.responses) { $Out.Add($Response) }
+                    }
+                }
+                return $Out
+            }
+
+            foreach ($Response in (Send-BatchPayloadSet $BatchPayloads $BatchURL $MaxConcurrency $TimeoutSec)) { $ReturnedData.Add($Response) }
+
+            # EXO can throttle individual sub-requests inside a 200 batch envelope (status 429 per response,
+            # emitted under Prefer: odata.continue-on-error). SendConcurrent only sees the outer 200, so
+            # retry those here: rebuild the throttled sub-requests into fresh batches, honour Retry-After
+            # (else a capped exponential backoff), and swap the successful results back in by id.
+            # A mailbox caught mid-failover or mid-move fails the same way and succeeds moments later.
+            $TransientError = 'TransientException|MailboxCrossSiteFailoverException|MailboxInfoStaleException|MailboxOfflineException'
+            $RateLimitRetry = 0
+            while ($RateLimitRetry -lt 3) {
+                $Throttled = @($ReturnedData.Where({
+                            $_.id -and $IdToBatchRequest.ContainsKey($_.id) -and
+                            ($_.status -eq 429 -or ($_.status -ge 400 -and "$($_.body.error.message) $($_.body.error.details.message)" -match $TransientError))
+                        }))
+                if ($Throttled.Count -eq 0) { break }
+                $RateLimitRetry++
+                $RetryAfter = 0
+                foreach ($ThrottledResponse in $Throttled) { $Ra = $ThrottledResponse.headers.'Retry-After' -as [int]; if ($Ra -gt $RetryAfter) { $RetryAfter = $Ra } }
+                if ($RetryAfter -le 0) { $RetryAfter = [int][math]::Pow(2, $RateLimitRetry) }  # 2s, 4s, 8s
+                Start-Sleep -Seconds $RetryAfter
+
+                $ThrottledRequests = @($Throttled | ForEach-Object { $IdToBatchRequest[$_.id] })
+                $RetryPayloads = [System.Collections.Generic.List[object]]::new()
+                for ($i = 0; $i -lt $ThrottledRequests.Count; $i += $BatchSize) {
+                    $Slice = $ThrottledRequests[$i..[math]::Min($i + $BatchSize - 1, $ThrottledRequests.Count - 1)]
+                    $RetryBody = @{ requests = @($Slice) }
+                    $RetryJson = [CIPP.CippJson]::ToJson($RetryBody, 10) ?? (ConvertTo-Json -InputObject $RetryBody -Depth 10)
+                    $RetryJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $RetryJson
+                    $RetryPayloads.Add(@{ Json = $RetryJson; Headers = if ($AnchorPerMailbox) { $Slice[0].headers.Clone() } else { $Headers.Clone() }; Ids = @($Slice.id) })
                 }
 
-                Write-Host "Batch #$($batches.IndexOf($batch) + 1) of $($batches.Count) processed"
+                # Halve the fan-out each round: firing every throttled batch back at once re-trips the same limit.
+                $Replacements = @{}
+                foreach ($Response in (Send-BatchPayloadSet $RetryPayloads $BatchURL ([Math]::Max(1, $MaxConcurrency -shr $RateLimitRetry)) $TimeoutSec)) { if ($Response.id) { $Replacements[$Response.id] = $Response } }
+                for ($i = 0; $i -lt $ReturnedData.Count; $i++) {
+                    if ($ReturnedData[$i].id -and $Replacements.ContainsKey($ReturnedData[$i].id)) { $ReturnedData[$i] = $Replacements[$ReturnedData[$i].id] }
+                }
             }
 
             # Follow @odata.nextLink continuations so results are not capped at one page (mirrors New-GraphBulkRequest).
@@ -133,7 +233,8 @@ function New-ExoBulkRequest {
                 }
 
                 Write-Host "Fetching next page for $($NextBatchRequests.Count) request(s)"
-                $NextBatchBodyJson = ConvertTo-Json -InputObject @{ requests = @($NextBatchRequests) } -Depth 10
+                $NextBatchBody = @{ requests = @($NextBatchRequests) }
+                $NextBatchBodyJson = [CIPP.CippJson]::ToJson($NextBatchBody, 10) ?? (ConvertTo-Json -InputObject $NextBatchBody -Depth 10)
                 $NextBatchBodyJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $NextBatchBodyJson
                 $NextResults = Invoke-CIPPRestMethod $BatchURL -Method POST -Body $NextBatchBodyJson -Headers $Headers -ContentType 'application/json; charset=utf-8'
 
@@ -164,10 +265,12 @@ function New-ExoBulkRequest {
                 $itemId = $item.id
                 $CmdletName = $IdToCmdletName[$itemId]
                 $OperationGuid = $IdToOperationGuid[$itemId]  # Will be $null if not provided
-                $body = $item.body.PSObject.Copy()
+                $body = if ($item.body -is [System.Management.Automation.PSCustomObject]) { $item.body } else { $item.body.PSObject.Copy() }
 
-                if ($body.'@adminapi.warnings') {
-                    Write-Warning ($body.'@adminapi.warnings' | Out-String)
+                # A never-used mailbox has no data to return; EXO warns per mailbox, which is noise at scale.
+                $Warnings = @(@($body.'@adminapi.warnings').Where({ $_ -and "$_" -notmatch "hasn't logged on to mailbox" }))
+                if ($Warnings.Count -gt 0) {
+                    Write-Warning ($Warnings | Out-String)
                 }
                 if (![string]::IsNullOrEmpty($body.error.details.message) -or ![string]::IsNullOrEmpty($body.error.message)) {
                     if ($body.error.details.message) {
@@ -219,10 +322,12 @@ function New-ExoBulkRequest {
         } else {
             $FinalData = foreach ($item in $ReturnedData) {
                 $OperationGuid = $IdToOperationGuid[$item.id]  # Will be $null if not provided
-                $body = $item.body.PSObject.Copy()
+                $body = if ($item.body -is [System.Management.Automation.PSCustomObject]) { $item.body } else { $item.body.PSObject.Copy() }
 
-                if ($body.'@adminapi.warnings') {
-                    Write-Warning ($body.'@adminapi.warnings' | Out-String)
+                # A never-used mailbox has no data to return; EXO warns per mailbox, which is noise at scale.
+                $Warnings = @(@($body.'@adminapi.warnings').Where({ $_ -and "$_" -notmatch "hasn't logged on to mailbox" }))
+                if ($Warnings.Count -gt 0) {
+                    Write-Warning ($Warnings | Out-String)
                 }
                 if (![string]::IsNullOrEmpty($body.error.details.message) -or ![string]::IsNullOrEmpty($body.error.message)) {
                     if ($body.error.details.message) {
@@ -266,6 +371,6 @@ function New-ExoBulkRequest {
         return $FinalData
 
     } else {
-        Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
+        Write-Error (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Exchange bulk request')
     }
 }

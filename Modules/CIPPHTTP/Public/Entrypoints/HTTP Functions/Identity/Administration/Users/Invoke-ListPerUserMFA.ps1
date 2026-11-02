@@ -10,10 +10,6 @@ function Invoke-ListPerUserMFA {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APIName -message 'Accessed this API' -Sev 'Debug'
-
     # Parse query parameters
     $Tenant = $Request.query.tenantFilter
     try {
@@ -41,6 +37,5 @@ function Invoke-ListPerUserMFA {
             StatusCode = $StatusCode
             Body       = @($Results)
         })
-
 
 }

@@ -1,0 +1,47 @@
+{
+  "name": "DisableM365GroupUsers",
+  "label": "Disable M365 Group creation by users",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Prevents standard users from creating Microsoft 365 groups, optionally exempting members of a named group.",
+  "executiveText": "Stops group sprawl by routing Microsoft 365 group creation through IT or a designated team, keeping ownership, naming and lifecycle under control.",
+  "docsDescription": "Grades EnableGroupCreation on the Group.Unified directory setting and, when an exempt group is configured, that GroupCreationAllowedGroupId points at it (resolved by display name per tenant). Remediation can create the exempt group and instantiates the directory setting from its template when the tenant has none.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Graph: PATCH settings (Group.Unified)",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "AllowedGroupName": {
+      "label": "Optional: group whose members may still create M365 groups",
+      "omitWhenBlank": true,
+      "type": "textField"
+    },
+    "CreateGroup": {
+      "label": "Create the allowed group if it does not exist",
+      "type": "switch",
+      "default": false
+    }
+  },
+  "read": {
+    "requiredCaches": [
+      "Settings",
+      "Groups"
+    ],
+    "cacheType": "Settings"
+  },
+  "prepare": "Get-CIPPBaselineDisableM365GroupUsersState",
+  "remediate": {
+    "executor": "DisableM365GroupUsers",
+    "allowedGroupName": "%AllowedGroupName%",
+    "createGroup": "%CreateGroup%"
+  }
+}

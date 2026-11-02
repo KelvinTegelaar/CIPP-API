@@ -15,7 +15,10 @@ function Invoke-AddIntuneTemplate {
     try {
         if ($Request.Body.RawJSON) {
             if (!$Request.Body.displayName) { throw 'You must enter a displayName' }
-            if ($null -eq ($Request.Body.RawJSON | ConvertFrom-Json)) { throw 'the JSON is invalid' }
+            $Validation = Test-CIPPIntuneTemplate -RawJSON $Request.Body.RawJSON -TemplateType $Request.Body.TemplateType -DisplayName $Request.Body.displayName -IncludeCatalogChecks
+            if (-not $Validation.IsValid) {
+                throw [System.ArgumentException]::new("The template was not saved because it would not deploy: $($Validation.Errors -join ' ')")
+            }
 
             $reusableTemplateRefs = @()
             $object = [PSCustomObject]@{
@@ -35,12 +38,19 @@ function Invoke-AddIntuneTemplate {
                 PartitionKey          = 'IntuneTemplate'
                 GUID                  = "$GUID"
             }
-            Write-LogMessage -headers $Headers -API $APIName -message "Created intune policy template named $($Request.Body.displayName) with GUID $GUID" -Sev 'Debug'
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Created intune policy template named $($Request.Body.displayName) with GUID $GUID" -Sev 'Info'
 
             $Result = 'Successfully added template'
             $StatusCode = [HttpStatusCode]::OK
         } else {
             $TenantFilter = $Request.Body.tenantFilter ?? $Request.Query.tenantFilter
+
+            # AnyTenant: template is built from a live read of this tenant; enforce scope
+            $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+            if ($AllowedTenants -notcontains 'AllTenants' -and -not ($TenantFilter -and (Get-Tenants -TenantFilter $TenantFilter))) {
+                throw 'Access to this tenant is not allowed'
+            }
+
             $URLName = $Request.Body.URLName ?? $Request.Query.URLName
             $ID = $Request.Body.ID ?? $Request.Query.ID
             $ODataType = $Request.Body.ODataType ?? $Request.Query.ODataType
@@ -50,6 +60,11 @@ function Invoke-AddIntuneTemplate {
             $reusableTemplateRefs = $reusableResult.ReusableSettings
             # Intune templates store payload in RAWJson; only the content is rewritten to use reusable template GUID placeholders.
             $templateJson = if ($reusableResult.RawJSON) { $reusableResult.RawJSON } else { $Template.TemplateJson }
+
+            $Validation = Test-CIPPIntuneTemplate -RawJSON $templateJson -TemplateType $Template.Type -DisplayName $Template.DisplayName
+            if (-not $Validation.IsValid) {
+                throw [System.ArgumentException]::new("The captured policy did not produce a deployable template: $($Validation.Errors -join ' ')")
+            }
 
             $object = [PSCustomObject]@{
                 Displayname      = $Template.DisplayName
@@ -66,21 +81,21 @@ function Invoke-AddIntuneTemplate {
                 RowKey       = "$GUID"
                 PartitionKey = 'IntuneTemplate'
             }
-            Write-LogMessage -headers $Headers -API $APIName -message "Created intune policy template $($Request.Body.displayName) with GUID $GUID using an original policy from a tenant" -Sev 'Debug'
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Created intune policy template $($Request.Body.displayName) with GUID $GUID using an original policy from a tenant" -Sev 'Info'
 
             $Result = 'Successfully added template'
             $StatusCode = [HttpStatusCode]::OK
         }
     } catch {
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Intune Template Deployment failed: $($ErrorMessage.NormalizedMessage)"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $Result = "Intune Template Deployment failed: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $Result -Sev 'Error' -LogData $ErrorMessage
     }
 
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
+            Body       = @{ Results = $Result; GUID = $StatusCode -eq [HttpStatusCode]::OK ? $GUID : $null }
         })
 }

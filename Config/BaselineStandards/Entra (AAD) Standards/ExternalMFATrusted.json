@@ -1,0 +1,41 @@
+{
+  "name": "ExternalMFATrusted",
+  "label": "Sets the Cross-tenant Access Setting to Trust External MFA",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Sets the default state for whether MFA performed in an external tenant is trusted for inbound B2B access.",
+  "executiveText": "Controls whether guests who already completed multifactor authentication in their home organization must repeat it when accessing this tenant. Trusting external MFA smooths partner collaboration; not trusting it enforces this organization's own MFA on every guest.",
+  "docsDescription": "Grades and sets inboundTrust.isMfaAccepted on the default cross-tenant access policy. Remediation reads the live policy and rewrites the merged inboundTrust object, preserving the compliant-device and hybrid-join trust flags alongside it.",
+  "impactColour": "info",
+  "addedDate": "2026-08-16",
+  "powershellEquivalent": "Update-MgPolicyCrossTenantAccessPolicyDefault",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "AAD_PREMIUM",
+    "AAD_PREMIUM_P2"
+  ],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "state": {
+      "type": "switch",
+      "label": "Trust MFA performed in external tenants",
+      "default": false,
+      "recommended": true
+    }
+  },
+  "read": {
+    "cacheType": "CrossTenantAccessPolicy"
+  },
+  "prepare": "Get-CIPPBaselineExternalMFATrustedState",
+  "remediate": {
+    "executor": "ExternalMFATrusted",
+    "trusted": "%state%"
+  }
+}
