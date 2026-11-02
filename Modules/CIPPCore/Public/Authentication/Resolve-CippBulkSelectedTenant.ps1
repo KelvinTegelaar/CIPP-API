@@ -14,13 +14,16 @@ function Resolve-CippBulkSelectedTenant {
         tenants instead.
 
     .PARAMETER Request
-        The HTTP request whose Body.selectedTenants is resolved.
+        The HTTP request, used to resolve the caller's tenant scope.
+
+    .PARAMETER SelectedTenants
+        The request body's selectedTenants entries, each carrying a customerId and defaultDomainName.
 
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
-    param($Request)
+    param($Request, $SelectedTenants)
 
     $Allowed = @(Test-CippAccess -Request $Request -TenantList | Where-Object { $_ })
     $Unrestricted = $Allowed -contains 'AllTenants'
@@ -32,15 +35,14 @@ function Resolve-CippBulkSelectedTenant {
         if ($Tenant.customerId) { $ById[[string]$Tenant.customerId] = $Tenant }
     }
 
-    $Selected = @($Request.Body.selectedTenants | Where-Object { $_ })
-    if ($Selected | Where-Object { $_.customerId -eq 'AllTenants' -or $_.defaultDomainName -eq 'AllTenants' }) {
+    if ($SelectedTenants | Where-Object { $_.customerId -eq 'AllTenants' -or $_.defaultDomainName -eq 'AllTenants' }) {
         if ($Unrestricted) {
             return [pscustomobject]@{ customerId = 'AllTenants'; defaultDomainName = 'AllTenants' }
         }
         return $All | Where-Object { $_.customerId -and $AllowedSet.Contains([string]$_.customerId) }
     }
 
-    foreach ($Entry in $Selected) {
+    foreach ($Entry in $SelectedTenants) {
         $Record = if ($Entry.customerId) { $ById[[string]$Entry.customerId] }
         if (-not $Record) { continue }
         if ($Entry.defaultDomainName -and $Entry.defaultDomainName -ne $Record.defaultDomainName) { continue }

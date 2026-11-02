@@ -1164,6 +1164,9 @@
                       "properties": {
                         "customerId": {
                           "type": "string"
+                        },
+                        "defaultDomainName": {
+                          "type": "string"
                         }
                       }
                     }
@@ -1206,7 +1209,10 @@
           }
         ],
         "x-cipp-role": "Endpoint.Application.ReadWrite",
-        "x-cipp-any-tenant": true
+        "x-cipp-any-tenant": true,
+        "x-cipp-reads-via": [
+          "Resolve-CippBulkSelectedTenant"
+        ]
       }
     },
     "/api/AddConnectionFilter": {
@@ -2333,6 +2339,9 @@
                       "properties": {
                         "customerId": {
                           "type": "string"
+                        },
+                        "defaultDomainName": {
+                          "type": "string"
                         }
                       }
                     }
@@ -2377,7 +2386,8 @@
         "x-cipp-role": "Endpoint.Application.ReadWrite",
         "x-cipp-any-tenant": true,
         "x-cipp-reads-via": [
-          "Get-CIPPEdgeAppBody"
+          "Get-CIPPEdgeAppBody",
+          "Resolve-CippBulkSelectedTenant"
         ]
       }
     },
@@ -4896,6 +4906,9 @@
                       "properties": {
                         "customerId": {
                           "type": "string"
+                        },
+                        "defaultDomainName": {
+                          "type": "string"
                         }
                       }
                     }
@@ -4944,7 +4957,10 @@
           }
         ],
         "x-cipp-role": "Endpoint.Application.ReadWrite",
-        "x-cipp-any-tenant": true
+        "x-cipp-any-tenant": true,
+        "x-cipp-reads-via": [
+          "Resolve-CippBulkSelectedTenant"
+        ]
       }
     },
     "/api/AddNamedLocation": {
@@ -5117,6 +5133,9 @@
                       "properties": {
                         "customerId": {
                           "type": "string"
+                        },
+                        "defaultDomainName": {
+                          "type": "string"
                         }
                       }
                     }
@@ -5170,7 +5189,8 @@
         "x-cipp-role": "Endpoint.Application.ReadWrite",
         "x-cipp-any-tenant": true,
         "x-cipp-reads-via": [
-          "Get-CIPPOfficeAppBody"
+          "Get-CIPPOfficeAppBody",
+          "Resolve-CippBulkSelectedTenant"
         ]
       }
     },
@@ -6855,6 +6875,9 @@
                       "properties": {
                         "customerId": {
                           "type": "string"
+                        },
+                        "defaultDomainName": {
+                          "type": "string"
                         }
                       }
                     }
@@ -6894,7 +6917,10 @@
           }
         ],
         "x-cipp-role": "Endpoint.Application.ReadWrite",
-        "x-cipp-any-tenant": true
+        "x-cipp-any-tenant": true,
+        "x-cipp-reads-via": [
+          "Resolve-CippBulkSelectedTenant"
+        ]
       }
     },
     "/api/AddTeam": {
@@ -8209,6 +8235,9 @@
                       "properties": {
                         "customerId": {
                           "type": "string"
+                        },
+                        "defaultDomainName": {
+                          "type": "string"
                         }
                       }
                     }
@@ -8263,7 +8292,10 @@
           }
         ],
         "x-cipp-role": "Endpoint.Application.ReadWrite",
-        "x-cipp-any-tenant": true
+        "x-cipp-any-tenant": true,
+        "x-cipp-reads-via": [
+          "Resolve-CippBulkSelectedTenant"
+        ]
       }
     },
     "/api/CreateSafeLinksPolicyTemplate": {

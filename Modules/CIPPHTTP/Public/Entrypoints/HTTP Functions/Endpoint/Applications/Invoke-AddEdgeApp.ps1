@@ -7,7 +7,7 @@ function Invoke-AddEdgeApp {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $Tenants = (Resolve-CippBulkSelectedTenant -Request $Request).defaultDomainName
+    $Tenants = (Resolve-CippBulkSelectedTenant -Request $Request -SelectedTenants $Request.Body.selectedTenants).defaultDomainName
     $Headers = $Request.Headers
     $APIName = $Request.Params.CIPPEndpoint
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }

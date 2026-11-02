@@ -27,7 +27,7 @@ Describe 'Bulk endpoint tenant-scope source guard' {
     It 'narrows selectedTenants to the caller scope: <_>' -ForEach $script:ScopedHandlers {
         $Root = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions'
         $Path = Join-Path $Root $_
-        (Get-Content $Path -Raw) | Should -Match 'Test-CippAccess -Request \$Request -TenantList|Resolve-CippBulkSelectedTenant -Request \$Request' `
+        (Get-Content $Path -Raw) | Should -Match 'Test-CippAccess -Request \$Request -TenantList|Resolve-CippBulkSelectedTenant -Request \$Request -SelectedTenants \$Request\.Body\.selectedTenants' `
             -Because "$_ exposes selectedTenants and must filter it against the caller's allowed tenants"
     }
 

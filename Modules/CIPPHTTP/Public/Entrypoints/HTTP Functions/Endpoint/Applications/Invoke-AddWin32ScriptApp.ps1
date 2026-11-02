@@ -37,7 +37,7 @@ function Invoke-AddWin32ScriptApp {
     # Use whichever case was provided
     $AppName = if ($Win32ScriptApp.ApplicationName) { $Win32ScriptApp.ApplicationName } else { $Win32ScriptApp.applicationName }
 
-    $Tenants = (Resolve-CippBulkSelectedTenant -Request $Request).defaultDomainName
+    $Tenants = (Resolve-CippBulkSelectedTenant -Request $Request -SelectedTenants $Request.Body.selectedTenants).defaultDomainName
 
     $Failed = 0
     $Results = foreach ($Tenant in $Tenants) {

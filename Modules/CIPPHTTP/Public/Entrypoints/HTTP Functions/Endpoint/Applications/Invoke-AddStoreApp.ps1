@@ -33,7 +33,7 @@ function Invoke-AddStoreApp {
             'runAsAccount' = $RunAsAccount
         }
     }
-    $Tenants = (Resolve-CippBulkSelectedTenant -Request $Request).defaultDomainName
+    $Tenants = (Resolve-CippBulkSelectedTenant -Request $Request -SelectedTenants $Request.Body.selectedTenants).defaultDomainName
     $Results = foreach ($Tenant in $Tenants) {
         try {
             $CompleteObject = [PSCustomObject]@{

@@ -58,7 +58,7 @@ function Invoke-AddChocoApp {
     $intuneBody.detectionRules[0].path = "$($ENV:SystemDrive)\programdata\chocolatey\lib"
     $intuneBody.detectionRules[0].fileOrFolderName = $PackageName
 
-    $Tenants = (Resolve-CippBulkSelectedTenant -Request $Request).defaultDomainName
+    $Tenants = (Resolve-CippBulkSelectedTenant -Request $Request -SelectedTenants $Request.Body.selectedTenants).defaultDomainName
 
     $Results = foreach ($Tenant in $Tenants) {
         try {

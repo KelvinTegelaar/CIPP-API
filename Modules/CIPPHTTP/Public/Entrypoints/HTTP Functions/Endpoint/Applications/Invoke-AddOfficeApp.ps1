@@ -7,7 +7,7 @@ function Invoke-AddOfficeApp {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $Tenants = (Resolve-CippBulkSelectedTenant -Request $Request).defaultDomainName
+    $Tenants = (Resolve-CippBulkSelectedTenant -Request $Request -SelectedTenants $Request.Body.selectedTenants).defaultDomainName
     # Input bindings are passed in via param block.
     $Headers = $Request.Headers
     $APIName = $Request.Params.CIPPEndpoint
