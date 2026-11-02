@@ -33,8 +33,7 @@ function Invoke-AddStoreApp {
             'runAsAccount' = $RunAsAccount
         }
     }
-    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
-    $Tenants = ($Request.Body.selectedTenants | Where-Object { $AllowedTenants -contains $_.customerId -or $AllowedTenants -contains 'AllTenants' }).defaultDomainName
+    $Tenants = (Resolve-CippBulkSelectedTenant -Request $Request).defaultDomainName
     $Results = foreach ($Tenant in $Tenants) {
         try {
             $CompleteObject = [PSCustomObject]@{
