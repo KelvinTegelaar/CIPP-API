@@ -60,6 +60,21 @@ function Get-CIPPAppPermissionExposure {
         single user's delegated grant) says when and by whom each delegated grant of the last 30 days was added. A
         single user's grant is normally that user's consent: one added by an app other than CIPP or a Microsoft
         service, the client itself included, raises suspicion two steps, also for Microsoft and CIPP apps.
+
+        Exchange RBAC for Applications roles ('Application Mail.Read' and the like) give an app mailbox access in
+        Exchange that Entra does not show. They count like permissions (Type 'ExchangeRole'), rated from the catalog
+        by role name, from the ExoAppRoleAssignments cache (or Exchange with -Live); without it the report covers
+        what Entra shows. A role limited to a management scope or administrative unit is one impact step lower, and
+        RiskReasons says when an Entra permission already gives the same access to every mailbox, so the scope
+        restricts nothing. One assigned in the last 7 days raises suspicion two steps, also for Microsoft and CIPP
+        apps. Exchange does not record who assigned it in the directory audit log.
+
+        Exchange application access policies (the ExoApplicationAccessPolicies cache, or Exchange with -Live) limit
+        the mailbox permissions an app holds in Entra, not its Exchange application roles. An app with a valid
+        RestrictAccess policy reaches only its groups' members, so those permissions are one impact step lower
+        (AccessPolicy 'RestrictAccess'); a DenyAccess policy alone still leaves every other mailbox and lowers nothing.
+        A policy Exchange marks invalid is not counted. Without the policies, those permissions count as reaching
+        every mailbox.
     .PARAMETER TenantFilter
         The tenant to report on.
     .PARAMETER Live
@@ -378,7 +393,148 @@ function Get-CIPPAppPermissionExposure {
         }
     }
 
-    $CippAppId = [System.Environment]::GetEnvironmentVariable('ApplicationID')
+    # Exchange RBAC for Applications: mailbox access Exchange gives an app itself, not visible in Entra. Read best
+    # effort: without it the report covers what Entra shows.
+    $ExoAppAssignments = @()
+    if ($Live) {
+        try {
+            $ExoAppAssignments = @(Get-CIPPExoAppRoleAssignment -TenantFilter $TenantFilter)
+        } catch {
+            Write-Information "Exchange application roles unavailable for $($TenantFilter): $($_.Exception.Message)"
+        }
+    } else {
+        $TypeRows = [System.Collections.Generic.List[object]]::new()
+        foreach ($Item in @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAppRoleAssignments')) {
+            if ($Item.RowKey -ne 'ExoAppRoleAssignments-Count') { $TypeRows.Add($Item) }
+        }
+        if ($TypeRows.Count -gt 0) {
+            $ExoAppAssignments = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoAppRoleAssignments' -Rows $TypeRows.ToArray() -Fields 'role', 'servicePrincipalId', 'enabled', 'customResourceScope', 'customResourceScopeFilter', 'recipientAdministrativeUnitScope', 'whenCreatedUTC')
+        }
+    }
+    foreach ($ExoAssignment in $ExoAppAssignments) {
+        $PrincipalId = [string]$ExoAssignment.servicePrincipalId
+        if ($ExoAssignment.enabled -eq $false -or -not $PrincipalId -or -not $SpById.ContainsKey($PrincipalId)) { continue }
+        $RoleName = [string]$ExoAssignment.role
+        $Entry = $null
+        if (-not $Catalog.ExchangeRole.TryGetValue($RoleName, [ref]$Entry)) {
+            # Microsoft adds application roles over time: one not catalogued yet still reaches mailbox data.
+            $Entry = [PSCustomObject]@{ name = $RoleName; suspicion = 'Medium'; impact = 'High'; categories = @('DataAccess'); coveredBy = @(); reason = 'Exchange application role not in the catalog: it gives the app access to mailbox data.' }
+        }
+        $Impact = [string]$Entry.impact
+        $Reason = [string]$Entry.reason
+        $Scope = 'Organization'
+        $ScopeName = $null
+        if ($ExoAssignment.customResourceScope) {
+            $Scope = 'Management scope'
+            $ScopeName = [string]$ExoAssignment.customResourceScope
+            $Reason = "$Reason Scoped to the management scope $ScopeName$(if ($ExoAssignment.customResourceScopeFilter) { " ($($ExoAssignment.customResourceScopeFilter))" }): impact one step lower."
+        } elseif ($ExoAssignment.recipientAdministrativeUnitScope) {
+            $Scope = 'Administrative unit'
+            $ScopeName = [string]$ExoAssignment.recipientAdministrativeUnitScope
+            $Reason = "$Reason Scoped to the administrative unit $($ScopeName): impact one step lower."
+        }
+        if ($Scope -ne 'Organization') { $Impact = $RankName[[Math]::Max(1, [int]$RiskRank[$Impact] - 1)] }
+        $Created = $null
+        if ($ExoAssignment.whenCreatedUTC -is [datetime]) {
+            $Created = $ExoAssignment.whenCreatedUTC.ToUniversalTime()
+        } elseif ($ExoAssignment.whenCreatedUTC -and [datetimeoffset]::TryParse([string]$ExoAssignment.whenCreatedUTC, [cultureinfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AssumeUniversal, [ref]$Parsed)) {
+            $Created = $Parsed.UtcDateTime
+        }
+        $Permissions = $null
+        if (-not $PermissionsByApp.TryGetValue($PrincipalId, [ref]$Permissions)) {
+            $Permissions = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            $PermissionsByApp[$PrincipalId] = $Permissions
+        }
+        $Permissions["Exchange Online|ExchangeRole|$RoleName|$Scope|$ScopeName"] = [PSCustomObject]@{
+            Api           = 'Exchange Online'
+            Name          = $RoleName
+            Type          = 'ExchangeRole'
+            Suspicion     = [string]$Entry.suspicion
+            Impact        = $Impact
+            Categories    = @($Entry.categories)
+            Reason        = $Reason
+            ConsentType   = $null
+            Scope         = $Scope
+            ScopeName     = $ScopeName
+            ScopeFilter   = if ($Scope -eq 'Management scope') { [string]$ExoAssignment.customResourceScopeFilter } else { $null }
+            CoveredBy     = @($Entry.coveredBy)
+            AddedDateTime = $Created
+            AddedBy       = $null
+            AddedByType   = $null
+        }
+    }
+
+    # Application access policies limit which mailboxes the mailbox permissions an app holds in Entra reach, not its
+    # Exchange application roles. Read best effort: without them those permissions count as reaching every mailbox.
+    $AccessPolicies = @()
+    $AccessPoliciesKnown = $false
+    if ($Live) {
+        try {
+            $AccessPolicies = @(Get-CIPPExoApplicationAccessPolicy -TenantFilter $TenantFilter)
+            $AccessPoliciesKnown = $true
+        } catch {
+            Write-Information "Exchange application access policies unavailable for $($TenantFilter): $($_.Exception.Message)"
+        }
+    } else {
+        $TypeRows = [System.Collections.Generic.List[object]]::new()
+        foreach ($Item in @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoApplicationAccessPolicies')) {
+            if ($Item.RowKey -eq 'ExoApplicationAccessPolicies-Count') { $AccessPoliciesKnown = $true } else { $TypeRows.Add($Item) }
+        }
+        if ($TypeRows.Count -gt 0) {
+            $AccessPoliciesKnown = $true
+            $AccessPolicies = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoApplicationAccessPolicies' -Rows $TypeRows.ToArray() -Fields 'appId', 'accessRight', 'scopeName', 'scopeIdentity', 'isValid')
+        }
+    }
+    if ($AccessPolicies.Count -gt 0) {
+        # The application permissions the policies apply to: Exchange data through Graph, Outlook REST and EWS.
+        $PolicyScopedPermissions = [System.Collections.Generic.HashSet[string]]::new([string[]]@(
+                'Microsoft Graph|Mail.Read', 'Microsoft Graph|Mail.ReadBasic', 'Microsoft Graph|Mail.ReadBasic.All', 'Microsoft Graph|Mail.ReadWrite', 'Microsoft Graph|Mail.Send'
+                'Microsoft Graph|MailboxSettings.Read', 'Microsoft Graph|MailboxSettings.ReadWrite', 'Microsoft Graph|Calendars.Read', 'Microsoft Graph|Calendars.ReadWrite'
+                'Microsoft Graph|Contacts.Read', 'Microsoft Graph|Contacts.ReadWrite'
+                'Exchange Online|full_access_as_app', 'Exchange Online|Mail.Read', 'Exchange Online|Mail.ReadWrite', 'Exchange Online|Mail.Send', 'Exchange Online|Calendars.Read'
+                'Exchange Online|Calendars.ReadWrite', 'Exchange Online|Calendars.ReadWrite.All', 'Exchange Online|Contacts.Read', 'Exchange Online|Contacts.ReadWrite'
+                'Exchange Online|MailboxSettings.Read', 'Exchange Online|MailboxSettings.ReadWrite'
+            ), [System.StringComparer]::OrdinalIgnoreCase)
+        $PoliciesByAppId = @{}
+        foreach ($Policy in $AccessPolicies) {
+            $PolicyAppId = ([string]$Policy.appId).ToLowerInvariant()
+            if (-not $PolicyAppId) { continue }
+            if (-not $PoliciesByAppId.ContainsKey($PolicyAppId)) { $PoliciesByAppId[$PolicyAppId] = [System.Collections.Generic.List[object]]::new() }
+            $PoliciesByAppId[$PolicyAppId].Add($Policy)
+        }
+        foreach ($Pair in $PermissionsByApp.GetEnumerator()) {
+            $Sp = $SpById[$Pair.Key]
+            if (-not $Sp.appId) { continue }
+            # A policy for '*' applies to every app.
+            $AppPolicies = @(@($PoliciesByAppId[([string]$Sp.appId).ToLowerInvariant()]) + @($PoliciesByAppId['*']) | Where-Object { $_ })
+            if ($AppPolicies.Count -eq 0) { continue }
+            $Valid = @($AppPolicies | Where-Object { $_.isValid -ne $false })
+            $Invalid = @($AppPolicies | Where-Object { $_.isValid -eq $false })
+            $GroupName = { param($Policy) if ($Policy.scopeName) { [string]$Policy.scopeName } else { [string]$Policy.scopeIdentity } }
+            # Exchange denies a DenyAccess group's members first, then allows only the members of any RestrictAccess
+            # group: one RestrictAccess policy limits the app to its groups, whatever else applies.
+            $Restrict = @($Valid | Where-Object accessRight -EQ 'RestrictAccess' | ForEach-Object { & $GroupName $_ } | Sort-Object -Unique)
+            $Deny = @($Valid | Where-Object accessRight -EQ 'DenyAccess' | ForEach-Object { & $GroupName $_ } | Sort-Object -Unique)
+            $InvalidNote = if ($Invalid.Count -gt 0) { " Exchange marks the application access policy for $((@($Invalid | ForEach-Object { & $GroupName $_ } | Sort-Object -Unique)) -join ', ') invalid (its group may be gone): not counted." } else { '' }
+            foreach ($D in $Pair.Value.Values) {
+                if ($D.Type -ne 'Application' -or -not $PolicyScopedPermissions.Contains("$($D.Api)|$($D.Name)")) { continue }
+                if ($Restrict.Count -gt 0) {
+                    $D | Add-Member -NotePropertyName AccessPolicy -NotePropertyValue 'RestrictAccess' -Force
+                    $D | Add-Member -NotePropertyName AccessPolicyScope -NotePropertyValue ($Restrict -join ', ') -Force
+                    $D.Impact = $RankName[[Math]::Max(1, [int]$RiskRank[[string]$D.Impact] - 1)]
+                    $D.Reason = "$($D.Reason) Limited by an application access policy to the members of $($Restrict -join ', ')$(if ($Deny.Count -gt 0) { " except those of $($Deny -join ', ')" }): impact one step lower.$InvalidNote"
+                } elseif ($Deny.Count -gt 0) {
+                    $D | Add-Member -NotePropertyName AccessPolicy -NotePropertyValue 'DenyAccess' -Force
+                    $D | Add-Member -NotePropertyName AccessPolicyScope -NotePropertyValue ($Deny -join ', ') -Force
+                    $D.Reason = "$($D.Reason) An application access policy keeps it from the members of $($Deny -join ', '), but it still reaches every other mailbox.$InvalidNote"
+                } else {
+                    $D.Reason = "$($D.Reason)$InvalidNote"
+                }
+            }
+        }
+    }
+
+    $CippAppId =[System.Environment]::GetEnvironmentVariable('ApplicationID')
     $PartnerTenantId = [System.Environment]::GetEnvironmentVariable('TenantID')
     $VendorTenants = Get-CIPPVendorTenantMap
 
@@ -825,6 +981,8 @@ function Get-CIPPAppPermissionExposure {
         $MaxImpact = 0
         $ApplicationCount = 0
         $RoleCount = 0
+        $ExchangeRoleCount = 0
+        $RecentExchangeRole = $null
         $RecentRole = $null
         $RoleAddedByApp = $null
         $Parsed = [datetimeoffset]::MinValue
@@ -840,6 +998,11 @@ function Get-CIPPAppPermissionExposure {
             if ($D.Type -eq 'Application') { $ApplicationCount++ }
             if ($D.ConsentType -eq 'AllPrincipals') { $HasAllPrincipals = $true }
             foreach ($Category in $D.Categories) { [void]$CategorySet.Add([string]$Category) }
+            if ($D.Type -eq 'ExchangeRole') {
+                $ExchangeRoleCount++
+                if (-not $RecentExchangeRole -and $D.AddedDateTime -and ($Now - $D.AddedDateTime).TotalDays -le 7) { $RecentExchangeRole = $D.Name }
+                continue
+            }
             if ($D.Type -ne 'DirectoryRole') { continue }
             $RoleCount++
             $RoleLabel = if ($D.ViaGroupId) { "$($D.Name) (through group $($D.ViaGroupName))" } else { $D.Name }
@@ -916,6 +1079,8 @@ function Get-CIPPAppPermissionExposure {
             $D = $Details[$i]
             $Labels[$i] = if ($D.Type -eq 'DirectoryRole') {
                 '{0}: {1} (directory role{2}{3}, suspicion {4}, impact {5})' -f $D.Api, $D.Name, $(if ($D.Scope -ne 'Tenant') { ", scoped to $($D.DirectoryScopeId)" }), $(if ($D.ViaGroupId) { ", through group $($D.ViaGroupName)" }), $D.Suspicion, $D.Impact
+            } elseif ($D.Type -eq 'ExchangeRole') {
+                '{0}: {1} (Exchange application role{2}, suspicion {3}, impact {4})' -f $D.Api, $D.Name, $(if ($D.Scope -ne 'Organization') { ", scoped to $($D.Scope.ToLowerInvariant()) $($D.ScopeName)" }), $D.Suspicion, $D.Impact
             } elseif ($D.ConsentType) {
                 '{0}: {1} ({2}, suspicion {3}, impact {4}, {5})' -f $D.Api, $D.Name, $D.Type, $D.Suspicion, $D.Impact, $D.ConsentType
             } else {
@@ -930,17 +1095,29 @@ function Get-CIPPAppPermissionExposure {
         $Reasons.Add($(if ($Details.Count -eq 0) {
                     'No catalogued permissions or directory roles'
                 } else {
-                    '{0}: highest impact {1}, highest suspicion {2}' -f $(if ($RoleCount -gt 0) { 'Permissions and directory roles' } else { 'Permissions' }), $RankName[$MaxImpact], $RankName[$MaxSuspicion]
+                    '{0}: highest impact {1}, highest suspicion {2}' -f $(if ($RoleCount -gt 0 -and $ExchangeRoleCount -gt 0) { 'Permissions, directory roles and Exchange application roles' } elseif ($RoleCount -gt 0) { 'Permissions and directory roles' } elseif ($ExchangeRoleCount -gt 0) { 'Permissions and Exchange application roles' } else { 'Permissions' }), $RankName[$MaxImpact], $RankName[$MaxSuspicion]
                 }))
         $AppSuspicion = $MaxSuspicion
         $EffectiveImpact = $MaxImpact
-        if ($ApplicationCount -eq 0 -and $RoleCount -eq 0 -and -not $HasAllPrincipals -and $EffectiveImpact -gt 1) {
+        if ($ApplicationCount -eq 0 -and $RoleCount -eq 0 -and $ExchangeRoleCount -eq 0 -and -not $HasAllPrincipals -and $EffectiveImpact -gt 1) {
             $EffectiveImpact--
             $Reasons.Add('Only delegated permissions, each consented by individual users: limited to what those users can reach (impact one step lower)')
+        }
+        # Entra and Exchange grants add up: a scoped Exchange role restricts nothing when Entra already gives the same
+        # access to every mailbox.
+        foreach ($D in $Details) {
+            if ($D.Type -ne 'ExchangeRole' -or $D.Scope -eq 'Organization') { continue }
+            $CoveredBy = @($D.CoveredBy)
+            # An Entra permission an application access policy limits to a group does not reach every mailbox.
+            $Broader = @(foreach ($Other in $Details) { if ($Other.Type -eq 'Application' -and $Other.AccessPolicy -ne 'RestrictAccess' -and "$($Other.Api)|$($Other.Name)" -in $CoveredBy) { "$($Other.Api) $($Other.Name)" } })
+            if ($Broader.Count -eq 0) { continue }
+            $Reach = if ($AccessPoliciesKnown) { 'which no application access policy limits to a group' } else { 'which reaches every mailbox unless an application access policy limits it' }
+            $Reasons.Add(('{0} is scoped in Exchange to the {1} {2}, but the app also holds {3} in Entra, {4}: the Exchange scope restricts nothing' -f $D.Name, $D.Scope.ToLowerInvariant(), $D.ScopeName, ($Broader -join ', '), $Reach))
         }
         # Access given to the app recently or by another app: raises Microsoft and CIPP apps too.
         $ActorFlags = [System.Collections.Generic.List[string]]::new()
         if ($RecentRole) { $ActorFlags.Add("Directory role $RecentRole assigned in the last 7 days (suspicion two steps higher)") }
+        if ($RecentExchangeRole) { $ActorFlags.Add("Exchange application role $RecentExchangeRole assigned in the last 7 days (suspicion two steps higher)") }
         if ($RoleAddedByApp) { $ActorFlags.Add("Directory role $RoleAddedByApp rather than by a person (suspicion two steps higher)") }
         if ($GrantAddedByApp) { $ActorFlags.Add("$GrantAddedByApp rather than by that user's consent (suspicion two steps higher)") }
         $RiskLevel = 0
@@ -1116,8 +1293,9 @@ function Get-CIPPAppPermissionExposure {
                 Categories                      = $Categories.ToArray()
                 PermissionCount                 = $Details.Count
                 ApplicationPermissionCount      = $ApplicationCount
-                DelegatedPermissionCount        = $Details.Count - $ApplicationCount - $RoleCount
+                DelegatedPermissionCount        = $Details.Count - $ApplicationCount - $RoleCount - $ExchangeRoleCount
                 DirectoryRoleCount              = $RoleCount
+                ExchangeRoleCount               = $ExchangeRoleCount
                 HasAllPrincipalsGrant           = $HasAllPrincipals
                 Permissions                     = $Labels -join '; '
                 PermissionDetails               = $Details

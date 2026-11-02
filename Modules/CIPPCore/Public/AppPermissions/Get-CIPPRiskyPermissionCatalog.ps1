@@ -1,11 +1,11 @@
 function Get-CIPPRiskyPermissionCatalog {
     <#
     .SYNOPSIS
-        Returns Config/RiskyPermissions.json with lookups for app role assignments, delegated grants and directory roles.
+        Returns Config/RiskyPermissions.json with lookups for app role assignments, delegated grants, directory roles and Exchange application roles.
     .DESCRIPTION
         Parsed once per worker and re-read when the file changes. Application entries are keyed on
         'api|id' and delegated entries on 'api|name': Exchange Online's legacy roles reuse Graph ids.
-        Directory role entries are keyed on the role template id.
+        Directory role entries are keyed on the role template id, Exchange application role entries on the role name.
     #>
     [CmdletBinding()]
     param()
@@ -19,6 +19,7 @@ function Get-CIPPRiskyPermissionCatalog {
     $Application = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $Delegated = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $DirectoryRole = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $ExchangeRole = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($Entry in $Entries) {
         if ($Entry.type -eq 'Application') {
             $Application["$($Entry.api)|$($Entry.id)"] = $Entry
@@ -26,6 +27,8 @@ function Get-CIPPRiskyPermissionCatalog {
             $Delegated["$($Entry.api)|$($Entry.name)"] = $Entry
         } elseif ($Entry.type -eq 'DirectoryRole') {
             $DirectoryRole[[string]$Entry.id] = $Entry
+        } elseif ($Entry.type -eq 'ExchangeRole') {
+            $ExchangeRole[[string]$Entry.name] = $Entry
         }
     }
 
@@ -36,6 +39,7 @@ function Get-CIPPRiskyPermissionCatalog {
         Application   = $Application
         Delegated     = $Delegated
         DirectoryRole = $DirectoryRole
+        ExchangeRole  = $ExchangeRole
     }
     return $script:CIPPRiskyPermissionCatalog
 }

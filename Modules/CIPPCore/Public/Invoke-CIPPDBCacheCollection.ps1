@@ -120,6 +120,8 @@ function Invoke-CIPPDBCacheCollection {
             'ExoExternalInOutlook'
             'ExoOutboundConnector'
             'ExoRoleAssignmentPolicy'
+            'ExoAppRoleAssignments'
+            'ExoApplicationAccessPolicies'
             'ExoHostedContentFilterRule'
             'ExoGlobalQuarantinePolicy'
             'ExoOMEConfiguration'

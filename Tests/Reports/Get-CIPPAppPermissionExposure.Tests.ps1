@@ -10,8 +10,9 @@ BeforeAll {
     function Get-Tenants { param($TenantFilter) }
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
     function New-GraphBulkRequest { param($tenantid, $Requests) }
+    function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams) }
 
-    foreach ($Name in 'Get-CIPPRiskyPermissionCatalog.ps1', 'Get-CIPPVendorTenantMap.ps1', 'ConvertFrom-CIPPCredentialAuditEvent.ps1', 'ConvertFrom-CIPPRoleAuditEvent.ps1', 'ConvertFrom-CIPPGrantAuditEvent.ps1', 'Get-CIPPAppPermissionExposure.ps1') {
+    foreach ($Name in 'Get-CIPPRiskyPermissionCatalog.ps1', 'Get-CIPPVendorTenantMap.ps1', 'ConvertFrom-CIPPCredentialAuditEvent.ps1', 'ConvertFrom-CIPPRoleAuditEvent.ps1', 'ConvertFrom-CIPPGrantAuditEvent.ps1', 'Get-CIPPExoAppRoleAssignment.ps1', 'Get-CIPPExoApplicationAccessPolicy.ps1', 'Get-CIPPAppPermissionExposure.ps1') {
         . (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter $Name -File | Select-Object -First 1 -ExpandProperty FullName)
     }
 
@@ -742,6 +743,183 @@ Describe 'Get-CIPPAppPermissionExposure' {
         }
     }
 
+    Context 'Exchange application roles' {
+        BeforeAll {
+            function script:Add-ExoRole {
+                param($Id, $Role, $Owner = 'vendor-tenant', $Publisher = 'Verified Co', $Scope, $Filter, $AdminUnit, $DaysAgo = 400, $Enabled = $true)
+                $Cache = $script:Caches['contoso.onmicrosoft.com']
+                if (-not $Cache.ContainsKey('ExoAppRoleAssignments')) { $Cache.ExoAppRoleAssignments = @() }
+                if ($Id -notin $Cache.ServicePrincipals.id) { $Cache.ServicePrincipals += script:New-Sp -Id $Id -AppId "app-$Id" -Name $Id -Owner $Owner -Publisher $Publisher }
+                $Cache.ExoAppRoleAssignments += [pscustomobject]@{
+                    role = $Role; servicePrincipalId = $Id; enabled = $Enabled; customResourceScope = $Scope; customResourceScopeFilter = $Filter
+                    recipientAdministrativeUnitScope = $AdminUnit; whenCreatedUTC = [datetime]::UtcNow.AddDays(-$DaysAgo).ToString('o')
+                }
+            }
+            function script:Get-Row { param($Id) @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com') | Where-Object ServicePrincipalId -EQ $Id }
+        }
+
+        It 'reports an app whose mailbox access is granted only in Exchange, ignoring disabled assignments and apps not in Entra' {
+            script:Add-ExoRole -Id 'sp-exo' -Role 'Application Mail.ReadWrite'
+            script:Add-ExoRole -Id 'sp-exo' -Role 'Application Mail.Send' -Enabled $false
+            $script:Caches['contoso.onmicrosoft.com'].ExoAppRoleAssignments += [pscustomobject]@{ role = 'Application Mail.Read'; servicePrincipalId = 'sp-gone'; enabled = $true }
+
+            $Rows = @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com')
+            $Row = $Rows | Where-Object ServicePrincipalId -EQ 'sp-exo'
+
+            $Rows.ServicePrincipalId | Should -Not -Contain 'sp-gone'
+            $Row.Risk | Should -BeExactly 'Critical'
+            $Row.ExchangeRoleCount | Should -Be 1
+            $Row.ApplicationPermissionCount | Should -Be 0
+            $Row.DelegatedPermissionCount | Should -Be 0
+            $Row.PermissionDetails[0].Type | Should -BeExactly 'ExchangeRole'
+            $Row.PermissionDetails[0].Scope | Should -BeExactly 'Organization'
+            $Row.PermissionDetails[0].AddedDateTime | Should -BeOfType [datetime]
+            $Row.Permissions | Should -BeExactly 'Exchange Online: Application Mail.ReadWrite (Exchange application role, suspicion High, impact Critical)'
+            $Row.RiskReasons[0] | Should -BeLike 'Permissions and Exchange application roles:*'
+        }
+
+        It 'lowers impact for a scoped role, and says when an Entra permission makes the scope restrict nothing' {
+            script:Add-ExoRole -Id 'sp-scoped' -Role 'Application Mail.Read' -AdminUnit 'au-finance'
+            script:Add-ExoRole -Id 'sp-backup' -Role 'Application Mail.Read' -Scope 'Finance' -Filter "Department -eq 'Finance'"
+
+            $Rows = @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com')
+            $Scoped = $Rows | Where-Object ServicePrincipalId -EQ 'sp-scoped'
+            $Backup = $Rows | Where-Object ServicePrincipalId -EQ 'sp-backup'
+            $BackupRole = @($Backup.PermissionDetails | Where-Object Type -EQ 'ExchangeRole')[0]
+
+            $Scoped.PermissionDetails[0].Scope | Should -BeExactly 'Administrative unit'
+            $Scoped.PermissionDetails[0].Impact | Should -BeExactly 'High'
+            $Scoped.HighestImpact | Should -BeExactly 'High'
+            $Scoped.Permissions | Should -BeLike '*scoped to administrative unit au-finance*'
+            @($Scoped.RiskReasons | Where-Object { $_ -like '*restricts nothing*' }).Count | Should -Be 0
+            $BackupRole.ScopeName | Should -BeExactly 'Finance'
+            $BackupRole.ScopeFilter | Should -BeExactly "Department -eq 'Finance'"
+            $BackupRole.Reason | Should -BeLike "*management scope Finance (Department -eq 'Finance'): impact one step lower."
+            $Backup.RiskReasons | Should -Contain 'Application Mail.Read is scoped in Exchange to the management scope Finance, but the app also holds Microsoft Graph Mail.Read in Entra, which reaches every mailbox unless an application access policy limits it: the Exchange scope restricts nothing'
+        }
+
+        It 'raises a role assigned in the last 7 days, also on a Microsoft app' {
+            script:Add-ExoRole -Id 'sp-new' -Role 'Application Calendars.Read' -DaysAgo 3
+            script:Add-ExoRole -Id 'sp-old' -Role 'Application Calendars.Read' -DaysAgo 40
+            script:Add-ExoRole -Id 'sp-ms' -Role 'Application Calendars.Read' -DaysAgo 2 -Owner $script:MicrosoftTenant
+
+            $Rows = @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com')
+            $New = $Rows | Where-Object ServicePrincipalId -EQ 'sp-new'
+
+            $New.Suspicion | Should -BeExactly 'High'
+            $New.RiskReasons | Should -Contain 'Exchange application role Application Calendars.Read assigned in the last 7 days (suspicion two steps higher)'
+            ($Rows | Where-Object ServicePrincipalId -EQ 'sp-old').Suspicion | Should -BeExactly 'Low'
+            ($Rows | Where-Object ServicePrincipalId -EQ 'sp-ms').Suspicion | Should -BeExactly 'High'
+        }
+
+        It 'rates an application role outside the catalog as mailbox access' {
+            script:Add-ExoRole -Id 'sp-future' -Role 'Application Tasks.ReadWrite'
+
+            $Detail = (script:Get-Row 'sp-future').PermissionDetails[0]
+            "$($Detail.Suspicion)/$($Detail.Impact)" | Should -BeExactly 'Medium/High'
+            $Detail.Reason | Should -BeLike 'Exchange application role not in the catalog*'
+        }
+
+        It 'keeps full impact for an app holding an Exchange role next to per-user delegated grants' {
+            $script:Caches['contoso.onmicrosoft.com'].OAuth2PermissionGrants += [pscustomobject]@{ clientId = 'sp-mix'; resourceId = 'res-graph'; consentType = 'Principal'; scope = 'Mail.Read' }
+            script:Add-ExoRole -Id 'sp-mix' -Role 'Application Calendars.Read'
+
+            (script:Get-Row 'sp-mix').RiskReasons | Should -Not -Contain 'Only delegated permissions, each consented by individual users: limited to what those users can reach (impact one step lower)'
+        }
+    }
+
+    Context 'Exchange application access policies' {
+        BeforeAll {
+            function script:Add-MailApp {
+                param($Id)
+                $Cache = $script:Caches['contoso.onmicrosoft.com']
+                $Cache.ServicePrincipals += script:New-Sp -Id $Id -AppId "app-$Id" -Name $Id -Publisher 'Verified Co'
+                $Cache.AppRoleAssignments += script:New-Assignment -PrincipalId $Id -AppRoleId $script:Ids.MailRead
+                $Cache.AppRoleAssignments += script:New-Assignment -PrincipalId $Id -AppRoleId $script:Ids.DirectoryRead
+            }
+            function script:Add-AccessPolicy {
+                param($AppId, $AccessRight, $Group, $IsValid = $true)
+                $Cache = $script:Caches['contoso.onmicrosoft.com']
+                if (-not $Cache.ContainsKey('ExoApplicationAccessPolicies')) { $Cache.ExoApplicationAccessPolicies = @() }
+                $Cache.ExoApplicationAccessPolicies += [pscustomobject]@{ appId = $AppId; accessRight = $AccessRight; scopeName = $Group; scopeIdentity = $Group; isValid = $IsValid }
+            }
+            function script:Get-MailRead { param($Row) @($Row.PermissionDetails | Where-Object { $_.Type -eq 'Application' -and $_.Name -eq 'Mail.Read' })[0] }
+            function script:Get-AppRow { param($Id) @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com') | Where-Object ServicePrincipalId -EQ $Id }
+        }
+
+        It 'lowers the impact of mailbox permissions a RestrictAccess policy limits, also with a DenyAccess policy next to it' {
+            script:Add-MailApp -Id 'sp-restricted'
+            script:Add-AccessPolicy -AppId 'APP-SP-RESTRICTED' -AccessRight 'RestrictAccess' -Group 'Sales Mailboxes'
+            script:Add-AccessPolicy -AppId 'app-sp-restricted' -AccessRight 'DenyAccess' -Group 'Executives'
+
+            $Row = script:Get-AppRow 'sp-restricted'
+            $MailRead = script:Get-MailRead $Row
+            $DirectoryRead = @($Row.PermissionDetails | Where-Object Name -EQ 'Directory.Read.All')[0]
+
+            $MailRead.Impact | Should -BeExactly 'High'
+            $MailRead.AccessPolicy | Should -BeExactly 'RestrictAccess'
+            $MailRead.AccessPolicyScope | Should -BeExactly 'Sales Mailboxes'
+            $MailRead.Reason | Should -BeLike '*Limited by an application access policy to the members of Sales Mailboxes except those of Executives: impact one step lower.'
+            $DirectoryRead.PSObject.Properties['AccessPolicy'] | Should -BeNullOrEmpty
+            $Row.HighestImpact | Should -BeExactly 'High'
+        }
+
+        It 'lowers nothing for a DenyAccess policy alone' {
+            script:Add-MailApp -Id 'sp-denied'
+            script:Add-AccessPolicy -AppId 'app-sp-denied' -AccessRight 'DenyAccess' -Group 'Executives'
+
+            $MailRead = script:Get-MailRead (script:Get-AppRow 'sp-denied')
+
+            $MailRead.Impact | Should -BeExactly 'Critical'
+            $MailRead.AccessPolicy | Should -BeExactly 'DenyAccess'
+            $MailRead.Reason | Should -BeLike '*keeps it from the members of Executives, but it still reaches every other mailbox.'
+        }
+
+        It 'applies a policy for every app, and does not count one Exchange marks invalid' {
+            script:Add-MailApp -Id 'sp-any'
+            script:Add-MailApp -Id 'sp-broken'
+            script:Add-AccessPolicy -AppId 'app-sp-any' -AccessRight 'RestrictAccess' -Group 'All Staff'
+            script:Add-AccessPolicy -AppId 'app-sp-broken' -AccessRight 'RestrictAccess' -Group 'Deleted Group' -IsValid $false
+            script:Add-AccessPolicy -AppId '*' -AccessRight 'DenyAccess' -Group 'Board'
+
+            $Rows = @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com')
+            $Any = script:Get-MailRead ($Rows | Where-Object ServicePrincipalId -EQ 'sp-any')
+            $Broken = script:Get-MailRead ($Rows | Where-Object ServicePrincipalId -EQ 'sp-broken')
+
+            $Any.Reason | Should -BeLike '*members of All Staff except those of Board:*'
+            $Broken.AccessPolicy | Should -BeExactly 'DenyAccess'
+            $Broken.Impact | Should -BeExactly 'Critical'
+            $Broken.Reason | Should -BeLike '*marks the application access policy for Deleted Group invalid (its group may be gone): not counted.'
+        }
+
+        It 'does not limit Exchange application roles' {
+            script:Add-AccessPolicy -AppId 'app-sp-exo' -AccessRight 'RestrictAccess' -Group 'Sales Mailboxes'
+            $Cache = $script:Caches['contoso.onmicrosoft.com']
+            $Cache.ServicePrincipals += script:New-Sp -Id 'sp-exo' -AppId 'app-sp-exo' -Name 'Exo App'
+            $Cache.ExoAppRoleAssignments = @([pscustomobject]@{ role = 'Application Mail.Read'; servicePrincipalId = 'sp-exo'; enabled = $true })
+
+            $Role = (script:Get-AppRow 'sp-exo').PermissionDetails[0]
+
+            $Role.Impact | Should -BeExactly 'Critical'
+            $Role.PSObject.Properties['AccessPolicy'] | Should -BeNullOrEmpty
+        }
+
+        It 'says a scoped Exchange role restricts nothing only when no RestrictAccess policy limits the Entra permission' {
+            $Cache = $script:Caches['contoso.onmicrosoft.com']
+            script:Add-MailApp -Id 'sp-limited'
+            script:Add-AccessPolicy -AppId 'app-sp-limited' -AccessRight 'RestrictAccess' -Group 'Finance Mailboxes'
+            $Cache.ExoAppRoleAssignments = @(
+                [pscustomobject]@{ role = 'Application Mail.Read'; servicePrincipalId = 'sp-limited'; enabled = $true; customResourceScope = 'Finance' }
+                [pscustomobject]@{ role = 'Application Mail.Read'; servicePrincipalId = 'sp-backup'; enabled = $true; customResourceScope = 'Finance' }
+            )
+
+            $Rows = @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com')
+
+            @(($Rows | Where-Object ServicePrincipalId -EQ 'sp-limited').RiskReasons | Where-Object { $_ -like '*restricts nothing*' }).Count | Should -Be 0
+            ($Rows | Where-Object ServicePrincipalId -EQ 'sp-backup').RiskReasons | Should -Contain 'Application Mail.Read is scoped in Exchange to the management scope Finance, but the app also holds Microsoft Graph Mail.Read in Entra, which no application access policy limits to a group: the Exchange scope restricts nothing'
+        }
+    }
+
     Context 'sign-in activity from the reporting database' {
         It 'reports the last sign-in of any kind and how stale it is' {
             $Recent = [datetime]::UtcNow.AddDays(-10).ToString('o')
@@ -820,6 +998,79 @@ Describe 'Get-CIPPAppPermissionExposure' {
             $Rows[0].CacheTimestamp | Should -BeNullOrEmpty
             Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*appRoleAssignedTo*' }
             Should -Invoke Get-CIPPDbItem -Times 0 -ParameterFilter { $Type -ne 'ServicePrincipalSignInActivities' }
+        }
+
+        It 'reads Exchange application roles from Exchange, with the filter of their management scope' {
+            Mock New-GraphGetRequest {
+                switch -Wildcard ($uri) {
+                    '*/servicePrincipals?*' {
+                        script:New-Sp -Id 'res-graph' -AppId $script:GraphAppId -Name 'Microsoft Graph' -Owner $script:MicrosoftTenant
+                        script:New-Sp -Id 'sp-exo' -AppId 'app-exo' -Name 'Exo App' -Publisher 'Verified Co'
+                    }
+                    default { }
+                }
+            }
+            Mock New-GraphBulkRequest { }
+            Mock New-ExoRequest {
+                switch ($cmdlet) {
+                    'Get-ServicePrincipal' { [pscustomobject]@{ Identity = 'exo-sp-1'; Name = 'exo-sp-1'; AppId = 'app-exo'; ObjectId = 'sp-exo'; DisplayName = 'Exo App' } }
+                    'Get-ManagementRoleAssignment' {
+                        [pscustomobject]@{ Guid = 'ra-1'; Role = 'Application Mail.Send'; RoleAssignee = 'exo-sp-1'; Enabled = $true; CustomResourceScope = 'Finance'; WhenCreatedUTC = [datetime]::UtcNow.AddDays(-100) }
+                        [pscustomobject]@{ Guid = 'ra-2'; Role = 'Mail Recipients'; RoleAssignee = 'Organization Management'; Enabled = $true }
+                    }
+                    'Get-ManagementScope' { [pscustomobject]@{ Name = 'Finance'; RecipientFilter = "Department -eq 'Finance'" } }
+                }
+            }
+
+            $Row = @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com' -Live)[0]
+
+            $Row.ServicePrincipalId | Should -BeExactly 'sp-exo'
+            $Row.PermissionDetails[0].Name | Should -BeExactly 'Application Mail.Send'
+            $Row.PermissionDetails[0].ScopeFilter | Should -BeExactly "Department -eq 'Finance'"
+            $Row.HighestImpact | Should -BeExactly 'High'
+            Should -Invoke Get-CIPPDbItem -Times 0 -ParameterFilter { $Type -eq 'ExoAppRoleAssignments' }
+        }
+
+        It 'covers what Entra shows when Exchange cannot be read' {
+            Mock New-GraphGetRequest {
+                switch -Wildcard ($uri) {
+                    '*/servicePrincipals?*' {
+                        script:New-Sp -Id 'res-graph' -AppId $script:GraphAppId -Name 'Microsoft Graph' -Owner $script:MicrosoftTenant
+                        script:New-Sp -Id 'sp-backup' -AppId 'app-backup' -Name 'Backup Vendor'
+                    }
+                    '*/servicePrincipals/res-graph/appRoleAssignedTo*' { script:New-Assignment -PrincipalId 'sp-backup' -AppRoleId $script:Ids.MailRead }
+                    default { }
+                }
+            }
+            Mock New-GraphBulkRequest { }
+            Mock New-ExoRequest { throw 'Exchange unavailable' }
+
+            $Rows = @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com' -Live)
+
+            $Rows.AppId | Should -Be @('app-backup')
+        }
+
+        It 'reads application access policies from Exchange' {
+            Mock New-GraphGetRequest {
+                switch -Wildcard ($uri) {
+                    '*/servicePrincipals?*' {
+                        script:New-Sp -Id 'res-graph' -AppId $script:GraphAppId -Name 'Microsoft Graph' -Owner $script:MicrosoftTenant
+                        script:New-Sp -Id 'sp-backup' -AppId 'app-backup' -Name 'Backup Vendor'
+                    }
+                    '*/servicePrincipals/res-graph/appRoleAssignedTo*' { script:New-Assignment -PrincipalId 'sp-backup' -AppRoleId $script:Ids.MailRead }
+                    default { }
+                }
+            }
+            Mock New-GraphBulkRequest { }
+            Mock New-ExoRequest {
+                if ($cmdlet -eq 'Get-ApplicationAccessPolicy') { [pscustomobject]@{ Identity = 'contoso\pol-1'; AppId = 'app-backup'; AccessRight = 'RestrictAccess'; ScopeName = 'Backup Scope'; IsValid = $true } }
+            }
+
+            $Row = @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com' -Live)[0]
+
+            $Row.PermissionDetails[0].AccessPolicy | Should -BeExactly 'RestrictAccess'
+            $Row.HighestImpact | Should -BeExactly 'High'
+            Should -Invoke Get-CIPPDbItem -Times 0 -ParameterFilter { $Type -eq 'ExoApplicationAccessPolicies' }
         }
 
         It 'reads sign-in activity from the cache instead of calling the slow report endpoint' {
