@@ -177,14 +177,14 @@ function Register-CIPPExtensionScheduledTasks {
         }
     }
     foreach ($Task in $PushTasks) {
-        if ($Task.Tenant -notin $MappedTenants) {
+        if ($Task.SyncType -in $Extensions -and $Task.Tenant -notin $MappedTenants) {
             Write-Information "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)"
             $Entity = $Task | Select-Object -Property PartitionKey, RowKey
             Remove-CIPPAzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
         }
     }
     foreach ($Task in $SherwebMigTasks) {
-        if ($Task.Tenant -notin $MappedTenants) {
+        if ('Sherweb' -in $Extensions -and $Task.Tenant -notin $MappedTenants) {
             Write-Information "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)"
             $Entity = $Task | Select-Object -Property PartitionKey, RowKey
             Remove-CIPPAzDataTableEntity -Force @ScheduledTasksTable -Entity $Entity
