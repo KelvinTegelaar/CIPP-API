@@ -192,6 +192,18 @@ Describe 'Get-CIPPRolePermissions' {
         }
     }
 
+    It 'surfaces BlockAllTenants, defaulting to $false when the column is missing' {
+        Mock Get-CIPPAzDataTableEntity {
+            [PSCustomObject]@{ RowKey = 'helpdesk'; Permissions = '{}'; PermissionRules = '{"Include":["Identity.*.Read"],"Exclude":[]}' }
+        }
+        (Get-CIPPRolePermissions -RoleName 'helpdesk').BlockAllTenants | Should -BeExactly $false
+
+        Mock Get-CIPPAzDataTableEntity {
+            [PSCustomObject]@{ RowKey = 'helpdesk'; Permissions = '{}'; PermissionRules = '{"Include":["Identity.*.Read"],"Exclude":[]}'; BlockAllTenants = $true }
+        }
+        (Get-CIPPRolePermissions -RoleName 'helpdesk').BlockAllTenants | Should -BeExactly $true
+    }
+
     It 'throws for an unknown role' {
         Mock Get-CIPPAzDataTableEntity { $null }
         { Get-CIPPRolePermissions -RoleName 'missing' } | Should -Throw '*not found*'

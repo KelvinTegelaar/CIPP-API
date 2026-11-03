@@ -70,6 +70,10 @@ function Test-CippRoleTenantScope {
 
     $Tenants = @($Tenants)
 
+    if ($TenantFilter -eq 'AllTenants' -and $Role.BlockAllTenants) {
+        return $false
+    }
+
     if (($Role.BlockedTenants | Measure-Object).Count -eq 0 -and $Role.AllowedTenants -contains 'AllTenants') {
         return $true
     }

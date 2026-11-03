@@ -20320,6 +20320,9 @@
                   "AllowedTenants": {
                     "type": "string"
                   },
+                  "BlockAllTenants": {
+                    "type": "boolean"
+                  },
                   "BlockedEndpoints": {
                     "type": "string"
                   },

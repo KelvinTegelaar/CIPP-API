@@ -84,6 +84,7 @@ function Get-CippAccessScopeRule {
         AllowedTenants  = $AllowedTenants
         BlockedTenants  = $BlockedTenants
         AllowedGroups   = $AllowedGroups
+        BlockAllTenants = [bool]$Permission.BlockAllTenants
     }
 
     # Entries keyed on a superseded version are dead weight; drop the lot rather than track ages

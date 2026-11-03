@@ -90,6 +90,7 @@ function Invoke-ExecCustomRole {
                         'AllowedTenants'       = "$($Request.Body.AllowedTenants | ConvertTo-Json -Compress)"
                         'BlockedTenants'       = "$($Request.Body.BlockedTenants | ConvertTo-Json -Compress)"
                         'BlockedEndpoints'     = "$($Request.Body.BlockedEndpoints | ConvertTo-Json -Compress)"
+                        'BlockAllTenants'      = [bool]$Request.Body.BlockAllTenants
                         'AllowedRolesTemplate' = "$($Request.Body.AllowedRolesTemplate | ConvertTo-Json -Compress)"
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $Role -Force | Out-Null
@@ -174,6 +175,7 @@ function Invoke-ExecCustomRole {
                     'AllowedTenants'       = $ExistingRole.AllowedTenants
                     'BlockedTenants'       = $ExistingRole.BlockedTenants
                     'BlockedEndpoints'     = $ExistingRole.BlockedEndpoints
+                    'BlockAllTenants'      = [bool]$ExistingRole.BlockAllTenants
                     'AllowedRolesTemplate' = $ExistingRole.AllowedRolesTemplate
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $NewRole -Force | Out-Null

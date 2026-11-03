@@ -40,6 +40,7 @@ BeforeAll {
 
     . $ScopeHelperPath
     . $FunctionPath
+    . (Join-Path $AuthDir 'Test-CippAllTenantsBlocked.ps1')
     . (Join-Path $PrivateAuthDir 'New-CippMeResponse.ps1')
     . (Join-Path $PrivateAuthDir 'Get-CippRequestIPAddress.ps1')
     . (Join-Path $PrivateAuthDir 'Find-CippBaseRole.ps1')
@@ -511,6 +512,47 @@ Describe 'Test-CIPPAccess tenant-filter permutations' {
         }
     }
 
+    Context 'BlockAllTenants role flag' {
+        It 'scoped role with the flag: AllTenants Read request is denied' {
+            Mock -CommandName Get-CIPPRolePermissions -MockWith {
+                [pscustomobject]@{ Role = 'roleT1'; Permissions = @('Identity.User.Read'); AllowedTenants = @('tenant-1'); BlockedTenants = @(); BlockedEndpoints = @(); BlockAllTenants = $true }
+            }
+            { Test-CIPPAccess -Request (New-UserRequest -CIPPEndpoint 'ListUsers' -UserRoles @('roleT1') -Query @{ tenantFilter = 'AllTenants' }) } |
+                Should -Throw -ExpectedMessage '*Access to this tenant is not allowed*'
+        }
+
+        It 'unrestricted role with the flag: AllTenants is denied, a single tenant is still allowed' {
+            Mock -CommandName Get-CIPPRolePermissions -MockWith {
+                [pscustomobject]@{ Role = 'roleAll'; Permissions = @('Identity.User.Read'); AllowedTenants = @('AllTenants'); BlockedTenants = @(); BlockedEndpoints = @(); BlockAllTenants = $true }
+            }
+            { Test-CIPPAccess -Request (New-UserRequest -CIPPEndpoint 'ListUsers' -UserRoles @('roleAll') -Query @{ tenantFilter = 'AllTenants' }) } |
+                Should -Throw -ExpectedMessage '*Access to this tenant is not allowed*'
+            Test-CIPPAccess -Request (New-UserRequest -CIPPEndpoint 'ListUsers' -UserRoles @('roleAll') -Query @{ tenantFilter = 'tenant-2' }) |
+                Should -BeTrue
+        }
+
+        It 'a second role without the flag still grants AllTenants (union)' {
+            Mock -CommandName Get-CIPPRolePermissions -MockWith {
+                param($Role)
+                switch ($Role) {
+                    'blocked' { [pscustomobject]@{ Role = 'blocked'; Permissions = @('Identity.User.Read'); AllowedTenants = @('AllTenants'); BlockedTenants = @(); BlockedEndpoints = @(); BlockAllTenants = $true } }
+                    'open' { [pscustomobject]@{ Role = 'open'; Permissions = @('Identity.User.Read'); AllowedTenants = @('tenant-1'); BlockedTenants = @(); BlockedEndpoints = @(); BlockAllTenants = $false } }
+                    default { throw "unexpected $Role" }
+                }
+            }
+            Test-CIPPAccess -Request (New-UserRequest -CIPPEndpoint 'ListUsers' -UserRoles @('blocked', 'open') -Query @{ tenantFilter = 'AllTenants' }) |
+                Should -BeTrue
+        }
+
+        It 'flag absent: unrestricted role keeps AllTenants Read access' {
+            Mock -CommandName Get-CIPPRolePermissions -MockWith {
+                [pscustomobject]@{ Role = 'roleAll'; Permissions = @('Identity.User.Read'); AllowedTenants = @('AllTenants'); BlockedTenants = @(); BlockedEndpoints = @() }
+            }
+            Test-CIPPAccess -Request (New-UserRequest -CIPPEndpoint 'ListUsers' -UserRoles @('roleAll') -Query @{ tenantFilter = 'AllTenants' }) |
+                Should -BeTrue
+        }
+    }
+
     Context 'filter precedence' {
         It 'Body.tenantFilter.value (object form) resolves the target when Query has no filter' {
             Mock -CommandName Get-CIPPRolePermissions -MockWith {
@@ -650,5 +692,40 @@ Describe 'Test-CIPPAccess IP quirks' {
         Mock -CommandName Test-IpInRange -MockWith { throw 'must not be called with an empty IP' }
         Test-CIPPAccess -Request (New-UserRequest -UserRoles @('editor') -OmitForwardedFor) | Should -BeTrue
         Should -Invoke -CommandName Test-IpInRange -Times 0
+    }
+}
+
+Describe 'Test-CippAllTenantsBlocked' {
+    BeforeEach {
+        Mock -CommandName Get-CippAccessScopeRule -MockWith {
+            param($Role)
+            switch ($Role) {
+                'blocked' { [pscustomobject]@{ Role = 'blocked'; Unrestricted = $true; BlockAllTenants = $true } }
+                'open' { [pscustomobject]@{ Role = 'open'; Unrestricted = $true; BlockAllTenants = $false } }
+                default { throw "Role $Role not found." }
+            }
+        }
+    }
+
+    It 'blocks when every custom role sets the flag, even alongside a non-admin base role' {
+        Test-CippAllTenantsBlocked -Roles @('editor', 'blocked') | Should -BeTrue
+    }
+
+    It 'does not block when any custom role leaves the flag unset' {
+        Test-CippAllTenantsBlocked -Roles @('blocked', 'open') | Should -BeFalse
+    }
+
+    It 'never blocks admin or superadmin' {
+        Test-CippAllTenantsBlocked -Roles @('admin', 'blocked') | Should -BeFalse
+        Test-CippAllTenantsBlocked -Roles @('superadmin', 'blocked') | Should -BeFalse
+    }
+
+    It 'does not block base-role-only callers' {
+        Test-CippAllTenantsBlocked -Roles @('editor') | Should -BeFalse
+    }
+
+    It 'reads the roles Test-CIPPAccess recorded for the request by default' {
+        $script:CippAccessUserContext = [pscustomobject]@{ User = 'u'; Roles = @('blocked') }
+        Test-CippAllTenantsBlocked | Should -BeTrue
     }
 }

@@ -153,6 +153,7 @@ function Invoke-ListCustomRole {
             $IPRanges = @()
         }
         $Role | Add-Member -NotePropertyName IPRange -NotePropertyValue $IPRanges -Force
+        $Role | Add-Member -NotePropertyName BlockAllTenants -NotePropertyValue ([bool]$Role.BlockAllTenants) -Force
 
         $RoleList.Add($Role)
     }
