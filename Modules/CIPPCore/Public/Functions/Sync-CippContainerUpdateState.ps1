@@ -50,18 +50,20 @@ function Sync-CippContainerUpdateState {
     }
 
     $Entity = @{
-        PartitionKey    = 'Settings'
-        RowKey          = 'UpdateConfig'
-        AutoUpdate      = $AutoUpdate
-        CheckInterval   = $CheckInterval
-        CheckTime       = $CheckTime
-        LastCheck       = [string]($Settings.LastCheck ?? '')
-        UpdateAvailable = $UpdateAvailable
-        RunningVersion  = $StoredRunning
-        RemoteVersion   = $StoredRemote
-        RemoteDigest    = [string]($Settings.RemoteDigest ?? '')
-        RemoteBuildDate = [string]($Settings.RemoteBuildDate ?? '')
-        CheckedTag      = $CheckedTag
+        PartitionKey      = 'Settings'
+        RowKey            = 'UpdateConfig'
+        AutoUpdate        = $AutoUpdate
+        CheckInterval     = $CheckInterval
+        CheckTime         = $CheckTime
+        LastCheck         = [string]($Settings.LastCheck ?? '')
+        UpdateAvailable   = $UpdateAvailable
+        RunningVersion    = $StoredRunning
+        RemoteVersion     = $StoredRemote
+        RemoteDigest      = [string]($Settings.RemoteDigest ?? '')
+        RemoteBuildDate   = [string]($Settings.RemoteBuildDate ?? '')
+        CheckedTag        = $CheckedTag
+        AttestationState  = [string]($Settings.AttestationState ?? '')
+        AttestationReason = [string]($Settings.AttestationReason ?? '')
     }
     if ($NeedsWrite) {
         Add-CIPPAzDataTableEntity @SettingsTable -Entity $Entity -Force | Out-Null

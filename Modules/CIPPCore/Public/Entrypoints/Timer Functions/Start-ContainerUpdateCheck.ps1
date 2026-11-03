@@ -175,23 +175,35 @@ function Start-ContainerUpdateCheck {
                 $UpdateAvailable = $true
             }
 
+            # Verified on every check so an up-to-date instance still shows whether its channel image is attested.
+            $Attestation = [pscustomobject]@{ State = ''; Reason = '' }
+            if ($RemoteDigest) {
+                $Attestation = Test-CIPPContainerAttestation -ImagePath $imagePath -Digest $RemoteDigest -Tag $CheckTag -AuthHeader $authHeader
+            }
+
             $UpdateEntity = @{
-                PartitionKey    = 'Settings'
-                RowKey          = 'UpdateConfig'
-                AutoUpdate      = [string]($Settings.AutoUpdate ?? 'true')
-                CheckInterval   = [string]($Settings.CheckInterval ?? '1h')
-                CheckTime       = [string]($Settings.CheckTime ?? '23')
-                LastCheck       = [string][int64](([DateTimeOffset]::UtcNow).ToUnixTimeSeconds())
-                UpdateAvailable = [string]$UpdateAvailable
-                RunningVersion  = [string]($RunningVersion ?? '')
-                RemoteVersion   = [string]($RemoteVersion ?? '')
-                RemoteDigest    = [string]($RemoteDigest ?? '')
-                RemoteBuildDate = [string]($RemoteBuildDate ?? '')
-                CheckedTag      = [string]($CheckTag ?? '')
+                PartitionKey      = 'Settings'
+                RowKey            = 'UpdateConfig'
+                AutoUpdate        = [string]($Settings.AutoUpdate ?? 'true')
+                CheckInterval     = [string]($Settings.CheckInterval ?? '1h')
+                CheckTime         = [string]($Settings.CheckTime ?? '23')
+                LastCheck         = [string][int64](([DateTimeOffset]::UtcNow).ToUnixTimeSeconds())
+                UpdateAvailable   = [string]$UpdateAvailable
+                RunningVersion    = [string]($RunningVersion ?? '')
+                RemoteVersion     = [string]($RemoteVersion ?? '')
+                RemoteDigest      = [string]($RemoteDigest ?? '')
+                RemoteBuildDate   = if ($RemoteBuildDate -is [DateTime]) { $RemoteBuildDate.ToUniversalTime().ToString('o') } else { [string]($RemoteBuildDate ?? '') }
+                CheckedTag        = [string]($CheckTag ?? '')
+                AttestationState  = [string]$Attestation.State
+                AttestationReason = [string]$Attestation.Reason
             }
             Add-CIPPAzDataTableEntity @SettingsTable -Entity $UpdateEntity -Force | Out-Null
 
-            if ($UpdateAvailable -and $Settings.AutoUpdate -eq 'true') {
+            if ($UpdateAvailable -and $Attestation.State -eq 'Failed') {
+                Write-LogMessage -API 'ContainerUpdateCheck' -message "Container update $RemoteVersion failed provenance verification: $($Attestation.Reason). Auto-restart withheld." -sev Warning
+            } elseif ($UpdateAvailable -and $Attestation.State -eq 'Unverifiable') {
+                Write-Information "Container update $RemoteVersion provenance could not be verified, retrying next check: $($Attestation.Reason)"
+            } elseif ($UpdateAvailable -and $Settings.AutoUpdate -eq 'true' -and $Attestation.State -eq 'Verified') {
                 Write-LogMessage -API 'ContainerUpdateCheck' -message "Auto-update: new container version detected (running: $RunningVersion, remote: $RemoteVersion). Restarting." -sev Info
                 try {
                     Request-CIPPRestart -Reason 'Auto-update: new container version available'
@@ -200,6 +212,9 @@ function Start-ContainerUpdateCheck {
                 }
             } elseif ($UpdateAvailable) {
                 Write-LogMessage -API 'ContainerUpdateCheck' -message "Container update available (running: $RunningVersion, remote: $RemoteVersion)" -sev Info
+            } elseif ($Attestation.State -in 'Failed', 'Unverifiable') {
+                # Information only: channels whose current image predates attestation would otherwise warn every check.
+                Write-Information "Container is up to date. Version: $RunningVersion. Channel image provenance $($Attestation.State): $($Attestation.Reason)"
             } else {
                 Write-Information "Container is up to date. Version: $RunningVersion"
             }

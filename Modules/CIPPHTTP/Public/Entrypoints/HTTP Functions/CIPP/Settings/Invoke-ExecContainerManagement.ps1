@@ -95,7 +95,8 @@ function Invoke-ExecContainerManagement {
         return [pscustomobject]@{
             Digest  = [string]$digest
             Version = [string]$version
-            Created = [string]$created
+            # ConvertFrom-Json yields a local DateTime; a bare string of it loses the zone.
+            Created = if ($created -is [DateTime]) { $created.ToUniversalTime().ToString('o') } else { [string]$created }
         }
     }
 
@@ -168,15 +169,17 @@ function Invoke-ExecContainerManagement {
                 # hourly checks, preferred time 23:00).
                 $Settings = Sync-CippContainerUpdateState
                 $UpdateInfo = @{
-                    AutoUpdate      = $true
-                    CheckInterval   = '1h'
-                    CheckTime       = '23'
-                    LastCheck       = $null
-                    UpdateAvailable = $false
-                    RunningVersion  = $null
-                    RemoteVersion   = $null
-                    RemoteDigest    = $null
-                    RemoteBuildDate = $null
+                    AutoUpdate        = $true
+                    CheckInterval     = '1h'
+                    CheckTime         = '23'
+                    LastCheck         = $null
+                    UpdateAvailable   = $false
+                    RunningVersion    = $null
+                    RemoteVersion     = $null
+                    RemoteDigest      = $null
+                    RemoteBuildDate   = $null
+                    AttestationState  = $null
+                    AttestationReason = $null
                 }
                 if ($Settings) {
                     $UpdateInfo.AutoUpdate = $Settings.AutoUpdate -eq 'true'
@@ -188,6 +191,8 @@ function Invoke-ExecContainerManagement {
                     $UpdateInfo.RemoteVersion = $Settings.RemoteVersion ?? $null
                     $UpdateInfo.RemoteDigest = $Settings.RemoteDigest ?? $null
                     $UpdateInfo.RemoteBuildDate = $Settings.RemoteBuildDate ?? $null
+                    $UpdateInfo.AttestationState = $Settings.AttestationState ?? $null
+                    $UpdateInfo.AttestationReason = $Settings.AttestationReason ?? $null
                 }
 
                 # Note: the branch-build tag list is NOT fetched here. Status is polled, and each
@@ -329,6 +334,12 @@ function Invoke-ExecContainerManagement {
                     $UpdateAvailable = $true
                 }
 
+                $ImagePath = $CurrentImage -replace '^ghcr\.io/', '' -replace ':.*$', ''
+                $Attestation = [pscustomobject]@{ State = ''; Reason = '' }
+                if ($RemoteDigest) {
+                    $Attestation = Test-CIPPContainerAttestation -ImagePath $ImagePath -Digest $RemoteDigest -Tag $CheckTag
+                }
+
                 $Entity = @{
                     PartitionKey    = 'Settings'
                     RowKey          = 'UpdateConfig'
@@ -339,6 +350,8 @@ function Invoke-ExecContainerManagement {
                     RemoteDigest    = [string]($RemoteDigest ?? '')
                     RemoteBuildDate = [string]($RemoteBuildDate ?? '')
                     CheckedTag      = [string]($CheckTag ?? '')
+                    AttestationState = [string]$Attestation.State
+                    AttestationReason = [string]$Attestation.Reason
                 }
                 $Existing = Get-CIPPAzDataTableEntity @SettingsTable -Filter "PartitionKey eq 'Settings' and RowKey eq 'UpdateConfig'" | Select-Object -First 1
                 if ($Existing) {
@@ -352,7 +365,10 @@ function Invoke-ExecContainerManagement {
                 Add-CIPPAzDataTableEntity @SettingsTable -Entity $Entity -Force | Out-Null
 
                 $Settings = Sync-CippContainerUpdateState
-                if ($UpdateAvailable -and $Settings.AutoUpdate -eq 'true') {
+                if ($UpdateAvailable -and $Attestation.State -eq 'Failed') {
+                    $Result = "Update available but withheld: $RemoteVersion failed provenance verification ($($Attestation.Reason))."
+                    Write-LogMessage -API $APIName -headers $Headers -message "Container update $RemoteVersion failed provenance verification: $($Attestation.Reason). Auto-restart withheld." -sev Warning
+                } elseif ($UpdateAvailable -and $Settings.AutoUpdate -eq 'true' -and $Attestation.State -eq 'Verified') {
                     Write-LogMessage -API $APIName -headers $Headers -message "Auto-update: new container version detected (running: $RunningVersion, remote: $RemoteVersion). Restarting." -sev Info
                     try { Request-CIPPRestart -Reason 'Auto-update: new container version available' } catch {}
                     $Result = "Update available — container restart initiated (auto-update enabled). Running: $RunningVersion, Remote: $RemoteVersion"
