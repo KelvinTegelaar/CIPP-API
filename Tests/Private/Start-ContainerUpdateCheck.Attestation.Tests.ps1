@@ -6,12 +6,15 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Entrypoints/Timer Functions/Start-ContainerUpdateCheck.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Invoke-CIPPContainerUpdateCheck.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Get-CIPPGHCRImageInfo.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/ConvertFrom-CIPPContainerImageRef.ps1')
 
     function Get-CippTable { param($tablename) @{} }
     function Sync-CippContainerUpdateState { }
     function Get-CIPPAzFunctionAppSubId { }
     function Get-CIPPFunctionAppResourceGroup { param($SiteName) }
-    function New-CIPPAzRestRequest { param($Uri, $Method) }
+    function New-CIPPAzRestRequest { param($Uri, $Method, $Body, $ContentType) }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function Test-CIPPContainerAttestation { param($ImagePath, $Digest, $Tag, $AuthHeader) }
     function Write-LogMessage { param($headers, $API, $message, $Sev, $LogData) }
