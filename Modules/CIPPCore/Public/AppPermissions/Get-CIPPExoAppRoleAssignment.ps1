@@ -11,15 +11,21 @@ function Get-CIPPExoAppRoleAssignment {
         assignments are thrown; a scope filter that cannot be read is left out.
     .PARAMETER TenantFilter
         The tenant to read
+    .PARAMETER ServicePrincipals
+        Get-ServicePrincipal output the caller already read; read from Exchange when not given
+    .PARAMETER ManagementScopes
+        Get-ManagementScope output the caller already read; read from Exchange when needed and not given
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+        [object[]]$ServicePrincipals,
+        [object[]]$ManagementScopes
     )
 
     # No service principal registered in Exchange means no app can hold an Exchange application role.
-    $ExoServicePrincipals = @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ServicePrincipal')
+    $ExoServicePrincipals = if ($PSBoundParameters.ContainsKey('ServicePrincipals')) { @($ServicePrincipals | Where-Object { $_ }) } else { @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ServicePrincipal') }
     if ($ExoServicePrincipals.Count -eq 0) { return @() }
 
     # An assignment names the app by its Exchange identity: index every name it may use.
@@ -37,7 +43,8 @@ function Get-CIPPExoAppRoleAssignment {
     $ScopeFilters = @{}
     if (@($Assignments | Where-Object { $_.CustomResourceScope }).Count -gt 0) {
         try {
-            foreach ($Scope in @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ManagementScope')) {
+            $Scopes = if ($PSBoundParameters.ContainsKey('ManagementScopes')) { @($ManagementScopes) } else { @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ManagementScope') }
+            foreach ($Scope in $Scopes) {
                 if ($Scope.Name) { $ScopeFilters[[string]$Scope.Name] = [string]$Scope.RecipientFilter }
             }
         } catch {
@@ -57,6 +64,7 @@ function Get-CIPPExoAppRoleAssignment {
             role                             = [string]$Assignment.Role
             roleAssignee                     = if ($Assignment.RoleAssigneeName) { [string]$Assignment.RoleAssigneeName } else { [string]$Assignment.RoleAssignee }
             appId                            = [string]$ExoSp.AppId
+            appDisplayName                   = [string]$ExoSp.DisplayName
             servicePrincipalId               = [string]$ExoSp.ObjectId
             enabled                          = $Assignment.Enabled
             customResourceScope              = $ResourceScope

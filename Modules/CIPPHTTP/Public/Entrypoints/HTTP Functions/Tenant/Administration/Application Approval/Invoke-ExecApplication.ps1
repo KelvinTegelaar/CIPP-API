@@ -10,7 +10,7 @@ function Invoke-ExecApplication {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     $ValidTypes = @('applications', 'servicePrincipals')
-    $ValidActions = @('Update', 'Upsert', 'Delete', 'RemoveKey', 'RemovePassword', 'Hide', 'Show', 'ListSigningCertificates', 'AddSigningCertificate', 'SetPreferredSigningKey', 'RemoveSigningCertificate')
+    $ValidActions = @('Update', 'Upsert', 'Delete', 'RemoveKey', 'RemovePassword', 'Hide', 'Show', 'ListSigningCertificates', 'AddSigningCertificate', 'SetPreferredSigningKey', 'RemoveSigningCertificate', 'UpdateOwners', 'UpdateAssignments')
 
     $Id = $Request.Query.Id ?? $Request.Body.Id
     $Type = $Request.Query.Type ?? $Request.Body.Type
@@ -44,6 +44,67 @@ function Invoke-ExecApplication {
                 Body       = "Invalid Action specified. Valid actions are: $($ValidActions -join ', ')"
             })
         return
+    }
+
+    if ($Action -eq 'UpdateOwners') {
+        if (-not $Type) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{ Results = @(@{ resultText = "Type is required for $Action."; state = 'error' }) }
+                })
+        }
+        # The autocomplete posts { label, value } objects; plain id strings are accepted too.
+        $Owners = foreach ($Change in @(@{ Adding = $true; Items = $Request.Body.AddOwnerIds }, @{ Adding = $false; Items = $Request.Body.RemoveOwnerIds })) {
+            foreach ($Owner in @($Change.Items)) {
+                if ($null -eq $Owner) { continue }
+                $OwnerId = "$($Owner.value ?? $Owner)"
+                [PSCustomObject]@{ Id = $OwnerId; Label = "$($Owner.label ?? $OwnerId)"; Adding = $Change.Adding }
+            }
+        }
+        $InvalidOwners = @($Owners).Where({ $_.Id -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$' })
+        if (@($Owners).Count -eq 0 -or $InvalidOwners.Count -gt 0) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{ Results = @(@{ resultText = 'Select at least one owner to add or remove.'; state = 'error' }) }
+                })
+        }
+        $SeenOwners = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        foreach ($Owner in $Owners) {
+            if (-not $SeenOwners.Add($Owner.Id)) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Results = @(@{ resultText = "$($Owner.Label) is selected more than once; it can't be both added and removed."; state = 'error' }) }
+                    })
+            }
+        }
+    }
+
+    if ($Action -eq 'UpdateAssignments') {
+        $GuidPattern = '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$'
+        $DefaultAccessRoleId = '00000000-0000-0000-0000-000000000000'
+        $InvalidInput = if ($Type -ne 'servicePrincipals') { 'User and group assignments exist only on enterprise applications (Type servicePrincipals).' }
+        $AddPrincipals = foreach ($Principal in @(@($Request.Body.AddUserIds) + @($Request.Body.AddGroupIds))) {
+            if ($null -eq $Principal) { continue }
+            $PrincipalId = "$($Principal.value ?? $Principal)"
+            if ($PrincipalId -notmatch $GuidPattern) { $InvalidInput = "'$PrincipalId' is not a user or group id." }
+            [PSCustomObject]@{ Id = $PrincipalId; Label = "$($Principal.label ?? $PrincipalId)" }
+        }
+        $RemoveAssignments = foreach ($Assignment in @($Request.Body.RemoveAssignmentIds)) {
+            if ($null -eq $Assignment) { continue }
+            $AssignmentId = "$($Assignment.value ?? $Assignment)"
+            if ($AssignmentId -notmatch '^[A-Za-z0-9_-]+$') { $InvalidInput = "'$AssignmentId' is not an assignment id." }
+            [PSCustomObject]@{ Id = $AssignmentId; Label = "$($Assignment.label ?? $AssignmentId)" }
+        }
+        $AppRoleId = "$($Request.Body.AppRoleId.value ?? $Request.Body.AppRoleId)"
+        if ($AppRoleId -and $AppRoleId -notmatch $GuidPattern) { $InvalidInput = "'$AppRoleId' is not an app role id." }
+        $RequiredInput = $Request.Body.AppRoleAssignmentRequired
+        $SetRequired = if ($null -ne $RequiredInput -and "$RequiredInput" -ne '') { "$RequiredInput" -eq 'True' }
+        if ($InvalidInput) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{ Results = @(@{ resultText = $InvalidInput; state = 'error' }) }
+                })
+        }
     }
 
     $PostParams = @{
@@ -240,6 +301,150 @@ function Invoke-ExecApplication {
                 }
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
             }
+        } elseif ($Action -eq 'UpdateOwners') {
+            $AppName = $Request.Body.DisplayName ?? $Id ?? $AppId
+            $OwnerById = @{}
+            $BulkRequests = foreach ($Owner in $Owners) {
+                $OwnerById[$Owner.Id] = $Owner
+                if ($Owner.Adding) {
+                    @{
+                        id      = $Owner.Id
+                        method  = 'POST'
+                        url     = "$($Type)$($IdPath)/owners/`$ref"
+                        body    = @{ '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$($Owner.Id)" }
+                        headers = @{ 'Content-Type' = 'application/json' }
+                    }
+                } else {
+                    @{
+                        id     = $Owner.Id
+                        method = 'DELETE'
+                        url    = "$($Type)$($IdPath)/owners/$($Owner.Id)/`$ref"
+                    }
+                }
+            }
+
+            $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -tenantid $TenantFilter -AsApp $true
+            $Failed = 0
+            $OwnerResults = foreach ($Result in $BulkResults) {
+                $Owner = $OwnerById[[string]$Result.id]
+                $Label = $Owner.Label ?? $Result.id
+                $Adding = $Owner.Adding
+                if ($Result.status -ge 200 -and $Result.status -lt 300) {
+                    $Message = if ($Adding) { "Added $Label as owner of '$AppName'" } else { "Removed $Label as owner of '$AppName'" }
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
+                    @{ resultText = $Message; state = 'success' }
+                } else {
+                    $Failed++
+                    $ErrorText = @(Get-NormalizedError -message ($Result.body.error.message ?? "Request failed with status $($Result.status)"))[0]
+                    $Message = if ($Adding) { "Failed to add $Label as owner of '$AppName': $ErrorText" } else { "Failed to remove $Label as owner of '$AppName': $ErrorText" }
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Error'
+                    @{ resultText = $Message; state = 'error' }
+                }
+            }
+
+            return ([HttpResponseContext]@{
+                    StatusCode = Get-CippBulkStatusCode -Total @($Owners).Count -Failed $Failed
+                    Body       = @{ Results = @($OwnerResults) }
+                })
+        } elseif ($Action -eq 'UpdateAssignments') {
+            $Sp = New-GraphGetRequest -Uri "$Uri`?`$select=id,displayName,appRoles,appRoleAssignmentRequired" -tenantid $TenantFilter -AsApp $true
+            $AppName = $Sp.displayName
+            $ChangeRequired = $null -ne $SetRequired -and $SetRequired -ne [bool]$Sp.appRoleAssignmentRequired
+            if (@($AddPrincipals).Count -eq 0 -and @($RemoveAssignments).Count -eq 0 -and -not $ChangeRequired) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::BadRequest
+                        Body       = @{ Results = @(@{ resultText = "No changes selected for '$AppName'."; state = 'error' }) }
+                    })
+            }
+
+            if (@($AddPrincipals).Count -gt 0) {
+                # Default Access is only valid on apps that declare no roles for users and groups.
+                $UserRoles = @($Sp.appRoles).Where({ $_.isEnabled -and $_.allowedMemberTypes -contains 'User' })
+                $RoleError = $null
+                if (-not $AppRoleId -and $UserRoles.Count -eq 0) { $AppRoleId = $DefaultAccessRoleId }
+                if ($AppRoleId -eq $DefaultAccessRoleId -and $UserRoles.Count -eq 0) {
+                    $RoleName = 'Default Access'
+                } else {
+                    $Role = $UserRoles.Where({ $_.id -eq $AppRoleId }, 'First')[0]
+                    if ($Role) {
+                        $RoleName = $Role.displayName ?? $Role.value
+                    } else {
+                        $RoleError = "Select one of the roles '$AppName' offers to users and groups: $(($UserRoles.ForEach({ $_.displayName ?? $_.value })) -join ', ')."
+                    }
+                }
+                if ($RoleError) {
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::BadRequest
+                            Body       = @{ Results = @(@{ resultText = $RoleError; state = 'error' }) }
+                        })
+                }
+            }
+
+            $AssignmentResults = [System.Collections.Generic.List[object]]::new()
+            $Total = 0
+            $Failed = 0
+            if ($ChangeRequired) {
+                $Total++
+                $State = if ($SetRequired) { 'on' } else { 'off' }
+                try {
+                    $null = New-GraphPOSTRequest -Uri $Uri -Type 'PATCH' -Body (ConvertTo-Json -Compress -InputObject @{ appRoleAssignmentRequired = $SetRequired }) -tenantid $TenantFilter -AsApp $true
+                    $Message = "Turned 'Assignment required' $State for '$AppName'"
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
+                    $AssignmentResults.Add(@{ resultText = $Message; state = 'success' })
+                } catch {
+                    $Failed++
+                    $ErrorMessage = Get-CippException -Exception $_
+                    $Message = "Failed to turn 'Assignment required' $State for '$AppName': $($ErrorMessage.NormalizedError)"
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Error' -LogData $ErrorMessage
+                    $AssignmentResults.Add(@{ resultText = $Message; state = 'error' })
+                }
+            }
+
+            $LabelByRequestId = @{}
+            $BulkRequests = @(
+                foreach ($Principal in $AddPrincipals) {
+                    $LabelByRequestId["add-$($Principal.Id)"] = $Principal.Label
+                    @{
+                        id      = "add-$($Principal.Id)"
+                        method  = 'POST'
+                        url     = "servicePrincipals/$($Sp.id)/appRoleAssignedTo"
+                        body    = @{ principalId = $Principal.Id; resourceId = $Sp.id; appRoleId = $AppRoleId }
+                        headers = @{ 'Content-Type' = 'application/json' }
+                    }
+                }
+                foreach ($Assignment in $RemoveAssignments) {
+                    $LabelByRequestId["remove-$($Assignment.Id)"] = $Assignment.Label
+                    @{
+                        id     = "remove-$($Assignment.Id)"
+                        method = 'DELETE'
+                        url    = "servicePrincipals/$($Sp.id)/appRoleAssignedTo/$($Assignment.Id)"
+                    }
+                }
+            )
+            if ($BulkRequests.Count -gt 0) {
+                $Total += $BulkRequests.Count
+                foreach ($Result in (New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter -AsApp $true)) {
+                    $RequestId = [string]$Result.id
+                    $Label = $LabelByRequestId[$RequestId] ?? $RequestId
+                    $Adding = $RequestId.StartsWith('add-')
+                    if ($Result.status -ge 200 -and $Result.status -lt 300) {
+                        $Message = if ($Adding) { "Assigned $Label to '$AppName' as $RoleName" } else { "Removed assignment $Label from '$AppName'" }
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
+                        $AssignmentResults.Add(@{ resultText = $Message; state = 'success' })
+                    } else {
+                        $Failed++
+                        $ErrorText = @(Get-NormalizedError -message ($Result.body.error.message ?? "Request failed with status $($Result.status)"))[0]
+                        $Message = if ($Adding) { "Failed to assign $Label to '$AppName': $ErrorText" } else { "Failed to remove assignment $Label from '$AppName': $ErrorText" }
+                        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Error'
+                        $AssignmentResults.Add(@{ resultText = $Message; state = 'error' })
+                    }
+                }
+            }
+
+            return ([HttpResponseContext]@{
+                    StatusCode = Get-CippBulkStatusCode -Total $Total -Failed $Failed
+                    Body       = @{ Results = @($AssignmentResults) }
+                })
         } elseif ($Action -eq 'Hide' -or $Action -eq 'Show') {
             # MyApps portal visibility is stored as the 'HideApp' string in the service
             # principal 'tags' collection. tags is a replace-collection on PATCH, so read the
