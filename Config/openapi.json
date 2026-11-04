@@ -14073,8 +14073,24 @@
                   "Action": {
                     "type": "string"
                   },
+                  "AddGroupIds": {
+                    "type": "string"
+                  },
+                  "AddOwnerIds": {
+                    "type": "string",
+                    "description": "The autocomplete posts { label, value } objects; plain id strings are accepted too."
+                  },
+                  "AddUserIds": {
+                    "type": "string"
+                  },
                   "AppId": {
                     "type": "string"
+                  },
+                  "AppRoleAssignmentRequired": {
+                    "type": "string"
+                  },
+                  "AppRoleId": {
+                    "$ref": "#/components/schemas/LabelValue"
                   },
                   "DisplayName": {
                     "type": "string",
@@ -14097,6 +14113,13 @@
                   "Payload": {
                     "type": "string",
                     "description": "Depth 10 so nested payloads (e.g. web/spa/publicClient redirectUris and implicitGrantSettings) aren't truncated."
+                  },
+                  "RemoveAssignmentIds": {
+                    "type": "string"
+                  },
+                  "RemoveOwnerIds": {
+                    "type": "string",
+                    "description": "The autocomplete posts { label, value } objects; plain id strings are accepted too."
                   },
                   "tenantFilter": {
                     "type": "string"
@@ -14149,7 +14172,7 @@
           {
             "name": "Type",
             "in": "query",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string"
             }
@@ -14165,6 +14188,9 @@
                 }
               }
             }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
           },
           "400": {
             "description": "Bad request - missing required field or invalid input"
@@ -20790,6 +20816,88 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecDeletedApplication": {
+      "post": {
+        "summary": "ExecDeletedApplication",
+        "operationId": "ExecDeletedApplication",
+        "tags": [
+          "Tenant > Administration > Application Approval"
+        ],
+        "description": "Restores (Action Restore) or permanently deletes (Action Delete) a deleted app registration or enterprise app\n(service principal). Any other kind of deleted object, such as a user or group, is refused: those are managed\nfrom Deleted Items with directory permissions. A restore says when the matching app registration or\nenterprise app is still deleted, since restoring one does not restore the other.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "ID": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ID",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Application.ReadWrite"
+      }
+    },
     "/api/ExecDeleteGDAPRelationship": {
       "post": {
         "summary": "ExecDeleteGDAPRelationship",
@@ -22778,6 +22886,105 @@
           }
         ],
         "x-cipp-role": "Exchange.Mailbox.ReadWrite"
+      }
+    },
+    "/api/ExecEnterpriseAppExchangeRbac": {
+      "post": {
+        "summary": "ExecEnterpriseAppExchangeRbac",
+        "operationId": "ExecEnterpriseAppExchangeRbac",
+        "tags": [
+          "Tenant > Administration > Application Approval"
+        ],
+        "description": "Manages the Exchange access of enterprise applications (service principals).\nAddRoles assigns Exchange RBAC for Applications roles, organisation-wide or scoped to a management scope or\nadministrative unit, registering the app in Exchange first when needed. ChangeScope assigns the same role\nwith the new scope and then removes the old assignment. RemoveRoles removes role assignments of the app.\nThese three need ServicePrincipalId.\nRemovePolicies removes application access policies. With ServicePrincipalId only that app's own policies are\nremoved: a policy for every app ('*') or that also names other apps is refused. Without it, any policy is.\nNewScope creates a management scope from a name and a recipient filter; RemoveScope removes management\nscopes no role assignment uses. Changes to the CIPP-SAM application itself are refused. After a role or\npolicy change the matching CIPP DB cache is refreshed, so the permission exposure report shows it.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "AdministrativeUnit": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "AssignmentIds": {
+                    "type": "string"
+                  },
+                  "ManagementScope": {
+                    "type": "string"
+                  },
+                  "PolicyIds": {
+                    "type": "string"
+                  },
+                  "RecipientFilter": {
+                    "type": "string"
+                  },
+                  "Roles": {
+                    "type": "string"
+                  },
+                  "ScopeName": {
+                    "type": "string"
+                  },
+                  "ScopeNames": {
+                    "type": "string"
+                  },
+                  "ScopeType": {
+                    "type": "string"
+                  },
+                  "ServicePrincipalId": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Application.ReadWrite"
       }
     },
     "/api/ExecEnterpriseAppPermission": {
@@ -50562,6 +50769,75 @@
         "x-cipp-role": "Endpoint.MEM.Read"
       }
     },
+    "/api/ListDeletedApplications": {
+      "get": {
+        "summary": "ListDeletedApplications",
+        "operationId": "ListDeletedApplications",
+        "tags": [
+          "Tenant > Administration > Application Approval"
+        ],
+        "description": "Lists the app registrations and enterprise apps (service principals) deleted in the last 30 days, which Entra\ncan still restore. Each row has the days left before Entra removes it for good, and whether the matching app\nregistration or enterprise app is deleted too: restoring one does not restore the other.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "appId": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "daysLeft": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "deletedDateTime": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "displayName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "publisher": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "relatedDeleted": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "type": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Application.Read"
+      }
+    },
     "/api/ListDeletedItems": {
       "get": {
         "summary": "ListDeletedItems",
@@ -52131,6 +52407,88 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListEnterpriseAppExchangeRbac": {
+      "get": {
+        "summary": "ListEnterpriseAppExchangeRbac",
+        "operationId": "ListEnterpriseAppExchangeRbac",
+        "tags": [
+          "Tenant > Administration > Application Approval"
+        ],
+        "description": "Lists the Exchange access of an enterprise application (service principal): whether it is registered in\nExchange, its RBAC for Applications role assignments with their scope, and the application access policies\nthat apply to it (its own and those for every app). Also returns the Application roles and management scopes\nof the tenant, to pick from when assigning.",
+        "parameters": [
+          {
+            "name": "ServicePrincipalId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record. The fields taken from Graph are the ones this endpoint selects, so they are what the response actually carries.",
+                    "properties": {
+                      "accessPolicies": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "appId": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "assignments": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "availableRoles": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "displayName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "exchangeIdentity": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "managementScopes": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "registered": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Application.Read"
+      }
+    },
     "/api/ListEquipment": {
       "get": {
         "summary": "ListEquipment",
@@ -52513,6 +52871,117 @@
         ],
         "x-cipp-role": "Exchange.Connector.Read",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListExoAppMailboxAccess": {
+      "get": {
+        "summary": "ListExoAppMailboxAccess",
+        "operationId": "ListExoAppMailboxAccess",
+        "tags": [
+          "Tenant > Administration > Application Approval"
+        ],
+        "description": "Lists the mailbox access Exchange gives apps across a tenant, by Type:\nRoles: every Exchange RBAC for Applications role assignment, with the app, the scope and the role's impact\nand suspicion from the risky permissions catalog.\nPolicies: every application access policy, once per policy, with the apps it names ('*' is every app).\nScopes: every management scope, with how many app and other role assignments use it.\nAvailableRoles: the Application roles that can be assigned, with their impact from the catalog.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "Type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record. The fields taken from Graph are the ones this endpoint selects, so they are what the response actually carries.",
+                    "properties": {
+                      "accessRight": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "appAssignmentCount": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "appIds": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "appliesToEveryApp": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "apps": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "description": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "exclusive": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "impact": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "isValid": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "name": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "otherAssignmentCount": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "policyIdentity": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "recipientFilter": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "scopeIdentityRaw": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "scopeName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "scopeRestrictionType": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "servicePrincipalIds": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "whenCreatedUTC": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Application.Read"
       }
     },
     "/api/ListExoRequest": {
