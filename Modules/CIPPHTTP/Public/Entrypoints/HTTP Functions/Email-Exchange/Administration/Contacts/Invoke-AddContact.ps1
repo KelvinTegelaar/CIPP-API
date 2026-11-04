@@ -66,8 +66,9 @@ function Invoke-AddContact {
             Identity = $NewContact.id
         }
 
-        # Only add HiddenFromAddressListsEnabled if we're actually hiding from GAL
-        if ([bool]$ContactObject.hidefromGAL) {
+        # Hide the contact from the Global Address List
+        if ($ContactObject.hidefromGAL -eq $true) {
+            # -eq $true rather than [bool]: [bool]'false' is $true, so a flag sent as text would hide every contact
             $MailContactParams.HiddenFromAddressListsEnabled = $true
             $needsMailContactUpdate = $true
         }

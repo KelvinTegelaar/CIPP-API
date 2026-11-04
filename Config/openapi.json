@@ -1444,7 +1444,7 @@
                   },
                   "hidefromGAL": {
                     "type": "boolean",
-                    "description": "Only add HiddenFromAddressListsEnabled if we're actually hiding from GAL"
+                    "description": "Hide the contact from the Global Address List"
                   },
                   "lastName": {
                     "type": "string"
