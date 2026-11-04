@@ -1,12 +1,14 @@
-# Pester tests for the Intune report-export cache collectors (DetectedApps, IntuneAppInstallStatus).
-# Both read a completed export job's rows through Get-CIPPIntuneReportExportRows. DetectedApps folds
-# the device x app rows into one row per app, sharing one device object per distinct device tuple;
-# the stored JSON must match a fresh object per row. IntuneAppInstallStatus maps each rollup row.
+# Pester tests for the Intune report-export cache collectors (DetectedApps, IntuneAppInstallStatus,
+# IntuneNonCompliantSettings). All read a completed export job's rows through Get-CIPPIntuneReportExportRows.
+# DetectedApps folds the device x app rows into one row per app, sharing one device object per distinct
+# device tuple; the stored JSON must match a fresh object per row. IntuneAppInstallStatus maps each rollup
+# row. IntuneNonCompliantSettings maps each device x setting row and clears the cache on an empty export.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     . (Join-Path $RepoRoot 'Modules/CIPPDB/Public/DBCache/Set-CIPPDBCacheDetectedApps.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPDB/Public/DBCache/Set-CIPPDBCacheIntuneAppInstallStatus.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPDB/Public/DBCache/Set-CIPPDBCacheIntuneNonCompliantSettings.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneReportExportJob.ps1')
 
     function Get-CIPPTable { param($tablename) @{ TableName = $tablename } }
@@ -20,7 +22,8 @@ BeforeAll {
     # Static stub rather than a Mock: it must bind pipeline input the way the real one does.
     function Add-CIPPDbItem {
         [CmdletBinding()]
-        param($TenantFilter, $Type, [Parameter(ValueFromPipeline)]$InputObject, $Data, [switch]$AddCount)
+        param($TenantFilter, $Type, [Parameter(ValueFromPipeline)]$InputObject, $Data, [switch]$AddCount, [switch]$ClearOnEmpty)
+        begin { if ($ClearOnEmpty) { $script:Cleared.Add($Type) } }
         process { foreach ($Item in @($InputObject) + @($Data)) { if ($null -ne $Item) { $script:Written.Add([pscustomobject]@{ Type = $Type; Item = $Item }) } } }
     }
 
@@ -37,6 +40,7 @@ BeforeAll {
 Describe 'Intune report-export collectors' {
     BeforeEach {
         $script:Written = [System.Collections.Generic.List[object]]::new()
+        $script:Cleared = [System.Collections.Generic.List[string]]::new()
         Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = 'x'; JobId = 'job-1' } }
         Mock New-GraphGetRequest { [pscustomobject]@{ status = 'completed'; url = 'https://blob/export.zip' } }
         Mock Remove-CIPPAzDataTableEntity {}
@@ -141,6 +145,33 @@ Describe 'Intune report-export collectors' {
             $Rows[0].failedDevicePercentage | Should -Be 20.5
         }
     }
+
+    Context 'Set-CIPPDBCacheIntuneNonCompliantSettings' {
+        It 'maps each device x setting row, preferring the readable setting name' {
+            Mock Get-CIPPIntuneReportExportRows {
+                $Row = [System.Collections.Generic.Dictionary[string, object]]::new()
+                $Row['DeviceId'] = 'dev-1'; $Row['DeviceName'] = 'PC1'; $Row['UPN'] = 'u1@contoso.com'; $Row['OS'] = 'Windows'
+                $Row['OSVersion'] = '10.0'; $Row['PolicyName'] = 'Win Baseline'; $Row['SettingName'] = 'Windows10CompliancePolicy.BitLockerEnabled'
+                $Row['SettingNm'] = 'Require BitLocker'; $Row['SettingStatus'] = 'Not compliant'; $Row['ErrorCode'] = [long]0
+                $Row
+                $Skip = [System.Collections.Generic.Dictionary[string, object]]::new(); $Skip['DeviceName'] = 'no id'; $Skip
+            }
+            Set-CIPPDBCacheIntuneNonCompliantSettings -TenantFilter 'contoso.com'
+            $Rows = @($script:Written | Where-Object Type -EQ 'IntuneNonCompliantSettings' | ForEach-Object Item)
+            $Rows.Count | Should -Be 1
+            $Rows[0].id | Should -Be 'dev-1-Win Baseline-Windows10CompliancePolicy.BitLockerEnabled'
+            $Rows[0].settingName | Should -Be 'Require BitLocker'
+            $Rows[0].userPrincipalName | Should -Be 'u1@contoso.com'
+            Should -Invoke Remove-CIPPAzDataTableEntity -Times 1 -Exactly
+        }
+
+        It 'clears the cache on an empty export, since no failing settings is the healthy state' {
+            Mock Get-CIPPIntuneReportExportRows {}
+            Set-CIPPDBCacheIntuneNonCompliantSettings -TenantFilter 'contoso.com'
+            $script:Cleared | Should -Be @('IntuneNonCompliantSettings')
+            $script:Written.Count | Should -Be 0
+        }
+    }
 }
 
 Describe 'Intune collection group' {
@@ -148,7 +179,7 @@ Describe 'Intune collection group' {
         . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Invoke-CIPPDBCacheCollection.ps1')
     }
 
-    It 'touches both exports before any collector runs, and reads them last' {
+    It 'touches every export before any collector runs, and reads them last' {
         $global:IntuneGroupCalls = [System.Collections.Generic.List[string]]::new()
         Mock Get-CIPPIntuneReportExportJob { $global:IntuneGroupCalls.Add("export:$ReportName") }
         Mock Get-Command { [pscustomobject]@{ Name = $Name } }
@@ -165,8 +196,8 @@ Describe 'Intune collection group' {
 
         $Result.Failed | Should -Be 0
         $Calls = @($global:IntuneGroupCalls)
-        $Calls.Count | Should -Be 20
-        $Calls[0..2] | Should -Be @('export:AppInvRawData', 'export:AppInstallStatusAggregate', 'ManagedDevices')
-        $Calls[-3..-1] | Should -Be @('ManagedDeviceCleanupRules', 'export:AppInvRawData', 'export:AppInstallStatusAggregate')
+        $Calls.Count | Should -Be 22
+        $Calls[0..3] | Should -Be @('export:AppInvRawData', 'export:AppInstallStatusAggregate', 'export:NoncompliantDevicesAndSettingsV3', 'ManagedDevices')
+        $Calls[-4..-1] | Should -Be @('ManagedDeviceCleanupRules', 'export:AppInvRawData', 'export:AppInstallStatusAggregate', 'export:NoncompliantDevicesAndSettingsV3')
     }
 }

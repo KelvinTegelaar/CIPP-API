@@ -31,7 +31,7 @@ function Start-IntuneReportExportOrchestrator {
             return
         }
 
-        $ReportNames = @('AppInvRawData', 'AppInstallStatusAggregate')
+        $ReportNames = @('AppInvRawData', 'AppInstallStatusAggregate', 'NoncompliantDevicesAndSettingsV3')
 
         $Queue = New-CippQueueEntry -Name 'Intune Report Export Submission' -TotalTasks ($LicensedTenants.Count * $ReportNames.Count)
 

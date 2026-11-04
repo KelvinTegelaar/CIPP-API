@@ -51117,6 +51117,96 @@
         "x-cipp-role": "Identity.Device.Read"
       }
     },
+    "/api/ListDeviceNonCompliance": {
+      "get": {
+        "summary": "ListDeviceNonCompliance",
+        "operationId": "ListDeviceNonCompliance",
+        "tags": [
+          "Endpoint > MEM"
+        ],
+        "description": "Lists cached failing compliance settings on non-compliant Intune managed devices, one row per device per setting, from the NoncompliantDevicesAndSettingsV3 export in the CIPP reporting database. Each row carries the device's current compliance state from the ManagedDevices cache. Supports AllTenants.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "builtInPolicy": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "complianceState": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "deviceCount": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "deviceName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "errorCode": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "errorCount": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "os": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "osVersion": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "policyName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "settingName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "settingStatus": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "userPrincipalName": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.MEM.Read"
+      }
+    },
     "/api/ListDevicePolicyStatus": {
       "get": {
         "summary": "ListDevicePolicyStatus",
