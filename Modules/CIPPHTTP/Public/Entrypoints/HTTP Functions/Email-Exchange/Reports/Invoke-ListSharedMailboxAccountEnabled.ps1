@@ -45,11 +45,13 @@ function Invoke-ListSharedMailboxAccountEnabled {
 
         $SharedMailboxList = (New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($TenantFilter)/Mailbox?`$filter=RecipientTypeDetails eq 'SharedMailbox'" -Tenantid $TenantFilter -scope ExchangeOnline)
         $Select = 'id,userPrincipalName,accountEnabled,displayName,givenName,surname,onPremisesSyncEnabled,assignedLicenses'
+        $Top = '999'
         # signInActivity needs Entra P1, Graph rejects the whole request without it
         if (Test-CIPPStandardLicense -StandardName 'UserSignInLogsCapable' -TenantFilter $TenantFilter -Preset Entra -SkipLog) {
             $Select = "$Select,signInActivity"
+            $Top = '500'
         }
-        $AllUsersInfo = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=500&`$select=$Select" -tenantid $TenantFilter
+        $AllUsersInfo = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=$Top&`$select=$Select" -tenantid $TenantFilter
         $SharedMailboxDetails = foreach ($SharedMailbox in $SharedMailboxList) {
             # Match the User
             $User = $AllUsersInfo | Where-Object { $_.userPrincipalName -eq $SharedMailbox.userPrincipalName } | Select-Object -First 1
