@@ -984,6 +984,84 @@
         "x-cipp-role": "Tenant.ConditionalAccess.ReadWrite"
       }
     },
+    "/api/AddCAPolicyClone": {
+      "post": {
+        "summary": "AddCAPolicyClone",
+        "operationId": "AddCAPolicyClone",
+        "tags": [
+          "Tenant > Conditional"
+        ],
+        "description": "Duplicates a Conditional Access policy within the same tenant under a new display name, with the chosen state.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "ID of the Conditional Access policy to duplicate."
+                  },
+                  "newDisplayName": {
+                    "type": "string",
+                    "description": "Display name for the new policy; must differ from every existing policy name in the tenant."
+                  },
+                  "state": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "State of the new policy: disabled, enabledForReportingButNotEnforced, enabled or sameAsSource. Defaults to disabled."
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant the source policy lives in; the copy is created in the same tenant."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.ConditionalAccess.ReadWrite"
+      }
+    },
     "/api/AddCATemplate": {
       "post": {
         "summary": "AddCATemplate",
