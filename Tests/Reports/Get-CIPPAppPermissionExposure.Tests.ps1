@@ -12,7 +12,7 @@ BeforeAll {
     function New-GraphBulkRequest { param($tenantid, $Requests) }
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams) }
 
-    foreach ($Name in 'Get-CIPPRiskyPermissionCatalog.ps1', 'Get-CIPPVendorTenantMap.ps1', 'ConvertFrom-CIPPCredentialAuditEvent.ps1', 'ConvertFrom-CIPPRoleAuditEvent.ps1', 'ConvertFrom-CIPPGrantAuditEvent.ps1', 'Get-CIPPExoAppRoleAssignment.ps1', 'Get-CIPPExoApplicationAccessPolicy.ps1', 'Get-CIPPAppPermissionExposure.ps1') {
+    foreach ($Name in 'Get-CIPPRiskyPermissionCatalog.ps1', 'Get-CIPPVendorTenantMap.ps1', 'ConvertFrom-CIPPCredentialAuditEvent.ps1', 'ConvertFrom-CIPPRoleAuditEvent.ps1', 'ConvertFrom-CIPPGrantAuditEvent.ps1', 'Get-CIPPExoAppRoleAssignment.ps1', 'Get-CIPPExoApplicationAccessPolicy.ps1', 'Get-CIPPAppFederatedCredential.ps1', 'Get-CIPPAppPermissionExposure.ps1') {
         . (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter $Name -File | Select-Object -First 1 -ExpandProperty FullName)
     }
 
@@ -825,6 +825,64 @@ Describe 'Get-CIPPAppPermissionExposure' {
             script:Add-ExoRole -Id 'sp-mix' -Role 'Application Calendars.Read'
 
             (script:Get-Row 'sp-mix').RiskReasons | Should -Not -Contain 'Only delegated permissions, each consented by individual users: limited to what those users can reach (impact one step lower)'
+        }
+    }
+
+    Context 'federated credentials' {
+        BeforeEach {
+            $script:HomeTenant = '11111111-2222-3333-4444-555555555555'
+            Mock Get-Tenants { [pscustomobject]@{ defaultDomainName = $TenantFilter; customerId = $script:HomeTenant } }
+        }
+        BeforeAll {
+            # An app registered in this tenant holding Mail.Read (suspicion Low), with its federated credentials.
+            function script:Add-FederatedApp {
+                param($Id, [object[]]$Federated)
+                $Cache = $script:Caches['contoso.onmicrosoft.com']
+                $Cache.ServicePrincipals += script:New-Sp -Id $Id -AppId "app-$Id" -Name $Id -Owner $script:HomeTenant
+                $Cache.AppRoleAssignments += script:New-Assignment -PrincipalId $Id -AppRoleId $script:Ids.MailRead
+                if (-not $Cache.ContainsKey('Apps')) { $Cache.Apps = @() }
+                $Cache.Apps += [pscustomobject]@{ id = "obj-$Id"; appId = "app-$Id"; passwordCredentials = @(); keyCredentials = @() }
+                if (-not $Cache.ContainsKey('AppFederatedCredentials')) { $Cache.AppFederatedCredentials = @() }
+                foreach ($Credential in $Federated) {
+                    $Cache.AppFederatedCredentials += [pscustomobject]@{ appId = "app-$Id"; credentialId = [guid]::NewGuid().ToString(); name = $Credential.Name; issuer = $Credential.Issuer; subject = 'sub-1'; audiences = @('api://AzureADTokenExchange') }
+                }
+            }
+            function script:Get-AppRow { param($Id) @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com') | Where-Object ServicePrincipalId -EQ $Id }
+        }
+
+        It 'lists a credential trusting a recognised provider without raising suspicion' {
+            script:Add-FederatedApp -Id 'sp-gh' -Federated @(@{ Name = 'deploy'; Issuer = 'https://token.actions.githubusercontent.com' }, @{ Name = 'self'; Issuer = "https://login.microsoftonline.com/$script:HomeTenant/v2.0" })
+
+            $Row = script:Get-AppRow 'sp-gh'
+            $Federated = @($Row.CredentialDetails | Where-Object Type -EQ 'Federated')
+
+            $Row.FederatedCredentialCount | Should -Be 2
+            $Federated.Trust | Should -Be @('GitHub Actions', 'This tenant (a managed identity or app here)')
+            $Federated[0].Location | Should -BeExactly 'App registration'
+            $Row.Suspicion | Should -BeExactly 'Low'
+            $Row.RiskReasons | Should -Contain '2 federated credential(s) on its app registration, each trusting a recognised identity provider: tokens it issues for the configured subject sign in as this app with no secret'
+        }
+
+        It 'raises suspicion two steps for an unrecognised issuer and one for another Entra tenant, by the most any one does' {
+            script:Add-FederatedApp -Id 'sp-odd' -Federated @(@{ Name = 'oidc'; Issuer = 'https://evil.example.net/issuer' }, @{ Name = 'x-tenant'; Issuer = 'https://login.microsoftonline.com/99999999-8888-7777-6666-555555555555/v2.0' })
+            script:Add-FederatedApp -Id 'sp-xt' -Federated @(@{ Name = 'x-tenant'; Issuer = 'https://sts.windows.net/99999999-8888-7777-6666-555555555555/' })
+
+            $Rows = @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com')
+            $Odd = $Rows | Where-Object ServicePrincipalId -EQ 'sp-odd'
+            $CrossTenant = $Rows | Where-Object ServicePrincipalId -EQ 'sp-xt'
+
+            $Odd.Suspicion | Should -BeExactly 'High'
+            @($Odd.RiskReasons | Where-Object { $_ -like "Federated credential 'oidc'*not a recognised identity provider*" }).Count | Should -Be 1
+            @($Odd.RiskReasons | Where-Object { $_ -like "Federated credential 'x-tenant'*another Entra tenant*" }).Count | Should -Be 1
+            $CrossTenant.Suspicion | Should -BeExactly 'Medium'
+            @($CrossTenant.CredentialDetails | Where-Object Type -EQ 'Federated')[0].Trust | Should -BeExactly 'Another Entra tenant (99999999-8888-7777-6666-555555555555)'
+        }
+
+        It 'leaves the count unknown when the federated credentials were never collected' {
+            script:Add-FederatedApp -Id 'sp-none' -Federated @()
+            $script:Caches['contoso.onmicrosoft.com'].Remove('AppFederatedCredentials')
+
+            (script:Get-AppRow 'sp-none').FederatedCredentialCount | Should -BeNullOrEmpty
         }
     }
 

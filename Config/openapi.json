@@ -29190,6 +29190,7 @@
         "tags": [
           "Tenant > Administration > Application Approval"
         ],
+        "description": "Adds, removes and rotates the credentials of an app registration or service principal: client secrets\n(CredentialType password) and certificates (key, remove only). Federated credentials (CredentialType\nfederated, app registrations only) let tokens from another identity provider sign in as the app without a\nsecret: Add builds one from a Scenario (GitHub, Kubernetes, ManagedIdentity or Other) and Remove deletes the\none whose id is KeyId.",
         "requestBody": {
           "required": true,
           "content": {
@@ -29240,7 +29241,10 @@
                 },
                 "required": [
                   "tenantFilter"
-                ]
+                ],
+                "additionalProperties": true,
+                "x-cipp-passthrough": true,
+                "description": "This endpoint forwards the request body onward rather than reading a fixed set of fields. The properties listed here are the ones it is known to read; others may be accepted."
               }
             }
           }
@@ -29255,6 +29259,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -45152,6 +45159,90 @@
           }
         ],
         "x-cipp-role": "Endpoint.Application.Read"
+      }
+    },
+    "/api/ListAppSignInActivity": {
+      "get": {
+        "summary": "ListAppSignInActivity",
+        "operationId": "ListAppSignInActivity",
+        "tags": [
+          "Tenant > Administration > Application Approval"
+        ],
+        "description": "Returns when the tenant's apps and their credentials last signed in, from the CIPP DB caches of the Entra\nsign-in activity reports (Entra ID P1), for the app lists to show next to each app. apps holds one entry\nper app that signed in, by appId: its last sign-in of any kind, delegated and app-only. credentials holds\none entry per secret or certificate that signed in, by keyId. An app or credential missing from a list\nthat was collected has no sign-in recorded. Each list says whether and when it was collected: measure\nidle time from then, not from now, so a collection that stopped running never makes an app look idle.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "appId": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "apps": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "appsCollected": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "appsCollectedAt": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "credentialOrigin": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "credentials": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "credentialsCollected": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "credentialsCollectedAt": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "keyId": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "lastAppOnly": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "lastDelegated": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "lastSignInDateTime": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Application.Read"
       }
     },
     "/api/ListAppsRepository": {

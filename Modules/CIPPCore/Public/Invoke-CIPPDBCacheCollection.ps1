@@ -51,6 +51,7 @@ function Invoke-CIPPDBCacheCollection {
             'Guests'
             'ServicePrincipals'
             'Apps'
+            'AppFederatedCredentials'
             'Devices'
             'Organization'
             'Roles'

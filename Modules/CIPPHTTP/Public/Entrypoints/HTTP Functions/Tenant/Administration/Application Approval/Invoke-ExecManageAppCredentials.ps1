@@ -4,6 +4,12 @@ function Invoke-ExecManageAppCredentials {
         Entrypoint
     .ROLE
         Tenant.Application.ReadWrite
+    .DESCRIPTION
+        Adds, removes and rotates the credentials of an app registration or service principal: client secrets
+        (CredentialType password) and certificates (key, remove only). Federated credentials (CredentialType
+        federated, app registrations only) let tokens from another identity provider sign in as the app without a
+        secret: Add builds one from a Scenario (GitHub, Kubernetes, ManagedIdentity or Other) and Remove deletes the
+        one whose id is KeyId.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -43,10 +49,86 @@ function Invoke-ExecManageAppCredentials {
         return $null
     }
 
+    # The federated credential to add, from the scenario fields the dialog posts. Returns an error string when the
+    # input is incomplete or invalid.
+    function Get-FederatedCredentialBody {
+        param($Body)
+        $Value = { param($Field) "$($Body.$Field.value ?? $Body.$Field)".Trim() }
+        $Name = & $Value 'Name'
+        if ($Name.Length -lt 1 -or $Name.Length -gt 120) { return 'A name of 1 to 120 characters is required' }
+        $Scenario = & $Value 'Scenario'
+        $Segment = '^[A-Za-z0-9_.-]+$'
+        switch ($Scenario) {
+            'GitHub' {
+                $Org = & $Value 'GitHubOrganization'
+                $Repo = & $Value 'GitHubRepository'
+                $EntityType = & $Value 'GitHubEntityType'
+                $Entity = & $Value 'GitHubEntityValue'
+                if ($Org -notmatch $Segment -or $Repo -notmatch $Segment) { return 'A GitHub organization and repository are required' }
+                if ($EntityType -notin @('Environment', 'Branch', 'Tag', 'PullRequest')) { return 'GitHubEntityType must be Environment, Branch, Tag or PullRequest' }
+                if ($EntityType -ne 'PullRequest' -and -not $Entity) { return "The GitHub $($EntityType.ToLowerInvariant()) name is required" }
+                $Issuer = 'https://token.actions.githubusercontent.com'
+                $Subject = switch ($EntityType) {
+                    'Environment' { "repo:$($Org)/$($Repo):environment:$Entity" }
+                    'Branch' { "repo:$($Org)/$($Repo):ref:refs/heads/$Entity" }
+                    'Tag' { "repo:$($Org)/$($Repo):ref:refs/tags/$Entity" }
+                    'PullRequest' { "repo:$($Org)/$($Repo):pull_request" }
+                }
+            }
+            'Kubernetes' {
+                $Issuer = & $Value 'KubernetesIssuer'
+                $Namespace = & $Value 'KubernetesNamespace'
+                $ServiceAccount = & $Value 'KubernetesServiceAccount'
+                if ($Namespace -notmatch $Segment -or $ServiceAccount -notmatch $Segment) { return 'A Kubernetes namespace and service account are required' }
+                $Subject = "system:serviceaccount:$($Namespace):$ServiceAccount"
+            }
+            'ManagedIdentity' {
+                $Identity = & $Value 'ManagedIdentity'
+                if ($Identity -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') { return 'Select a managed identity' }
+                $TenantId = @(Get-Tenants -TenantFilter $TenantFilter)[0].customerId
+                if (-not $TenantId) { return 'The tenant ID could not be found' }
+                $Issuer = "https://login.microsoftonline.com/$TenantId/v2.0"
+                $Subject = $Identity
+            }
+            'Other' {
+                $Issuer = & $Value 'Issuer'
+                $Subject = & $Value 'Subject'
+                if (-not $Subject) { return 'A subject is required' }
+            }
+            default { return 'Scenario must be GitHub, Kubernetes, ManagedIdentity or Other' }
+        }
+        if ($Issuer -notmatch '^https://[^\s/]+') { return 'The issuer must be an https URL' }
+        $Audience = & $Value 'Audience'
+        $Credential = @{
+            name      = $Name
+            issuer    = $Issuer
+            subject   = $Subject
+            audiences = @($(if ($Audience) { $Audience } else { 'api://AzureADTokenExchange' }))
+        }
+        $Description = & $Value 'Description'
+        if ($Description) { $Credential.description = $Description }
+        $Credential
+    }
+
     try {
+        if ($CredentialType -eq 'federated' -and $AppType -ne 'applications') {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{ Results = @{ resultText = 'Federated credentials exist only on app registrations (AppType applications).'; state = 'error' } }
+                })
+        }
         $Results = switch ($Action) {
             'Remove' {
-                if ($CredentialType -eq 'password') {
+                if ($CredentialType -eq 'federated') {
+                    if ("$KeyId" -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
+                        @{ resultText = 'KeyId must be the id of the federated credential to remove.'; state = 'error' }
+                    } else {
+                        $Label = if ($DisplayName) { "'$DisplayName'" } else { $KeyId }
+                        $null = New-GraphPOSTRequest -Uri "$Uri/federatedIdentityCredentials/$KeyId" -Type 'DELETE' -Body '{}' -tenantid $TenantFilter
+                        Write-LogMessage -API $APIName -tenant $TenantFilter -headers $Headers -message "Removed federated credential $Label ($KeyId) from $AppType $AppRef" -sev Info
+                        @{ resultText = "Removed federated credential $Label. Tokens it trusted can no longer sign in as the app."; state = 'success' }
+                    }
+                } elseif ($CredentialType -eq 'password') {
                     $null = New-GraphPOSTRequest -Uri "$Uri/removePassword" -Body (@{ keyId = $KeyId } | ConvertTo-Json) -tenantid $TenantFilter
                     Write-LogMessage -API $APIName -tenant $TenantFilter -headers $Headers -message "Removed password credential $KeyId from $AppType $AppRef" -sev Info
                     @{ resultText = "Successfully removed password credential $KeyId"; state = 'success' }
@@ -62,7 +144,16 @@ function Invoke-ExecManageAppCredentials {
             'Add' {
                 # Only client secret (password) addition is implemented here. Adding a certificate means
                 # PATCHing keyCredentials with an uploaded public-key cert - not built yet; use Entra.
-                if ($CredentialType -ne 'password') {
+                if ($CredentialType -eq 'federated') {
+                    $Federated = Get-FederatedCredentialBody -Body $Request.Body
+                    if ($Federated -is [string]) {
+                        @{ resultText = $Federated; state = 'error' }
+                    } else {
+                        $null = New-GraphPOSTRequest -Uri "$Uri/federatedIdentityCredentials" -Body (ConvertTo-Json -InputObject $Federated -Depth 5 -Compress) -tenantid $TenantFilter
+                        Write-LogMessage -API $APIName -tenant $TenantFilter -headers $Headers -message "Added federated credential '$($Federated.name)' (issuer $($Federated.issuer), subject $($Federated.subject)) to $AppType $AppRef" -sev Info
+                        @{ resultText = "Added federated credential '$($Federated.name)': tokens from $($Federated.issuer) for $($Federated.subject) now sign in as the app."; state = 'success' }
+                    }
+                } elseif ($CredentialType -ne 'password') {
                     @{ resultText = 'Adding certificate credentials is not supported here yet. Upload the certificate in Entra instead.'; state = 'error' }
                 } else {
                     $PasswordCredential = @{

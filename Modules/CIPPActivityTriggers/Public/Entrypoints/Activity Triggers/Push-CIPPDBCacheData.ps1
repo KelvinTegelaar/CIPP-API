@@ -183,6 +183,13 @@ function Push-CIPPDBCacheData {
                     QueueId      = $QueueId
                     QueueName    = "DB Cache ServicePrincipalSignInActivities - $TenantFilter"
                 })
+            $Tasks.Add(@{
+                    FunctionName = 'ExecCIPPDBCache'
+                    Name         = 'AppCredentialSignInActivities'
+                    TenantFilter = $TenantFilter
+                    QueueId      = $QueueId
+                    QueueName    = "DB Cache AppCredentialSignInActivities - $TenantFilter"
+                })
         } else {
             Write-Host "Skipping Conditional Access data collection for $TenantFilter - no required license"
         }

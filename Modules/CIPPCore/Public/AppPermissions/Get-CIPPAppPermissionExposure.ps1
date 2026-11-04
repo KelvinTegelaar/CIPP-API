@@ -34,6 +34,13 @@ function Get-CIPPAppPermissionExposure {
         (one on the same object expires, or was removed, within 30 days of it) raises suspicion one step only:
         an attacker adds a credential next to the app's own, since removing that breaks the app.
 
+        Federated credentials on the app registration (the AppFederatedCredentials cache, or Graph with -Live) let
+        tokens from another identity provider sign in as the app with no secret. They are listed in
+        CredentialDetails (Type 'Federated') with the issuer, subject and who runs the issuer. One trusting an issuer
+        CIPP does not recognise raises suspicion two steps; one trusting another Entra tenant that is not the
+        partner tenant or a listed vendor, one step. GitHub Actions, Azure Kubernetes Service, this tenant and
+        common CI providers raise nothing. Graph does not date federated credentials, so their age is not rated.
+
         Managed identities (servicePrincipalType ManagedIdentity) are their own ownership class whatever their owner
         organisation: no suspicion adjustment, no credential scoring (Azure manages those), and the Azure resource
         named from alternativeNames. Who controls that resource is set in Azure, which CIPP cannot read.
@@ -615,6 +622,41 @@ function Get-CIPPAppPermissionExposure {
         }
     }
 
+    # Federated credentials of those app registrations, by appId: tokens from another identity provider that sign in
+    # as the app without a secret. $null when they were not read.
+    $FederatedByAppId = $null
+    if ($AppRegByAppId.Count -gt 0) {
+        $FederatedRows = $null
+        if ($Live) {
+            try {
+                $FederatedRows = @(Get-CIPPAppFederatedCredential -TenantFilter $TenantFilter -Applications @($AppRegByAppId.Values))
+            } catch {
+                Write-Information "Federated credentials unavailable for $($TenantFilter): $($_.Exception.Message)"
+            }
+        } else {
+            $Cached = [System.Collections.Generic.List[object]]::new()
+            $CachedCount = $null
+            foreach ($Item in @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'AppFederatedCredentials')) {
+                if ($Item.RowKey -eq 'AppFederatedCredentials-Count') { $CachedCount = $Item } else { $Cached.Add($Item) }
+            }
+            if ($CachedCount -or $Cached.Count -gt 0) {
+                $FederatedRows = if ($Cached.Count -gt 0) { @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'AppFederatedCredentials' -Rows $Cached.ToArray() -Fields 'appId', 'credentialId', 'name', 'issuer', 'subject', 'audiences', 'description', 'claimsMatchingExpression') } else { @() }
+            }
+        }
+        if ($null -ne $FederatedRows) {
+            $FederatedByAppId = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($Row in $FederatedRows) {
+                if (-not $Row.appId) { continue }
+                $List = $null
+                if (-not $FederatedByAppId.TryGetValue([string]$Row.appId, [ref]$List)) {
+                    $List = [System.Collections.Generic.List[object]]::new()
+                    $FederatedByAppId[[string]$Row.appId] = $List
+                }
+                $List.Add($Row)
+            }
+        }
+    }
+
     # Who added the credentials of the last 30 days (the audit log's reach), keyed 'objectId|keyId'. Read for every
     # object holding a credential, whatever its start date: the caller sets that, so it can be backdated past the
     # window. $null when the audit log was not read.
@@ -949,6 +991,66 @@ function Get-CIPPAppPermissionExposure {
             }
         }
 
+        # Federated credentials on its app registration: a token from the issuer for the subject signs in as the app,
+        # with no secret or certificate to find or expire. Rated by who runs the issuer.
+        $FederatedCount = 0
+        $FederatedReasons = [System.Collections.Generic.List[object]]::new()
+        $FederatedList = $null
+        if ($AppReg -and $null -ne $FederatedByAppId -and $AppId) { [void]$FederatedByAppId.TryGetValue($AppId, [ref]$FederatedList) }
+        foreach ($Federated in @($FederatedList)) {
+            if (-not $Federated) { continue }
+            $FederatedCount++
+            $Issuer = ([string]$Federated.issuer).TrimEnd('/')
+            $IssuerTenant = if ($Issuer -match '^https://(login\.microsoftonline\.com|sts\.windows\.net)/([0-9a-fA-F-]{36})(/v2\.0)?$') { $Matches[2] } else { $null }
+            $IssuerVendor = $null
+            if ($IssuerTenant) { [void]$VendorTenants.TryGetValue($IssuerTenant, [ref]$IssuerVendor) }
+            # Steps: how much a credential trusting this issuer raises suspicion.
+            $Trust, $Steps = if ($Issuer -eq 'https://token.actions.githubusercontent.com' -or $Issuer -like 'https://token.actions.githubusercontent.com/*') {
+                'GitHub Actions', 0
+            } elseif ($Issuer -match '^https://[a-z0-9-]+\.oic\.prod-aks\.azure\.com/') {
+                'Azure Kubernetes Service', 0
+            } elseif ($IssuerTenant -and $TenantId -and $IssuerTenant -eq $TenantId) {
+                'This tenant (a managed identity or app here)', 0
+            } elseif ($IssuerTenant -and $PartnerTenantId -and $IssuerTenant -eq $PartnerTenantId) {
+                'Your partner tenant', 0
+            } elseif ($IssuerTenant -and $IssuerVendor) {
+                "Entra tenant of $($IssuerVendor.Name)", 0
+            } elseif ($IssuerTenant) {
+                "Another Entra tenant ($IssuerTenant)", 1
+            } elseif ($Issuer -in 'https://gitlab.com', 'https://app.terraform.io', 'https://accounts.google.com', 'https://cognito-identity.amazonaws.com') {
+                ([uri]$Issuer).Host, 0
+            } else {
+                'Unrecognised issuer', 2
+            }
+            $Matching = if ($Federated.claimsMatchingExpression) { "subjects matching $($Federated.claimsMatchingExpression)" } else { [string]$Federated.subject }
+            $CredentialDetails.Add([PSCustomObject]@{
+                    Location      = 'App registration'
+                    Type          = 'Federated'
+                    Purpose       = 'Sign-in'
+                    Expired       = $false
+                    DisplayName   = [string]$Federated.name
+                    KeyId         = [string]$Federated.credentialId
+                    Issuer        = [string]$Federated.issuer
+                    Subject       = $Matching
+                    Trust         = $Trust
+                    StartDateTime = $null
+                    AddedDateTime = $null
+                    AddedBy       = $null
+                    AddedByType   = $null
+                    EndDateTime   = $null
+                })
+            if ($Steps -gt 0) {
+                $FederatedReasons.Add(@{
+                        Steps = $Steps
+                        Text  = if ($Steps -ge 2) {
+                            "Federated credential '$($Federated.name)' on its app registration trusts tokens from $($Federated.issuer), not a recognised identity provider: whoever runs that issuer signs in as this app with no secret (a self-hosted cluster looks the same; suspicion two steps higher)"
+                        } else {
+                            "Federated credential '$($Federated.name)' on its app registration lets identities in another Entra tenant ($IssuerTenant) sign in as this app (suspicion one step higher)"
+                        }
+                    })
+            }
+        }
+
         # Index 0: any flow, 1: delegated as client, 2: app-only as client, 3/4: as a resource.
         $SignIns = [object[]]::new($ActivityFields.Count)
         $LastSignIn = $null
@@ -1131,6 +1233,13 @@ function Get-CIPPAppPermissionExposure {
                 $EffectiveImpact = 4
                 $RiskLevel = 4
                 $Reasons.Add(("{0} sign-in credential(s) on its service principal in this tenant, which {1} never adds: whoever holds one signs in as this app with all of its access, including access not visible as grants (Critical)" -f $CredentialCount, $(if ($IsCippApp) { 'CIPP' } else { 'Microsoft' })))
+            } elseif ($FederatedCount -gt 0) {
+                # Only CIPP's own registration can sit here, when the report runs on the partner tenant.
+                $AppSuspicion = 4
+                $MaxImpact = 4
+                $EffectiveImpact = 4
+                $RiskLevel = 4
+                $Reasons.Add("$FederatedCount federated credential(s) on its app registration, which CIPP never adds: whoever controls the trusted issuer signs in as this app with all of its access, with no secret (Critical)")
             } elseif ($ActorFlags.Count -gt 0) {
                 foreach ($Flag in $ActorFlags) { $AppSuspicion += 2; $Reasons.Add($Flag) }
                 $AppSuspicion = [Math]::Min(4, $AppSuspicion)
@@ -1212,6 +1321,13 @@ function Get-CIPPAppPermissionExposure {
                 $AppSuspicion += 2
                 $Reasons.Add("$Backdated (suspicion two steps higher)")
             }
+            if ($FederatedReasons.Count -gt 0) {
+                # Each credential is named; together they raise suspicion by the most any one does.
+                foreach ($Flag in $FederatedReasons) { $Reasons.Add($Flag.Text) }
+                $AppSuspicion += ($FederatedReasons | Measure-Object -Property Steps -Maximum).Maximum
+            } elseif ($FederatedCount -gt 0) {
+                $Reasons.Add("$FederatedCount federated credential(s) on its app registration, each trusting a recognised identity provider: tokens it issues for the configured subject sign in as this app with no secret")
+            }
             foreach ($Flag in $ActorFlags) { $AppSuspicion += 2; $Reasons.Add($Flag) }
             $Created = $null
             if ($Sp.createdDateTime -is [datetime]) {
@@ -1285,6 +1401,7 @@ function Get-CIPPAppPermissionExposure {
                 SignInActivityTimestamp         = $ActivityTimestamp
                 ServicePrincipalCredentialCount = $CredentialCount
                 AppRegistrationCredentialCount  = if ($AppReg) { $AppRegCredentialCount } else { $null }
+                FederatedCredentialCount        = if ($AppReg -and $null -ne $FederatedByAppId) { $FederatedCount } else { $null }
                 CredentialDetails               = $CredentialDetails.ToArray()
                 Risk                            = $RankName[$RiskLevel]
                 RiskReasons                     = $Reasons.ToArray()
