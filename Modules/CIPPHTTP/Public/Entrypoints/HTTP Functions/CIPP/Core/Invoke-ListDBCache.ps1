@@ -218,6 +218,25 @@ function Invoke-ListDBCache {
                 })
         }
 
+        # Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.
+        # latestOnly, groupBy and top do not apply to paged reads.
+        if ($Request.Query.manualPagination -eq $true) {
+            # Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.
+            $PageSize = $Request.Query.PageSize -as [int]
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::OK
+                    # Continuation token from the previous page's Metadata.nextLink; opaque to callers.
+                    Body       = Get-CIPPReportPage -TenantFilter $(if ($IsAllTenants) { 'AllTenants' } else { $Tenant }) -Type $Type -PageSize $PageSize -ContinuationToken $Request.Query.nextLink -Report {
+                        param($PageTenant)
+                        if ($null -eq $AllowedDomains -or $AllowedDomains.Contains([string]$PageTenant)) {
+                            $PageParams = @{ TenantFilter = $PageTenant; Type = $Type }
+                            if ($SelectFields) { $PageParams.Fields = $SelectFields }
+                            New-CIPPDbRequest @PageParams
+                        }
+                    }
+                })
+        }
+
         if ($IsAllTenants) {
             # New-CIPPDbRequest resolves the tenant through Get-Tenants, which has no 'AllTenants' entry, so
             # it cannot serve this path. Read the rows directly and parse them the same way it would.

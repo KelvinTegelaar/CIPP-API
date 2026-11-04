@@ -12,8 +12,8 @@ function Get-CippSandboxData {
         Because only the requested types for THIS tenant are fetched and injected, the
         sandbox is structurally unable to read any other tenant's data.
 
-        -Type must be a string literal. Dynamic type names cannot be pre-fetched and are
-        rejected with a clear error (rather than silently returning empty data).
+        -Type must be a named string literal. Missing, positional and dynamic type names are
+        rejected with a clear error. Data is projected to the field manifest, as for built-in tests.
 
     .PARAMETER ScriptContent
         The (already text-replaced, already validated) script content.
@@ -42,13 +42,10 @@ function Get-CippSandboxData {
 
     foreach ($Call in $Calls) {
         $Type = $null
-        $HasType = $false
-        $TypeIsLiteral = $true
 
         for ($i = 0; $i -lt $Call.CommandElements.Count; $i++) {
             $Element = $Call.CommandElements[$i]
             if ($Element -is [System.Management.Automation.Language.CommandParameterAst] -and $Element.ParameterName -ieq 'Type') {
-                $HasType = $true
                 $Value = if ($Element.Argument) {
                     $Element.Argument
                 } elseif ($i + 1 -lt $Call.CommandElements.Count) {
@@ -58,19 +55,17 @@ function Get-CippSandboxData {
                 }
                 if ($Value -is [System.Management.Automation.Language.StringConstantExpressionAst]) {
                     $Type = $Value.Value
-                } else {
-                    $TypeIsLiteral = $false
                 }
             }
         }
 
-        if ($HasType -and -not $TypeIsLiteral) {
-            throw "Custom test sandbox requires a literal -Type for Get-CIPPTestData (for example: Get-CIPPTestData -Type 'Users'). Dynamic or computed type names are not supported."
+        # Without a type the read would be the tenant's whole reporting partition.
+        if ([string]::IsNullOrWhiteSpace($Type)) {
+            throw [System.ArgumentException]::new("Custom test sandbox requires a literal -Type for every Get-CIPPTestData call (for example: Get-CIPPTestData -Type 'Users'). Missing, positional, dynamic or computed type names are not supported.")
         }
 
-        $Key = if ($Type) { $Type } else { '' }
-        if (-not $Data.ContainsKey($Key)) {
-            $Data[$Key] = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type $Type -NoProjection)
+        if (-not $Data.ContainsKey($Type)) {
+            $Data[$Type] = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type $Type)
         }
     }
 
