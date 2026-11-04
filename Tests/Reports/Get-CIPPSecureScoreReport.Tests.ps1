@@ -18,7 +18,7 @@ BeforeAll {
     if (-not (Test-Path $CippSharp)) { throw "Could not locate CIPPSharp.dll at $CippSharp" }
     Add-Type -Path $CippSharp -ErrorAction SilentlyContinue
 
-    function Get-CIPPDbItem { [CmdletBinding()] param($TenantFilter, $Type, [switch]$CountsOnly) }
+    function Get-CIPPDbItem { [CmdletBinding()] param($TenantFilter, $Type, [switch]$CountsOnly, $Partition) }
     function Get-Tenants { [CmdletBinding()] param($TenantFilter, [switch]$IncludeErrors, [switch]$IncludeAll, [switch]$SkipDomains, [switch]$TriggerRefresh) }
     function Write-LogMessage { [CmdletBinding()] param($API, $tenant, $message, $sev, $LogData) }
 
@@ -47,7 +47,9 @@ Describe 'Get-CIPPSecureScoreReport tenant scoping' {
     BeforeEach {
         Mock -CommandName Write-LogMessage -MockWith { }
         Mock -CommandName Get-Tenants -MockWith { $script:Known }
-        Mock -CommandName Get-CIPPDbItem -MockWith {
+        # No summary rows yet: these tests cover the legacy full-record path.
+        Mock -CommandName Get-CIPPDbItem -MockWith { @() }
+        Mock -CommandName Get-CIPPDbItem -ParameterFilter { $Type -eq 'SecureScore' } -MockWith {
             @(
                 script:New-ScoreRow -Partition 'alpha.onmicrosoft.com' -Current 80
                 script:New-ScoreRow -Partition 'beta.onmicrosoft.com' -Current 40
@@ -83,7 +85,7 @@ Describe 'Get-CIPPSecureScoreReport tenant scoping' {
     }
 
     It 'returns empty when every cached partition is unknown' {
-        Mock -CommandName Get-CIPPDbItem -MockWith {
+        Mock -CommandName Get-CIPPDbItem -ParameterFilter { $Type -eq 'SecureScore' } -MockWith {
             @(script:New-ScoreRow -Partition 'ghost.onmicrosoft.com' -Current 10)
         }
 
@@ -104,12 +106,95 @@ Describe 'Get-CIPPSecureScoreReport tenant scoping' {
             if ($TenantFilter) { return $script:Known | Where-Object defaultDomainName -EQ $TenantFilter }
             return $script:Known
         }
-        Mock -CommandName Get-CIPPDbItem -MockWith {
+        Mock -CommandName Get-CIPPDbItem -ParameterFilter { $Type -eq 'SecureScore' } -MockWith {
             @(script:New-ScoreRow -Partition 'alpha.onmicrosoft.com' -Current 80)
         }
 
         $Result = @(Get-CIPPSecureScoreReport -TenantFilter 'alpha.onmicrosoft.com')
         $Result.Count | Should -Be 1
         $Result[0].Tenant | Should -BeExactly 'alpha.onmicrosoft.com'
+    }
+}
+
+Describe 'Get-CIPPSecureScoreReport summary rows' {
+    BeforeAll {
+        function script:New-SummaryRow {
+            param([string]$Partition, [double]$Current, [string]$Title = 'Require MFA')
+            [pscustomobject]@{
+                PartitionKey = $Partition
+                RowKey       = 'SecureScoreSummary-latest'
+                Data         = (ConvertTo-Json -Compress -Depth 10 -InputObject @{
+                        id              = 'latest'
+                        currentScore    = $Current
+                        maxScore        = 100
+                        createdDateTime = '2026-10-29T00:00:00Z'
+                        history         = @(
+                            @{ date = '2026-10-28T00:00:00Z'; currentScore = $Current - 10; maxScore = 100 }
+                            @{ date = '2026-10-29T00:00:00Z'; currentScore = $Current; maxScore = 100 }
+                        )
+                        controls        = @(
+                            @{ controlName = 'MFARegistrationV2'; title = $Title; tier = 'Core'; maxScore = 10; score = 5; scoreInPercentage = 50; state = 'Default' }
+                        )
+                    })
+            }
+        }
+    }
+
+    BeforeEach {
+        Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Get-Tenants -MockWith { $script:Known }
+        Mock -CommandName Get-CIPPDbItem -MockWith { @() }
+        Mock -CommandName Get-CIPPDbItem -ParameterFilter { $Type -eq 'SecureScoreSummary' } -MockWith {
+            @(
+                script:New-SummaryRow -Partition 'alpha.onmicrosoft.com' -Current 80
+                script:New-SummaryRow -Partition 'beta.onmicrosoft.com' -Current 40 -Title 'Second title'
+                script:New-SummaryRow -Partition 'ghost.onmicrosoft.com' -Current 10
+                [pscustomobject]@{ PartitionKey = 'alpha.onmicrosoft.com'; RowKey = 'SecureScoreSummary-Count'; Data = '' }
+            )
+        }
+    }
+
+    It 'never reads the full SecureScore records when summary rows exist' {
+        $null = Get-CIPPSecureScoreReport -TenantFilter 'AllTenants' -IncludeHistory
+        Should -Invoke Get-CIPPDbItem -Times 0 -ParameterFilter { $Type -eq 'SecureScore' }
+    }
+
+    It 'keeps the report shape, history included, and drops unmanaged tenants' {
+        $Result = @(Get-CIPPSecureScoreReport -TenantFilter 'AllTenants' -IncludeHistory)
+
+        ($Result.Tenant | Sort-Object) | Should -Be @('alpha.onmicrosoft.com', 'beta.onmicrosoft.com')
+        $Alpha = $Result | Where-Object Tenant -EQ 'alpha.onmicrosoft.com'
+        $Alpha.TenantName | Should -BeExactly 'Alpha Corp'
+        $Alpha.PercentageScore | Should -Be 80
+        $Alpha.History[0].PercentageScore | Should -Be 70
+        ([datetime]$Alpha.History[0].Date).ToUniversalTime().ToString('yyyy-MM-dd') | Should -Be '2026-10-28'
+        $Alpha.PSObject.Properties.Name | Should -Not -Contain 'Controls'
+    }
+
+    It 'reads full records only for managed tenants that have no summary row yet' {
+        Mock -CommandName Get-CIPPDbItem -ParameterFilter { $Type -eq 'SecureScoreSummary' } -MockWith {
+            @(script:New-SummaryRow -Partition 'alpha.onmicrosoft.com' -Current 80)
+        }
+        Mock -CommandName Get-CIPPDbItem -ParameterFilter { $Type -eq 'SecureScore' } -MockWith {
+            @(script:New-ScoreRow -Partition $Partition -Current 40)
+        }
+
+        $Report = Get-CIPPSecureScoreReport -TenantFilter 'AllTenants' -IncludeControls
+
+        ($Report.Results.Tenant | Sort-Object) | Should -Be @('alpha.onmicrosoft.com', 'beta.onmicrosoft.com')
+        ($Report.Results | Where-Object Tenant -EQ 'beta.onmicrosoft.com').PercentageScore | Should -Be 40
+        Should -Invoke Get-CIPPDbItem -Times 1 -Exactly -ParameterFilter { $Type -eq 'SecureScore' -and $Partition -eq 'beta.onmicrosoft.com' }
+        Should -Invoke Get-CIPPDbItem -Times 0 -ParameterFilter { $Type -eq 'SecureScore' -and $Partition -eq 'alpha.onmicrosoft.com' }
+    }
+
+    It 'returns slim per-tenant controls and one shared catalog with -IncludeControls' {
+        $Report = Get-CIPPSecureScoreReport -TenantFilter 'AllTenants' -IncludeControls
+
+        @($Report.Results).Count | Should -Be 2
+        $Report.Catalog.Keys | Should -Be @('MFARegistrationV2')
+        $Report.Catalog['MFARegistrationV2'].tier | Should -Be 'Core'
+        $Control = @($Report.Results[0].Controls)[0]
+        $Control.scoreInPercentage | Should -Be 50
+        $Control.PSObject.Properties.Name | Should -Not -Contain 'title'
     }
 }

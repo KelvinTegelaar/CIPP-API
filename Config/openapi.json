@@ -63227,8 +63227,24 @@
         "tags": [
           "Tenant > Reports"
         ],
-        "description": "Returns the latest Microsoft Secure Score per tenant from the CIPP reporting database, with no\nlive Graph calls. Reads the nightly cache and projects to the score fields only, so the large\ncontrolScores breakdown on each cached record is never materialized.\n\nQuery parameters:\n  - tenantFilter: A tenant domain, or 'AllTenants' for every tenant the caller can see.\n  - includeHistory: When 'true', each tenant also carries a History array of the retained\n                    daily scores (date / score / percentage) for trend display.",
+        "description": "Returns the latest Microsoft Secure Score per tenant from the CIPP reporting database, with no\nlive Graph calls. Reads the nightly cache and projects to the score fields only, so the large\ncontrolScores breakdown on each cached record is never materialized.\n\nQuery parameters:\n  - tenantFilter: A tenant domain, or 'AllTenants' for every tenant the caller can see.\n  - includeHistory: When 'true', each tenant also carries a History array of the retained\n                    daily scores (date / score / percentage) for trend display.\n  - includeControls: When 'true', each tenant also carries its per-control scores and states\n                     as Controls, and the response adds a Catalog of shared control metadata.\n  - ControlName: With a single tenantFilter, returns that tenant's cached control profile\n                 (description, remediation, state history) instead of the report.",
         "parameters": [
+          {
+            "name": "ControlName",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeControls",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
           {
             "name": "includeHistory",
             "in": "query",
@@ -63255,11 +63271,36 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                    "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "properties": {
+                      "Data": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ETag": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "RowKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Type": {
+                        "x-cipp-field-source": "storage"
+                      }
+                    }
                   }
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
