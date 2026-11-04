@@ -39,6 +39,7 @@ Describe 'Get-CIPPSharedMailboxAccountEnabledReport' {
             assignedLicenses      = @(@{ skuId = 'sku-1' })
             id                    = 'user-id-shared'
             onPremisesSyncEnabled = $false
+            signInActivity        = @{ lastSuccessfulSignInDateTime = '2026-10-01T08:00:00Z' }
         }
         $script:RegularUser = @{
             userPrincipalName     = 'user@contoso.com'
@@ -78,6 +79,7 @@ Describe 'Get-CIPPSharedMailboxAccountEnabledReport' {
         $Result[0].accountEnabled | Should -BeTrue
         $Result[0].onPremisesSyncEnabled | Should -BeFalse
         $Result[0].CacheTimestamp | Should -Not -BeNullOrEmpty
+        $Result[0].lastSuccessfulSignInDateTime | Should -Not -BeNullOrEmpty
         # Must not leak the regular (non-shared) mailbox
         $Result.UserPrincipalName | Should -Not -Contain 'user@contoso.com'
     }
