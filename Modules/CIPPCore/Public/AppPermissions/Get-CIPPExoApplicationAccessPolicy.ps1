@@ -7,7 +7,7 @@ function Get-CIPPExoApplicationAccessPolicy {
         Entra (Graph, EWS and Outlook REST): RestrictAccess allows only the members of a group, DenyAccess every
         mailbox but them. They do not limit Exchange RBAC for Applications roles. Returns one row per policy and app
         (a policy can name several apps, or '*' for every app) with the access right, the group and whether Exchange
-        considers the policy valid. Errors are thrown.
+        considers the policy valid. A tenant without policies returns nothing; other errors are thrown.
     .PARAMETER TenantFilter
         The tenant to read
     #>
@@ -17,7 +17,15 @@ function Get-CIPPExoApplicationAccessPolicy {
         [string]$TenantFilter
     )
 
-    foreach ($Policy in @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ApplicationAccessPolicy')) {
+    # With no policy in the tenant, Exchange reports the wildcard lookup ('<org>\*') as an object not found.
+    $Policies = try {
+        @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ApplicationAccessPolicy')
+    } catch {
+        if ($_.Exception.Message -notmatch 'ManagementObjectNotFoundException') { throw }
+        @()
+    }
+
+    foreach ($Policy in $Policies) {
         foreach ($AppId in @($Policy.AppId)) {
             if (-not $AppId) { continue }
             [PSCustomObject]@{

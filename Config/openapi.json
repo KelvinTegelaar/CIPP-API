@@ -20448,6 +20448,9 @@
                   "AllowedTenants": {
                     "type": "string"
                   },
+                  "AppRoleTenants": {
+                    "type": "string"
+                  },
                   "BlockAllTenants": {
                     "type": "boolean"
                   },
@@ -20513,237 +20516,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the Microsoft Graph entity it queries. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
-                  "properties": {
-                    "accessType": {
-                      "type": "object",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "allowExternalSenders": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "assignedLabels": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "assignedLicenses": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "autoSubscribeNewMembers": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "classification": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "cloudLicensing": {
-                      "type": "object",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "createdByAppId": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "createdDateTime": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "deletedDateTime": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "description": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "displayName": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "expirationDateTime": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "groupTypes": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "hasMembersWithLicenseErrors": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "hideFromAddressLists": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "hideFromOutlookClients": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "id": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "infoCatalogs": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "isArchived": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "isAssignableToRole": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "isFavorite": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "isManagementRestricted": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "isSubscribedByMail": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "licenseProcessingState": {
-                      "type": "object",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "mail": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "mailEnabled": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "mailNickname": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "membershipRule": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "membershipRuleProcessingState": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "membershipRuleProcessingStatus": {
-                      "type": "object",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "onPremisesDomainName": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "onPremisesExtensionAttributes": {
-                      "type": "object",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "onPremisesLastSyncDateTime": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "onPremisesNetBiosName": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "onPremisesProvisioningErrors": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "onPremisesSamAccountName": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "onPremisesSecurityIdentifier": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "onPremisesSyncEnabled": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "organizationId": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "preferredDataLocation": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "preferredLanguage": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "proxyAddresses": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "renewedDateTime": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "resourceBehaviorOptions": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "resourceProvisioningOptions": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "securityEnabled": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "securityIdentifier": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "serviceProvisioningErrors": {
-                      "type": "array",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "theme": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "uniqueName": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "unseenConversationsCount": {
-                      "type": "integer",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "unseenCount": {
-                      "type": "integer",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "unseenMessagesCount": {
-                      "type": "integer",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "visibility": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "welcomeMessageEnabled": {
-                      "type": "boolean",
-                      "x-cipp-field-source": "graph-entity"
-                    },
-                    "writebackConfiguration": {
-                      "type": "object",
-                      "x-cipp-field-source": "graph-entity"
-                    }
-                  }
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -41011,6 +40784,10 @@
                 "properties": {
                   "Action": {
                     "type": "string"
+                  },
+                  "allowedTenants": {
+                    "type": "string",
+                    "description": "Restricted multi-tenant mode: other tenant IDs allowed to sign in when multi-tenant (Update only)"
                   },
                   "appId": {
                     "type": "string"
