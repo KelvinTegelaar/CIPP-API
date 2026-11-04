@@ -364,7 +364,7 @@ user-documentation/tenant
 user-documentation/tenant/administration
 user-documentation/tenant/administration/alert-configuration
 user-documentation/tenant/administration/alert-configuration/alert
-user-documentation/tenant/administration/alert-configuration/alert-history
+user-documentation/tenant/administration/alert-configuration/history
 user-documentation/tenant/administration/alert-configuration/rogue-apps
 user-documentation/tenant/administration/alert-configuration/snoozed-alerts
 user-documentation/tenant/administration/app-consent-requests
