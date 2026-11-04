@@ -36,6 +36,7 @@ function New-CIPPBackup {
                     $BackupTables = @(
                         'AppPermissions'
                         'AccessRoleGroups'
+                        'allowedAppRoles'
                         'ApiClients'
                         'CippReplacemap'
                         'CustomPowershellScripts'
