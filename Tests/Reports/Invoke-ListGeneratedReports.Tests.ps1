@@ -18,6 +18,7 @@ BeforeAll {
     function Write-LogMessage { param($user, $API, $message, $Sev, $LogData) }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Select-CippAllowedTenantData.ps1')
 
     function Invoke-List ([hashtable]$Query) {
         $Response = Invoke-ListGeneratedReports -Request ([pscustomobject]@{ Query = $Query; Headers = @{} }) -TriggerMetadata @{ FunctionName = 'ListGeneratedReports' }
@@ -59,5 +60,26 @@ Describe 'Invoke-ListGeneratedReports' {
         $script:Properties | Should -BeNullOrEmpty
         $Reports[0].Sections | Should -Be 1
         $Reports[0].Blocks[0].type | Should -Be 'test'
+    }
+
+    Context 'restricted caller' {
+        BeforeEach {
+            $script:CippAllowedTenantsStorage = [pscustomobject]@{ Value = @('id-contoso') }
+            Mock Get-Tenants { [pscustomobject]@{ customerId = 'id-contoso'; defaultDomainName = 'contoso.com' } }
+        }
+        AfterEach { $script:CippAllowedTenantsStorage = $null }
+
+        It 'does not return another tenant''s report by GUID' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ PartitionKey = 'removed.com'; RowKey = 'b'; TemplateName = 'CIS'; Blocks = '[{"type":"secret"}]' }
+            }
+            $Response = Invoke-ListGeneratedReports -Request ([pscustomobject]@{ Query = @{ ReportGUID = '22222222-2222-2222-2222-222222222222' }; Headers = @{} }) -TriggerMetadata @{ FunctionName = 'ListGeneratedReports' }
+            $Response.Body | Should -Not -Match 'secret'
+        }
+
+        It 'lists only its own tenants'' reports without a tenant filter' {
+            $Reports = Invoke-List @{}
+            $Reports.RowKey | Should -Be @('a')
+        }
     }
 }
