@@ -47,7 +47,7 @@
       {
         "cmdlet": "Set-TeamsProtectionPolicy",
         "params": {
-          "Identity": "Default Teams Protection Policy",
+          "Identity": "%Name%",
           "ZapEnabled": true
         }
       }

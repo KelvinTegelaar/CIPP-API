@@ -18,14 +18,33 @@ function Invoke-CIPPBaselineExoRequest {
     param(
         $Remediate,
         $TenantFilter,
-        # The read result. Unused here; every executor takes the same arguments.
+        # The read result. A step's %Property% tokens left after rendering resolve against it.
         $Current
     )
 
     foreach ($Step in @($Remediate.cmdlets)) {
         if (-not $Step) { continue }
+        $StepParams = $Step.params ?? [PSCustomObject]@{}
+        # Tokens naming a property of the read record (e.g. a policy's localized identity)
+        # resolve here; an exact "%prop%" keeps the property's JSON type.
+        $StepJson = ConvertTo-Json -Compress -Depth 100 -InputObject $StepParams
+        if ($StepJson -match '%[A-Za-z_][A-Za-z0-9_.]*%') {
+            $Records = @($Current | Where-Object { $_ })
+            if ($Records.Count -ne 1) {
+                throw "$($Step.cmdlet) references a read-record token ($($Matches[0])) but the read returned $($Records.Count) records."
+            }
+            foreach ($Property in $Records[0].PSObject.Properties) {
+                $Token = '%{0}%' -f $Property.Name
+                $StepJson = $StepJson.Replace(('"{0}"' -f $Token), (ConvertTo-Json -Compress -Depth 100 -InputObject $Property.Value))
+                $StepJson = $StepJson.Replace($Token, "$($Property.Value)")
+            }
+            if ($StepJson -match '%[A-Za-z_][A-Za-z0-9_.]*%') {
+                throw "$($Step.cmdlet) has an unresolved token ($($Matches[0])) that the read record does not provide."
+            }
+            $StepParams = $StepJson | ConvertFrom-Json
+        }
         $CmdParams = @{}
-        foreach ($Property in ($Step.params ?? [PSCustomObject]@{}).PSObject.Properties) {
+        foreach ($Property in $StepParams.PSObject.Properties) {
             $CmdParams[$Property.Name] = $Property.Value
         }
 
@@ -55,7 +74,7 @@ function Invoke-CIPPBaselineExoRequest {
         }
         # .Count would collide with a cmdlet param literally named "Count" (the hashtable
         # returns that key's VALUE, not the entry count) - .Keys.Count is unambiguous.
-        if ($CmdParams.Keys.Count -eq 0 -and @(($Step.params ?? [PSCustomObject]@{}).PSObject.Properties).Count -gt 0) { continue }
+        if ($CmdParams.Keys.Count -eq 0 -and @($StepParams.PSObject.Properties).Count -gt 0) { continue }
 
         try {
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $Step.cmdlet -cmdParams $CmdParams -useSystemMailbox $true -Compliance:([bool]($Step.compliance ?? $false))

@@ -56,25 +56,11 @@
     "MicrosoftAuthenticator.featureSettings.displayAppInformationRequiredState.state": "enabled"
   },
   "remediate": {
-    "executor": "GraphRequest",
-    "requests": [
-      {
-        "method": "PATCH",
-        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator",
-        "body": {
-          "@odata.type": "#microsoft.graph.microsoftAuthenticatorAuthenticationMethodConfiguration",
-          "state": "enabled",
-          "featureSettings": {
-            "displayAppInformationRequiredState": {
-              "state": "enabled",
-              "includeTarget": {
-                "targetType": "group",
-                "id": "all_users"
-              }
-            }
-          }
-        }
-      }
-    ]
+    "executor": "AuthenticationPolicy",
+    "params": {
+      "AuthenticationMethodId": "MicrosoftAuthenticator",
+      "Enabled": true,
+      "MicrosoftAuthenticatorDisplayAppInfo": "enabled"
+    }
   }
 }

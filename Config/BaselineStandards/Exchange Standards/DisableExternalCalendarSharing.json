@@ -55,7 +55,7 @@
       {
         "cmdlet": "Set-SharingPolicy",
         "params": {
-          "Identity": "Default Sharing Policy",
+          "Identity": "%Id%",
           "Enabled": "%externalCalendarSharingEnabled%"
         }
       }
