@@ -42080,6 +42080,179 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecUnassignAPDevice": {
+      "post": {
+        "summary": "ExecUnassignAPDevice",
+        "operationId": "ExecUnassignAPDevice",
+        "tags": [
+          "Endpoint > Autopilot"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "device": {
+                    "type": "string",
+                    "description": "The Autopilot device identity id"
+                  },
+                  "serialNumber": {
+                    "type": "string",
+                    "description": "Serial number, used for logging only"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the Microsoft Graph entity it queries. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                  "properties": {
+                    "addressableUserName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "azureActiveDirectoryDeviceId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "azureAdDeviceId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "deploymentProfileAssignedDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "deploymentProfileAssignmentDetailedStatus": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "deploymentProfileAssignmentStatus": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "deviceAccountPassword": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "deviceAccountUpn": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "deviceFriendlyName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "enrollmentState": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "groupTag": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "id": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "lastContactedDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "managedDeviceId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "manufacturer": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "model": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "productKey": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "purchaseOrderIdentifier": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "remediationState": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "remediationStateLastModifiedDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "resourceName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "serialNumber": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "skuNumber": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "systemFamily": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "userlessEnrollmentStatus": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "userPrincipalName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.Autopilot.ReadWrite"
+      }
+    },
     "/api/ExecUniversalSearch": {
       "get": {
         "summary": "ExecUniversalSearch",
