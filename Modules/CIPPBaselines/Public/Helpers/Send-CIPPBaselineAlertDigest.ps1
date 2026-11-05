@@ -25,8 +25,21 @@ function Send-CIPPBaselineAlertDigest {
         foreach ($TenantGroup in ($Queued | Group-Object -Property PartitionKey)) {
             $TenantFilter = $TenantGroup.Name
 
+            # Every finished orchestration runs this digest, often at the same moment: a row
+            # belongs to whichever caller deletes it first, so no two digests send it. The
+            # plain cmdlet, because the large-entity delete treats an already-deleted row as success.
+            $Claimed = @(foreach ($Row in $TenantGroup.Group) {
+                    try {
+                        Remove-AzDataTableEntity @Table -Entity $Row -ErrorAction Stop
+                        $Row
+                    } catch {
+                        Write-Information "Baseline alert $($Row.RowKey) for $TenantFilter already claimed: $($_.Exception.Message)"
+                    }
+                })
+            if ($Claimed.Count -eq 0) { continue }
+
             # Newest event wins when the same (standard, event) queued twice across runs.
-            $Rows = @($TenantGroup.Group | Sort-Object -Property Timestamp -Descending |
+            $Rows = @($Claimed | Sort-Object -Property Timestamp -Descending |
                 Group-Object -Property { '{0}|{1}' -f $_.Standard, $_.Event } |
                 ForEach-Object { $_.Group[0] })
 
@@ -89,9 +102,6 @@ function Send-CIPPBaselineAlertDigest {
                 }
             }
 
-            # Processed - drained whether or not every channel accepted it, so a failing
-            # channel cannot replay the same digest at every following run.
-            Remove-CIPPAzDataTableEntity -Force @Table -Entity @($TenantGroup.Group)
             Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Sent baseline alert digest: $($Rows.Count) event$(if ($Rows.Count -ne 1) { 's' })" -Sev 'Info'
         }
     } catch {
