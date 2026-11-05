@@ -3947,9 +3947,6 @@
               }
             }
           },
-          "207": {
-            "description": "Partial success - some items failed; per-item results are in the body"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
@@ -11672,9 +11669,6 @@
                     "type": "string",
                     "description": "Interact with query parameters or the body of the request."
                   },
-                  "defaultDomainName": {
-                    "type": "string"
-                  },
                   "offboardingDefaults": {
                     "type": "string"
                   }
@@ -11756,9 +11750,6 @@
                   "customerId": {
                     "type": "string",
                     "description": "Interact with query parameters or the body of the request."
-                  },
-                  "defaultDomainName": {
-                    "type": "string"
                   },
                   "vacationDefaults": {
                     "type": "string"
@@ -42447,6 +42438,17 @@
                   "type": "object",
                   "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
+                    "Compliant": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CurrentValue": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Diff": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
                     "ETag": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
@@ -42456,6 +42458,9 @@
                     },
                     "Results": {
                       "x-cipp-field-source": "backend"
+                    },
+                    "Status": {
+                      "x-cipp-field-source": "storage"
                     },
                     "Timestamp": {
                       "type": "string",
@@ -42758,9 +42763,6 @@
                         "type": "string"
                       }
                     }
-                  },
-                  "user": {
-                    "type": "string"
                   }
                 }
               }
@@ -42824,7 +42826,8 @@
                     "type": "string"
                   },
                   "user": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Saves either the shared allUsers row or the caller's own, never another user's"
                   }
                 }
               }
