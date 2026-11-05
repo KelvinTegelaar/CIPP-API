@@ -202,7 +202,7 @@ function Invoke-ExecApiClient {
                         }
                     } catch {
                         $Results.Add(@{
-                                resultText = "Client saved, but MCP app configuration failed: $($_.Exception.Message)"
+                                resultText = "Client saved, but MCP app configuration failed: $($_.Exception.Message) Do not create the client again - run Save to Azure to retry the MCP setup for it."
                                 state      = 'warning'
                             })
                     }

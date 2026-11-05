@@ -43,7 +43,16 @@ function Set-CIPPMCPClientApp {
     $ResourceObjectId = $Resource.ObjectId
     $ScopeId = $Resource.ScopeId
 
-    $App = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$AppId')" -NoAuthCheck $true -AsApp $true
+    # A client created moments ago may not have replicated yet.
+    $App = $null
+    for ($Attempt = 1; $Attempt -le 6 -and -not $App; $Attempt++) {
+        try {
+            $App = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$AppId')" -NoAuthCheck $true -AsApp $true
+        } catch {
+            if ($Attempt -eq 6 -or $_.Exception.Message -notmatch 'does not exist or one of its queried reference-property objects are not present') { throw }
+        }
+        if (-not $App -and $Attempt -lt 6) { Start-Sleep -Seconds 3 }
+    }
     if (-not $App) {
         throw "App registration with AppId '$AppId' was not found."
     }
@@ -109,7 +118,15 @@ function Set-CIPPMCPClientApp {
     } | ConvertTo-Json -Depth 10 -Compress
 
     if ($PSCmdlet.ShouldProcess($AppId, 'Configure API client as MCP OAuth client')) {
-        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($App.id)" -type PATCH -body $PatchBody -NoAuthCheck $true -asapp $true
+        for ($Attempt = 1; $Attempt -le 6; $Attempt++) {
+            try {
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($App.id)" -type PATCH -body $PatchBody -NoAuthCheck $true -asapp $true
+                break
+            } catch {
+                if ($Attempt -eq 6 -or $_.Exception.Message -notmatch 'does not exist or one of its queried reference-property objects are not present') { throw }
+                Start-Sleep -Seconds 3
+            }
+        }
         Write-LogMessage -headers $Headers -API 'ExecApiClient' -message "Configured API client $AppId as an MCP OAuth client (callbacks, public client flows, resource permissions) against resource $ResourceAppId." -Sev 'Info'
 
         # OIDC + offline_access on Graph are admin-consented tenant-wide (they can't be

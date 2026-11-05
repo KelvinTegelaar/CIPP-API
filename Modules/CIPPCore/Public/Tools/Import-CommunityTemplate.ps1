@@ -63,6 +63,14 @@ function Import-CommunityTemplate {
                 }
             }
 
+            # A new standards template keeps the file's tenants, so a restricted caller may only import tenants they can access
+            if (-not $Existing -and $Template.PartitionKey -eq 'StandardsTemplateV2') {
+                $OutOfScope = @(Get-CIPPBaselineOutOfScopeAssignment -Assignments @($NewJSON.tenantFilter) | Select-Object -Unique)
+                if ($OutOfScope.Count -gt 0) {
+                    throw [System.UnauthorizedAccessException]::new("Your role can't import this template, because it is assigned to tenants outside your access: $($OutOfScope -join ', ').")
+                }
+            }
+
             if ($Template.PartitionKey -eq 'AppApprovalTemplate') {
                 # Extract the Permission Set name,id,permissions from the JSON and add to the AppPermissions table
                 $AppPermissionsTable = Get-CIPPTable -TableName 'AppPermissions'
@@ -343,6 +351,7 @@ function Import-CommunityTemplate {
             }
         }
     } catch {
+        if ($_.Exception -is [System.UnauthorizedAccessException]) { throw }
         $StatusMessage = "Community template import failed. Error: $($_.Exception.Message)"
         Write-Warning $StatusMessage
         Write-Information $_.InvocationInfo.PositionMessage

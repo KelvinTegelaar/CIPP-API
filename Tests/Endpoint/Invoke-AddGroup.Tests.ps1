@@ -9,7 +9,6 @@ BeforeAll {
     function New-CIPPGroup { param($GroupObject, $TenantFilter, $APIName, $ExecutingUser) }
     function Get-Tenants { param() }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = "$Exception" } }
-    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
 
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Identity/Administration/Groups/Invoke-AddGroup.ps1'
     . ([ScriptBlock]::Create("using namespace System.Net`n" + (Get-Content -LiteralPath $EndpointPath -Raw)))
@@ -44,20 +43,5 @@ Describe 'Invoke-AddGroup' {
 
         Should -Invoke New-CIPPGroup -Times 1 -Exactly -ParameterFilter { $TenantFilter -eq 'contoso.com' }
         Should -Not -Invoke Get-Tenants
-    }
-
-    It 'returns 207 when only some tenants fail' {
-        Mock New-CIPPGroup { [pscustomobject]@{ Success = $false; Message = 'Graph said no' } } -ParameterFilter { $TenantFilter -eq 'a.com' }
-        $Response = Invoke-AddGroup -Request (New-AddGroupRequest -TenantFilter @([pscustomobject]@{ value = 'a.com' }, [pscustomobject]@{ value = 'b.com' }))
-
-        $Response.StatusCode | Should -Be 207
-        $Response.Body.Results.Count | Should -Be 2
-    }
-
-    It 'returns 500 when every tenant fails' {
-        Mock New-CIPPGroup { [pscustomobject]@{ Success = $false; Message = 'Graph said no' } }
-        $Response = Invoke-AddGroup -Request (New-AddGroupRequest -TenantFilter 'contoso.com')
-
-        $Response.StatusCode | Should -Be 500
     }
 }

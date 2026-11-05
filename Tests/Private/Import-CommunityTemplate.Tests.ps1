@@ -16,6 +16,9 @@ BeforeAll {
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GitHub/Get-CIPPTemplateContentHash.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/Import-CommunityTemplate.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaselineOutOfScopeAssignment.ps1')
+    function Get-TenantGroups { @() }
+    function Get-CIPPTenantLookup { @{ 'mine.onmicrosoft.com' = @{ customerId = 'tenant-1' }; 'victim.onmicrosoft.com' = @{ customerId = 'tenant-2' } } }
 
     function Get-RepoTemplate {
         param([string]$Description = 'Description from the repo')
@@ -139,6 +142,37 @@ Describe 'Import-CommunityTemplate direct-write path' {
 
             $null = Import-CommunityTemplate -Template (Get-RepoTemplate) -SHA 'abc123' -Source 'owner/repo'
             $script:Written.PSObject.Properties.Name | Should -Not -Contain 'ContentHash'
+        }
+    }
+
+    Context 'tenants named by a new standards template' {
+        BeforeEach {
+            Mock Get-CIPPAzDataTableEntity { $null }
+            $script:Written = $null
+            Mock Add-CIPPAzDataTableEntity { $script:Written = $Entity }
+            $script:Template = Get-RepoStandardsTemplate
+            $script:Template.JSON = (@{ templateName = 'Baseline'; tenantFilter = @(@{ value = 'victim.onmicrosoft.com'; label = 'Victim' }) } | ConvertTo-Json -Compress)
+        }
+        AfterEach { $script:CippAllowedTenantsStorage = $null }
+
+        It 'refuses a restricted caller whose access does not cover them, and writes nothing' {
+            $script:CippAllowedTenantsStorage = [System.Threading.AsyncLocal[object]]::new()
+            $script:CippAllowedTenantsStorage.Value = @('tenant-1')
+            { Import-CommunityTemplate -Template $script:Template -SHA 'abc123' -Source 'owner/repo' } | Should -Throw -ExceptionType ([System.UnauthorizedAccessException])
+            $script:Written | Should -BeNullOrEmpty
+        }
+
+        It 'imports an exported file with the placeholder tenant for a restricted caller' {
+            $script:CippAllowedTenantsStorage = [System.Threading.AsyncLocal[object]]::new()
+            $script:CippAllowedTenantsStorage.Value = @('tenant-1')
+            $script:Template.JSON = (@{ templateName = 'Baseline'; tenantFilter = @(@{ value = 'Template Tenant'; label = 'Template Tenant' }) } | ConvertTo-Json -Compress)
+            $null = Import-CommunityTemplate -Template $script:Template -SHA 'abc123' -Source 'owner/repo'
+            $script:Written | Should -Not -BeNullOrEmpty
+        }
+
+        It 'imports them unchanged for an unrestricted caller' {
+            $null = Import-CommunityTemplate -Template $script:Template -SHA 'abc123' -Source 'owner/repo'
+            ($script:Written.JSON | ConvertFrom-Json).tenantFilter.value | Should -Be 'victim.onmicrosoft.com'
         }
     }
 

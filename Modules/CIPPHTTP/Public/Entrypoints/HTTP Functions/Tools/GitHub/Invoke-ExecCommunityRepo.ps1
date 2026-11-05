@@ -237,7 +237,7 @@ function Invoke-ExecCommunityRepo {
                     }
                 }
             } catch {
-                $StatusCode = [HttpStatusCode]::InternalServerError
+                $StatusCode = $_.Exception -is [System.UnauthorizedAccessException] ? [HttpStatusCode]::Forbidden : [HttpStatusCode]::InternalServerError
                 $Results = @{
                     resultText = "Error importing template: $($_.Exception.Message)"
                     state      = 'error'

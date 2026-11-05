@@ -57,7 +57,13 @@ function Invoke-AddAlert {
         $WebhookTable = Get-CippTable -TableName 'WebhookRules'
         if ($Request.Body.RowKey) {
             # Editing replaces the entity, so carry the disabled state over to keep a disabled alert disabled
-            $ExistingAlert = Get-CIPPAzDataTableEntity @WebhookTable -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $RowKey)'" -Property RowKey, Disabled
+            $ExistingAlert = Get-CIPPAzDataTableEntity @WebhookTable -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $RowKey)'" -Property RowKey, Disabled, Tenants
+            if ($ExistingAlert -and -not (Test-CippTenantInScope -Tenant ($ExistingAlert.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue))) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::Forbidden
+                        Body       = @{ Results = 'Access to this alert is not allowed' }
+                    })
+            }
             if ($ExistingAlert.Disabled -eq $true) {
                 $CompleteObject.Disabled = $true
             }

@@ -12,7 +12,7 @@ Function Invoke-ListApplicationQueue {
     $Table = Get-CippTable -tablename 'apps'
     $QueuedApps = (Get-CIPPAzDataTableEntity @Table)
 
-    $CurrentApps = foreach ($QueueFile in $QueuedApps) {
+    $CurrentApps = @(foreach ($QueueFile in $QueuedApps) {
         Write-Host $QueueFile
         $ApplicationFile = $QueueFile.JSON | ConvertFrom-Json -Depth 10
         [PSCustomObject]@{
@@ -23,7 +23,7 @@ Function Invoke-ListApplicationQueue {
             id              = $($QueueFile.RowKey)
             status          = $($QueueFile.status)
         }
-    }
+    }) | Select-CippAllowedTenantData -TenantProperty tenantName
 
 
     return ([HttpResponseContext]@{

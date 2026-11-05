@@ -21,7 +21,8 @@ function Invoke-ExecGenerateReportBuilderReport {
                 throw 'ReportGUID is required for deletion'
             }
             $ReportTable = Get-CippTable -tablename 'ReportBuilderReports'
-            $ExistingEntity = Get-CIPPAzDataTableEntity @ReportTable -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Body.ReportGUID)'"
+            $ExistingEntity = Get-CIPPAzDataTableEntity @ReportTable -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Body.ReportGUID)'" |
+                Where-Object { Test-CippTenantInScope -Tenant $_.PartitionKey }
             if ($ExistingEntity) {
                 Remove-CIPPAzDataTableEntity @ReportTable -Entity $ExistingEntity
                 # The rendered PDF sits in its own table; a large one is split across part rows, so fetch

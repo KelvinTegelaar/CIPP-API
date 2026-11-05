@@ -41,6 +41,11 @@ function Import-CIPPBaselineTemplate {
     if ($Existing -and "$($Existing.SHA)" -eq "$SHA" -and -not $Force) {
         return "Baseline '$($Baseline.templateName)' is already up to date. Skipping import."
     }
+    # The import replaces the baseline's assignments with the file's, so a restricted caller needs both in scope (as AddBaseline)
+    $OutOfScope = @(Get-CIPPBaselineOutOfScopeAssignment -Assignments @($Baseline.assignedTenants; $(if ($Existing.assignedTo) { $Existing.assignedTo | ConvertFrom-Json })) | Select-Object -Unique)
+    if ($OutOfScope.Count -gt 0) {
+        throw [System.UnauthorizedAccessException]::new("Your role can't import this baseline, because it is assigned to tenants outside your access: $($OutOfScope -join ', ').")
+    }
 
     # Related templates first, so the baseline's references resolve the moment it lands.
     $Tree = $null

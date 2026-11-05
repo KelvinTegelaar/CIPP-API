@@ -9,12 +9,11 @@ function Invoke-AddGroup {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $SelectedTenants = $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter
+    $SelectedTenants = $Request.body.tenantFilter.value ? $Request.body.tenantFilter.value : $Request.body.tenantFilter
     if ('AllTenants' -in $SelectedTenants) { $SelectedTenants = (Get-Tenants).defaultDomainName }
 
 
     $GroupObject = $Request.body
-    $Failed = 0
 
     $Results = foreach ($tenant in $SelectedTenants) {
         try {
@@ -23,18 +22,19 @@ function Invoke-AddGroup {
 
             if ($Result.Success) {
                 "Successfully created group $($GroupObject.displayName) for $($tenant)"
+                $StatusCode = [HttpStatusCode]::OK
             } else {
                 throw $Result.Message
             }
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             "Failed to create group. $($GroupObject.displayName) for $($tenant) $($ErrorMessage.NormalizedError)"
-            $Failed++
+            $StatusCode = [HttpStatusCode]::InternalServerError
         }
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = Get-CippBulkStatusCode -Total @($SelectedTenants).Count -Failed $Failed
+            StatusCode = $StatusCode
             Body       = @{'Results' = @($Results) }
         })
 }

@@ -115,6 +115,21 @@ Describe 'Set-CIPPMCPClientApp' {
         $Result.ClientAppId | Should -Be $script:AppId
     }
 
+    It 'waits for a just-created client app to replicate instead of failing' {
+        Mock -CommandName Start-Sleep -MockWith { }
+        $script:GetCalls = 0
+        Mock -CommandName New-GraphGetRequest -MockWith {
+            $script:GetCalls++
+            if ($script:GetCalls -eq 1) { throw "Resource '$script:AppId' does not exist or one of its queried reference-property objects are not present." }
+            [PSCustomObject]@{ id = $script:AppObjectId; appId = $script:AppId }
+        }
+
+        $Result = Set-CIPPMCPClientApp -AppId $script:AppId -Headers @{}
+
+        $Result.Success | Should -BeTrue
+        Should -Invoke -CommandName New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter { $type -eq 'PATCH' }
+    }
+
     It 'does not fail the configuration when the consent grant throws' {
         Mock -CommandName Grant-CippAppGraphConsent -MockWith { throw 'Insufficient privileges' }
         $Result = Set-CIPPMCPClientApp -AppId $script:AppId -Headers @{}
