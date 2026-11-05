@@ -580,6 +580,20 @@ function Push-ExecOnboardTenantQueue {
                     }
                 }
 
+                # Baselines assigned to All Tenants exclude the same group
+                $RolloutTable = Get-CIPPTable -tablename 'BaselineRollouts'
+                foreach ($Rollout in @(Get-CIPPAzDataTableEntity @RolloutTable -Filter "PartitionKey eq 'rollout'")) {
+                    $Assigned = @(try { $Rollout.assignedTo | ConvertFrom-Json -ErrorAction Stop } catch { })
+                    if ($Assigned.Where({ ($_.value ?? $_) -eq 'AllTenants' }).Count -eq 0) { continue }
+                    $ExcludedValues = @(try { $Rollout.excludedTenants | ConvertFrom-Json -ErrorAction Stop } catch { })
+                    if ($ExcludedValues -contains $ExclusionGroupId) { continue }
+                    $ExcludedTo = @(try { $Rollout.excludedTo | ConvertFrom-Json -ErrorAction Stop } catch { })
+                    $Rollout | Add-Member -NotePropertyName 'excludedTo' -NotePropertyValue ([string](ConvertTo-Json -Compress -Depth 10 -InputObject @($ExcludedTo + $GroupExclusionObj))) -Force
+                    $Rollout | Add-Member -NotePropertyName 'excludedTenants' -NotePropertyValue ([string](ConvertTo-Json -Compress -Depth 10 -InputObject @($ExcludedValues + $ExclusionGroupId))) -Force
+                    Add-CIPPAzDataTableEntity @RolloutTable -Entity $Rollout -Force
+                    $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Excluded the group from baseline '$($Rollout.templateName)'" })
+                }
+
                 # Bust the tenant groups cache so standards pick up the new member
                 $null = Get-TenantGroups -SkipCache
 

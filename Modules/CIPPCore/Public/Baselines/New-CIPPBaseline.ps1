@@ -117,8 +117,8 @@ function New-CIPPBaseline {
         if ($Value -eq 'AllTenants') {
             @{ scope = 'allTenants'; scopeId = 'AllTenants'; scopeName = 'AllTenants'; segment = 'allTenants' }
         } else {
-            # Group selections send the group ID; older saves round-tripped names. Accept both.
-            $Group = $Groups | Where-Object { $_.Id -eq $Value -or $_.Name -eq $Value } | Select-Object -First 1
+            # Group selections send the group ID; older saves round-tripped names. Accept both. The export placeholder is never a group.
+            $Group = if ($Value -ne 'Exported Template') { $Groups | Where-Object { $_.Id -eq $Value -or $_.Name -eq $Value } | Select-Object -First 1 }
             if ($Group) {
                 @{ scope = 'group'; scopeId = "$($Group.Id)"; scopeName = "$($Group.Name)"; segment = "group_$($Group.Id)" }
             } else {

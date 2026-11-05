@@ -158,4 +158,18 @@ Describe 'Baseline tenant identity (#941)' {
         ($Deltas | Where-Object { $_.scope -eq 'group' }).scopeId | Should -Be 'g1'
         ($script:Written | Where-Object { $_.PartitionKey -eq 'rollout' }).excludedTenants | Should -Be "[`"$script:CustomerId`"]"
     }
+
+    It 'never turns the export placeholder into a group named after it' {
+        Mock Get-TenantGroups { @([pscustomobject]@{ Id = 'g-trap'; Name = 'Exported Template'; Members = @([pscustomobject]@{ defaultDomainName = 'contoso.com' }) }) }
+        $script:Rollouts = @()
+        $Baseline = [pscustomobject]@{
+            templateName    = 'Imported'
+            stages          = @([pscustomobject]@{ name = 'Stage 1'; standards = @([pscustomobject]@{ standard = 'TeamsGlobalMeetingPolicy'; variables = @{} }) })
+            assignedTenants = @([pscustomobject]@{ label = 'Exported Template'; value = 'Exported Template'; type = 'Tenant' })
+        }
+
+        $null = New-CIPPBaseline -Baseline $Baseline -User 'tester'
+
+        @($script:Written | Where-Object { $_.PartitionKey -eq 'standardItem' -and $_.scope -eq 'group' }).Count | Should -Be 0
+    }
 }
