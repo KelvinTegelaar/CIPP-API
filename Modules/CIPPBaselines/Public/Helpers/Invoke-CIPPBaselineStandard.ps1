@@ -759,7 +759,8 @@ function Invoke-CIPPBaselineStandard {
                 $Result.Status = 'Compliant'
                 # Edge-triggered like the Drift alert: checkBeforeRun:false standards write every
                 # run, so alerting on a steady-state rewrite would fire forever with nothing changed.
-                if ($Item.AlertOnRemediate -and $PriorStatus -ne 'Compliant') { $Result.AlertEvent = 'Remediated' }
+                # An operator-triggered fix is not news to the operator, and the alert says "automatically".
+                if ($Item.AlertOnRemediate -and $PriorStatus -ne 'Compliant' -and $TriggeredBy -eq 'schedule') { $Result.AlertEvent = 'Remediated' }
             }
         } elseif ($Compliant) {
             $Result.Compliant = $true

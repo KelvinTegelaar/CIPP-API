@@ -16,7 +16,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Filter) }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function Remove-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
-    function Add-CIPPBaselineHistoryEvent { param($TenantFilter, $Standard, $Mode, $TriggeredBy, $Outcome, $Detail, $RunId, $Remediated) }
+    function Add-CIPPBaselineHistoryEvent { param($TenantFilter, $Standard, $Mode, $TriggeredBy, $Outcome, $Detail, $Diff, $RunId, $Remediated) }
     function Set-CIPPBaselineResult { param($Result, $Prior, $RunId) }
     function Send-CIPPBaselineAlert { param($Result) }
     function New-CIPPDbRequest { param($TenantFilter, $Type, $Fields) }
@@ -350,7 +350,7 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         Mock Set-CIPPDBCacheTestCache { }
         Mock Start-Sleep { }
         Mock Write-LogMessage { }
-        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ PartitionKey = $script:Tenant; RowKey = 'TestStd'; PendingVerification = $true } }
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ PartitionKey = $script:Tenant; RowKey = 'TestStd'; PendingVerification = $true; Compliant = $true; Status = 'Compliant'; CurrentValue = '{"enabled":true}'; Diff = '[]' } }
         Mock Add-CIPPAzDataTableEntity { }
         $script:PushItem = @{
             RunId = 'run-1'; Mode = 'oneoff'; TriggeredBy = 'operator@contoso.com'
@@ -428,13 +428,25 @@ Describe 'Push-CIPPBaselineStandard oneoff verification' {
         Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $Sev -eq 'Warning' -and $message -like '*still grades*' }
     }
 
-    It 'still non-compliant after both retries does NOT write the row' {
+    It 'still non-compliant after both retries replaces the optimistic Compliant row with the verified Drift' {
+        Mock Add-CIPPBaselineHistoryEvent { }
         Mock Invoke-CIPPBaselineStandard {
-            if ($GradeOnly) { $script:GradeCalls++; return [PSCustomObject]@{ Compliant = $false } }
+            if ($GradeOnly) {
+                $script:GradeCalls++
+                return [PSCustomObject]@{
+                    Compliant    = $false
+                    CurrentValue = [PSCustomObject]@{ enabled = $false }
+                    Diff         = @([PSCustomObject]@{ Property = 'enabled'; ExpectedValue = $true; ReceivedValue = $false })
+                }
+            }
             [PSCustomObject]@{ Remediated = $true; CacheType = @('TestCache') }
         }
         Push-CIPPBaselineStandard -Item $script:PushItem
-        Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+            $Entity.Status -eq 'Drift' -and $Entity.Compliant -eq $false -and $Entity.PendingVerification -eq $false -and
+            $Entity.CurrentValue -eq '{"enabled":false}' -and $Entity.Diff -like '*"Property":"enabled"*'
+        }
+        Should -Invoke Add-CIPPBaselineHistoryEvent -Times 1 -Exactly -ParameterFilter { $Outcome -eq 'Drift' -and $TriggeredBy -eq 'operator@contoso.com' }
     }
 
     It 'scheduled runs are untouched: impact records out, no inline refresh, no verification' {
@@ -580,6 +592,14 @@ Describe 'Invoke-CIPPBaselineStandard remediation alerting and write failures' {
         $Result = Invoke-CIPPBaselineStandard -Item $script:WriteAlwaysItem -Mode 'run'
         $Result.AlertEvent | Should -Be 'Remediated'
         Should -Invoke Send-CIPPBaselineAlert -Times 1 -Exactly
+    }
+
+    It 'an operator-triggered fix does not raise the "fixed automatically" alert' {
+        Mock Get-CIPPAzDataTableEntity { @(& $script:PriorRow 'Drift') }
+        $Result = Invoke-CIPPBaselineStandard -Item $script:WriteAlwaysItem -Mode 'oneoff' -TriggeredBy 'operator@contoso.com' -Force
+        $Result.Outcome | Should -Be 'Remediated'
+        $Result.AlertEvent | Should -BeNullOrEmpty
+        Should -Invoke Send-CIPPBaselineAlert -Times 0 -Exactly
     }
 
     It 'alerts on first sight, where there is no prior row at all' {

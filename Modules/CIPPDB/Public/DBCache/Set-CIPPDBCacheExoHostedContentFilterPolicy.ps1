@@ -1,7 +1,7 @@
 function Set-CIPPDBCacheExoHostedContentFilterPolicy {
     <#
     .SYNOPSIS
-        Caches Exchange Online Hosted Content Filter policies
+        Caches Exchange Online Hosted Content Filter policies and rules
 
     .PARAMETER TenantFilter
         The tenant to cache Hosted Content Filter data for
@@ -29,6 +29,9 @@ function Set-CIPPDBCacheExoHostedContentFilterPolicy {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Hosted Content Filter policies (none found)' -sev Debug
         }
         $HostedContentFilterPolicies = $null
+
+        # Rules ride along with their policies so a post-write refresh never grades a stale rule.
+        Set-CIPPDBCacheExoHostedContentFilterRule -TenantFilter $TenantFilter
 
     } catch {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache Hosted Content Filter data: $($_.Exception.Message)" -sev Error

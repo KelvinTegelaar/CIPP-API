@@ -339,6 +339,93 @@ Describe 'Get-CIPPBaselineSpamFilterPolicyState block-list write params' {
         $Prepared.Expected.bulkMovesEnabled | Should -BeExactly 'On'
         $Prepared.Current.extraPolicyParams.BulkMovesEnabled | Should -BeExactly 'On'
     }
+
+    It 'writes the allowed sender domains it grades' {
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ AllowedSenderDomains = @('b.example.com', 'a.example.com') } }
+        $Prepared = Get-CIPPBaselineSpamFilterPolicyState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Current.extraPolicyParams.AllowedSenderDomains) | Should -BeExactly @('a.example.com', 'b.example.com')
+    }
+
+    It 'clears the allowed sender domains on the existing policy when the list is blank' {
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ AllowedSenderDomains = @() } }
+        $Prepared = Get-CIPPBaselineSpamFilterPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.extraPolicyParams.AllowedSenderDomains['@odata.type'] | Should -Be '#Exchange.GenericHashTable'
+        $Prepared.Current.extraPolicyParams.AllowedSenderDomains.Keys.Count | Should -Be 1
+    }
+}
+
+Describe 'Get-CIPPBaselineSafeLinksPolicyState DoNotRewriteUrls write' {
+    BeforeAll {
+        . (Join-Path (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public') 'PrepareHooks/Get-CIPPBaselineSafeLinksPolicyState.ps1')
+    }
+    BeforeEach {
+        $script:SafeLinksPolicies = @(@{ Name = 'CIPP Default SafeLinks Policy'; DoNotRewriteUrls = @('old.example.com') })
+        Mock New-CIPPDbRequest {
+            switch ($Type) {
+                'ExoSafeLinksPolicies' { @($script:SafeLinksPolicies | ConvertTo-Cached) }
+                'ExoSafeLinksRules' { @(@{ Name = 'CIPP Default SafeLinks Policy_Rule'; SafeLinksPolicy = 'CIPP Default SafeLinks Policy'; Priority = 0 } | ConvertTo-Cached) }
+                'ExoAcceptedDomains' { @(@{ Name = 'contoso.com' } | ConvertTo-Cached) }
+            }
+        }
+    }
+
+    It 'writes the configured URLs' {
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ DoNotRewriteUrls = @('new.example.com') } }
+        $Prepared = Get-CIPPBaselineSafeLinksPolicyState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Current.extraPolicyParams.DoNotRewriteUrls) | Should -BeExactly @('new.example.com')
+    }
+
+    It 'clears the URLs on the existing policy when the list is blank, matching the empty list it grades' {
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ DoNotRewriteUrls = '' } }
+        $Prepared = Get-CIPPBaselineSafeLinksPolicyState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Expected.doNotRewriteUrls).Count | Should -Be 0
+        $Prepared.Current.extraPolicyParams.DoNotRewriteUrls['@odata.type'] | Should -Be '#Exchange.GenericHashTable'
+    }
+
+    It 'sends nothing for a blank list when the policy is being created' {
+        $script:SafeLinksPolicies = @(@{ Name = 'Some Other Policy' })
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ DoNotRewriteUrls = '' } }
+        $Prepared = Get-CIPPBaselineSafeLinksPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.policyExists | Should -BeFalse
+        $Prepared.Current.extraPolicyParams.PSObject.Properties.Name | Should -Not -Contain 'DoNotRewriteUrls'
+    }
+}
+
+Describe 'Get-CIPPBaselineSpoofWarnState allow list' {
+    BeforeAll {
+        . (Join-Path (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public') 'PrepareHooks/Get-CIPPBaselineSpoofWarnState.ps1')
+        $script:Grade = {
+            param($Allow, $TenantList)
+            $script:ExternalInOutlook = @{ Enabled = $true; AllowList = $TenantList }
+            $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ externalWarningEnabled = $true; allowListAdd = $Allow } }
+            $Prepared = Get-CIPPBaselineSpoofWarnState -Item $Item -TenantFilter $script:Tenant
+            @(Compare-CIPPIntuneObject -ReferenceObject $Prepared.Expected -DifferenceObject $Prepared.Current | Where-Object { $_ })
+        }
+    }
+    BeforeEach {
+        Mock New-CIPPDbRequest { if ($Type -eq 'ExoExternalInOutlook') { @($script:ExternalInOutlook | ConvertTo-Cached) } }
+    }
+
+    It 'drifts when a configured entry is missing from the tenant' {
+        $Diff = & $script:Grade @('sim.example.com', 'vendor.example.com') @('vendor.example.com')
+        @($Diff.Property -like 'AllowList*').Count | Should -BeGreaterThan 0
+    }
+
+    It 'is compliant when every configured entry is present, ignoring case and entries added elsewhere' {
+        @(& $script:Grade @('Sim.Example.com') @('sim.example.com', 'portal-added.example.com', '')).Count | Should -Be 0
+    }
+
+    It 'is compliant with a blank list - the allow list is add-only' {
+        @(& $script:Grade @() @('portal-added.example.com')).Count | Should -Be 0
+    }
+
+    It 'still grades the warning switch' {
+        $script:ExternalInOutlook = @{ Enabled = $false; AllowList = @() }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ externalWarningEnabled = $true; allowListAdd = @() } }
+        $Prepared = Get-CIPPBaselineSpoofWarnState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.Enabled | Should -BeTrue
+        $Prepared.Current.Enabled | Should -BeFalse
+    }
 }
 
 Describe 'Get-CIPPBaselineMailboxDefaultAuditSetState' {

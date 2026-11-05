@@ -123,7 +123,6 @@ function Invoke-CIPPDBCacheCollection {
             'ExoRoleAssignmentPolicy'
             'ExoAppRoleAssignments'
             'ExoApplicationAccessPolicies'
-            'ExoHostedContentFilterRule'
             'ExoGlobalQuarantinePolicy'
             'ExoOMEConfiguration'
             'ExoIRMConfiguration'

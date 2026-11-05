@@ -89,8 +89,7 @@
       "DeliverMessageAfterScan": true,
       "AllowClickThrough": "%AllowClickThrough%",
       "DisableUrlRewrite": "%DisableUrlRewrite%",
-      "EnableOrganizationBranding": "%EnableOrganizationBranding%",
-      "DoNotRewriteUrls": "%DoNotRewriteUrls%"
+      "EnableOrganizationBranding": "%EnableOrganizationBranding%"
     },
     "ruleParams": {
       "Priority": 0

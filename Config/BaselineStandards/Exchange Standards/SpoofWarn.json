@@ -46,12 +46,10 @@
       "default": []
     }
   },
-  "expected": {
-    "Enabled": "%externalWarningEnabled%"
-  },
   "read": {
     "cacheType": "ExoExternalInOutlook"
   },
+  "prepare": "Get-CIPPBaselineSpoofWarnState",
   "remediate": {
     "executor": "ExoRequest",
     "cmdlets": [

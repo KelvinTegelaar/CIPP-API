@@ -60,19 +60,26 @@ function Push-CIPPBaselineStandard {
                             if (-not ($Verdict -and -not $Verdict.Compliant)) { break }
                         }
                         if ($Verdict -and -not $Verdict.Compliant) {
-                            Write-LogMessage -API 'Baselines' -tenant $Item.Item.TenantFilter -message "The refreshed cache still grades `"$($Item.Item.Standard)`" as drifted after remediation - either the write did not take effect or the API is lagging beyond the retry window; the next compare may re-report drift until the scheduled collection." -Sev 'Warning'
+                            Write-LogMessage -API 'Baselines' -tenant $Item.Item.TenantFilter -message "The refreshed cache still grades `"$($Item.Item.Standard)`" as drifted after remediation - the write did not take effect or the API is lagging beyond the retry window. The row is marked as drifted; the next run re-checks it." -Sev 'Warning'
                         }
                     }
-                    if ($Verdict -and $Verdict.Compliant) {
+                    if ($Verdict) {
                         # GradeOnly persists nothing - the row still carries the optimistic
-                        # PendingVerification the initial remediation wrote. A clean verdict
-                        # here (first pass or after backoff) confirms the fix, so clear it.
+                        # Compliant + PendingVerification the remediation wrote. Replace it with
+                        # the verified verdict either way, so a write that did not take shows Drift.
                         $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
                         $SafeTenant = ConvertTo-CIPPODataFilterValue -Value "$($Item.Item.TenantFilter)" -Type String
                         $SafeRowKey = ConvertTo-CIPPODataFilterValue -Value ("$($Item.Item.Standard)" -replace '#', '~') -Type String
-                        $ResolvedRow = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant' and RowKey eq '$SafeRowKey'" | Select-Object -First 1
+                        $ResolvedRow = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant' and RowKey eq '$SafeRowKey'")[0]
                         if ($ResolvedRow -and $ResolvedRow.PendingVerification) {
                             $ResolvedRow.PendingVerification = $false
+                            if (-not $Verdict.Compliant) {
+                                $ResolvedRow.Compliant = $false
+                                $ResolvedRow.Status = 'Drift'
+                                $ResolvedRow.CurrentValue = [string](ConvertTo-Json -Compress -Depth 100 -InputObject $Verdict.CurrentValue)
+                                $ResolvedRow.Diff = [string](ConvertTo-Json -Compress -Depth 100 -InputObject @($Verdict.Diff))
+                                $null = Add-CIPPBaselineHistoryEvent -TenantFilter $Item.Item.TenantFilter -Standard $Item.Item.Standard -Mode 'oneoff' -TriggeredBy ($Item.TriggeredBy ?? 'schedule') -Outcome 'Drift' -Detail 'Still drifted after remediation: the refreshed tenant data does not match the baseline.' -Diff @($Verdict.Diff) -RunId $Item.RunId
+                            }
                             $null = Add-CIPPAzDataTableEntity @ResolvedTable -Entity $ResolvedRow -Force
                         }
                     }
