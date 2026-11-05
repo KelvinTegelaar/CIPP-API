@@ -5,8 +5,53 @@ function Get-CIPPMFAState {
         $APIName = 'Get MFA Status',
         $Headers
     )
+    # Guest/external matching: CA categorises a user by userType + #EXT# UPN. Graph user objects do
+    # not carry a B2B user's home tenant id (identities[].issuer is 'ExternalAzureAD' or the host
+    # domain), so enumerated externalTenants are matched by resolving the external UPN domain with
+    # findTenantInformationByDomainName into $DomainTenantLookup (only when a policy needs it).
+    # ponytail: the invited UPN domain is an approximation of the home tenant (a guest who redeemed
+    # with another identity, or whose domain moved tenants, is misattributed); the authoritative
+    # source is homeTenantId on sign-in logs, too costly per user. Domains that fail to resolve for
+    # any reason other than "no such tenant" land in $UnresolvedDomains and the match is $null
+    # (unknown) instead of $false, so a failed lookup never produces a definite verdict.
+    $B2BCategories = @('b2bCollaborationGuest', 'b2bCollaborationMember')
+    $DomainTenantLookup = @{}
+    $UnresolvedDomains = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    function Get-MFAGuestBlockTypes {
+        param ($GuestConfig)
+        if ($null -eq $GuestConfig -or [string]::IsNullOrWhiteSpace($GuestConfig.guestOrExternalUserTypes)) { return @() }
+        return @(([string]$GuestConfig.guestOrExternalUserTypes -split ',').Trim())
+    }
+    # Returns $true (matches), $false (does not match) or $null (home tenant unknown, may match).
+    function Test-MFAGuestBlockMatch {
+        param ($User, $GuestConfig)
+        if ((Get-MFAGuestBlockTypes -GuestConfig $GuestConfig) -notcontains $User.GuestCategory) { return $false }
+        $ExternalTenants = $GuestConfig.externalTenants
+        if ($User.GuestCategory -notin $B2BCategories -or [string]$ExternalTenants.membershipKind -ne 'enumerated') { return $true }
+        if ($User.ExternalDomain -and $UnresolvedDomains.Contains($User.ExternalDomain)) { return $null }
+        $HomeTenantId = if ($User.ExternalDomain) { $DomainTenantLookup[$User.ExternalDomain] }
+        if (-not $HomeTenantId) { return $false }
+        return (@($ExternalTenants.members) -contains $HomeTenantId)
+    }
+    function Test-MFAEnumeratedB2BBlock {
+        param ($GuestConfig)
+        if ([string]$GuestConfig.externalTenants.membershipKind -ne 'enumerated') { return $false }
+        foreach ($Type in (Get-MFAGuestBlockTypes -GuestConfig $GuestConfig)) { if ($Type -in $B2BCategories) { return $true } }
+        return $false
+    }
+    # Same tri-state as Test-MFAGuestBlockMatch.
+    function Test-MFAGuestExcluded {
+        param ($User, $Policy)
+        if (-not $User.GuestCategory) { return $false }
+        if ($Policy.conditions.users.excludeUsers -contains 'GuestsOrExternalUsers') { return $true }
+        return (Test-MFAGuestBlockMatch -User $User -GuestConfig $Policy.conditions.users.excludeGuestsOrExternalUsers)
+    }
+
     #$PerUserMFAState = Get-CIPPPerUserMFA -TenantFilter $TenantFilter -AllUsers $true
     $users = foreach ($user in (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/users?$top=999&$select=id,UserPrincipalName,DisplayName,accountEnabled,assignedLicenses,perUserMfaState,userType' -tenantid $TenantFilter)) {
+        $IsExt = [string]$user.UserPrincipalName -like '*#EXT#*'
+        $GuestCategory = if ($user.userType -eq 'Guest') { if ($IsExt) { 'b2bCollaborationGuest' } else { 'internalGuest' } } elseif ($IsExt) { 'b2bCollaborationMember' } else { $null }
+        $ExternalDomain = if ($IsExt -and [string]$user.UserPrincipalName -match '^.+_(?<domain>[^_#]+)#EXT#@') { $Matches.domain.ToLowerInvariant() } else { $null }
         [PSCustomObject]@{
             UserPrincipalName = $user.UserPrincipalName
             isLicensed        = [boolean]$user.assignedLicenses.Count
@@ -15,6 +60,8 @@ function Get-CIPPMFAState {
             ObjectId          = $user.id
             perUserMfaState   = $user.perUserMfaState
             UserType          = $user.userType
+            GuestCategory     = $GuestCategory
+            ExternalDomain    = $ExternalDomain
         }
     }
 
@@ -32,6 +79,7 @@ function Get-CIPPMFAState {
     $UserExcludeRoleMembership = @{}
     $RoleNameLookup = @{}
     $MFAIndex = @{}
+    $NeedsTenantLookup = $false
 
     try {
         $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $TenantFilter ).IsEnabled
@@ -96,6 +144,10 @@ function Get-CIPPMFAState {
                 }
 
                 if ($RequiresMFA) {
+                    if (-not $NeedsTenantLookup -and ((Test-MFAEnumeratedB2BBlock -GuestConfig $Policy.conditions.users.includeGuestsOrExternalUsers) -or (Test-MFAEnumeratedB2BBlock -GuestConfig $Policy.conditions.users.excludeGuestsOrExternalUsers))) {
+                        $NeedsTenantLookup = $true
+                    }
+
                     # Handle user assignments
                     if ($null -ne $Policy.conditions.users.includeUsers) {
                         # Check if "All" is included
@@ -103,6 +155,7 @@ function Get-CIPPMFAState {
                             $AllUserPolicies.Add($Policy)
                         } else {
                             foreach ($UserId in $Policy.conditions.users.includeUsers) {
+                                if ($UserId -eq 'GuestsOrExternalUsers') { continue }
                                 if (-not $PolicyTable.ContainsKey($UserId)) {
                                     $PolicyTable[$UserId] = [System.Collections.Generic.List[object]]::new()
                                 }
@@ -111,8 +164,10 @@ function Get-CIPPMFAState {
                         }
                     }
 
-                    # Handle guest/external user assignments
-                    if ($null -ne $Policy.conditions.users.includeGuestsOrExternalUsers) {
+                    # Handle guest/external user assignments: the legacy 'GuestsOrExternalUsers'
+                    # token in includeUsers, or the newer includeGuestsOrExternalUsers block.
+                    if ($Policy.conditions.users.includeUsers -contains 'GuestsOrExternalUsers' -or
+                        -not [string]::IsNullOrWhiteSpace($Policy.conditions.users.includeGuestsOrExternalUsers.guestOrExternalUserTypes)) {
                         $GuestUserPolicies.Add($Policy)
                     }
 
@@ -322,6 +377,34 @@ function Get-CIPPMFAState {
 
     if ($CAState.count -eq 0) { $CAState.Add('None') | Out-Null }
 
+    # Resolve B2B home tenants only when an MFA policy scopes guests to enumerated external tenants.
+    if ($NeedsTenantLookup) {
+        $DomainRequests = foreach ($Domain in @($users | Where-Object { $_.ExternalDomain -and $_.GuestCategory -in $B2BCategories } | ForEach-Object { $_.ExternalDomain } | Select-Object -Unique)) {
+            @{ id = $Domain; method = 'GET'; url = "tenantRelationships/findTenantInformationByDomainName(domainName='$Domain')" }
+        }
+        if ($DomainRequests) {
+            foreach ($Request in $DomainRequests) { [void]$UnresolvedDomains.Add($Request.id) }
+            try {
+                foreach ($Result in @(New-GraphBulkRequest -Requests @($DomainRequests) -tenantid $TenantFilter -asapp $true)) {
+                    $Domain = [string]$Result.id
+                    if ($Result.status -eq 200 -and $Result.body.tenantId) {
+                        $DomainTenantLookup[$Domain] = [string]$Result.body.tenantId
+                        [void]$UnresolvedDomains.Remove($Domain)
+                    } elseif ($Result.status -in 400, 404) {
+                        # Not an Entra tenant: a definite "no home tenant", not a failure.
+                        [void]$UnresolvedDomains.Remove($Domain)
+                    }
+                }
+            } catch {
+                Write-Host "External tenant lookup failed: $($_.Exception.Message)"
+                $Errors.Add(@{Step = 'ExternalTenants'; Message = $_.Exception.Message })
+            }
+            if ($UnresolvedDomains.Count -gt 0) {
+                $Errors.Add(@{Step = 'ExternalTenants'; Message = "Could not resolve the home tenant for $($UnresolvedDomains.Count) external domain(s): $($UnresolvedDomains -join ', ')" })
+            }
+        }
+    }
+
     # Fetch role assignments if not already fetched (e.g., when MFA registration was unavailable)
     if ($null -eq $assignments) {
         $assignments = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$expand=principal" -tenantid $TenantFilter -ErrorAction SilentlyContinue
@@ -336,28 +419,17 @@ function Get-CIPPMFAState {
     foreach ($User in $Users) {
         $UserCAState = [System.Collections.Generic.List[object]]::new()
 
-        # Check if user is a guest and add guest-targeting policies
-        if ($User.UserType -eq 'Guest') {
+        # Check if user is a guest/external user and add guest-targeting policies
+        if ($User.GuestCategory) {
             foreach ($Policy in $GuestUserPolicies) {
-                $GuestConfig = $Policy.conditions.users.includeGuestsOrExternalUsers
-                $IsGuestIncluded = $false
-
-                if ($null -ne $GuestConfig -and $null -ne $GuestConfig.guestOrExternalUserTypes) {
-                    $GuestTypes = $GuestConfig.guestOrExternalUserTypes -split ','
-                    # Check if policy includes all guests or specifically internal guests
-                    if ($GuestTypes -contains 'internalGuest') {
-                        $IsGuestIncluded = $true
-                    }
+                $IncludeMatch = if ($Policy.conditions.users.includeUsers -contains 'GuestsOrExternalUsers') { $true } else {
+                    Test-MFAGuestBlockMatch -User $User -GuestConfig $Policy.conditions.users.includeGuestsOrExternalUsers
                 }
-
                 # Check if guests are explicitly excluded from the policy
-                $ExcludeGuestConfig = $Policy.conditions.users.excludeGuestsOrExternalUsers
-                if ($null -ne $ExcludeGuestConfig -and $null -ne $ExcludeGuestConfig.guestOrExternalUserTypes) {
-                    $ExcludeGuestTypes = $ExcludeGuestConfig.guestOrExternalUserTypes -split ','
-                    if ($ExcludeGuestTypes -contains 'internalGuest') {
-                        $IsGuestIncluded = $false
-                    }
-                }
+                $GuestExcluded = if ($IncludeMatch -ne $false) { Test-MFAGuestExcluded -User $User -Policy $Policy } else { $false }
+                # $null from either check means the home tenant is unknown: the policy may apply
+                $IsGuestIncluded = ($IncludeMatch -ne $false) -and ($GuestExcluded -ne $true)
+                $Indeterminate = ($null -eq $IncludeMatch) -or ($null -eq $GuestExcluded)
 
                 if ($IsGuestIncluded) {
                     # Check if user is excluded directly or via group/role
@@ -401,7 +473,7 @@ function Get-CIPPMFAState {
 
                     $PolicyObj = [PSCustomObject]@{
                         DisplayName  = $Policy.displayName
-                        UserIncluded = -not $IsExcluded
+                        UserIncluded = if ($IsExcluded) { $false } elseif ($Indeterminate) { $null } else { $true }
                         AllApps      = ($Policy.conditions.applications.includeApplications -contains 'All')
                         PolicyState  = $Policy.state
                     }
@@ -419,8 +491,10 @@ function Get-CIPPMFAState {
         # Add policies that apply to this specific user
         if ($PolicyTable.ContainsKey($User.ObjectId)) {
             foreach ($Policy in $PolicyTable[$User.ObjectId]) {
-                # Check if user is excluded directly or via group/role
-                $IsExcluded = $Policy.conditions.users.excludeUsers -contains $User.ObjectId
+                # Check if user is excluded directly, as a guest, or via group/role
+                $GuestExcluded = Test-MFAGuestExcluded -User $User -Policy $Policy
+                $IsExcluded = ($Policy.conditions.users.excludeUsers -contains $User.ObjectId) -or ($GuestExcluded -eq $true)
+                $Indeterminate = ($null -eq $GuestExcluded)
                 $ExcludedViaGroup = $null
                 $ExcludedViaRole = $null
 
@@ -460,7 +534,7 @@ function Get-CIPPMFAState {
 
                 $PolicyObj = [PSCustomObject]@{
                     DisplayName  = $Policy.displayName
-                    UserIncluded = -not $IsExcluded
+                    UserIncluded = if ($IsExcluded) { $false } elseif ($Indeterminate) { $null } else { $true }
                     AllApps      = ($Policy.conditions.applications.includeApplications -contains 'All')
                     PolicyState  = $Policy.state
                 }
@@ -476,21 +550,12 @@ function Get-CIPPMFAState {
 
         # Add policies that apply to all users
         foreach ($Policy in $AllUserPolicies) {
-            # Check if user is excluded directly or via group/role
-            $IsExcluded = $Policy.conditions.users.excludeUsers -contains $User.ObjectId
+            # Check if user is excluded directly, as a guest, or via group/role
+            $GuestExcluded = Test-MFAGuestExcluded -User $User -Policy $Policy
+            $IsExcluded = ($Policy.conditions.users.excludeUsers -contains $User.ObjectId) -or ($GuestExcluded -eq $true)
+            $Indeterminate = ($null -eq $GuestExcluded)
             $ExcludedViaGroup = $null
             $ExcludedViaRole = $null
-
-            # Check if guests are excluded from this "All users" policy
-            if (-not $IsExcluded -and $User.UserType -eq 'Guest') {
-                $ExcludeGuestConfig = $Policy.conditions.users.excludeGuestsOrExternalUsers
-                if ($null -ne $ExcludeGuestConfig -and $null -ne $ExcludeGuestConfig.guestOrExternalUserTypes) {
-                    $ExcludeGuestTypes = $ExcludeGuestConfig.guestOrExternalUserTypes -split ','
-                    if ($ExcludeGuestTypes -contains 'internalGuest') {
-                        $IsExcluded = $true
-                    }
-                }
-            }
 
             # Check exclude groups
             if (-not $IsExcluded -and $null -ne $Policy.conditions.users.excludeGroups -and $Policy.conditions.users.excludeGroups.Count -gt 0) {
@@ -529,7 +594,7 @@ function Get-CIPPMFAState {
             # Always add the policy to show it applies (even if excluded)
             $PolicyObj = [PSCustomObject]@{
                 DisplayName  = $Policy.displayName
-                UserIncluded = -not $IsExcluded
+                UserIncluded = if ($IsExcluded) { $false } elseif ($Indeterminate) { $null } else { $true }
                 AllApps      = ($Policy.conditions.applications.includeApplications -contains 'All')
                 PolicyState  = $Policy.state
             }
@@ -547,19 +612,25 @@ function Get-CIPPMFAState {
         # seconds of pipeline setup on its own.
         $HasEnabledPolicy = $false
         $HasAllAppsPolicy = $false
+        $HasIndeterminatePolicy = $false
         foreach ($Policy in $UserCAState) {
-            if ($Policy.UserIncluded -eq $true -and $Policy.PolicyState -eq 'enabled') {
+            if ($Policy.PolicyState -ne 'enabled') { continue }
+            if ($Policy.UserIncluded -eq $true) {
                 $HasEnabledPolicy = $true
                 if ($Policy.AllApps -eq $true) {
                     $HasAllAppsPolicy = $true
                     break
                 }
+            } elseif ($null -eq $Policy.UserIncluded) {
+                $HasIndeterminatePolicy = $true
             }
         }
         if ($HasEnabledPolicy) {
             $CoveredByCA = if ($HasAllAppsPolicy) { 'Enforced - All Apps' } else { 'Enforced - Specific Apps' }
         } elseif ($CASuccess -eq $false) {
             $CoveredByCA = $CAError
+        } elseif ($HasIndeterminatePolicy) {
+            $CoveredByCA = 'Unknown - external tenant lookup failed'
         } else {
             $CoveredByCA = 'Not Enforced'
         }
