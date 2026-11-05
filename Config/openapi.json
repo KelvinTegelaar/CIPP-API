@@ -5135,6 +5135,9 @@
           "207": {
             "description": "Partial success - some items failed; per-item results are in the body"
           },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
