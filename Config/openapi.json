@@ -56739,6 +56739,69 @@
         "x-cipp-role": "Endpoint.MEM.Read"
       }
     },
+    "/api/ListIntunePolicyFailures": {
+      "get": {
+        "summary": "ListIntunePolicyFailures",
+        "operationId": "ListIntunePolicyFailures",
+        "tags": [
+          "Endpoint > MEM"
+        ],
+        "description": "Lists the Intune configuration policies (settings catalog, device configuration profiles, administrative templates and endpoint security) that have at least one device in Error or Conflict, from the same report as Intune's Assignment failures view. With policyId it returns that policy's affected devices and its failing settings with error and conflict device counts, naming the other policies that set a conflicting setting where Intune exposes them.",
+        "parameters": [
+          {
+            "name": "policyBaseTypeName",
+            "in": "query",
+            "description": "The policy's PolicyBaseTypeName from the list; decides how conflicting policies are looked up",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "policyId",
+            "in": "query",
+            "description": "Policy id (GUID) to drill into; omit for the list of failing policies",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.MEM.Read"
+      }
+    },
     "/api/ListIntuneReusableSettings": {
       "get": {
         "summary": "ListIntuneReusableSettings",

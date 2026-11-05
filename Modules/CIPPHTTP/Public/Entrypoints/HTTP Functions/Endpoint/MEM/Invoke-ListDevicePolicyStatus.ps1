@@ -64,43 +64,13 @@ function Invoke-ListDevicePolicyStatus {
             })
     }
 
-    $GetReportRows = {
-        param($Definition)
-        $Rows = [System.Collections.Generic.List[object]]::new()
-        $PageSize = 500
-        $Skip = 0
-        do {
-            $Body = @{
-                top     = $PageSize
-                skip    = $Skip
-                select  = $Definition.Select ?? @()
-                orderBy = $Definition.OrderBy ?? @('PolicyName')
-                search  = ''
-                filter  = $Definition.Filter
-            } | ConvertTo-Json -Compress -Depth 5
-            $Page = New-GraphPOSTRequest -uri $Definition.Uri -tenantid $TenantFilter -body $Body
-            if ($Page -is [string]) { $Page = $Page | ConvertFrom-Json }
-
-            # Reports come back as a column schema plus positional value arrays
-            $Columns = @($Page.Schema.Column)
-            foreach ($Values in @($Page.Values)) {
-                $Row = [ordered]@{}
-                for ($Index = 0; $Index -lt $Columns.Count; $Index++) {
-                    $Row[$Columns[$Index]] = $Values[$Index]
-                }
-                $Rows.Add([PSCustomObject]$Row)
-            }
-            $Skip = $Skip + $PageSize
-        } while (@($Page.Values).Count -eq $PageSize -and $Skip -lt [int]$Page.TotalRowCount)
-        , @($Rows)
-    }
-
     $Names = if ($Report -eq 'all') { @($Reports.Keys) } else { @("$Report") }
     $Loaded = [ordered]@{}
     $Errors = [ordered]@{}
     foreach ($Name in $Names) {
         try {
-            $Loaded[$Name] = & $GetReportRows $Reports[$Name]
+            $Definition = $Reports[$Name]
+            $Loaded[$Name] = Get-CIPPIntuneReportRows -TenantFilter $TenantFilter @Definition
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $Errors[$Name] = "Failed to load $Name policies for device $($DeviceId): $($ErrorMessage.NormalizedError)"
