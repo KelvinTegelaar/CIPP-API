@@ -29,6 +29,21 @@ function Invoke-RemovePolicy {
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
+        # Multi-admin approval: the request is raised (or already open from an earlier attempt) and CIPP
+        # completes the delete once approved
+        $ApprovalCode = $_.Exception.Data['IntuneApprovalCode']
+        if ($ApprovalCode -or "$($_.Exception.Data['RawErrorBody']) $($_.Exception.Message)" -match 'active Approval Request already exists') {
+            $Pending = $ApprovalCode ? $_.Exception.Message : 'An Intune multi-admin approval request for this deletion is already waiting for another administrator.'
+            $Results = [pscustomobject]@{
+                resultText = "Policy $($PolicyId) was not deleted yet. $Pending"
+                state      = 'warning'
+                copyField  = $ApprovalCode ?? $PolicyId
+            }
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Accepted
+                    Body       = [pscustomobject]@{ Results = $Results }
+                })
+        }
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Could not delete policy: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APINAME -message $Results -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
