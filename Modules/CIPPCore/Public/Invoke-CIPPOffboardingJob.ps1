@@ -189,7 +189,7 @@ function Invoke-CIPPOffboardingJob {
                     userid       = $UserID
                     username     = $Username
                     tenantFilter = $TenantFilter
-                    Forward      = $Options.forward.value
+                    Forward      = [string]($Options.forward.value ?? $Options.forward)
                     KeepCopy     = [bool]$Options.KeepCopy
                     APIName      = $APIName
                     Headers      = $Headers

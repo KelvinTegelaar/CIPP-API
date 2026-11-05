@@ -176,5 +176,25 @@ function Get-CIPPLicenseOverview {
             }
         }
     }
+    # New SKU names go into the shared name table now, so user pages resolve them before the next cache run
+    try {
+        $LiveNames = @{}
+        foreach ($Row in $GraphRequest) {
+            if ($Row.skuId -and $Row.License) { $LiveNames[$Row.skuId.ToLowerInvariant()] = $Row.License }
+        }
+        if ($LiveNames.Count -gt 0) {
+            $Known = @(Get-CIPPLicenseSkuName -SkuIds @($LiveNames.Keys)).skuId
+            $NewNames = @(foreach ($SkuId in $LiveNames.Keys) {
+                    if ($SkuId -notin $Known) { @{ PartitionKey = 'Sku'; RowKey = $SkuId; DisplayName = $LiveNames[$SkuId] } }
+                })
+            if ($NewNames.Count -gt 0) {
+                $NameTable = Get-CIPPTable -TableName 'LicenseSkuNames'
+                Add-CIPPAzDataTableEntity @NameTable -Entity $NewNames
+            }
+        }
+    } catch {
+        Write-Verbose "LicenseSkuNames insert skipped: $($_.Exception.Message)"
+    }
+
     return ($GraphRequest | Sort-Object -Property License)
 }

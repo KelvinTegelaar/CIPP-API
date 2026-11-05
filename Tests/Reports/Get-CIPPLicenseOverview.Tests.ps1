@@ -20,8 +20,10 @@ BeforeAll {
     function New-GraphGetRequest { param($uri, $scope, $TenantID, $AsApp) }
     function New-GraphBulkRequest { param($Requests, $TenantID, $asapp) }
     function Get-CIPPTable { param($TableName) }
-    function Get-CIPPAzDataTableEntity { param($Table) }
+    function Get-CIPPAzDataTableEntity { param($Table, $Context, $Filter) }
     function Initialize-CIPPExcludedLicenses { }
+    function Get-CIPPLicenseSkuName { param($SkuIds) }
+    function Add-CIPPAzDataTableEntity { param($Context, $Entity) }
 
     . $FunctionPath
 
@@ -116,5 +118,51 @@ Describe 'Get-CIPPLicenseOverview exclusion/dropdown gate' {
         $Result = Get-CIPPLicenseOverview -TenantFilter $script:Tenant
 
         @($Result).skuId | Should -Contain $script:FlowFreeGuid
+    }
+}
+
+Describe 'Get-CIPPLicenseOverview SKU name backfill' {
+    BeforeEach {
+        $script:KioskGuid = 'bc20d3f7-abea-4597-b474-a35321a50157'   # not in ConversionTable.csv
+        Mock -CommandName Initialize-CIPPExcludedLicenses -MockWith { }
+        Mock -CommandName Get-CIPPTable -MockWith { @{ Context = $TableName } }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { @() }
+        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { }
+        Mock -CommandName New-GraphGetRequest -MockWith {
+            @([pscustomobject]@{ aadSkuId = $script:KioskGuid; displayName = 'Exchange Online Kiosk for GCC' })
+        }
+        Mock -CommandName New-GraphBulkRequest -MockWith {
+            New-BulkResult -Skus @(
+                (New-Sku -SkuId $script:KioskGuid -PartNumber 'EXCHANGEDESKLESS_GOV'),
+                (New-Sku -SkuId $script:E5Guid -PartNumber 'SPE_E5')
+            )
+        }
+    }
+
+    It 'saves a live name the name table does not hold yet' {
+        Mock -CommandName Get-CIPPLicenseSkuName -MockWith { [pscustomobject]@{ skuId = $script:E5Guid; displayName = 'Microsoft 365 E5' } }
+
+        $null = Get-CIPPLicenseOverview -TenantFilter 'contoso.onmicrosoft.com'
+
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+            $Context -eq 'LicenseSkuNames' -and @($Entity).Count -eq 1 -and
+            $Entity[0].RowKey -eq $script:KioskGuid -and $Entity[0].DisplayName -eq 'Exchange Online Kiosk for GCC'
+        }
+    }
+
+    It 'writes nothing when every name is already known' {
+        Mock -CommandName Get-CIPPLicenseSkuName -MockWith { @($SkuIds | ForEach-Object { [pscustomobject]@{ skuId = $_; displayName = 'x' } }) }
+
+        $null = Get-CIPPLicenseOverview -TenantFilter 'contoso.onmicrosoft.com'
+
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+    }
+
+    It 'still returns the overview when the name table fails' {
+        Mock -CommandName Get-CIPPLicenseSkuName -MockWith { throw 'table down' }
+
+        $Result = Get-CIPPLicenseOverview -TenantFilter 'contoso.onmicrosoft.com'
+
+        @($Result).License | Should -Contain 'Exchange Online Kiosk for GCC'
     }
 }
