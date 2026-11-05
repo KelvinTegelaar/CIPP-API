@@ -288,6 +288,13 @@ function Test-CIPPAccess {
                 }
 
                 if ($TenantList.IsPresent) {
+                    # One unrestricted role already grants every tenant, so the other roles'
+                    # tenant ids add nothing. Returning them alongside 'AllTenants' only invites
+                    # callers to misread the list (`$List -ne 'AllTenants'` filters an array and
+                    # is truthy here), so answer exactly as for admin/superadmin.
+                    if (@($ScopeRules | Where-Object { $_.Unrestricted }).Count -gt 0) {
+                        return @('AllTenants')
+                    }
                     $swTenantList = [System.Diagnostics.Stopwatch]::StartNew()
                     $NeedsTenantList = @($ScopeRules | Where-Object { -not $_.Unrestricted -and $_.AllowAllTenants }).Count -gt 0
                     $Tenants = if ($NeedsTenantList) { Get-Tenants -IncludeErrors } else { @() }
