@@ -13,6 +13,7 @@ BeforeAll {
     function Get-CippException { param($Exception) }
     function Write-AlertTrace { param($cmdletName, $tenantFilter, $data) }
     function Write-LogMessage { param($message, $API, $tenant, $sev, $LogData, $tenantFilter) }
+    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset) $true }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-AlertContentHash.ps1')
     foreach ($Name in 'TERRL', 'EntraConnectSyncStatus', 'QuotaUsed', 'EntraLicenseUtilization', 'OverusedLicenses', 'UnusedLicenses', 'LowDomainScore', 'SecureScore') {

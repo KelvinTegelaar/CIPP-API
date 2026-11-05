@@ -27,8 +27,11 @@ BeforeAll {
         Export-ModuleMember -Function New-CippCoreRequest
     }
     $null = New-Module -Name OomHintHttp -ScriptBlock {
+        # Tagged pscustomobject, not the worker type: the dispatcher's cast resolves to the test runner's own HttpResponseContext class when one is loaded
         function New-Response($StatusCode, $Body) {
-            [Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext]@{ StatusCode = $StatusCode; Body = $Body }
+            $Response = [pscustomobject]@{ StatusCode = $StatusCode; Body = $Body }
+            $Response.PSObject.TypeNames.Insert(0, 'Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext')
+            $Response
         }
         function Invoke-ListPaged {
             param($Request, $TriggerMetadata)
