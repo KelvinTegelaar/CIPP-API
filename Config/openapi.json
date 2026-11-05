@@ -50333,6 +50333,33 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink. latestOnly, groupBy and top do not apply to paged reads.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "name": "select",
             "in": "query",
             "description": "Comma-separated list of top-level fields to keep on each record; everything else is dropped during parse. A kept field keeps its ENTIRE subtree (e.g. select=conditions keeps conditions.users.includeRoles). The Tenant stamp is always preserved. Omit to return all fields.",
