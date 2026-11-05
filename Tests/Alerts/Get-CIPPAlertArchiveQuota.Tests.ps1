@@ -12,6 +12,7 @@ BeforeAll {
     function Get-CippException { param($Exception) }
     function Write-AlertTrace { param($cmdletName, $tenantFilter, $data) }
     function Write-LogMessage { param($message, $API, $tenant, $sev, $LogData) }
+    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-AlertContentHash.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPAutoExpandingArchiveState.ps1')
@@ -26,6 +27,7 @@ Describe 'Get-CIPPAlertArchiveQuota' {
             [pscustomobject]@{ UPN = 'aea@contoso.com'; ArchiveEnabled = $true; recipientTypeDetails = 'UserMailbox'; ArchiveSize = 113162000000; ArchiveQuota = 118111600640; AutoExpandingArchive = $true }
             [pscustomobject]@{ UPN = 'plain@contoso.com'; ArchiveEnabled = $true; recipientTypeDetails = 'UserMailbox'; ArchiveSize = $script:UsedBytes; ArchiveQuota = 118111600640; AutoExpandingArchive = $false }
         )
+        Mock Test-CIPPStandardLicense { $true }
         Mock Get-CIPPMailboxesReport { $script:Rows }
         Mock Get-CIPPTextReplacement { '' }
         Mock Write-LogMessage {}
@@ -33,6 +35,16 @@ Describe 'Get-CIPPAlertArchiveQuota' {
             param($cmdletName, $tenantFilter, $data)
             $script:Captured = @($data | Where-Object { $null -ne $_ })
         }
+    }
+
+    It 'skips tenants without an Exchange license before touching the cache or EXO' {
+        Mock Test-CIPPStandardLicense { $false }
+        Mock New-ExoRequest { throw 'There is no subscription for this service available' }
+        Get-CIPPAlertArchiveQuota -InputValue @{} -TenantFilter 'contoso.onmicrosoft.com'
+        Should -Invoke Get-CIPPMailboxesReport -Times 0 -Exactly
+        Should -Invoke New-ExoRequest -Times 0 -Exactly
+        Should -Invoke Write-LogMessage -Times 0 -Exactly
+        Should -Invoke Write-AlertTrace -Times 0 -Exactly
     }
 
     It 'skips auto-expanding archives and still alerts on a normal near-full archive' {

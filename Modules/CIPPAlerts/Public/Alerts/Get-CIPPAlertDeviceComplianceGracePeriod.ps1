@@ -10,6 +10,13 @@ function Get-CIPPAlertDeviceComplianceGracePeriod {
         $InputValue,
         $TenantFilter
     )
+
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'DeviceComplianceGracePeriod' -TenantFilter $TenantFilter -Preset Intune
+
+    if (-not $HasLicense) {
+        return
+    }
+
     try {
         $ExpiresWithinDays = 0
         if ($null -ne $InputValue.ExpiresWithinDays -and $InputValue.ExpiresWithinDays -ne '') {

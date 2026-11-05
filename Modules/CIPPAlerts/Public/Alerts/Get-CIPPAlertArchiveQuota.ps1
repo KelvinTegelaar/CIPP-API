@@ -12,6 +12,12 @@ function Get-CIPPAlertArchiveQuota {
         $TenantFilter
     )
 
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'ArchiveQuota' -TenantFilter $TenantFilter -Preset Exchange
+
+    if (-not $HasLicense) {
+        return
+    }
+
     $Threshold = if ($InputValue.ArchiveQuotaThreshold) { [int]$InputValue.ArchiveQuotaThreshold } else { 90 }
     $ExcludedRaw = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text ([string]$InputValue.ArchiveQuotaExcludedMailboxes)
     $Excluded = @($ExcludedRaw -split ',' | ForEach-Object { $_.Trim().ToLower() } | Where-Object { $_ })

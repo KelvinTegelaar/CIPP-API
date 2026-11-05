@@ -9,6 +9,7 @@ BeforeAll {
     function Get-CippException { param($Exception) }
     function Write-LogMessage { param($message, $API, $tenant, $sev, $LogData) }
     function Write-AlertTrace { param($cmdletName, $tenantFilter, $data) }
+    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-AlertContentHash.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPAlerts/Public/Alerts/Get-CIPPAlertTERRL.ps1')
@@ -17,6 +18,7 @@ BeforeAll {
 Describe 'TERRL alert content hash' {
     BeforeEach {
         $script:Captured = $null
+        Mock Test-CIPPStandardLicense { $true }
         Mock Write-AlertTrace {
             param($cmdletName, $tenantFilter, $data)
             $script:Captured = @($data | Where-Object { $null -ne $_ })
@@ -53,6 +55,16 @@ Describe 'TERRL alert content hash' {
         Get-CIPPAlertTERRL -InputValue 80 -TenantFilter 'contoso.onmicrosoft.com'
         $script:Captured | Should -BeNullOrEmpty
         Should -Invoke Write-LogMessage -Times 0 -Exactly
+    }
+
+    It 'skips tenants without an Exchange license without calling EXO or logging an error' {
+        Mock Test-CIPPStandardLicense { $false }
+        Mock New-ExoRequest { throw 'There is no subscription for this service available' }
+        Mock Write-LogMessage {}
+        Get-CIPPAlertTERRL -InputValue 80 -TenantFilter 'contoso.onmicrosoft.com'
+        Should -Invoke New-ExoRequest -Times 0 -Exactly
+        Should -Invoke Write-LogMessage -Times 0 -Exactly
+        Should -Invoke Write-AlertTrace -Times 0 -Exactly
     }
 
     It 'falls back to an 80% threshold when no input is given' {

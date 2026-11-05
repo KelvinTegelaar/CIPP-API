@@ -11,6 +11,13 @@ function Get-CIPPAlertDeviceCompliance {
         $InputValue,
         $TenantFilter
     )
+
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'DeviceCompliance' -TenantFilter $TenantFilter -Preset Intune
+
+    if (-not $HasLicense) {
+        return
+    }
+
     try {
         $AlertData = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices?`$filter=complianceState eq 'noncompliant'&`$select=id,deviceName,managedDeviceOwnerType,complianceState,lastSyncDateTime&`$top=999" -tenantid $TenantFilter
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
