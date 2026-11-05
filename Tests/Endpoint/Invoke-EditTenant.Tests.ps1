@@ -31,6 +31,7 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $TenantId, $message, $Sev) }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
 
     $script:CustomerId = 'f0e1d2c3-0000-0000-0000-000000000001'
     $script:StaticGroupId = '11111111-1111-1111-1111-111111111111'

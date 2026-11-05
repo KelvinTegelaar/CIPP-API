@@ -50141,7 +50141,7 @@
           {
             "name": "allTenants",
             "in": "query",
-            "description": "A template is not bound to a tenant - the same template deploys to many, and each variable in it resolves against whichever tenant it lands on. So a caller editing one needs every variable *name* that exists anywhere, not the set belonging to whichever tenant happens to be selected. Values are deliberately not returned here: they differ per tenant, so there is no single correct one to show.",
+            "description": "A template is not bound to a tenant - the same template deploys to many, and each variable in it resolves against whichever tenant it lands on. So a caller editing one needs every variable *name* that exists anywhere, not the set belonging to whichever tenant happens to be selected. Values are deliberately not returned here: they differ per tenant, so there is no single correct one to show. Only names from tenants the caller's roles cover are listed.",
             "required": false,
             "schema": {
               "type": "boolean"

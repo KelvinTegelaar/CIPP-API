@@ -16,6 +16,10 @@ Describe 'Get-CippErrorStatusCode' {
         Get-CaughtStatus { throw [System.Management.Automation.ItemNotFoundException]::new('Template not found') } | Should -Be ([System.Net.HttpStatusCode]::NotFound)
     }
 
+    It 'maps an UnauthorizedAccessException from Assert-CippTenantAccess to 403' {
+        Get-CaughtStatus { throw [System.UnauthorizedAccessException]::new("Your roles don't include t2.example.com.") } | Should -Be ([System.Net.HttpStatusCode]::Forbidden)
+    }
+
     It 'maps a plain string throw, as Graph helpers raise, to 500' {
         Get-CaughtStatus { throw 'Graph returned 503' } | Should -Be ([System.Net.HttpStatusCode]::InternalServerError)
     }

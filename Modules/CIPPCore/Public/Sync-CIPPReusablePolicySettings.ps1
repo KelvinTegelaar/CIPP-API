@@ -1,7 +1,9 @@
 function Sync-CIPPReusablePolicySettings {
     param(
         [psobject]$TemplateInfo,
-        [string]$Tenant
+        [string]$Tenant,
+        # Map the tenant's existing settings by name without creating or updating any
+        [switch]$ReadOnly
     )
 
     $result = [pscustomobject]@{
@@ -52,7 +54,7 @@ function Sync-CIPPReusablePolicySettings {
             $needsUpdate = $true
         }
 
-        if ($needsUpdate) {
+        if ($needsUpdate -and -not $ReadOnly) {
             try {
                 if ($targetId) {
                     $updated = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/reusablePolicySettings/$targetId" -tenantid $Tenant -type PUT -body $templateRaw

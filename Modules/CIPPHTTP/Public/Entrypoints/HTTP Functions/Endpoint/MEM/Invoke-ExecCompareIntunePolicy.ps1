@@ -70,8 +70,8 @@ function Invoke-ExecCompareIntunePolicy {
                 # that no longer exists by the label the standard still carries for it.
                 [string]$StandardsTemplateId,
                 # Set when the caller only needs the template's identity and type in order to find
-                # the tenant's own copy. Skips the reusable settings sync, which writes to the
-                # tenant and is the other source's job to run.
+                # the tenant's own copy. Skips the reusable settings lookup, which is the other
+                # source's job to run.
                 [switch]$SkipReusableSync
             )
 
@@ -98,7 +98,7 @@ function Invoke-ExecCompareIntunePolicy {
             if ($TenantFilter) {
                 if (-not $SkipReusableSync) {
                     try {
-                        $ReusableSync = Sync-CIPPReusablePolicySettings -TemplateInfo $JSONData -Tenant $TenantFilter -ErrorAction Stop
+                        $ReusableSync = Sync-CIPPReusablePolicySettings -TemplateInfo $JSONData -Tenant $TenantFilter -ReadOnly -ErrorAction Stop
                         if ($ReusableSync.RawJSON) {
                             $RawJSON = $ReusableSync.RawJSON
                         }
@@ -224,8 +224,8 @@ function Invoke-ExecCompareIntunePolicy {
                 }
 
                 # Resolved for the tenant, because the name a policy is deployed under can depend on
-                # tenant variables in the payload. The reusable settings sync is skipped - it writes
-                # to the tenant, and the baseline source already runs it.
+                # tenant variables in the payload. The reusable settings lookup is skipped - the
+                # baseline source already runs it.
                 $Template = Get-ComparisonTemplate -TemplateGuid $Source.templateGuid -TenantFilter $Source.tenantFilter -SkipReusableSync -Label $Label -StandardsTemplateId $Source.standardsTemplateId
 
                 if (-not $Template.TemplateType) {

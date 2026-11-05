@@ -104,6 +104,7 @@ Describe '<Name> resolves selectedTenants against the tenant cache' -ForEach @(
             $null, @('HttpStatusCode', [System.Net.HttpStatusCode]))
         class HttpResponseContext { [int]$StatusCode; [object]$Body }
         function Test-CippAccess { param($Request, [switch]$TenantList) }
+        function Test-CippAllTenantsBlocked { $false }
         function Get-Tenants { param([switch]$IncludeErrors) }
         function New-GraphGetRequest { param($Uri, $tenantid) }
         function New-GraphPostRequest { param($Uri, $tenantid, $Body, $Type) }
@@ -217,5 +218,23 @@ Describe '<Name> resolves selectedTenants against the tenant cache' -ForEach @(
             Assert-Written -Tenant 'AllTenants' -Times 1
             Assert-WriteCount -Times 1
         }
+    }
+
+    It 'refuses an AllTenants entry when the caller''s roles block AllTenants (<Caller>)' -ForEach @(
+        @{ Caller = 'unrestricted'; Allowed = @('AllTenants') }
+        @{ Caller = 'scoped'; Allowed = @('aaaaaaaa-0000-0000-0000-000000000000') }
+    ) {
+        Mock Test-CippAccess { $Allowed }
+        Mock Test-CippAllTenantsBlocked { $true }
+        { Invoke-Handler @([pscustomobject]@{ customerId = 'AllTenants'; defaultDomainName = 'AllTenants' }) } |
+            Should -Throw -ExceptionType ([System.UnauthorizedAccessException])
+        Assert-WriteCount -Times 0
+    }
+
+    It 'still deploys individually selected tenants when the caller''s roles block AllTenants' {
+        Mock Test-CippAccess { 'AllTenants' }
+        Mock Test-CippAllTenantsBlocked { $true }
+        Invoke-Handler @([pscustomobject]@{ customerId = $script:IdA; defaultDomainName = 'a.onmicrosoft.com' })
+        Assert-Written -Tenant 'a.onmicrosoft.com' -Times 1
     }
 }

@@ -18,7 +18,7 @@ function Invoke-EditTenant {
     $tenantGroups = $Request.Body.tenantGroups
 
     $PropertiesTable = Get-CippTable -TableName 'TenantProperties'
-    $Existing = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "PartitionKey eq '$customerId'"
+    $Existing = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $customerId)'"
     $Tenant = Get-Tenants -TenantFilter $customerId
     # AnyTenant: Get-Tenants is narrowed to the caller's allowed tenants; no match means
     # unknown or out-of-scope, either way nothing may be written
@@ -62,7 +62,7 @@ function Invoke-EditTenant {
         $AllGroups = Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup'"
         $StaticGroups = $AllGroups | Where-Object { $_.GroupType -ne 'dynamic' }
         $StaticGroupIds = $StaticGroups.RowKey
-        $CurrentGroupMemberships = Get-CIPPAzDataTableEntity @GroupMembersTable -Filter "customerId eq '$customerId'"
+        $CurrentGroupMemberships = Get-CIPPAzDataTableEntity @GroupMembersTable -Filter "customerId eq '$(ConvertTo-CIPPODataFilterValue -Value $customerId)'"
         foreach ($Group in $tenantGroups) {
             # Only allow adding to static groups; dynamic group membership is managed by the orchestrator
             if ($StaticGroupIds -notcontains $Group.groupId) { continue }

@@ -208,7 +208,7 @@ function New-CippCoreRequest {
             } catch {
                 Write-Warning "Exception occurred on HTTP trigger ($FunctionName): $($_.Exception.Message)"
                 $HttpResponse = [HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::InternalServerError
+                    StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
                     Body       = $_.Exception.Message
                 }
             }

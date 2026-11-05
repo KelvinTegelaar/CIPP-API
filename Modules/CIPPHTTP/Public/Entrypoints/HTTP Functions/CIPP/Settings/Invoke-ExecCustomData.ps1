@@ -512,7 +512,7 @@ function Invoke-ExecCustomData {
                 }
 
                 # Retrieve the mapping entity
-                $MappingEntity = Get-CIPPAzDataTableEntity @CustomDataMappingsTable -Filter "PartitionKey eq 'Mapping' and RowKey eq '$MappingId'"
+                $MappingEntity = Get-CIPPAzDataTableEntity @CustomDataMappingsTable -Filter "PartitionKey eq 'Mapping' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $MappingId)'"
                 if (!$MappingEntity) {
                     $StatusCode = [HttpStatusCode]::NotFound
                     throw "Mapping with ID '$MappingId' not found."
@@ -552,7 +552,7 @@ function Invoke-ExecCustomData {
                 }
 
                 # Retrieve the mapping entity
-                $MappingEntity = Get-CIPPAzDataTableEntity @CustomDataMappingsTable -Filter "PartitionKey eq 'Mapping' and RowKey eq '$MappingId'"
+                $MappingEntity = Get-CIPPAzDataTableEntity @CustomDataMappingsTable -Filter "PartitionKey eq 'Mapping' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $MappingId)'"
                 if (!$MappingEntity) {
                     $StatusCode = [HttpStatusCode]::NotFound
                     throw "Mapping with ID '$MappingId' not found."

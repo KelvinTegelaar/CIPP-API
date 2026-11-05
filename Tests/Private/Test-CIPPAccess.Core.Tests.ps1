@@ -544,6 +544,19 @@ Describe 'Test-CIPPAccess tenant-filter permutations' {
                 Should -BeTrue
         }
 
+        It 'the flag does not lift an endpoint block on AllTenants' {
+            Mock -CommandName Get-CIPPRolePermissions -MockWith {
+                param($Role)
+                switch ($Role) {
+                    'blocker' { [pscustomobject]@{ Role = 'blocker'; Permissions = @('Identity.User.Read'); AllowedTenants = @('AllTenants'); BlockedTenants = @(); BlockedEndpoints = @('ListUsers'); BlockAllTenants = $true } }
+                    'open' { [pscustomobject]@{ Role = 'open'; Permissions = @('Identity.User.Read'); AllowedTenants = @('AllTenants'); BlockedTenants = @(); BlockedEndpoints = @() } }
+                    default { throw "unexpected $Role" }
+                }
+            }
+            { Test-CIPPAccess -Request (New-UserRequest -CIPPEndpoint 'ListUsers' -UserRoles @('blocker', 'open') -Query @{ tenantFilter = 'AllTenants' }) } |
+                Should -Throw -ExpectedMessage "*'blocker' has blocked this endpoint: ListUsers"
+        }
+
         It 'flag absent: unrestricted role keeps AllTenants Read access' {
             Mock -CommandName Get-CIPPRolePermissions -MockWith {
                 [pscustomobject]@{ Role = 'roleAll'; Permissions = @('Identity.User.Read'); AllowedTenants = @('AllTenants'); BlockedTenants = @(); BlockedEndpoints = @() }

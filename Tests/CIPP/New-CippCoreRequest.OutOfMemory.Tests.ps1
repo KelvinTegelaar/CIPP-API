@@ -24,6 +24,7 @@ BeforeAll {
         $script:CippAllowedTenantsStorage = [pscustomobject]@{ Value = $null }
         $script:CippAllowedGroupsStorage = [pscustomobject]@{ Value = $null }
         . $Path
+        . (Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $Path))) 'Get-CippErrorStatusCode.ps1')
         Export-ModuleMember -Function New-CippCoreRequest
     }
     $null = New-Module -Name OomHintHttp -ScriptBlock {
@@ -49,6 +50,10 @@ BeforeAll {
         function Invoke-ListRecovers {
             param($Request, $TriggerMetadata)
             try { throw [System.OutOfMemoryException]::new() } catch { return (New-Response 200 @('fallback')) }
+        }
+        function Invoke-ExecRefused {
+            param($Request, $TriggerMetadata)
+            throw [System.UnauthorizedAccessException]::new('refused')
         }
         function Invoke-ListFails {
             param($Request, $TriggerMetadata)
@@ -102,5 +107,11 @@ Describe 'New-CippCoreRequest out-of-memory responses' {
         $Response = Send-Request 'ListFails'
         [int]$Response.StatusCode | Should -Be 500
         $Response.Body | Should -Be @('Graph said no')
+    }
+
+    It 'returns 403 for an access refusal that escapes the endpoint' {
+        $Response = Send-Request 'ExecRefused'
+        [int]$Response.StatusCode | Should -Be 403
+        $Response.Body | Should -Be 'refused'
     }
 }
