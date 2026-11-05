@@ -20,7 +20,11 @@ function New-GraphPOSTRequest {
         $maxRetries = 3,
         $ScheduleRetry = $false,
         [switch]$UseCertificate,
-        $headers
+        $headers,
+        # Intune multi-admin approval: the reason shown to the approver, and Set-CIPPAssignedPolicy
+        # parameters to apply once the write completes. Only used when Intune demands approval.
+        $ApprovalJustification,
+        $ApprovalAssignParams
     )
 
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
@@ -145,6 +149,13 @@ function New-GraphPOSTRequest {
             } catch {
                 Write-Warning "Failed to schedule retry task: $($_.Exception.Message)"
             }
+        }
+
+        # Intune multi-admin approval refuses a protected write that carries no justification, and raises
+        # nothing. Raise the request app-only - one raised with the GDAP token has no requestor and can
+        # never be completed. Tenants without approval never see this error.
+        if (-not $RequestSuccessful -and "$Message $RawErrorBody" -match 'x-msft-approval-justification\S{0,6} is required' -and -not $AddedHeaders.'x-msft-approval-justification') {
+            return New-CIPPIntuneApprovalRequest -TenantFilter $tenantid -Uri $uri -Type $type -Body $body -Justification $ApprovalJustification -AssignParams $ApprovalAssignParams
         }
 
         if ($RequestSuccessful -eq $false) {

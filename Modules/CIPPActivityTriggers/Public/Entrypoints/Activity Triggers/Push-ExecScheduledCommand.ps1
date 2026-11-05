@@ -381,6 +381,12 @@ function Push-ExecScheduledCommand {
                 $State = 'Failed'
             }
             Write-Information 'Ran the command. Processing results'
+            # A recurring command can end its own recurrence by setting Recurrence to '0' on its row
+            # (Invoke-CIPPIntuneApprovalRetry does, once its approval request is resolved).
+            if ($task.Recurrence -and $task.Recurrence -ne '0') {
+                $LatestRecurrence = (Get-AzDataTableEntity @Table -Filter "PartitionKey eq '$($task.PartitionKey)' and RowKey eq '$($task.RowKey)'" -Property Recurrence).Recurrence
+                if ($null -ne $LatestRecurrence) { $task.Recurrence = $LatestRecurrence }
+            }
         }
 
         # Extract TaskAttachments from structured output before general result processing

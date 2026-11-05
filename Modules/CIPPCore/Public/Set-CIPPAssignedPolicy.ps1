@@ -271,6 +271,8 @@ function Set-CIPPAssignedPolicy {
         }
 
     } catch {
+        # Pending Intune multi-admin approval, already logged and scheduled for completion - not a failure.
+        if ($_.Exception.Data['IntuneApprovalCode']) { throw }
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -message "Failed to assign $GroupName to Policy $PolicyId, using Platform $PlatformType and $Type. The error is:$($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         # Throw rather than return the message. A returned string is indistinguishable from success
