@@ -4,7 +4,8 @@
   "cat": "Teams Standards",
   "tag": [
     "CIS M365 7.0.0 (8.2.1)",
-    "CIS M365 7.0.0 (8.2.2)"
+    "CIS M365 7.0.0 (8.2.2)",
+    "CIS M365 7.0.0 (8.2.3)"
   ],
   "impact": "Medium Impact",
   "helpText": "Sets the properties of the Global external access policy.",
@@ -15,7 +16,8 @@
   "powershellEquivalent": "Set-CsExternalAccessPolicy",
   "appliesToTest": [
     "CIS_8_2_1",
-    "CIS_8_2_2"
+    "CIS_8_2_2",
+    "CIS_8_2_3"
   ],
   "recommendedBy": [],
   "requiredCapabilities": [

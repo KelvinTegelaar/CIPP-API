@@ -89,7 +89,7 @@ function Get-CippTestDataFieldManifest {
             'CsTeamsClientConfiguration'         = @('AllowDropbox', 'AllowBox', 'AllowGoogleDrive', 'AllowShareFile', 'AllowEgnyte', 'AllowEmailIntoChannel')
             'CsTeamsMeetingPolicy'               = @('AllowAnonymousUsersToJoinMeeting', 'AllowAnonymousUsersToStartMeeting', 'AutoAdmittedUsers', 'AllowPSTNUsersToBypassLobby', 'MeetingChatEnabledType', 'DesignatedPresenterRoleMode', 'AllowExternalParticipantGiveRequestControl', 'AllowExternalNonTrustedMeetingChat', 'AllowCloudRecording')
             'CsTeamsMessagingPolicy'             = @('UseB2BInvitesToAddExternalUsers', 'AllowSecurityEndUserReporting')
-            'CsTenantFederationConfiguration'    = @('AllowFederatedUsers', 'AllowedDomains', 'AllowTeamsConsumer', 'AllowTeamsConsumerInbound')
+            'CsTenantFederationConfiguration'    = @('AllowFederatedUsers', 'AllowedDomains', 'AllowTeamsConsumer', 'AllowTeamsConsumerInbound', 'ExternalAccessWithTrialTenants')
             'DefaultAppManagementPolicy'         = @('isEnabled', 'applicationRestrictions', 'servicePrincipalRestrictions')
             'DeviceRegistrationPolicy'           = @('azureADJoin', 'userDeviceQuota', 'localAdminPassword', 'multiFactorAuthConfiguration')
             'DirectoryRecommendations'           = @('status', 'priority', 'displayName', 'impactType', 'lastModifiedDateTime', 'insights', 'recommendationType', 'applicationDisplayName', 'applicationId')
