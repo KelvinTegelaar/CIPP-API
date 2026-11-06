@@ -22,6 +22,7 @@ BeforeAll {
 
 Describe 'Set-CIPPFeatureFlag -Force' {
     BeforeEach {
+        foreach ($Name in @([System.Environment]::GetEnvironmentVariables().Keys).Where({ "$_" -like 'CIPP_FEATUREFLAG_*' })) { [System.Environment]::SetEnvironmentVariable($Name, [NullString]::Value) }
         Mock Get-CippTable { @{} }
         Mock Add-CIPPAzDataTableEntity {}
     }
@@ -40,5 +41,11 @@ Describe 'Set-CIPPFeatureFlag -Force' {
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
             $Entity.RowKey -eq 'SystemManagedFlag' -and $Entity.Enabled -eq $true
         }
+        [System.Environment]::GetEnvironmentVariable('CIPP_FEATUREFLAG_SystemManagedFlag') | Should -Be 'True'
+    }
+
+    It 'leaves the process value alone when the toggle is refused' {
+        $null = Set-CIPPFeatureFlag -Id 'SystemManagedFlag' -Enabled $true -WarningAction SilentlyContinue
+        [System.Environment]::GetEnvironmentVariable('CIPP_FEATUREFLAG_SystemManagedFlag') | Should -BeNullOrEmpty
     }
 }

@@ -55,6 +55,7 @@ function Set-CIPPFeatureFlag {
             }
 
             $null = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
+            [System.Environment]::SetEnvironmentVariable("CIPP_FEATUREFLAG_$Id", [string]$Enabled)
 
             Write-Information "Feature flag '$Id' set to $Enabled"
             return $true
