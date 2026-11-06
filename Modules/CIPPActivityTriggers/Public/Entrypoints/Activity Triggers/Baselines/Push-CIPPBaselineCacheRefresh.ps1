@@ -10,6 +10,10 @@ function Push-CIPPBaselineCacheRefresh {
         per-type cache collection activity. Nothing remediated = no cache work at all - and
         without this, the next run would re-read the stale pre-remediation cache and
         re-detect drift that is already fixed.
+        That refresh's own PostExecution calls back here with Parameters.Verify (each tenant's
+        remediated standards) and starts one compare run per tenant against the fresh cache,
+        which replaces each optimistic Compliant + PendingVerification row with the verified
+        verdict.
     .FUNCTIONALITY
         Entrypoint
     #>
@@ -18,6 +22,17 @@ function Push-CIPPBaselineCacheRefresh {
 
     try {
         Set-CippBaselineRunContext -RunId $Item.Parameters.RunId
+
+        if ($Item.Parameters.Verify) {
+            foreach ($Entry in @($Item.Parameters.Verify)) {
+                try {
+                    $null = Start-CIPPBaselineOrchestrator -TenantFilter $Entry.TenantFilter -StandardName @($Entry.Standards) -Mode 'compare' -TriggeredBy 'verification'
+                } catch {
+                    Write-LogMessage -API 'Baselines' -tenant $Entry.TenantFilter -message "Baseline verification after the cache refresh failed to start: $($_.Exception.Message)" -Sev 'Error'
+                }
+            }
+            return
+        }
 
         # Every finished run re-verified state, so record today's fleet rollup for the
         # trend chart - even when nothing was remediated.
@@ -30,11 +45,16 @@ function Push-CIPPBaselineCacheRefresh {
         }
 
         $Impacted = @{}
+        $Verify = @{}
         foreach ($ActivityResult in @($Item.Results)) {
             foreach ($Record in @($ActivityResult)) {
                 # Family types (IntuneDeviceConfigurations, ...) have no collector of their own; their umbrella cacheType refreshes them.
                 if ($Record -and $Record.CacheType -and $Record.TenantFilter -and (Get-CIPPBaselineCommand -Name "Set-CIPPDBCache$($Record.CacheType)")) {
                     $Impacted[('{0}|{1}' -f $Record.TenantFilter, $Record.CacheType)] = $Record
+                    if ($Record.Standard) {
+                        $Verify[$Record.TenantFilter] ??= [System.Collections.Generic.HashSet[string]]::new()
+                        $null = $Verify[$Record.TenantFilter].Add($Record.Standard)
+                    }
                 }
             }
         }
@@ -53,11 +73,21 @@ function Push-CIPPBaselineCacheRefresh {
                 QueueId      = $Queue.RowKey
             }
         }
-        $null = Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
-                Batch            = @($Batch)
-                OrchestratorName = 'BaselineCacheRefresh'
-                SkipLog          = $true
-            })
+        $Orchestrator = @{
+            Batch            = @($Batch)
+            OrchestratorName = 'BaselineCacheRefresh'
+            SkipLog          = $true
+        }
+        if ($Verify.Count -gt 0) {
+            $Orchestrator.PostExecution = @{
+                FunctionName = 'CIPPBaselineCacheRefresh'
+                Parameters   = @{
+                    RunId  = $Item.Parameters.RunId
+                    Verify = @(foreach ($Tenant in @($Verify.Keys)) { @{ TenantFilter = $Tenant; Standards = @($Verify[$Tenant]) } })
+                }
+            }
+        }
+        $null = Start-CIPPOrchestrator -InputObject ([PSCustomObject]$Orchestrator)
         Write-LogMessage -API 'Baselines' -message "Baseline run finished - refreshing $($Impacted.Count) impacted cache(s)." -Sev 'Info'
     } catch {
         Write-LogMessage -API 'Baselines' -message "Baseline cache refresh failed: $($_.Exception.Message)" -Sev 'Error'

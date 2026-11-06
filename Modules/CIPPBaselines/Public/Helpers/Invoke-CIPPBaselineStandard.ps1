@@ -17,10 +17,12 @@ function Invoke-CIPPBaselineStandard {
             delete.executor    'Foo' -> Invoke-CIPPBaselineDeleteFoo
             prepare                  -> the Get-CIPPBaseline*State function it names
 
-        -GradeOnly is the post-remediation cache verification: read and compare only,
-        returning { Compliant, CurrentValue, Diff } while persisting NOTHING - no history
-        events, no alignment writes, no alerts, no remediation. Only meaningful right after
-        a remediation on the same item, where conflict/unconfigured/manual cannot occur.
+        -GradeOnly reads and compares only, returning { Compliant, CurrentValue, Diff } while
+        persisting NOTHING - no history events, no alignment writes, no alerts, no remediation.
+
+        A remediation writes an optimistic Compliant + PendingVerification row. The run's
+        PostExecution refreshes the written caches and then compares again; until that cache
+        is newer than the write, a non-forced run leaves the pending row as it is.
     .FUNCTIONALITY
         Internal
     #>
@@ -448,6 +450,21 @@ function Invoke-CIPPBaselineStandard {
             $JustRefreshed = Wait-CIPPBaselineCacheReady -TenantFilter $TenantFilter -Definition $Definition -RunId $RunId
         }
 
+        # A cache older than a pending remediation still holds the pre-write state and would report the
+        # fixed drift again. Bounded to a day so a cache that never refreshes cannot hide drift forever.
+        $FreshnessType = $Definition.read.freshnessType ?? $Definition.read.cacheType
+        if ($Prior.PendingVerification -eq $true -and -not $Force -and -not $GradeOnly -and -not $JustRefreshed -and $FreshnessType -and
+            "$($Prior.LastRemediated)" -match '^\d+$' -and [int64]$Prior.LastRemediated -gt ($Now - 86400)) {
+            $CacheMeta = @($(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $FreshnessType -CountsOnly } catch { $null }))[0]
+            if ($CacheMeta.Timestamp -and ([datetimeoffset]$CacheMeta.Timestamp).ToUnixTimeSeconds() -lt [int64]$Prior.LastRemediated) {
+                Write-Information "Baselines: $($Item.Standard) on $TenantFilter is awaiting verification - the $FreshnessType cache predates the remediation."
+                $Result.PendingVerification = $true
+                $Result.Outcome = 'Skipped-NoCache'
+                $Result.Status = $PriorStatus
+                return $Result
+            }
+        }
+
         if ($Definition.prepare) {
             if ($Definition.prepare -notmatch '^Get-CIPPBaseline[A-Za-z0-9]+$' -or -not (Get-CIPPBaselineCommand -Name $Definition.prepare)) {
                 throw "Prepare function $($Definition.prepare) is not available."
@@ -809,10 +826,11 @@ function Invoke-CIPPBaselineStandard {
         return $Result
     } catch {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Baseline run failed for $($Item.Standard) on ${TenantFilter}: $($_.Exception.Message)" -Sev 'Error'
-        # A failed verification must never overwrite the optimistic post-remediation row.
         if ($GradeOnly) { return $null }
         if ($Result) {
             $Result.Outcome = 'Error'
+            # An error is not a verification: a pending row stays pending.
+            $Result.PendingVerification = [bool]$Prior.PendingVerification
             try { Set-CIPPBaselineResult -Result $Result -Prior $Prior -RunId $RunId } catch { Write-Information "Set-CIPPBaselineResult failed: $($_.Exception.Message)" }
             return $Result
         }
