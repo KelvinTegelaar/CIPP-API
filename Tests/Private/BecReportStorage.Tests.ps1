@@ -38,6 +38,11 @@ Describe 'Set-CIPPBecReport' {
         ($script:Writes | Where-Object { $_.Table -eq 'BecReports' }).Force | Should -BeTrue
     }
 
+    It 'keeps an NHI case in the NhiReports and NhiResults tables' {
+        $null = Set-CIPPBecReport -Kind 'NHI' -TenantFilter 'contoso.com' -CaseId 'NHI-1' -Properties @{ Status = 'Completed'; ServicePrincipalId = 'sp-1' } -Results ([pscustomobject]@{ CaseId = 'NHI-1' })
+        @($script:Writes.Table) | Should -Be @('NhiResults', 'NhiReports')
+    }
+
     It 'stores structured properties as compact JSON' {
         $Entity = Set-CIPPBecReport -TenantFilter 'contoso.com' -CaseId 'BEC-1' -Properties @{ Containment = @([pscustomobject]@{ At = 'x'; Actions = @('ResetPassword') }) }
         $Entity.Containment | Should -BeOfType [string]
@@ -76,6 +81,11 @@ Describe 'Get-CIPPBecReport' {
         # ConvertFrom-Json unrolls a JSON array; a one-entry history must still be a list for the case page
         $Rows[1].Containment -is [array] | Should -BeTrue
         @($Rows[1].Containment).Count | Should -Be 1
+    }
+
+    It 'reads an NHI case from the NHI tables, narrowed to one service principal' {
+        $null = Get-CIPPBecReport -Kind 'NHI' -TenantFilter 'contoso.com' -ServicePrincipalId 'sp-1'
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Context.TableName -eq 'NhiReports' -and $Filter -like "*ServicePrincipalId eq 'sp-1'*" }
     }
 
     It 'narrows to one user and scans every tenant for AllTenants' {

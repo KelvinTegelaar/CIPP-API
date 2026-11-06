@@ -21,6 +21,9 @@ function Set-CIPPBecReport {
         When supplied, serialised to JSON and written to the run's BecResults row (replace).
     .PARAMETER Replace
         Replace the whole run row instead of merging (used when a run is first created).
+    .PARAMETER Kind
+        BEC (the BecReports and BecResults tables) or NHI, a non-human identity investigation (NhiReports and
+        NhiResults).
     .FUNCTIONALITY
         Internal
     #>
@@ -30,8 +33,10 @@ function Set-CIPPBecReport {
         [Parameter(Mandatory = $true)][string]$CaseId,
         [hashtable]$Properties = @{},
         $Results,
-        [switch]$Replace
+        [switch]$Replace,
+        [ValidateSet('BEC', 'NHI')][string]$Kind = 'BEC'
     )
+    $TablePrefix = if ($Kind -eq 'NHI') { 'Nhi' } else { 'Bec' }
 
     $Entity = @{
         PartitionKey = [string]$TenantFilter
@@ -51,7 +56,7 @@ function Set-CIPPBecReport {
     if ($PSBoundParameters.ContainsKey('Results') -and $null -ne $Results) {
         $Json = [CIPP.CippJson]::ToJson($Results, 15)
         if ($null -eq $Json) { throw "BEC results for $CaseId hold a value that cannot be written as JSON" }
-        $ResultsTable = Get-CIPPTable -TableName 'BecResults'
+        $ResultsTable = Get-CIPPTable -TableName "$($TablePrefix)Results"
         if ($PSCmdlet.ShouldProcess("$TenantFilter/$CaseId", 'Write BEC results row')) {
             Add-CIPPAzDataTableEntity @ResultsTable -Entity @{
                 PartitionKey = [string]$TenantFilter
@@ -61,7 +66,7 @@ function Set-CIPPBecReport {
         }
     }
 
-    $Table = Get-CIPPTable -TableName 'BecReports'
+    $Table = Get-CIPPTable -TableName "$($TablePrefix)Reports"
     if ($PSCmdlet.ShouldProcess("$TenantFilter/$CaseId", 'Write BEC run row')) {
         if ($Replace) {
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force

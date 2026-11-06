@@ -7,20 +7,25 @@ function ConvertFrom-CIPPRoleAuditEvent {
         a service principal, and returns the service principal, the role (template id and name) or the group it was
         added to, and who did it: a user or an app. Other events, eligible assignments and changes to users return
         nothing. Whether a group holds a role is up to the caller.
+        -AnyPrincipal also returns roles given to users and eligible (PIM) assignments, with targetType saying
+        whether the principal is a ServicePrincipal or a User: who an app elevated.
     .PARAMETER Events
         Directory audit events (auditLogs/directoryAudits) with initiatedBy and targetResources.
+    .PARAMETER AnyPrincipal
+        Include users and eligible assignments.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
         [AllowEmptyCollection()]
-        [object[]]$Events
+        [object[]]$Events,
+        [switch]$AnyPrincipal
     )
 
     $Rows = [System.Collections.Generic.List[object]]::new()
     foreach ($Event in $Events) {
         $Activity = [string]$Event.activityDisplayName
-        $IsRole = $Activity.StartsWith('Add member to role', [System.StringComparison]::OrdinalIgnoreCase)
+        $IsRole = $Activity.StartsWith('Add member to role', [System.StringComparison]::OrdinalIgnoreCase) -or ($AnyPrincipal -and $Activity.StartsWith('Add eligible member to role', [System.StringComparison]::OrdinalIgnoreCase))
         $IsGroup = $Activity -eq 'Add member to group'
         if (-not $IsRole -and -not $IsGroup) { continue }
         $SpTarget = $null
@@ -29,7 +34,7 @@ function ConvertFrom-CIPPRoleAuditEvent {
         $GroupId = $null
         $GroupName = $null
         foreach ($Target in $Event.targetResources) {
-            if ($Target.type -eq 'ServicePrincipal' -and -not $SpTarget) { $SpTarget = $Target }
+            if (($Target.type -eq 'ServicePrincipal' -or ($AnyPrincipal -and $Target.type -eq 'User')) -and -not $SpTarget) { $SpTarget = $Target }
             if ($Target.type -eq 'Role') {
                 if (-not $RoleId) { $RoleId = [string]$Target.id }
                 if (-not $RoleName) { $RoleName = [string]$Target.displayName }
@@ -58,7 +63,8 @@ function ConvertFrom-CIPPRoleAuditEvent {
                 activityDateTime              = $Event.activityDateTime
                 activityDisplayName           = $Event.activityDisplayName
                 targetId                      = [string]$SpTarget.id
-                targetDisplayName             = [string]$SpTarget.displayName
+                targetDisplayName             = [string]($SpTarget.displayName ?? $SpTarget.userPrincipalName)
+                targetType                    = [string]$SpTarget.type
                 roleId                        = if ($IsRole) { $RoleId } else { $null }
                 roleName                      = if ($IsRole) { $RoleName } else { $null }
                 groupId                       = if ($IsGroup) { $GroupId } else { $null }
