@@ -39,7 +39,7 @@ function Get-CIPPIntuneScriptReport {
         return $AllResults
     }
 
-    $GroupItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneScriptGroups' | Where-Object { $_.RowKey -notlike '*-Count' }
+    $GroupItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntunePolicyGroups' | Where-Object { $_.RowKey -notlike '*-Count' }
     if (-not $GroupItems) {
         $GroupItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Groups' | Where-Object { $_.RowKey -notlike '*-Count' }
     }

@@ -3,7 +3,8 @@ function Set-CIPPDBCacheIntuneApplications {
     param(
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
-        [string]$QueueId
+        [string]$QueueId,
+        [switch]$SkipGroupSnapshot
     )
 
     try {
@@ -12,19 +13,14 @@ function Set-CIPPDBCacheIntuneApplications {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping applications cache' -sev Debug
             # A license skip is still a completed collection: record authoritative empty sets for
             # every type this collector writes so collect-on-miss does not re-run it forever.
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplicationGroups' -Data @() -AddCount -ClearOnEmpty
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplications' -Data @() -AddCount -ClearOnEmpty
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneMobileAppsAll' -Data @() -AddCount -ClearOnEmpty
             return
         }
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Intune applications' -sev Debug
+        if (-not $SkipGroupSnapshot) { Set-CIPPDBCacheIntunePolicyGroups -TenantFilter $TenantFilter }
         $BulkRequests = @(
-            @{
-                id     = 'Groups'
-                method = 'GET'
-                url    = '/groups?$top=999&$select=id,displayName'
-            }
             @{
                 id     = 'Apps'
                 method = 'GET'
@@ -40,15 +36,12 @@ function Set-CIPPDBCacheIntuneApplications {
         )
 
         $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
-        $Groups = ($BulkResults | Where-Object { $_.id -eq 'Groups' }).body.value
         $Apps = ($BulkResults | Where-Object { $_.id -eq 'Apps' }).body.value
         $AllApps = ($BulkResults | Where-Object { $_.id -eq 'AllApps' }).body.value
 
-        if (-not $Groups) { $Groups = @() }
         if (-not $Apps) { $Apps = @() }
         if (-not $AllApps) { $AllApps = @() }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplicationGroups' -Data @($Groups) -AddCount
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplications' -Data @($Apps) -AddCount
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneMobileAppsAll' -Data @($AllApps) -AddCount
 

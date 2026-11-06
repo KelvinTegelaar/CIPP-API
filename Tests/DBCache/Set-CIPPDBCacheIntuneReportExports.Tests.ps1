@@ -186,7 +186,7 @@ Describe 'Intune collection group' {
         Mock Get-Command { [pscustomobject]@{ Name = $Name } }
         Mock Write-LogMessage {}
         $Stub = { param($TenantFilter, $QueueId) $global:IntuneGroupCalls.Add($MyInvocation.MyCommand.Name -replace '^Set-CIPPDBCache') }
-        foreach ($Type in 'ManagedDevices', 'IntunePolicies', 'IntuneApplications', 'IntuneAssignmentFilters', 'IntuneCompliancePolicies',
+        foreach ($Type in 'ManagedDevices', 'IntunePolicies', 'IntuneApplications', 'IntuneAssignmentFilters',
             'ManagedDeviceEncryptionStates', 'IntuneAppProtectionPolicies', 'IntuneScripts', 'IntuneReusableSettings', 'MDEOnboarding',
             'AutopilotDeploymentProfiles', 'DeviceEnrollmentConfigurations', 'IntuneDeviceManagementSettings', 'IntuneDataProcessorOnboarding',
             'IntuneBrandingProfile', 'ManagedDeviceCleanupRules') {
@@ -197,7 +197,7 @@ Describe 'Intune collection group' {
 
         $Result.Failed | Should -Be 0
         $Calls = @($global:IntuneGroupCalls)
-        $Calls.Count | Should -Be 22
+        $Calls.Count | Should -Be 21
         $Calls[0..3] | Should -Be @('export:AppInvRawData', 'export:AppInstallStatusAggregate', 'export:NoncompliantDevicesAndSettingsV3', 'ManagedDevices')
         $Calls[-4..-1] | Should -Be @('ManagedDeviceCleanupRules', 'export:AppInvRawData', 'export:AppInstallStatusAggregate', 'export:NoncompliantDevicesAndSettingsV3')
     }

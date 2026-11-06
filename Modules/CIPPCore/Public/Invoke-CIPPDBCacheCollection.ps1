@@ -75,6 +75,8 @@ function Invoke-CIPPDBCacheCollection {
 
             $Params = @{ TenantFilter = $TenantFilter }
             if ($QueueId) { $Params.QueueId = $QueueId }
+            # IntunePolicies runs earlier in this group and has already written the shared group snapshot
+            if ($Function.Parameters.Keys -contains 'SkipGroupSnapshot') { $Params.SkipGroupSnapshot = $true }
 
             Write-Information "  [$CollectionType] Collecting $CacheType for $TenantFilter"
             & $FullFunctionName @Params

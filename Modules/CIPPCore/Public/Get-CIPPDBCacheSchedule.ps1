@@ -161,7 +161,6 @@ function Get-CIPPDBCacheSchedule {
                 'IntunePolicies'
                 'IntuneApplications'
                 'IntuneAssignmentFilters'
-                'IntuneCompliancePolicies'
                 'ManagedDeviceEncryptionStates'
                 'IntuneAppProtectionPolicies'
                 'IntuneScripts'
