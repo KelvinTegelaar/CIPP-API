@@ -730,6 +730,30 @@ Describe 'Get-CIPPTextReplacement' {
         }
     }
 
+    Context 'nested custom variables' {
+        It 'resolves a variable that references another, whatever order they enumerate in' {
+            # Six pairs: one pass in hashtable order leaves some inner token unresolved almost every run.
+            $script:GlobalRows = @(foreach ($N in 1..6) {
+                    New-VariableRow -Name "outer$N" -Value "%inner$N%-$N"
+                    New-VariableRow -Name "inner$N" -Value "in$N"
+                })
+            $Text = (1..6 | ForEach-Object { "%outer$_%" }) -join ','
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text $Text |
+                Should -Be ((1..6 | ForEach-Object { "in$_-$_" }) -join ',')
+        }
+
+        It 'resolves a built-in token inside a custom variable' {
+            $script:GlobalRows = @(New-VariableRow -Name 'breakglass' -Value 'bg1@%initialdomain%')
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%breakglass%' | Should -Be 'bg1@contoso.onmicrosoft.com'
+        }
+
+        It 'stops after two levels so a self-referencing variable cannot loop' {
+            $script:GlobalRows = @(New-VariableRow -Name 'loop' -Value 'x%loop%')
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%loop%' | Should -Be 'xx%loop%'
+        }
+    }
+
     Context 'text without a token' {
         It 'is returned unchanged without reading tenants or variables' {
             $script:GlobalRows = @(New-VariableRow -Name 'sitename' -Value 'Contoso')

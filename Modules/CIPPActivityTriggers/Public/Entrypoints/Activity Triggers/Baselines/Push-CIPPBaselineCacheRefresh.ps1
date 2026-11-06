@@ -58,6 +58,10 @@ function Push-CIPPBaselineCacheRefresh {
                 }
             }
         }
+        # IntunePolicies also writes IntuneConfigurationPolicies, so collecting both reads every settings catalog policy twice.
+        foreach ($Key in @($Impacted.Keys)) {
+            if ($Key.EndsWith('|IntunePolicies')) { $Impacted.Remove(($Key -replace 'IntunePolicies$', 'IntuneConfigurationPolicies')) }
+        }
         if ($Impacted.Count -eq 0) {
             Write-Information 'Baseline cache refresh: nothing was remediated - no caches to refresh.'
             return

@@ -332,6 +332,8 @@ exit 0
     }
 
     # Refresh the caches this run wrote to, so the next compare does not read the old copies as drift.
+    # IntunePolicies also writes IntuneConfigurationPolicies, so collecting both reads the settings catalog twice.
+    if ($Refresh.Contains('IntunePolicies')) { $null = $Refresh.RemoveAll({ param($Type) $Type -eq 'IntuneConfigurationPolicies' }) }
     foreach ($CacheType in ($Refresh | Sort-Object -Unique)) {
         $Collector = Get-CIPPBaselineCommand -Name "Set-CIPPDBCache$CacheType"
         if ($Collector) {

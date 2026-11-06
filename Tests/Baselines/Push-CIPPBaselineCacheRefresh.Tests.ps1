@@ -45,6 +45,30 @@ Describe 'Push-CIPPBaselineCacheRefresh' {
         }
     }
 
+    It 'reads the settings catalog once when the umbrella is queued for the same tenant' {
+        Mock Get-CIPPBaselineCommand { if ($Name -in @('Set-CIPPDBCacheIntunePolicies', 'Set-CIPPDBCacheIntuneConfigurationPolicies')) { $Name } }
+        $Item = [pscustomobject]@{
+            Parameters = @{ RunId = 'run-1' }
+            Results    = @(
+                @(
+                    [pscustomobject]@{ TenantFilter = 'contoso.com'; CacheType = 'IntunePolicies'; Standard = 'IntuneTemplate#a' }
+                    [pscustomobject]@{ TenantFilter = 'contoso.com'; CacheType = 'IntuneConfigurationPolicies'; Standard = 'IntuneTemplate#a' }
+                )
+                @([pscustomobject]@{ TenantFilter = 'contoso.com'; CacheType = 'IntuneConfigurationPolicies'; Standard = 'DefenderASRPolicy' })
+                @([pscustomobject]@{ TenantFilter = 'fabrikam.com'; CacheType = 'IntuneConfigurationPolicies'; Standard = 'DefenderASRPolicy' })
+            )
+        }
+
+        Push-CIPPBaselineCacheRefresh -Item $Item
+
+        Should -Invoke Start-CIPPOrchestrator -Times 1 -Exactly -ParameterFilter {
+            $Queued = @($InputObject.Batch | ForEach-Object { "$($_.TenantFilter)|$($_.Name)" } | Sort-Object)
+            $Contoso = @($InputObject.PostExecution.Parameters.Verify).Where({ $_.TenantFilter -eq 'contoso.com' })[0]
+            ($Queued -join ',') -eq 'contoso.com|IntunePolicies,fabrikam.com|IntuneConfigurationPolicies' -and
+            (@($Contoso.Standards | Sort-Object) -join ',') -eq 'DefenderASRPolicy,IntuneTemplate#a'
+        }
+    }
+
     It 'starts nothing when no remediated type has a collector' {
         $Item = [pscustomobject]@{
             Parameters = @{ RunId = 'run-1' }

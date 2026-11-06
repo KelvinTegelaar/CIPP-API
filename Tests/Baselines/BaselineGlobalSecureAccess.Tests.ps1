@@ -162,6 +162,16 @@ Describe 'Invoke-CIPPBaselineGlobalSecureAccessCompliantNetwork' {
         Should -Invoke Set-CIPPIntunePolicy -Times 1 -Exactly -ParameterFilter { $TemplateType -eq 'Catalog' -and $RawJSON -like '*com.apple.system-extension-policy_allowedsystemextensions*' -and $RawJSON -like '*UBF8T346G9*' }
     }
 
+    It 'refreshes the settings catalog once when it deploys both macOS profile kinds' {
+        Mock Set-CIPPDBCacheIntuneScripts { }
+        Mock Set-CIPPDBCacheIntuneConfigurationPolicies { }
+        Mock Set-CIPPDBCacheIntunePolicies { }
+        Invoke-CIPPBaselineGlobalSecureAccessCompliantNetwork -Remediate ([PSCustomObject]@{ deployWindows = $false }) -TenantFilter $script:Tenant -Current $script:Configured | Out-Null
+        Should -Invoke Set-CIPPIntunePolicy -Times 1 -Exactly -ParameterFilter { $TemplateType -eq 'Catalog' }
+        Should -Invoke Set-CIPPDBCacheIntunePolicies -Times 1 -Exactly
+        Should -Invoke Set-CIPPDBCacheIntuneConfigurationPolicies -Times 0 -Exactly
+    }
+
     It 'refuses to enable the policy with no break-glass exclusion, but still deploys report-only' {
         $Remediate = [PSCustomObject]@{ deployMacOS = $false; enforce = $true; useDetectedBreakGlass = $false }
         { Invoke-CIPPBaselineGlobalSecureAccessCompliantNetwork -Remediate $Remediate -TenantFilter $script:Tenant -Current $null } | Should -Throw '*Refusing to enable*'
