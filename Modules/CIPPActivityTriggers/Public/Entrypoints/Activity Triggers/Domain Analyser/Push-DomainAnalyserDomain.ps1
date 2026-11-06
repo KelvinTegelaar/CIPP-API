@@ -93,6 +93,11 @@ function Push-DomainAnalyserDomain {
 
     #Region MX Check
     $MXRecord = Read-MXRecord -Domain $Domain -ErrorAction Stop
+    # A failed lookup is not an empty MX set: saving it would read as every record removed and flip the MX change alert
+    if ($MXRecord.LookupFailed -and -not [string]::IsNullOrEmpty($DomainObject.DomainAnalyser)) {
+        Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "Kept the previous Domain Analyser result for $Domain because its MX lookup failed: $($MXRecord.ValidationFails -join ' ')" -sev Warning
+        return
+    }
 
     $Result.ExpectedSPFRecord = $MXRecord.ExpectedInclude
     $Result.MXPassTest = $false

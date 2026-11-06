@@ -50,6 +50,23 @@ Describe 'Push-DomainAnalyserDomain' {
         Mock Test-MtaSts { New-MtaSts -Record '' -Mode '' -Valid $false }
     }
 
+    It 'keeps the previous result when the MX lookup failed' {
+        Mock Get-CIPPAzDataTableEntity {
+            if ($Name -eq 'Config') { [pscustomobject]@{ Resolver = 'Google' } }
+            else { [pscustomobject]@{ RowKey = 'contoso.com'; PartitionKey = 'TenantDomains'; TenantId = 'contoso.onmicrosoft.com'; TenantDetails = '{}'; DomainAnalyser = '{"ActualMXRecords":[{"Hostname":"mx"}]}' } }
+        }
+        Mock Read-MXRecord { [pscustomobject]@{ Records = @(); LookupFailed = $true; MailProvider = ''; ValidationPasses = @(); ValidationFails = @('could not be retrieved') } }
+        Push-DomainAnalyserDomain -Item @{ RowKey = 'contoso.com' } | Should -BeNullOrEmpty
+        $script:Saved | Should -BeNullOrEmpty
+        Should -Invoke Write-LogMessage -ParameterFilter { $sev -eq 'Warning' -and $message -like '*MX lookup failed*' }
+    }
+
+    It 'saves a failed MX lookup for a domain that has no earlier result' {
+        Mock Read-MXRecord { [pscustomobject]@{ Records = @(); LookupFailed = $true; MailProvider = ''; ValidationPasses = @(); ValidationFails = @('could not be retrieved') } }
+        Push-DomainAnalyserDomain -Item @{ RowKey = 'contoso.com' } | Out-Null
+        $script:Saved | Should -Not -BeNullOrEmpty
+    }
+
     It 'stores the per-check messages beside the analyser result' {
         $Result = Push-DomainAnalyserDomain -Item @{ RowKey = 'contoso.com' }
         $Result.Score | Should -Be 140

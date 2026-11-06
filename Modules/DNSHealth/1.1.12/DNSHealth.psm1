@@ -1460,7 +1460,9 @@ function Read-MXRecord {
     Reads MX records for domain
 
     .DESCRIPTION
-    Queries DNS servers to get MX records and returns in PSCustomObject list with Preference and Hostname
+    Queries DNS servers to get MX records and returns in PSCustomObject list with Preference and Hostname.
+    LookupFailed is true when the resolver gave no usable answer (no response, SERVFAIL, REFUSED), so the
+    domain's MX records are unknown rather than missing.
 
     .PARAMETER Domain
     Domain to query
@@ -1491,6 +1493,7 @@ function Read-MXRecord {
         MailProvider     = ''
         ExpectedInclude  = ''
         Selectors        = ''
+        LookupFailed     = $false
     }
     $ValidationPasses = [System.Collections.Generic.List[string]]::new()
     $ValidationFails = [System.Collections.Generic.List[string]]::new()
@@ -1508,9 +1511,19 @@ function Read-MXRecord {
         $Result = Resolve-DnsHttpsQuery @DnsQuery -ErrorAction Stop
     }
 
-    catch { $Result = $null }
+    catch {
+        $Result = $null
+        $LookupError = $_.Exception.Message
+    }
+    # NOERROR and NXDOMAIN are answers; anything else leaves the MX records unknown, not absent
+    $MXResults.LookupFailed = $null -eq $Result -or $Result.Status -notin @(0, 3)
     if ($Result.Status -eq 2 -and $Result.AD -eq $false) {
         $ValidationFails.Add('DNSSEC validation failed.') | Out-Null
+    }
+
+    elseif ($MXResults.LookupFailed) {
+        $Reason = if ($LookupError) { $LookupError } else { "DNS status $($Result.Status)" }
+        $ValidationFails.Add("The mail exchanger records for this domain could not be retrieved ($Reason).") | Out-Null
     }
 
     elseif ($Result.Status -ne 0 -or -not ($Result.Answer)) {
@@ -1597,7 +1610,7 @@ function Read-MXRecord {
     $MXResults.Records = @($MXResults.Records)
     $MXResults
 }
-#EndRegion './Public/Records/Read-MXRecord.ps1' 144
+#EndRegion './Public/Records/Read-MXRecord.ps1' 157
 #Region './Public/Records/Read-NSRecord.ps1' -1
 
 function Read-NSRecord {
