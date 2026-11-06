@@ -520,12 +520,12 @@ function Get-CIPPBaselineAlignment {
         $Rows = @($Entities | ForEach-Object { Convert-CIPPBaselineResolvedEntity -Entity $_ -Definitions $Definitions -ResolveTemplateName $ResolveTemplateName })
 
         $FilterInfo = $null
-        if ($Stage -and -not $BaselineId) { throw 'Stage requires BaselineId.' }
+        if ($Stage -and -not $BaselineId) { throw [System.ArgumentException]::new('Stage requires BaselineId.') }
         if ($BaselineId) {
             $FilterBaseline = Get-CIPPBaseline -ID $BaselineId | Select-Object -First 1
-            if (-not $FilterBaseline) { throw "Baseline '$BaselineId' was not found." }
+            if (-not $FilterBaseline) { throw [System.Management.Automation.ItemNotFoundException]::new("Baseline '$BaselineId' was not found.") }
             $StageKeys = @(Get-CIPPBaselineStageStandards -Baseline $FilterBaseline -Definitions $Definitions)
-            if ($Stage -and ($Stage -lt 1 -or $Stage -gt $StageKeys.Count)) { throw "Baseline '$($FilterBaseline.templateName)' has no stage $Stage." }
+            if ($Stage -and ($Stage -lt 1 -or $Stage -gt $StageKeys.Count)) { throw [System.ArgumentException]::new("Baseline '$($FilterBaseline.templateName)' has no stage $Stage.") }
             # Tenant -> instance keys this baseline has rolled out to it.
             $Allowed = @{}
             foreach ($State in @($FilterBaseline.tenantStates)) {

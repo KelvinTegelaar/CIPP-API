@@ -20,7 +20,7 @@ function Invoke-ExecBaselineOverride {
         $TenantFilter = $Request.Body.tenantFilter
         $Standard = $Request.Body.standard
         if (-not ($Action -and $TenantFilter -and $Standard)) {
-            throw 'Provide action, tenantFilter, and standard.'
+            throw [System.ArgumentException]::new('Provide action, tenantFilter, and standard.')
         }
 
         $User = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
@@ -137,7 +137,7 @@ function Invoke-ExecBaselineOverride {
                 $null = Add-CIPPBaselineHistoryEvent -TenantFilter $TenantFilter -Standard $Standard -Mode 'triage' -TriggeredBy $User -Outcome 'Override Removed' -Detail 'Removed the tenant override - the standard falls back to the inherited configuration'
             }
             default {
-                throw "Unknown action '$Action'. Use createOverride or deleteOverride."
+                throw [System.ArgumentException]::new("Unknown action '$Action'. Use createOverride or deleteOverride.")
             }
         }
 
@@ -147,7 +147,7 @@ function Invoke-ExecBaselineOverride {
     } catch {
         Write-LogMessage -headers $Request.Headers -API $APIName -message "Failed to update override: $($_.Exception.Message)" -Sev 'Error'
         $Results = [pscustomobject]@{ Results = "Failed to update override: $($_.Exception.Message)" }
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

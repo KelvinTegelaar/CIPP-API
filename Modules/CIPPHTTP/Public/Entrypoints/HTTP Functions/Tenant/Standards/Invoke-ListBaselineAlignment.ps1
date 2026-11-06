@@ -49,13 +49,13 @@ function Invoke-ListBaselineAlignment {
         } elseif ($Request.Query.tenantFilter) {
             Get-CIPPBaselineAlignment -TenantFilter $Request.Query.tenantFilter
         } else {
-            throw 'Provide tenantFilter or byStandard=true.'
+            throw [System.ArgumentException]::new('Provide tenantFilter or byStandard=true.')
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         Write-LogMessage -headers $Request.Headers -API $APIName -message "Failed to list baseline alignment: $($_.Exception.Message)" -Sev 'Error'
         $Results = @{ Results = "Failed to list baseline alignment: $($_.Exception.Message)" }
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

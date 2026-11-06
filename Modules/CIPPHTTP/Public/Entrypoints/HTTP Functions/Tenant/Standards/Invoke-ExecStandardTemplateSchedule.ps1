@@ -13,21 +13,17 @@ function Invoke-ExecStandardTemplateSchedule {
   $ID = $Request.Body.TemplateId ?? $Request.Query.TemplateId
   # The stored field is runManually: $true means "do not run on schedule".
   $RunManually = $Request.Body.runManually -eq $true
-  $StatusCode = [HttpStatusCode]::InternalServerError
-
   try {
     $Table = Get-CippTable -tablename 'templates'
     $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
     $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$SafeID'"
     if (-not $Entity) {
-      $StatusCode = [HttpStatusCode]::BadRequest
-      throw "Standards template '$ID' was not found."
+      throw [System.Management.Automation.ItemNotFoundException]::new("Standards template '$ID' was not found.")
     }
 
     $Data = $Entity.JSON | ConvertFrom-Json -Depth 100
     if ($Data.type -eq 'drift') {
-      $StatusCode = [HttpStatusCode]::BadRequest
-      throw "Template '$($Data.templateName)' is a drift template and does not run on a schedule."
+      throw [System.ArgumentException]::new("Template '$($Data.templateName)' is a drift template and does not run on a schedule.")
     }
 
     $Data | Add-Member -NotePropertyName 'runManually' -NotePropertyValue $RunManually -Force
@@ -43,7 +39,8 @@ function Invoke-ExecStandardTemplateSchedule {
     Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Info
     $StatusCode = [HttpStatusCode]::OK
   } catch {
-    if ($StatusCode -eq [HttpStatusCode]::BadRequest) {
+    $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
+    if ($StatusCode -ne [HttpStatusCode]::InternalServerError) {
       $Result = $_.Exception.Message
       Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Warning
     } else {
