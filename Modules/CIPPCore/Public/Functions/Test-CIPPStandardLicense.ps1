@@ -34,7 +34,7 @@ function Test-CIPPStandardLicense {
         [string[]]$RequiredCapabilities,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Exchange', 'SharePoint', 'Intune', 'Entra', 'EntraP2', 'PIM', 'Teams', 'Compliance', 'DefenderForOffice365')]
+        [ValidateSet('Exchange', 'SharePoint', 'Intune', 'Entra', 'EntraP2', 'PIM', 'Teams', 'Compliance', 'DefenderForOffice365', 'DefenderForEndpoint')]
         [string[]]$Preset,
 
         [Parameter(Mandatory = $false)]
@@ -55,6 +55,7 @@ function Test-CIPPStandardLicense {
         PIM                  = @('AAD_PREMIUM_P2', 'Entra_Identity_Governance')
         Teams                = @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
         Compliance           = @('RMS_S_PREMIUM', 'RMS_S_PREMIUM2', 'MIP_S_CLP1', 'MIP_S_CLP2')
+        DefenderForEndpoint  = @('MDE_SMB', 'WIN_DEF_ATP', 'DEFENDER_ENDPOINT_P1')
         DefenderForOffice365 = @(
             'ATP_ENTERPRISE', 'ATP_ENTERPRISE_GOV',
             'THREAT_INTELLIGENCE', 'THREAT_INTELLIGENCE_GOV'

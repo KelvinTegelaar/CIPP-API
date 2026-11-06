@@ -177,6 +177,7 @@ Describe 'Intune report-export collectors' {
 Describe 'Intune collection group' {
     BeforeAll {
         . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Invoke-CIPPDBCacheCollection.ps1')
+        . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPDBCacheSchedule.ps1')
     }
 
     It 'touches every export before any collector runs, and reads them last' {

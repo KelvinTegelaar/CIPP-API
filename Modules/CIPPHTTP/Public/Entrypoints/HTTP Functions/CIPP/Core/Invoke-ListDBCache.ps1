@@ -165,12 +165,19 @@ function Invoke-ListDBCache {
                 $Rows = @($Rows | Where-Object { $AllowedDomains.Contains([string]$_.PartitionKey) })
             }
 
-            $Results = @($Rows | ForEach-Object {
+            # Scheduled: the nightly run refreshes this type, so its age means something
+            $Scheduled = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($Entry in (Get-CIPPDBCacheSchedule).GetEnumerator()) {
+                if ($Entry.Value.Types) { $Scheduled.UnionWith([string[]]$Entry.Value.Types) } else { [void]$Scheduled.Add($Entry.Key) }
+            }
+            $Results = @(foreach ($Row in $Rows) {
+                    $RowType = $Row.RowKey -replace '-Count$', ''
                     [PSCustomObject]@{
-                        Tenant      = $_.PartitionKey
-                        Type        = $_.RowKey -replace '-Count$', ''
-                        Count       = $_.DataCount
-                        LastRefresh = $_.Timestamp
+                        Tenant      = $Row.PartitionKey
+                        Type        = $RowType
+                        Count       = $Row.DataCount
+                        LastRefresh = $Row.Timestamp
+                        Scheduled   = $Scheduled.Contains($RowType)
                     }
                 })
 

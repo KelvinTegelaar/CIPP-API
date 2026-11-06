@@ -42,6 +42,15 @@ function Push-ExecCIPPDBCache {
 
         Write-Information "Collecting $Name for tenant $TenantFilter"
 
+        $License = foreach ($Entry in (Get-CIPPDBCacheSchedule).GetEnumerator()) {
+            if ($Entry.Key -eq $Name -or $Entry.Value.Types -contains $Name) { $Entry.Value.License; break }
+        }
+        if ($License -and -not (Test-CIPPStandardLicense -StandardName "$($Name)LicenseCheck" -TenantFilter $TenantFilter -Preset $License -SkipLog)) {
+            $Message = "Skipped $Name for tenant $TenantFilter - the tenant has no $License license"
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message $Message -sev Info
+            return $Message
+        }
+
         # Build the full function name
         $FullFunctionName = "Set-CIPPDBCache$Name"
         $Function = Get-Command -Name $FullFunctionName -ErrorAction SilentlyContinue
