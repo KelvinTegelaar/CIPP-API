@@ -194,12 +194,30 @@ Describe 'Get-CIPPBaselineFIDO2PasskeyProfilesState' {
 
     It 'grades the DEFAULT profile only - operator profiles are never graded' {
         # The operator profile (p-other) differs on every field; only the default profile
-        # participates. Note enforcementType grades even while restrictions are off - the
-        # classic graded the dormant field, and Graph defaults it to 'block'.
+        # participates.
         Mock New-CIPPDbRequest { @($script:Fido2 | ConvertTo-Cached) }
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasskeyTypes = 'deviceBound'; AttestationEnforcement = 'registrationOnly'; EnforceKeyRestrictions = $false; EnforcementType = 'block' } }
         $Prepared = Get-CIPPBaselineFIDO2PasskeyProfilesState -Item $Item -TenantFilter $script:Tenant
         (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'does not grade the hidden restriction type while restrictions are off (#1166)' {
+        Mock New-CIPPDbRequest { @($script:Fido2 | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasskeyTypes = 'deviceBound'; AttestationEnforcement = 'registrationOnly'; EnforceKeyRestrictions = $false } }
+        $Prepared = Get-CIPPBaselineFIDO2PasskeyProfilesState -Item $Item -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'keeps the tenant restriction type when writing with restrictions off' {
+        Mock New-GraphPostRequest { $script:capturedBody = $body }
+        $Current = [PSCustomObject]@{
+            defaultProfileId = 'p-default'
+            enforcementType  = 'block'
+            allProfiles      = @($script:Fido2.passkeyProfiles | ConvertTo-Cached)
+        }
+        Invoke-CIPPBaselineFIDO2PasskeyProfiles -Remediate ([PSCustomObject]@{ passkeyTypes = 'synced'; attestationEnforcement = 'disabled'; enforceKeyRestrictions = $false; enforcementType = '' }) -TenantFilter $script:Tenant -Current $Current
+        $Default = @(($script:capturedBody | ConvertFrom-Json).passkeyProfiles) | Where-Object { $_.id -eq 'p-default' }
+        $Default.keyRestrictions.enforcementType | Should -Be 'block'
     }
 
     It 'refuses key restrictions with no AAGUIDs once Microsoft passkeys are opted out - allow mode would lock every authenticator out' {

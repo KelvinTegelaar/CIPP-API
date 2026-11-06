@@ -143,6 +143,20 @@ Describe 'Invoke-CIPPStandardFIDO2PasskeyProfiles remediation' {
         @($default.keyRestrictions.aaGuids).Count | Should -Be 0
     }
 
+    It 'ignores the dormant restriction type while restrictions are off (#1166)' {
+        $Settings = @{
+            remediate              = $true
+            PasskeyTypes           = 'deviceBound'
+            AttestationEnforcement = 'disabled'
+            EnforceKeyRestrictions = $false
+            AAGUIDs                = ''
+        }
+
+        Invoke-CIPPStandardFIDO2PasskeyProfiles -Tenant $script:Tenant -Settings $Settings
+
+        $script:lastBody | Should -BeNullOrEmpty
+    }
+
     It 'refuses to enforce with no AAGUIDs and does not PATCH' {
         $Settings = @{
             remediate              = $true

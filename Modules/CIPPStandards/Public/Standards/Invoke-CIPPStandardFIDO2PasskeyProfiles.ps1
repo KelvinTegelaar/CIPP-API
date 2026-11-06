@@ -77,6 +77,8 @@ function Invoke-CIPPStandardFIDO2PasskeyProfiles {
     # Find the default passkey profile
     $DefaultProfileId = $CurrentConfig.defaultPasskeyProfile
     $DefaultProfile = $CurrentConfig.passkeyProfiles | Where-Object { $_.id -eq $DefaultProfileId }
+    # The restriction type is dormant while restrictions are off, so keep whatever the tenant has
+    if (-not $EnforceKeyRestrictions -and $DefaultProfile.keyRestrictions.enforcementType) { $EnforcementType = $DefaultProfile.keyRestrictions.enforcementType }
 
     # Determine compliance against the default profile
     $StateIsCorrect = $false

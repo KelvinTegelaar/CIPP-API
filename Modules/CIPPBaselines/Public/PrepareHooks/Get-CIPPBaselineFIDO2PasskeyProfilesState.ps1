@@ -6,7 +6,7 @@ function Get-CIPPBaselineFIDO2PasskeyProfilesState {
         Grades the DEFAULT passkey profile only - other profiles are operator-managed and
         never touched, which is also why the executor rebuilds the profile array preserving
         them. Graded: passkey types, attestation enforcement, whether key restrictions are
-        enforced, their enforcement type, and the sorted AAGUID set.
+        enforced, their enforcement type (only while enforced), and the sorted AAGUID set.
 
         Enforcing key restrictions with no AAGUIDs would lock every authenticator out (allow
         mode) or restrict nothing (block mode) - the classic refused the combination, and it
@@ -55,6 +55,8 @@ function Get-CIPPBaselineFIDO2PasskeyProfilesState {
         # exactly which facts a remediation would establish.
         [PSCustomObject]@{ passkeyTypes = ''; attestationEnforcement = ''; keyRestrictionsEnforced = $false; enforcementType = ''; aaGuids = @() }
     }
+    # The restriction type is dormant (and hidden in the form) while restrictions are off
+    if (-not $EnforceRestrictions) { $EnforcementType = $Current.enforcementType }
     # Carried for the executor: the PATCH must resend the whole profile array.
     $Current | Add-Member -NotePropertyName 'allProfiles' -NotePropertyValue @($Config.passkeyProfiles)
     $Current | Add-Member -NotePropertyName 'defaultProfileId' -NotePropertyValue "$($Config.defaultPasskeyProfile)"
