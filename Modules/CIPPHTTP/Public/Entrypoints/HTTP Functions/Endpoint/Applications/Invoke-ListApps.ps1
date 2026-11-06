@@ -1,7 +1,7 @@
 function Invoke-ListApps {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Endpoint.Application.Read
     .DESCRIPTION

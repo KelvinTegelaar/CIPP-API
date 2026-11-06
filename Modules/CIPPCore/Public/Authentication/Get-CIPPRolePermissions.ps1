@@ -91,6 +91,7 @@ function Get-CIPPRolePermissions {
             BlockedTenants   = @($BlockedTenants)
             BlockedEndpoints = @($BlockedEndpoints)
             BlockAllTenants  = [bool]$Role.BlockAllTenants
+            BlockTenantGroups = [bool]$Role.BlockTenantGroups
         }
     } else {
         throw "Role $RoleName not found."

@@ -1,7 +1,7 @@
 function Invoke-ListGuestUsers {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Identity.User.Read
     .SYNOPSIS

@@ -1,7 +1,7 @@
-﻿function Invoke-ListJITAdmin {
+function Invoke-ListJITAdmin {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Identity.Role.Read
 

@@ -1,11 +1,11 @@
 function Test-CippAllTenantsBlocked {
     <#
     .SYNOPSIS
-        Whether the current caller's roles block the AllTenants pseudo-tenant.
+        Whether the current caller's roles block the AllTenants pseudo-tenant, or with -TenantGroups, tenant groups in the tenant selector.
 
     .DESCRIPTION
         Reads the roles Test-CIPPAccess resolved for this request. Admin and superadmin are never
-        blocked; otherwise the caller is blocked only when every custom role sets BlockAllTenants,
+        blocked; otherwise the caller is blocked only when every custom role sets the flag (BlockAllTenants or BlockTenantGroups),
         so any unflagged custom role still grants it. A role that fails to load grants nothing.
 
     .PARAMETER Roles
@@ -18,7 +18,9 @@ function Test-CippAllTenantsBlocked {
     [OutputType([bool])]
     param(
         [Parameter()]
-        [string[]]$Roles = @($script:CippAccessUserContext.Roles)
+        [string[]]$Roles = @($script:CippAccessUserContext.Roles),
+
+        [switch]$TenantGroups
     )
 
     if ($Roles -contains 'admin' -or $Roles -contains 'superadmin') {
@@ -33,7 +35,8 @@ function Test-CippAllTenantsBlocked {
 
     foreach ($CustomRole in $CustomRoles) {
         try {
-            if (-not (Get-CippAccessScopeRule -Role $CustomRole).BlockAllTenants) {
+            $Rule = Get-CippAccessScopeRule -Role $CustomRole
+            if (-not $(if ($TenantGroups) { $Rule.BlockTenantGroups } else { $Rule.BlockAllTenants })) {
                 return $false
             }
         } catch {

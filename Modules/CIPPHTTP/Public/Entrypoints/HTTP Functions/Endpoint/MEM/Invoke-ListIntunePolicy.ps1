@@ -1,7 +1,7 @@
 function Invoke-ListIntunePolicy {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Endpoint.MEM.Read
     .DESCRIPTION

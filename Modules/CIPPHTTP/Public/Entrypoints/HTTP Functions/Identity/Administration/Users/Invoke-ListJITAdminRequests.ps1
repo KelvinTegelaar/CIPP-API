@@ -1,7 +1,7 @@
 function Invoke-ListJITAdminRequests {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Identity.Role.Read
     .SYNOPSIS

@@ -1,7 +1,7 @@
 function Invoke-ListScheduledItems {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         CIPP.Scheduler.Read
     .DESCRIPTION

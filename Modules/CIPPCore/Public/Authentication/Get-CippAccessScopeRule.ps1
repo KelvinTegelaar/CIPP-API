@@ -52,8 +52,9 @@ function Get-CippAccessScopeRule {
     # contributes no scope'
     $Permission = Get-CIPPRolePermissions -Role $Role
 
-    $Unrestricted = ((($Permission.AllowedTenants | Measure-Object).Count -eq 0 -or
-            $Permission.AllowedTenants -contains 'AllTenants') -and
+    # Only an explicit AllTenants grant is unrestricted. A role with no allowed tenants reaches none,
+    # the same answer the per-request check gives.
+    $Unrestricted = ($Permission.AllowedTenants -contains 'AllTenants' -and
         ($Permission.BlockedTenants | Measure-Object).Count -eq 0)
 
     $AllowAllTenants = $false
@@ -77,14 +78,19 @@ function Get-CippAccessScopeRule {
         )
     }
 
+    # Permissions and blocked endpoints ride along so a scope can be worked out per endpoint:
+    # only roles that grant an endpoint's permission contribute tenants to a request for it.
     $Rule = [PSCustomObject]@{
-        Role            = $Role
-        Unrestricted    = $Unrestricted
-        AllowAllTenants = $AllowAllTenants
-        AllowedTenants  = $AllowedTenants
-        BlockedTenants  = $BlockedTenants
-        AllowedGroups   = $AllowedGroups
-        BlockAllTenants = [bool]$Permission.BlockAllTenants
+        Role             = $Role
+        Unrestricted     = $Unrestricted
+        AllowAllTenants  = $AllowAllTenants
+        AllowedTenants   = $AllowedTenants
+        BlockedTenants   = $BlockedTenants
+        AllowedGroups    = $AllowedGroups
+        Permissions      = @($Permission.Permissions)
+        BlockedEndpoints = @($Permission.BlockedEndpoints)
+        BlockAllTenants  = [bool]$Permission.BlockAllTenants
+        BlockTenantGroups = [bool]$Permission.BlockTenantGroups
     }
 
     # Entries keyed on a superseded version are dead weight; drop the lot rather than track ages

@@ -1,7 +1,7 @@
 function Invoke-ExecIncidentsList {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Security.Incident.Read
     .DESCRIPTION

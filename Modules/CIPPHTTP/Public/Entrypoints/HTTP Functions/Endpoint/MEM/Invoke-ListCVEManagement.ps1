@@ -1,7 +1,7 @@
 function Invoke-ListCVEManagement {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         Endpoint.Security.Read
     .DESCRIPTION

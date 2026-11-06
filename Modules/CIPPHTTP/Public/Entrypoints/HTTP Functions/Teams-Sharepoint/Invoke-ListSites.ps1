@@ -1,7 +1,7 @@
 function Invoke-ListSites {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Sharepoint.Site.Read
     .DESCRIPTION

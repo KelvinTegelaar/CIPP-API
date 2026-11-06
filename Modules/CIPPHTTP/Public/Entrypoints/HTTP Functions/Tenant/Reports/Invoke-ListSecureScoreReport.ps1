@@ -1,7 +1,7 @@
 function Invoke-ListSecureScoreReport {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         Tenant.Reports.Read
     .DESCRIPTION

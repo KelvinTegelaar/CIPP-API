@@ -77,14 +77,13 @@ Describe 'Test-CIPPAccess tenant-group authorization' {
 
     It 'denies a request for a group the role was NOT granted' {
         { Test-CIPPAccess -Request (New-GroupRequest -RequestedGroupId 'group-notgranted') } |
-            Should -Throw -ExpectedMessage '*not allowed*'
+            Should -Throw -ExpectedMessage "Your roles don't include the tenant group *"
     }
 
-    It 'authorizes by group identity, never by expanding members' {
-        # If the decision expanded members it would have to call Expand-CIPPTenantGroups; it must not.
-        Mock -CommandName Expand-CIPPTenantGroups -MockWith { throw 'membership must not be expanded for the access decision' }
+    It 'authorizes by group identity: members never grant access' {
+        # Members are only expanded to find blocked ones; tenants outside the role's own list do not deny a granted group.
+        Mock -CommandName Expand-CIPPTenantGroups -MockWith { [pscustomobject]@{ addedFields = [pscustomobject]@{ customerId = 'tenant-outside-role' } } }
         $result = Test-CIPPAccess -Request (New-GroupRequest -RequestedGroupId 'group-allowed')
         $result | Should -BeTrue
-        Should -Invoke -CommandName Expand-CIPPTenantGroups -Times 0
     }
 }

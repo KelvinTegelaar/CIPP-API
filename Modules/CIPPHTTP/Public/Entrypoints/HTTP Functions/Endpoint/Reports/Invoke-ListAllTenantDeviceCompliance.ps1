@@ -1,7 +1,7 @@
 Function Invoke-ListAllTenantDeviceCompliance {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Tenant.DeviceCompliance.Read
     .DESCRIPTION

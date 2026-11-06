@@ -1,7 +1,7 @@
 Function Invoke-ListSharepointQuota {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Sharepoint.Admin.Read
     .DESCRIPTION

@@ -1,7 +1,7 @@
 function Invoke-ListLicenses {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Tenant.Directory.Read
     .DESCRIPTION

@@ -1,7 +1,7 @@
 function Invoke-ExecMDOAlertsList {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Security.Alert.Read
     .DESCRIPTION

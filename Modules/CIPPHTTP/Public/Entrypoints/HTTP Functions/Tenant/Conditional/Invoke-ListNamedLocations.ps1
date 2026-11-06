@@ -1,7 +1,7 @@
 Function Invoke-ListNamedLocations {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Tenant.ConditionalAccess.Read
     .DESCRIPTION

@@ -1,7 +1,7 @@
 function Invoke-ListTransportRules {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Exchange.TransportRule.Read
     .DESCRIPTION

@@ -88,6 +88,42 @@ function New-CippCoreRequest {
         }
     }
 
+    # A request names a tenant (tenantFilter) or a tenant group (tenantGroup), in the query or the body, never both. A group
+    # runs the endpoint's All Tenants path with the request scope narrowed to the group, so endpoints see
+    # tenantFilter=AllTenants and tenantGroup in the query, on a copy.
+    $BodyTenantFilter = @($Request.Body.tenantFilter).Where({ $_ }, 'First')[0]
+    $BodyTenantFilter = [string]($BodyTenantFilter.value ?? $BodyTenantFilter)
+    if ([string]$Request.Query.tenantFilter -like 'group:*' -or $BodyTenantFilter -like 'group:*') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = 'Send a tenant group as tenantGroup, not tenantFilter.'
+            })
+    }
+    $TenantGroup = $Request.Query.tenantGroup ?? @($Request.Body.tenantGroup).Where({ $_ }, 'First')[0]
+    if ($TenantGroup) {
+        if (@($FeatureFlags).Where({ $_.Id -eq 'TenantGroupSelector' -and -not $_.Enabled }).Count) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = 'Tenant group selection is turned off. Enable it in Application Settings > Features.'
+                })
+        }
+        if ($Request.Query.tenantFilter -or $BodyTenantFilter) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = 'Send tenantFilter or tenantGroup, not both.'
+                })
+        }
+        $Query = @{}
+        if ($Request.Query -is [System.Collections.IDictionary]) {
+            foreach ($Key in $Request.Query.Keys) { $Query[$Key] = $Request.Query[$Key] }
+        } else {
+            foreach ($Property in $Request.Query.PSObject.Properties) { $Query[$Property.Name] = $Property.Value }
+        }
+        $Query.tenantFilter = 'AllTenants'
+        $Query.tenantGroup = $TenantGroup
+        $Request.Query = $Query
+    }
+
     $HttpTrigger = @{
         Request         = [pscustomobject]($Request)
         TriggerMetadata = $TriggerMetadata
@@ -126,7 +162,7 @@ function New-CippCoreRequest {
                 foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
                 Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
                 return ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::Forbidden
+                        StatusCode = if ($_.Exception -is [System.ArgumentException]) { [HttpStatusCode]::BadRequest } else { [HttpStatusCode]::Forbidden }
                         Body       = $_.Exception.Message
                     })
             }

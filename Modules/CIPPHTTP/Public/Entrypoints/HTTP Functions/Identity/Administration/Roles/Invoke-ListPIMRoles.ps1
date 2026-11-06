@@ -1,7 +1,7 @@
 function Invoke-ListPIMRoles {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Identity.Role.Read
     .SYNOPSIS

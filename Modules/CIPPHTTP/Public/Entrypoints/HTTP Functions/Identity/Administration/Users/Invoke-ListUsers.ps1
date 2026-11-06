@@ -1,7 +1,7 @@
 Function Invoke-ListUsers {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Identity.User.Read
     .DESCRIPTION

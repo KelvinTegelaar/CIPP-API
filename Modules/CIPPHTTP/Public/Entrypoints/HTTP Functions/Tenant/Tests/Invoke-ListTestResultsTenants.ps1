@@ -10,7 +10,7 @@ function Invoke-ListTestResultsTenants {
         Test-CIPPAccess, so an all-tenants read still respects per-user tenant scoping.
 
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
 
     .ROLE
         Tenant.Reports.Read

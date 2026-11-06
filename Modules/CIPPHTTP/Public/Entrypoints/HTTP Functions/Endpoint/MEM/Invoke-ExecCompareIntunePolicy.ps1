@@ -39,17 +39,10 @@ function Invoke-ExecCompareIntunePolicy {
             })
     }
 
-    # AnyTenant: source tenants must be in the caller's scope; Get-Tenants is narrowed
-    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
-    if ($AllowedTenants -notcontains 'AllTenants') {
-        foreach ($SourceTenant in @($SourceA.tenantFilter, $SourceB.tenantFilter)) {
-            if ($SourceTenant -and -not (Get-Tenants -TenantFilter $SourceTenant)) {
-                return ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::Forbidden
-                        Body       = ConvertTo-Json -InputObject @{ Results = 'Failed to compare policies: Access to this tenant is not allowed' }
-                    })
-            }
-        }
+    try {
+        Assert-CippTenantAccess -Request $Request -TenantFilter @(@($SourceA.tenantFilter, $SourceB.tenantFilter) | Where-Object { $_ })
+    } catch {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Forbidden; Body = @{ Results = $_.Exception.Message } })
     }
 
     # Set by a resolver right before it throws for bad input or a missing source; anything else is 500.

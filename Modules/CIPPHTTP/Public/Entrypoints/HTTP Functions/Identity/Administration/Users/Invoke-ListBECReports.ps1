@@ -1,7 +1,7 @@
 function Invoke-ListBECReports {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         Identity.User.Read
     .SYNOPSIS

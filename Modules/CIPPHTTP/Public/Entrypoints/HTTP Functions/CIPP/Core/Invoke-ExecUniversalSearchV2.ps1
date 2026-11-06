@@ -1,7 +1,7 @@
 function Invoke-ExecUniversalSearchV2 {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         CIPP.Core.Read
     .DESCRIPTION

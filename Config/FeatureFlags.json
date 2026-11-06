@@ -108,5 +108,16 @@
     "Endpoints": [],
     "Pages": [],
     "Hidden": true
+  },
+  {
+    "Id": "TenantGroupSelector",
+    "Name": "Tenant Groups in Tenant Selector",
+    "Description": "Lets you pick a tenant group in the tenant selector to view data for every tenant in that group at once, on pages that support it. While off, the selector offers single tenants and All Tenants only, and API requests that name a tenantGroup are refused.",
+    "Enabled": false,
+    "AllowUserToggle": true,
+    "Timers": [],
+    "Endpoints": [],
+    "Pages": [],
+    "Hidden": false
   }
 ]

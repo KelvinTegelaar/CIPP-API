@@ -1,7 +1,7 @@
 function Invoke-ListConditionalAccessPolicies {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Tenant.ConditionalAccess.Read
     .DESCRIPTION

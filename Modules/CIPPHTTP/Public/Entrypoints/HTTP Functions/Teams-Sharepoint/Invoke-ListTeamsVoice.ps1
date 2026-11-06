@@ -1,7 +1,7 @@
 function Invoke-ListTeamsVoice {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Teams.Voice.Read
     .DESCRIPTION

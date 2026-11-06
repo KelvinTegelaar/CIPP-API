@@ -1,7 +1,7 @@
 Function Invoke-ListBasicAuth {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Identity.AuditLog.Read
     .DESCRIPTION

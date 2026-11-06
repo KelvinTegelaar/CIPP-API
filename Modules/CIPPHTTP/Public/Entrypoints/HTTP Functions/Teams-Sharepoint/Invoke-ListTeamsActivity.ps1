@@ -1,7 +1,7 @@
 Function Invoke-ListTeamsActivity {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Teams.Activity.Read
     .DESCRIPTION

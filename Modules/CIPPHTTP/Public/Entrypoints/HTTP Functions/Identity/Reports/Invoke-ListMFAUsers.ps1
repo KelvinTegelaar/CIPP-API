@@ -1,7 +1,7 @@
 function Invoke-ListMFAUsers {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Identity.User.Read
     .DESCRIPTION

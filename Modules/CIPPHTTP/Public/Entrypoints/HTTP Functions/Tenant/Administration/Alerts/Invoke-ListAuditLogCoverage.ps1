@@ -1,7 +1,7 @@
 function Invoke-ListAuditLogCoverage {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         Tenant.Alert.Read
     .DESCRIPTION

@@ -18,7 +18,6 @@ function Invoke-EditTenant {
     $tenantGroups = $Request.Body.tenantGroups
 
     $PropertiesTable = Get-CippTable -TableName 'TenantProperties'
-    $Existing = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $customerId)'"
     $Tenant = Get-Tenants -TenantFilter $customerId
     # AnyTenant: Get-Tenants is narrowed to the caller's allowed tenants; no match means
     # unknown or out-of-scope, either way nothing may be written
@@ -29,7 +28,27 @@ function Invoke-EditTenant {
             })
     }
     $TenantTable = Get-CippTable -TableName 'Tenants'
+    $Existing = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $customerId)'"
     $GroupMembersTable = Get-CippTable -TableName 'TenantGroupMembers'
+    $GroupTable = Get-CippTable -TableName 'TenantGroups'
+    # Table-service comparisons skip entities missing the property, so a server-side
+    # "GroupType ne 'dynamic'" drops static groups created before GroupType existed and
+    # they can never be added or removed here - treat a missing GroupType as static instead
+    $AllGroups = Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup'"
+    $StaticGroups = $AllGroups | Where-Object { $_.GroupType -ne 'dynamic' }
+    $StaticGroupIds = $StaticGroups.RowKey
+    $CurrentGroupMemberships = Get-CIPPAzDataTableEntity @GroupMembersTable -Filter "customerId eq '$(ConvertTo-CIPPODataFilterValue -Value $customerId)'"
+    # Adding the tenant to a group or removing it needs access to both the tenant and each group changed
+    if ($null -ne $tenantGroups) {
+        $ChangedGroups = @($StaticGroups | Where-Object { (@($tenantGroups.groupId) -contains $_.RowKey) -ne (@($CurrentGroupMemberships.GroupId) -contains $_.RowKey) })
+        if ($ChangedGroups.Count -gt 0) {
+            try {
+                Assert-CippTenantAccess -Request $Request -TenantFilter @(@($Tenant.defaultDomainName) + @($ChangedGroups | ForEach-Object { [PSCustomObject]@{ type = 'Group'; value = $_.RowKey; label = $_.Name } }))
+            } catch {
+                return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Forbidden; Body = @{ Results = $_.Exception.Message } })
+            }
+        }
+    }
 
     try {
         $AliasEntity = $Existing | Where-Object { $_.RowKey -eq 'Alias' }
@@ -55,14 +74,6 @@ function Invoke-EditTenant {
         }
 
         # Update tenant groups
-        $GroupTable = Get-CippTable -TableName 'TenantGroups'
-        # Table-service comparisons skip entities missing the property, so a server-side
-        # "GroupType ne 'dynamic'" drops static groups created before GroupType existed and
-        # they can never be added or removed here - treat a missing GroupType as static instead
-        $AllGroups = Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup'"
-        $StaticGroups = $AllGroups | Where-Object { $_.GroupType -ne 'dynamic' }
-        $StaticGroupIds = $StaticGroups.RowKey
-        $CurrentGroupMemberships = Get-CIPPAzDataTableEntity @GroupMembersTable -Filter "customerId eq '$(ConvertTo-CIPPODataFilterValue -Value $customerId)'"
         foreach ($Group in $tenantGroups) {
             # Only allow adding to static groups; dynamic group membership is managed by the orchestrator
             if ($StaticGroupIds -notcontains $Group.groupId) { continue }

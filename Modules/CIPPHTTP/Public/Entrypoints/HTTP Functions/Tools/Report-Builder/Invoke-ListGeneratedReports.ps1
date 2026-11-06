@@ -1,7 +1,7 @@
 function Invoke-ListGeneratedReports {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         CIPP.ReportBuilder.Read
     .DESCRIPTION

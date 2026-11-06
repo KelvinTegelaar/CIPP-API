@@ -1,7 +1,7 @@
 function Invoke-ListLogs {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         CIPP.Logs.Read
     .DESCRIPTION

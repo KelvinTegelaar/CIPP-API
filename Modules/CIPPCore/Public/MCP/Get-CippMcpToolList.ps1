@@ -35,7 +35,7 @@ function Get-CippMcpToolList {
     $Tools = [System.Collections.Generic.List[object]]::new()
 
     $PassthroughNotes = @{
-        ListTenants      = ' Start here: most CIPP tools require a tenantFilter — use the tenant''s defaultDomainName (or customerId for the GUID).'
+        ListTenants      = ' Start here: most CIPP tools require a tenantFilter — use the tenant''s defaultDomainName (or customerId for the GUID). Read tools whose schema lists tenantGroup can take a tenant group Id (from ListTenantGroups) instead of tenantFilter, to read across that group.'
         ListGraphRequest = ' Use this when no dedicated CIPP tool covers the data: pass Endpoint (e.g. "users" or "deviceManagement/managedDevices"), tenantFilter, and optionally graphFilter/expand/ListProperties.'
     }
     foreach ($CoreName in @('ListTenants', 'ListGraphRequest')) {

@@ -559,6 +559,12 @@ function Invoke-ExecCustomData {
                 }
 
                 $Mapping = $MappingEntity.JSON | ConvertFrom-Json
+                try {
+                    Assert-CippTenantAccess -Request $Request -TenantFilter $Mapping.tenantFilter
+                } catch {
+                    $StatusCode = [HttpStatusCode]::Forbidden
+                    throw
+                }
                 $Body = @{
                     Results = $Mapping
                 }

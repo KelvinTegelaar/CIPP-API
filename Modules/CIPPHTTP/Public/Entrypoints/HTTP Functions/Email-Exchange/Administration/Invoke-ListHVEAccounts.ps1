@@ -1,7 +1,7 @@
 function Invoke-ListHVEAccounts {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Exchange.Mailbox.Read
     .DESCRIPTION
