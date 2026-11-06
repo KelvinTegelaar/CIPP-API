@@ -64,6 +64,8 @@ function Get-CIPPBaselineCATemplateState {
     }
     if (-not $TemplateRow) { throw "Conditional Access template '$TemplateRef' was not found in the template store." }
     $Template = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $TemplateRow.JSON -EscapeForJson | ConvertFrom-Json -Depth 100
+    # Risk conditions are an Entra ID P2 feature; Graph rejects the policy without it (1039).
+    $RequiredCapabilities = if ((@($Template.conditions.signInRiskLevels) + @($Template.conditions.userRiskLevels)).Where({ $_ })) { @('AAD_PREMIUM_P2') }
 
     # --- lookup maps, cache-only
     $NameById = @{}
@@ -207,16 +209,17 @@ function Get-CIPPBaselineCATemplateState {
         if ($null -ne $CacheMeta) {
             # EmptyFamily: see the engine's cross-check - a tenant whose CA policies all
             # vanished at once is more likely a failed collection than a mass deletion.
-            return @{ Expected = $Expected; Current = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' }; EmptyFamily = $true }
+            return @{ Expected = $Expected; Current = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' }; EmptyFamily = $true; RequiredCapabilities = $RequiredCapabilities }
         }
-        return @{ Expected = $Expected; Current = $null }
+        return @{ Expected = $Expected; Current = $null; RequiredCapabilities = $RequiredCapabilities }
     }
 
     if (-not $Live) {
         if ($ConfiguredState -and $ConfiguredState -ne 'donotchange') { $Expected.state = $ConfiguredState }
         return @{
-            Expected = $Expected
-            Current  = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' }
+            Expected             = $Expected
+            Current              = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' }
+            RequiredCapabilities = $RequiredCapabilities
         }
     }
 
@@ -255,5 +258,5 @@ function Get-CIPPBaselineCATemplateState {
         $Current | Add-Member -NotePropertyName 'namedLocations' -NotePropertyValue ([PSCustomObject]$CurrentLocations)
     }
 
-    return @{ Expected = $Expected; Current = $Current }
+    return @{ Expected = $Expected; Current = $Current; RequiredCapabilities = $RequiredCapabilities }
 }

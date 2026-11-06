@@ -296,3 +296,15 @@ Describe 'Get-CIPPBaselineCATemplateState' {
         }
     }
 }
+
+Describe 'Get-CIPPBaselineCATemplateState license' {
+    It 'requires Entra ID P2 when the template uses risk conditions' {
+        $script:TemplateJSON = '{"displayName":"Variable test policy","state":"disabled","conditions":{"userRiskLevels":["high"],"users":{"includeUsers":["All"]}}}'
+        $State = Get-CIPPBaselineCATemplateState -Item @{ Variables = @{ caTemplate = 'tpl-1'; state = 'donotchange' } } -TenantFilter 'customer.example.com'
+        @($State.RequiredCapabilities) | Should -Be @('AAD_PREMIUM_P2')
+    }
+
+    It 'requires nothing extra without risk conditions' {
+        (Get-State '"Break Glass"' '"Site A"').RequiredCapabilities | Should -BeNullOrEmpty
+    }
+}

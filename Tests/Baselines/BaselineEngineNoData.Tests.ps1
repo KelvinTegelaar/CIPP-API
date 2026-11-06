@@ -95,3 +95,33 @@ Describe 'Engine: a prepare hook that cannot grade' {
         $Result.Status | Should -Be 'Compliant'
     }
 }
+
+Describe 'Engine: capabilities the prepared item needs' {
+    BeforeEach {
+        Mock Get-CIPPBaselineDefinition { $script:Definition }
+        Mock Get-CIPPAzDataTableEntity { @() }
+        Mock Set-CIPPBaselineResult {}
+        Mock Add-CIPPBaselineHistoryEvent {}
+        Mock Send-CIPPBaselineAlert {}
+        Mock Write-LogMessage {}
+        Mock Invoke-CIPPBaselineOneDriveLicensedQuota {}
+        Mock Get-CIPPBaselineOneDriveLicensedQuotaState { @{ Current = [PSCustomObject]@{ offenders = @(); targets = @() }; RequiredCapabilities = @('AAD_PREMIUM_P2') } }
+    }
+
+    It 'skips as unlicensed without grading or remediating when the tenant lacks them' {
+        Mock Get-CIPPTenantCapabilities { [PSCustomObject]@{ SHAREPOINTENTERPRISE = $true; AAD_PREMIUM = $true } }
+
+        $Result = Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'run' -Force
+
+        $Result.Status | Should -Be 'Skipped - No License'
+        $Result.LicenseAvailable | Should -BeFalse
+        Should -Invoke Invoke-CIPPBaselineOneDriveLicensedQuota -Times 0 -Exactly
+        Should -Invoke Set-CIPPBaselineResult -Times 1 -Exactly -ParameterFilter { $Result.Status -eq 'Skipped - No License' }
+    }
+
+    It 'grades normally when the tenant has them' {
+        Mock Get-CIPPTenantCapabilities { [PSCustomObject]@{ SHAREPOINTENTERPRISE = $true; AAD_PREMIUM_P2 = $true } }
+
+        (Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare').Status | Should -Be 'Compliant'
+    }
+}

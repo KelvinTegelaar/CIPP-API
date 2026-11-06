@@ -163,8 +163,31 @@ function Invoke-CIPPBaselineStandard {
         }
         $Item.Variables = & $NormalizeVariables $Item.Variables
 
+        $SkipUnlicensed = {
+            $Skipped = [PSCustomObject]@{
+                Item                = $Item
+                Mode                = $Mode
+                TriggeredBy         = $TriggeredBy
+                ExpectedValue       = $null
+                CurrentValue        = $null
+                Compliant           = $false
+                PendingVerification = $false
+                LicenseAvailable    = $false
+                Status              = 'Skipped - No License'
+                Remediated          = $false
+                Outcome             = 'Skipped-License'
+                Diff                = $null
+                Inheritance         = @($Item.Tiers)
+                AlertEvent          = $null
+                CacheType           = $null
+            }
+            Set-CIPPBaselineResult -Result $Skipped -Prior $null -RunId $RunId
+            $Skipped
+        }
+
         # A flat requiredCapabilities list is any-of; a nested array is a group that must
         # also match (AND of any-of groups).
+        $Capabilities = $null
         $Required = @($Definition.requiredCapabilities)
         if ($Required.Count -gt 0 -and $Mode -ne 'oneoff') {
             $Capabilities = $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
@@ -183,27 +206,7 @@ function Invoke-CIPPBaselineStandard {
                     break
                 }
             }
-            if (-not $Licensed) {
-                $Skipped = [PSCustomObject]@{
-                    Item                = $Item
-                    Mode                = $Mode
-                    TriggeredBy         = $TriggeredBy
-                    ExpectedValue       = $null
-                    CurrentValue        = $null
-                    Compliant           = $false
-                    PendingVerification = $false
-                    LicenseAvailable    = $false
-                    Status              = 'Skipped - No License'
-                    Remediated          = $false
-                    Outcome             = 'Skipped-License'
-                    Diff                = $null
-                    Inheritance         = @($Item.Tiers)
-                    AlertEvent          = $null
-                    CacheType           = $null
-                }
-                Set-CIPPBaselineResult -Result $Skipped -Prior $null -RunId $RunId
-                return $Skipped
-            }
+            if (-not $Licensed) { return (& $SkipUnlicensed) }
         }
 
         if (-not $GradeOnly) {
@@ -450,6 +453,11 @@ function Invoke-CIPPBaselineStandard {
                 throw "Prepare function $($Definition.prepare) is not available."
             }
             $Prepared = & $Definition.prepare -Item $Item -TenantFilter $TenantFilter
+            # Capabilities only the selected item needs (any-of), e.g. a CA template with risk conditions needs P2.
+            if ($Prepared.RequiredCapabilities -and $Mode -ne 'oneoff') {
+                $Capabilities ??= $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
+                if (-not @($Prepared.RequiredCapabilities).Where({ $Capabilities.$_ -eq $true })) { return (& $SkipUnlicensed) }
+            }
             # ConfigError: the hook cannot grade because of the baseline's own settings, so fresh data
             # would not help and re-collecting (a full per-object read for some caches) is skipped.
             if ($null -eq $Prepared.Current -and $CacheCollector -and -not $JustRefreshed -and -not $Prepared.ConfigError) {
