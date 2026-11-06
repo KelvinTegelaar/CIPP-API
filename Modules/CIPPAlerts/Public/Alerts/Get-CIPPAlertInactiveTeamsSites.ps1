@@ -11,7 +11,7 @@ function Get-CIPPAlertInactiveTeamsSites {
         $TenantFilter
     )
 
-    $HasTeams = Test-CIPPStandardLicense -StandardName 'InactiveTeamsSites' -TenantFilter $TenantFilter -Preset Teams
+    $HasTeams = Test-CIPPStandardLicense -StandardName 'InactiveTeamsSites' -TenantFilter $TenantFilter -Preset Teams -SkipLog
     if (-not $HasTeams) {
         return
     }

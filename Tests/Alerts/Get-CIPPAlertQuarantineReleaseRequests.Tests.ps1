@@ -17,7 +17,7 @@ BeforeAll {
     $TransientErrorPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Test-CippTransientError.ps1'
     if (-not (Test-Path $TransientErrorPath)) { throw "Could not locate Test-CippTransientError.ps1 at $TransientErrorPath" }
 
-    function Test-CIPPStandardLicense { [CmdletBinding()] param($StandardName, $TenantFilter, $Preset) }
+    function Test-CIPPStandardLicense { [CmdletBinding()] param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) }
     function New-ExoRequest { [CmdletBinding()] param($tenantid, $cmdlet, $cmdParams) }
     function Get-CippTable { [CmdletBinding()] param($tablename) }
     function Get-CIPPAzDataTableEntity { [CmdletBinding()] param($Filter) }

@@ -11,7 +11,7 @@
         $TenantFilter
     )
 
-    $HasLicense = Test-CIPPStandardLicense -StandardName 'QuarantineReleaseRequests' -TenantFilter $TenantFilter -Preset Exchange
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'QuarantineReleaseRequests' -TenantFilter $TenantFilter -Preset Exchange -SkipLog
 
     if (-not $HasLicense) {
         return

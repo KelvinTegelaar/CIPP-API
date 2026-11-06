@@ -11,7 +11,7 @@ function Get-CIPPAlertIntuneApprovalRequests {
         $TenantFilter
     )
 
-    $HasLicense = Test-CIPPStandardLicense -StandardName 'IntuneApprovalRequests' -TenantFilter $TenantFilter -Preset Intune
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'IntuneApprovalRequests' -TenantFilter $TenantFilter -Preset Intune -SkipLog
 
     if (-not $HasLicense) {
         return

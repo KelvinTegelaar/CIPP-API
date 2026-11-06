@@ -11,7 +11,7 @@ function Get-CIPPAlertTERRL {
         $TenantFilter
     )
 
-    $HasLicense = Test-CIPPStandardLicense -StandardName 'TERRL' -TenantFilter $TenantFilter -Preset Exchange
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'TERRL' -TenantFilter $TenantFilter -Preset Exchange -SkipLog
 
     if (-not $HasLicense) {
         return

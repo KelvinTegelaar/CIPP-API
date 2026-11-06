@@ -57,7 +57,7 @@ function Get-CIPPAlertIntunePolicyConflicts {
         return
     }
 
-    $HasLicense = Test-CIPPStandardLicense -StandardName 'IntunePolicyStatus' -TenantFilter $TenantFilter -Preset Intune
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'IntunePolicyStatus' -TenantFilter $TenantFilter -Preset Intune -SkipLog
     if (-not $HasLicense) {
         return
     }

@@ -12,7 +12,7 @@ function Get-CIPPAlertDeviceCompliance {
         $TenantFilter
     )
 
-    $HasLicense = Test-CIPPStandardLicense -StandardName 'DeviceCompliance' -TenantFilter $TenantFilter -Preset Intune
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'DeviceCompliance' -TenantFilter $TenantFilter -Preset Intune -SkipLog
 
     if (-not $HasLicense) {
         return

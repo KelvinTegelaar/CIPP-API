@@ -139,6 +139,33 @@ Describe 'Write-AlertTrace' {
         (Get-WrittenRow -Message 'first').Keys | Should -Not -Contain 'AlertItem'
     }
 
+    It 'an empty run still resolves open items and drops an until-resolved snooze, without reading snoozes or AlertLastRun' {
+        $script:Existing = @(
+            (New-StoredRow -Message 'first'),
+            (New-StoredRow -Message 'second' -Status 'Snoozed' -SnoozeUntilResolved 'True' -SnoozeRowKey 'snooze-1')
+        )
+        $script:LastRun = @([pscustomobject]@{ PartitionKey = '20260920'; RowKey = 'contoso.onmicrosoft.com-Get-CIPPAlertSomething'; LogData = '[{"Message":"third"}]' })
+
+        $Result = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @()
+
+        $Result | Should -BeNullOrEmpty
+        (Get-WrittenRow -Message 'first').Status | Should -Be 'Resolved'
+        (Get-WrittenRow -Message 'second').Status | Should -Be 'Resolved'
+        @($script:Removed | Where-Object { $_.Table -eq 'AlertSnooze' }).Count | Should -Be 1
+        Should -Invoke Get-CIPPActiveAlertSnoozes -Times 0 -Exactly
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 0 -Exactly -ParameterFilter { $TableName -eq 'AlertLastRun' }
+    }
+
+    It 'an empty run with nothing stored reads only its own history and writes nothing' {
+        $script:LastRun = @([pscustomobject]@{ PartitionKey = '20260920'; RowKey = 'contoso.onmicrosoft.com-Get-CIPPAlertSomething'; LogData = '[{"Message":"first"}]' })
+
+        Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data $null | Should -BeNullOrEmpty
+
+        $script:Writes.Count | Should -Be 0
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly
+        Should -Invoke Get-CIPPActiveAlertSnoozes -Times 0 -Exactly
+    }
+
     It 'reopens a resolved item, bumps the reopen count and returns it again' {
         $script:Existing = @(New-StoredRow -Message 'first' -Status 'Resolved' -ReopenCount '1' -ResolvedAt '2026-09-21T10:00:00.0000000Z')
 

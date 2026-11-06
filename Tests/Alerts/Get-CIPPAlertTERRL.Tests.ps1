@@ -9,7 +9,7 @@ BeforeAll {
     function Get-CippException { param($Exception) }
     function Write-LogMessage { param($message, $API, $tenant, $sev, $LogData) }
     function Write-AlertTrace { param($cmdletName, $tenantFilter, $data) }
-    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset) }
+    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-AlertContentHash.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPAlerts/Public/Alerts/Get-CIPPAlertTERRL.ps1')

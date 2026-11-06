@@ -53,6 +53,31 @@ function Remove-CIPPUserMFA {
 
     if ($MethodId) {
         $RemovableMethods = $RemovableMethods | Where-Object { $_.id -eq $MethodId }
+    } elseif (($RemovableMethods | Measure-Object).Count -gt 1) {
+        # Graph refuses the default method while others remain and a mobile while an alternate mobile remains, so the default goes last
+        $SignInPreferencesUri = "https://graph.microsoft.com/beta/users/$EncodedUser/authentication/signInPreferences"
+        $Preferred = try { (New-GraphGetRequest -uri $SignInPreferencesUri -tenantid $TenantFilter -AsApp $true).userPreferredMethodForSecondaryAuthentication } catch { $null }
+        if ($Preferred -in @('voiceAlternateMobile', 'voiceOffice') -and ($RemovableMethods | Where-Object { $_.phoneType -eq 'mobile' })) {
+            # The authentication methods policy may allow only one of text or voice
+            foreach ($MobilePreference in 'sms', 'voiceMobile') {
+                try {
+                    $null = New-GraphPOSTRequest -uri $SignInPreferencesUri -tenantid $TenantFilter -type PATCH -body (ConvertTo-Json -Compress -InputObject @{ userPreferredMethodForSecondaryAuthentication = $MobilePreference }) -AsApp $true
+                    $Preferred = $MobilePreference
+                    break
+                } catch {
+                    Write-Information "Could not move the default MFA method to $MobilePreference for $UserPrincipalName`: $($_.Exception.Message)"
+                }
+            }
+        }
+        $DefaultType = switch ($Preferred) { 'push' { '#microsoft.graph.microsoftAuthenticatorAuthenticationMethod' } 'oath' { '#microsoft.graph.softwareOathAuthenticationMethod' } }
+        $DefaultPhone = switch ($Preferred) { 'sms' { 'mobile' } 'voiceMobile' { 'mobile' } 'voiceAlternateMobile' { 'alternateMobile' } 'voiceOffice' { 'office' } }
+        $RemovableMethods = $RemovableMethods | Sort-Object -Stable -Property @{ Expression = {
+                if (($DefaultType -and $_.'@odata.type' -eq $DefaultType) -or ($DefaultPhone -and $_.phoneType -eq $DefaultPhone)) { 3 }
+                elseif ($_.phoneType -eq 'mobile') { 2 }
+                elseif ($_.phoneType) { 1 }
+                else { 0 }
+            }
+        }
     }
 
     if (($RemovableMethods | Measure-Object).Count -eq 0) {

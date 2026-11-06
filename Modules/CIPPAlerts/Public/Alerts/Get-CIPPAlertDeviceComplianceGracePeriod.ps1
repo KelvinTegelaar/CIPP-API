@@ -11,7 +11,7 @@ function Get-CIPPAlertDeviceComplianceGracePeriod {
         $TenantFilter
     )
 
-    $HasLicense = Test-CIPPStandardLicense -StandardName 'DeviceComplianceGracePeriod' -TenantFilter $TenantFilter -Preset Intune
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'DeviceComplianceGracePeriod' -TenantFilter $TenantFilter -Preset Intune -SkipLog
 
     if (-not $HasLicense) {
         return

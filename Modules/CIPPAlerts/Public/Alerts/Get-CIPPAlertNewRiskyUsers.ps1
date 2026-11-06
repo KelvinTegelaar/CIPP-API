@@ -11,16 +11,12 @@ function Get-CIPPAlertNewRiskyUsers {
         $InputValue,
         $TenantFilter
     )
+    if (-not (Test-CIPPStandardLicense -StandardName 'NewRiskyUsers' -TenantFilter $TenantFilter -Preset EntraP2 -SkipLog)) {
+        return
+    }
     $ContainHighRiskUsers = ($InputValue -eq $true -or [string]$InputValue -eq 'true')
     $Deltatable = Get-CIPPTable -Table DeltaCompare
     try {
-        # Check if tenant has P2 capabilities
-        $Capabilities = Get-CIPPTenantCapabilities -TenantFilter $TenantFilter
-        if (-not ($Capabilities.AAD_PREMIUM_P2 -eq $true)) {
-            Write-LogMessage -API 'Alerts' -tenant $($TenantFilter) -message 'Tenant does not have Azure AD Premium P2 licensing required for risky users detection' -sev Warning
-            return
-        }
-
         $Filter = "PartitionKey eq 'RiskyUsersDelta' and RowKey eq '{0}'" -f $TenantFilter
         $RiskyUsersDelta = (Get-CIPPAzDataTableEntity @Deltatable -Filter $Filter).delta | ConvertFrom-Json -ErrorAction SilentlyContinue
 

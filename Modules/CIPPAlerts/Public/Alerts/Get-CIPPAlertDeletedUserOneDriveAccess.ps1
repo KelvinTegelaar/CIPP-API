@@ -34,7 +34,7 @@ function Get-CIPPAlertDeletedUserOneDriveAccess {
         $TenantFilter
     )
 
-    $HasSharePoint = Test-CIPPStandardLicense -StandardName 'DeletedUserOneDriveAccess' -TenantFilter $TenantFilter -Preset SharePoint
+    $HasSharePoint = Test-CIPPStandardLicense -StandardName 'DeletedUserOneDriveAccess' -TenantFilter $TenantFilter -Preset SharePoint -SkipLog
     if (-not $HasSharePoint) {
         return
     }

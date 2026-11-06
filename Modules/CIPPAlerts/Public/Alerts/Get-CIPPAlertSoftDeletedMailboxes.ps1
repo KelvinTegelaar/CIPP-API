@@ -11,7 +11,7 @@ function Get-CIPPAlertSoftDeletedMailboxes {
         $TenantFilter
     )
 
-    $HasLicense = Test-CIPPStandardLicense -StandardName 'SoftDeletedMailboxes' -TenantFilter $TenantFilter -Preset Exchange
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'SoftDeletedMailboxes' -TenantFilter $TenantFilter -Preset Exchange -SkipLog
 
     if (-not $HasLicense) {
         return

@@ -4,7 +4,7 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
 
-    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset) }
+    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) }
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $Select) }
     function Get-CippException { param($Exception) }
     function Write-LogMessage { param($message, $API, $tenant, $sev, $LogData) }
