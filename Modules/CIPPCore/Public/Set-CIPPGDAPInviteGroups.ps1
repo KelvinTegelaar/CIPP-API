@@ -7,7 +7,9 @@ function Set-CIPPGDAPInviteGroups {
         $Invite = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Relationship.id)'"
         $APINAME = 'GDAPInvites'
         $RoleMappings = $Invite.RoleMappings | ConvertFrom-Json
-        $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($Relationship.id)/accessAssignments"
+        # Graph keeps removed assignments listed as deleted; their groups still need mapping again.
+        $AccessAssignments = @(New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($Relationship.id)/accessAssignments").Where({ $_.status -notin @('deleted', 'deleting') })
+        $Failed = $false
         foreach ($Role in $RoleMappings) {
             # Skip mapping if group is present in relationship
             if ($AccessAssignments.id -and $AccessAssignments.accessContainer.accessContainerid -contains $Role.GroupId ) { continue }
@@ -30,9 +32,11 @@ function Set-CIPPGDAPInviteGroups {
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API $APINAME -message "GDAP Group mapping failed for $($Relationship.customer.displayName) - Group: $($role.GroupId) - Exception: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-                return $false
+                $Failed = $true
             }
         }
+        # The invite stays until every group is mapped, so the next run retries only the ones still missing.
+        if ($Failed) { return $false }
 
         if ($PSCmdlet.ShouldProcess($Relationship.id, "Remove invite entry for $($Relationship.customer.displayName)")) {
             Write-LogMessage -API $APINAME -message "Groups mapped for GDAP Relationship: $($Relationship.customer.displayName) - $($Relationship.customer.displayName)" -Sev Info

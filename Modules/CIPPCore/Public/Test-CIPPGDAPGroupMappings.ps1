@@ -103,7 +103,8 @@ function Test-CIPPGDAPGroupMappings {
         # 3. Neither the id nor a matching group exists - recreate or report as missing
         if ($CreateMissing) {
             $MailNickname = 'M365GDAP{0}' -f (($ExpectedName -replace '^M365 GDAP ', '') -replace '[^a-zA-Z0-9]', '')
-            $RequestId = "create-$($Mapping.roleDefinitionId)"
+            # Unique per mapping: two missing groups can share a role.
+            $RequestId = "create-$($CreateRequests.Count)"
             $CreateLookup[$RequestId] = $Mapping
             $CreateRequests.Add(@{
                     id      = $RequestId

@@ -21,7 +21,8 @@ function Invoke-ListGDAPAccessAssignments {
 
 
     # Get all the access containers
-    $AccessContainers = $AccessAssignments.accessContainer.accessContainerId
+    # A group mapped again after a removal has a deleted and an active assignment; a batch id must be unique.
+    $AccessContainers = @($AccessAssignments.accessContainer.accessContainerId | Sort-Object -Unique)
     Write-Information "Getting access containers for $($AccessContainers -join ',')"
 
     $ContainerMembers = foreach ($AccessContainer in $AccessContainers) {

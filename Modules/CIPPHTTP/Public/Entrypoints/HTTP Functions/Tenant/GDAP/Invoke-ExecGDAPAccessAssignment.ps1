@@ -124,8 +124,9 @@ function Invoke-ExecGDAPAccessAssignment {
                 }
 
                 foreach ($Mapping in $Mappings) {
-                    $DeletedAssignments = $AccessAssignments | Where-Object { $_.accessContainer.accessContainerId -eq $Mapping.GroupId -and $_.status -eq 'deleted' }
-                    if (($AccessAssignments.accessContainer.accessContainerId -notcontains $Mapping.GroupId -or $DeletedAssignments.accessContainer.accessContainerId -contains $Mapping.GroupId) -and $Relationship.accessDetails.unifiedRoles.roleDefinitionId -contains $Mapping.roleDefinitionId) {
+                    # A group re-mapped after a removal keeps its deleted assignment listed next to the live one
+                    $LiveAssignment = @($AccessAssignments).Where({ $_.accessContainer.accessContainerId -eq $Mapping.GroupId -and $_.status -ne 'deleted' }, 'First')
+                    if ($LiveAssignment.Count -eq 0 -and $Relationship.accessDetails.unifiedRoles.roleDefinitionId -contains $Mapping.roleDefinitionId) {
                         Write-Information "Creating access assignment for $($Mapping.GroupId)"
                         $Requests.Add(@{
                                 'id'      = "create-$($Mapping.GroupId)"
