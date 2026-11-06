@@ -8,6 +8,8 @@ BeforeAll {
     function Clear-CippTokenCache { [CmdletBinding()] param($TenantFilter) }
     function Get-NormalizedError { [CmdletBinding()] param($message) $message }
     function Add-CIPPDelegatedPermission { [CmdletBinding()] param($RequiredResourceAccess, $ApplicationId, $TenantFilter) }
+    # Returns nothing: no additional partner tenants, so the customer is never treated as a partner.
+    function Get-CIPPPartnerTenant { [CmdletBinding()] param($PartnerTenantId, [switch]$IncludeDisabled) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Add-CIPPApplicationPermission.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/New-CIPPApplicationCopy.ps1')

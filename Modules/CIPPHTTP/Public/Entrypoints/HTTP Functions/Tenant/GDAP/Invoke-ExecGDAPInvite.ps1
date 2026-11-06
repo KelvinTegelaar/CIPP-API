@@ -12,6 +12,11 @@ function Invoke-ExecGDAPInvite {
     $Headers = $Request.Headers
 
     $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'Create'
+    # Multi-partner: act as the selected partner tenant (defaults to the primary)
+    $PartnerTenantId = $Request.Body.partnerTenantId.value ?? $Request.Body.partnerTenantId ?? $Request.Query.partnerTenantId
+    if (!$PartnerTenantId -or -not (Get-CIPPPartnerTenantList | Where-Object { $_.partnerTenantId -eq $PartnerTenantId })) {
+        $PartnerTenantId = $env:TenantID
+    }
     $InviteId = $Request.Body.InviteId
     $Reference = $Request.Body.Reference
     $Table = Get-CIPPTable -TableName 'GDAPInvites'
@@ -88,11 +93,11 @@ function Invoke-ExecGDAPInvite {
                     'duration'           = 'P730D'
                 } | ConvertTo-Json -Depth 5 -Compress
 
-                $NewRelationship = New-GraphPostRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships' -type POST -body $JSONBody -verbose -tenantid $env:TenantID
+                $NewRelationship = New-GraphPostRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships' -type POST -body $JSONBody -verbose -tenantid $PartnerTenantId
                 Start-Sleep -Milliseconds 100
                 $Count = 0
                 do {
-                    $CheckActive = New-GraphGetRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($NewRelationship.id)" -tenantid $env:TenantID
+                    $CheckActive = New-GraphGetRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($NewRelationship.id)" -tenantid $PartnerTenantId
                     Start-Sleep -Milliseconds 200
                     $Count++
                 } until ($CheckActive.status -eq 'created' -or $Count -gt 5)
@@ -108,7 +113,7 @@ function Invoke-ExecGDAPInvite {
                         'If-Match' = $NewRelationship.'@odata.etag'
                     }
 
-                    $NewRelationshipRequest = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($NewRelationship.id)/requests" -type POST -body $JSONBody -verbose -tenantid $env:TenantID -AddedHeaders $AddedHeaders
+                    $NewRelationshipRequest = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($NewRelationship.id)/requests" -type POST -body $JSONBody -verbose -tenantid $PartnerTenantId -AddedHeaders $AddedHeaders
 
                     if ($NewRelationshipRequest.action -eq 'lockForApproval') {
                         $InviteUrl = "https://admin.microsoft.com/AdminPortal/Home#/partners/invitation/granularAdminRelationships/$($NewRelationship.id)"
@@ -127,6 +132,7 @@ function Invoke-ExecGDAPInvite {
                             'RoleMappings'  = [string](@($RoleMappings) | ConvertTo-Json -Depth 10 -Compress)
                             'Technician'    = [string]$Technician
                             'Reference'     = if ($Reference) { [string]$Reference } else { $null }
+                            'partnerTenantId' = [string]$PartnerTenantId
                         }
 
                         Add-CIPPAzDataTableEntity @Table -Entity $InviteEntity
@@ -149,7 +155,7 @@ function Invoke-ExecGDAPInvite {
                     $Message = "$($Message): $($_.Exception.Message)"
                 }
 
-                Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $env:TenantID -message $Message -Sev 'Error' -LogData (Get-CippException -Exception $_)
+                Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $PartnerTenantId -message $Message -Sev 'Error' -LogData (Get-CippException -Exception $_)
                 $StatusCode = [HttpStatusCode]::InternalServerError
             }
 

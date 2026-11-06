@@ -68,6 +68,22 @@
     "Hidden": true
   },
   {
+    "Id": "MultiPartner",
+    "Name": "Multiple Partner Tenants",
+    "Description": "This is pre-alpha do not enable in production. Manage customer tenants across multiple partner (CSP) tenants from a single CIPP instance. Each customer tenant is owned by a partner tenant whose credentials are used for token acquisition.",
+    "Enabled": false,
+    "AllowUserToggle": true,
+    "Timers": [],
+    "Endpoints": [
+      "ListPartnerTenants",
+      "ExecRemovePartnerTenant",
+      "ExecAssignPartnerTenant",
+      "ExecEditPartnerTenant"
+    ],
+    "Pages": ["/cipp/advanced/super-admin/partner-tenants"],
+    "Hidden": false
+  },
+  {
     "Id": "Baselines",
     "Name": "Baselines",
     "Description": "This is currently an opt-in feature. The drift-first baseline engine that replaces classic Standards and Drift. Enables the scheduled baseline run and the Baselines menu, hides the classic Standards and Drift pages, and skips the scheduled classic Standards and Drift runs - the two systems never run side by side. On by default for installs that have no classic Standards templates.",

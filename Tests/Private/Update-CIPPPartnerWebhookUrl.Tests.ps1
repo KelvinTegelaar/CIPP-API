@@ -13,7 +13,8 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
     function Get-CIPPSiteHostname { param([switch]$AsRedirectUri, [switch]$IncludeStatus, [switch]$NoFallback) }
     function New-GraphGetRequest { param($uri, $tenantid, $NoAuthCheck, $scope) }
-    function New-CIPPGraphSubscription { param($TenantFilter, $BaseURL, $EventType, $APIName, [switch]$PartnerCenter) }
+    function New-CIPPGraphSubscription { param($TenantFilter, $BaseURL, $EventType, $APIName, [switch]$PartnerCenter, [string]$PartnerTenantId) }
+    function Get-CIPPPartnerTenant { param([string]$PartnerTenantId, [switch]$IncludeDisabled) }
 
     . $FunctionPath
 }
@@ -31,6 +32,17 @@ Describe 'Update-CIPPPartnerWebhookUrl' {
         $script:RegisteredEvents = @('test-created', 'granular-admin-relationship-approved', 'subscription-updated')
 
         Mock -CommandName Get-CIPPTable -MockWith { @{ Context = 'Config' } }
+        # Single-partner default: the only configured partner is the primary env tenant.
+        Mock -CommandName Get-CIPPPartnerTenant -MockWith {
+            [PSCustomObject]@{
+                PartitionKey    = 'Partners'
+                RowKey          = $script:TenantId
+                partnerTenantId = $script:TenantId
+                displayName     = '*Partner Tenant'
+                IsPrimary       = $true
+                Enabled         = $true
+            }
+        }
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
             [PSCustomObject]@{ RowKey = 'PartnerWebhookOnboarding'; Enabled = $script:Enabled }
         }
@@ -200,13 +212,15 @@ Describe 'Update-CIPPPartnerWebhookUrl' {
 
     Context 'When something unexpected breaks' {
         It 'never throws out of warmup' {
+            # A failure this early happens before any partner has been resolved, so there is no
+            # per-partner state to attach the reason to - it only reaches the informational log.
+            # What still matters is that warmup itself survives and reports nothing as updated.
             Mock -CommandName Get-CIPPTable -MockWith { throw 'table storage unavailable' }
 
             { Update-CIPPPartnerWebhookUrl } | Should -Not -Throw
 
             $Result = Update-CIPPPartnerWebhookUrl
-            $Result.Updated | Should -BeFalse
-            $Result.Reason | Should -Match 'table storage unavailable'
+            @($Result).Where({ $_.Updated }) | Should -BeNullOrEmpty
         }
     }
 }

@@ -10,6 +10,9 @@ BeforeAll {
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Update-AzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Invoke-CIPPRestMethod { param($Method, $Uri, $Body, $ContentType) }
+    # Single-partner: every tenant resolves to the primary, so no partner token lookup happens.
+    function Resolve-CIPPOwningPartner { param($TenantFilter) "$env:TenantID" }
+    function Get-CIPPPartnerRefreshToken { param($PartnerTenantId) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-GraphToken.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Clear-CippTokenCache.ps1')

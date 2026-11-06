@@ -14,8 +14,13 @@ function Invoke-ExecDeleteGDAPRelationship {
 
     # Interact with query parameters or the body of the request.
     $GDAPId = $Request.Query.GDAPId ?? $Request.Body.GDAPId
+    # Multi-partner: act as the relationship's source partner (defaults to the primary)
+    $PartnerTenantId = $Request.Query.partnerTenantId ?? $Request.Body.partnerTenantId
+    if (!$PartnerTenantId -or -not (Get-CIPPPartnerTenantList | Where-Object { $_.partnerTenantId -eq $PartnerTenantId })) {
+        $PartnerTenantId = $env:TenantID
+    }
     try {
-        $null = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($GDAPId)/requests" -type POST -body '{"action":"terminate"}' -tenantid $env:TenantID
+        $null = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($GDAPId)/requests" -type POST -body '{"action":"terminate"}' -tenantid $PartnerTenantId
         $Result = "Success. GDAP relationship for $($GDAPId) been revoked"
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK

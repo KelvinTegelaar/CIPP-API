@@ -20,9 +20,11 @@ function Invoke-ExecPartnerMode {
         } -Force
 
         if ($Request.Body.TenantMode -eq 'default') {
+            # Remove every partner tenant's row, not just the primary's
             $Table = Get-CippTable -tablename 'Tenants'
-            $Tenant = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($env:TenantID)'" -Property RowKey, PartitionKey, customerId, displayName
-            if ($Tenant) {
+            $PartnerIds = @((Get-CIPPPartnerTenantList).partnerTenantId)
+            $PartnerRows = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Tenants'" | Where-Object { $_.customerId -in $PartnerIds -or $_.isPartnerTenantRow -eq $true }
+            foreach ($Tenant in $PartnerRows) {
                 try {
                     Remove-CIPPAzDataTableEntity -Force @Table -Entity $Tenant
                 } catch {

@@ -25,6 +25,7 @@ function Test-CIPPGDAPGroupMappings {
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
+        [string]$PartnerTenantId,
         [Parameter(Mandatory = $true)]
         $RoleMappings,
         $PartnerGroups,
@@ -57,7 +58,8 @@ function Test-CIPPGDAPGroupMappings {
 
     # Fetch partner tenant security groups once if the caller did not already hand them to us
     if (-not $PartnerGroups) {
-        $PartnerGroups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
+        if (!$PartnerTenantId) { $PartnerTenantId = $env:TenantID }
+        $PartnerGroups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $PartnerTenantId -NoAuthCheck $true -AsApp $true
     }
 
     $Results = [System.Collections.Generic.List[object]]::new()
@@ -134,7 +136,8 @@ function Test-CIPPGDAPGroupMappings {
 
     # Execute any group recreations and fold the new ids back into the mappings
     if ($CreateRequests.Count -gt 0 -and $PSCmdlet.ShouldProcess('Partner tenant', "Recreate $($CreateRequests.Count) missing GDAP group(s)")) {
-        $CreateResults = New-GraphBulkRequest -Requests @($CreateRequests) -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
+        if (!$PartnerTenantId) { $PartnerTenantId = $env:TenantID }
+    $CreateResults = New-GraphBulkRequest -Requests @($CreateRequests) -tenantid $PartnerTenantId -NoAuthCheck $true -AsApp $true
         foreach ($Result in $CreateResults) {
             $Mapping = $CreateLookup[$Result.id]
             if (-not $Mapping) { continue }
@@ -180,6 +183,7 @@ function Test-CIPPGDAPGroupMappings {
                 }
                 Add-CIPPAzDataTableEntity @RolesTable -Entity @{
                     PartitionKey     = 'Roles'
+                    partnerTenantId  = "$PartnerTenantId"
                     RowKey           = [string]$Mapping.GroupId
                     RoleName         = [string]$Mapping.RoleName
                     GroupName        = [string]$Mapping.GroupName

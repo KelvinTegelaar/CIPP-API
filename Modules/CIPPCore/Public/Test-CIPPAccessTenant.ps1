@@ -57,6 +57,8 @@ function Test-CIPPAccessTenant {
         # GDAP relationship, so directory roles granted to the partner tenant do not apply to them.
         $IsDirectTenant = $Tenant.delegatedPrivilegeStatus -eq 'directTenant'
         $TenantType = if ($IsDirectTenant) { 'Direct' } else { 'GDAP' }
+        # GDAP role assignments in the customer belong to the owning partner's principals
+        $OwningPartner = Resolve-CIPPOwningPartner -TenantRow $Tenant
 
         $Results = [PSCustomObject]@{
             TenantName                = $Tenant.defaultDomainName
@@ -132,7 +134,7 @@ function Test-CIPPAccessTenant {
 
                 foreach ($RoleId in $ExpectedRoles) {
                     $GraphRole = $GDAPRolesGraph.body.value | Where-Object -Property roleDefinitionId -EQ $RoleId.Id
-                    $Role = $GraphRole.principal | Where-Object -Property organizationId -EQ $env:TenantID
+                    $Role = $GraphRole.principal | Where-Object -Property organizationId -EQ $OwningPartner
 
                     if (!$Role) {
                         $MissingRoles.Add(

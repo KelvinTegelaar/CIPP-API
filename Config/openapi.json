@@ -12347,6 +12347,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "partnerTenantId": {
+                    "type": "string",
+                    "description": "Multi-partner: run the check as a specific partner tenant. Defaults to the primary."
+                  },
                   "SkipCache": {
                     "type": "string",
                     "description": "Trigger a fresh run of the check instead of serving the cached result. The run repopulates the cache and the response only acknowledges it, so a follow-up call without SkipCache is what returns the updated result."
@@ -12365,6 +12369,15 @@
           }
         },
         "parameters": [
+          {
+            "name": "partnerTenantId",
+            "in": "query",
+            "description": "Multi-partner: run the check as a specific partner tenant. Defaults to the primary.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "SkipCache",
             "in": "query",
@@ -12660,6 +12673,14 @@
                       }
                     }
                   },
+                  "partnerTenantId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Multi-partner: create the GDAP groups in the selected partner tenant (defaults to the primary)"
+                  },
                   "templateId": {
                     "type": "string",
                     "description": "Add-CIPPGDAPRoleTemplate already writes customer-visible logs for the template path"
@@ -12673,6 +12694,15 @@
           {
             "name": "Action",
             "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partnerTenantId",
+            "in": "query",
+            "description": "Multi-partner: create the GDAP groups in the selected partner tenant (defaults to the primary)",
             "required": false,
             "schema": {
               "type": "string"
@@ -13170,9 +13200,6 @@
                     "ExcludeUser": {
                       "x-cipp-field-source": "storage"
                     },
-                    "hasAutoExtend": {
-                      "x-cipp-field-source": "storage"
-                    },
                     "initialDomainName": {
                       "x-cipp-field-source": "storage"
                     },
@@ -13186,12 +13213,6 @@
                       "x-cipp-field-source": "storage"
                     },
                     "PartitionKey": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "relationshipCount": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "relationshipEnd": {
                       "x-cipp-field-source": "storage"
                     },
                     "RequiresRefresh": {
@@ -15179,6 +15200,63 @@
         "x-cipp-role": "Endpoint.MEM.ReadWrite"
       }
     },
+    "/api/ExecAssignPartnerTenant": {
+      "post": {
+        "summary": "ExecAssignPartnerTenant",
+        "operationId": "ExecAssignPartnerTenant",
+        "tags": [
+          "CIPP > Setup"
+        ],
+        "description": "Reassigns which partner tenant owns a customer tenant. Validates against\nknownPartners, pins the assignment as manual, and clears the customer's token cache.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "customerId": {
+                    "type": "string"
+                  },
+                  "partnerTenantId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.SuperAdmin.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ExecAssignPolicy": {
       "post": {
         "summary": "ExecAssignPolicy",
@@ -15474,6 +15552,9 @@
                 "properties": {
                   "ID": {
                     "type": "string"
+                  },
+                  "partnerTenantId": {
+                    "type": "string"
                   }
                 }
               }
@@ -15483,6 +15564,14 @@
         "parameters": [
           {
             "name": "ID",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partnerTenantId",
             "in": "query",
             "required": false,
             "schema": {
@@ -20800,6 +20889,10 @@
                   "GDAPId": {
                     "type": "string",
                     "description": "Interact with query parameters or the body of the request."
+                  },
+                  "partnerTenantId": {
+                    "type": "string",
+                    "description": "Multi-partner: act as the relationship's source partner (defaults to the primary)"
                   }
                 }
               }
@@ -20811,6 +20904,15 @@
             "name": "GDAPId",
             "in": "query",
             "description": "Interact with query parameters or the body of the request.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partnerTenantId",
+            "in": "query",
+            "description": "Multi-partner: act as the relationship's source partner (defaults to the primary)",
             "required": false,
             "schema": {
               "type": "string"
@@ -20899,6 +21001,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "partnerTenantId": {
                       "x-cipp-field-source": "storage"
                     },
                     "Results": {
@@ -22343,6 +22448,64 @@
         "x-cipp-role": "Exchange.Mailbox.ReadWrite"
       }
     },
+    "/api/ExecEditPartnerTenant": {
+      "post": {
+        "summary": "ExecEditPartnerTenant",
+        "operationId": "ExecEditPartnerTenant",
+        "tags": [
+          "CIPP > Setup"
+        ],
+        "description": "Edits properties of an additional partner tenant. Managed controls whether the partner\nappears as a manageable tenant row in the tenant list (tenant mode governs the primary).",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Managed": {
+                    "type": "string",
+                    "description": "Arrives as a string from the action dialog; [bool]'false' would be $true"
+                  },
+                  "partnerTenantId": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.SuperAdmin.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ExecEditTemplate": {
       "post": {
         "summary": "ExecEditTemplate",
@@ -23316,15 +23479,12 @@
                       "x-cipp-field-source": "storage"
                     },
                     "Excluded": {
-                      "x-cipp-field-source": "storage,frontend"
+                      "x-cipp-field-source": "storage"
                     },
                     "ExcludeDate": {
-                      "x-cipp-field-source": "storage,frontend"
+                      "x-cipp-field-source": "storage"
                     },
                     "ExcludeUser": {
-                      "x-cipp-field-source": "storage,frontend"
-                    },
-                    "hasAutoExtend": {
                       "x-cipp-field-source": "storage"
                     },
                     "initialDomainName": {
@@ -23342,11 +23502,8 @@
                     "PartitionKey": {
                       "x-cipp-field-source": "storage"
                     },
-                    "relationshipCount": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "relationshipEnd": {
-                      "x-cipp-field-source": "storage"
+                    "partnerTenantId": {
+                      "x-cipp-field-source": "frontend"
                     },
                     "RequiresRefresh": {
                       "type": "boolean",
@@ -23990,6 +24147,14 @@
                   "Id": {
                     "type": "string"
                   },
+                  "partnerTenantId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Multi-partner: act as the relationship's source partner (defaults to the primary)"
+                  },
                   "RoleTemplateId": {
                     "type": "string"
                   }
@@ -24010,6 +24175,15 @@
           {
             "name": "Id",
             "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partnerTenantId",
+            "in": "query",
+            "description": "Multi-partner: act as the relationship's source partner (defaults to the primary)",
             "required": false,
             "schema": {
               "type": "string"
@@ -24312,6 +24486,14 @@
                   "InviteId": {
                     "type": "string"
                   },
+                  "partnerTenantId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Multi-partner: act as the selected partner tenant (defaults to the primary)"
+                  },
                   "Reference": {
                     "type": "string"
                   },
@@ -24333,6 +24515,15 @@
           {
             "name": "Action",
             "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partnerTenantId",
+            "in": "query",
+            "description": "Multi-partner: act as the selected partner tenant (defaults to the primary)",
             "required": false,
             "schema": {
               "type": "string"
@@ -24441,6 +24632,10 @@
                 "properties": {
                   "GDAPId": {
                     "type": "string"
+                  },
+                  "partnerTenantId": {
+                    "type": "string",
+                    "description": "Multi-partner: act as the relationship's source partner (defaults to the primary)"
                   }
                 }
               }
@@ -24451,6 +24646,15 @@
           {
             "name": "GDAPId",
             "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partnerTenantId",
+            "in": "query",
+            "description": "Multi-partner: act as the relationship's source partner (defaults to the primary)",
             "required": false,
             "schema": {
               "type": "string"
@@ -24612,6 +24816,14 @@
                     "type": "string",
                     "description": "Use OriginalTemplateId if provided (for rename), otherwise use TemplateId"
                   },
+                  "partnerTenantId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "New groups are created in the selected partner tenant (defaults to the primary)"
+                  },
                   "RoleMappings": {
                     "type": "array",
                     "items": {
@@ -24666,34 +24878,25 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "description": "Derived from the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
                   "properties": {
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
                     "GroupMappings": {
                       "x-cipp-field-source": "frontend"
                     },
-                    "PartitionKey": {
-                      "x-cipp-field-source": "storage"
+                    "partnerDisplayName": {
+                      "x-cipp-field-source": "backend,frontend"
+                    },
+                    "partnerTenantId": {
+                      "x-cipp-field-source": "backend"
                     },
                     "RoleMappings": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage,backend"
+                      "x-cipp-field-source": "backend"
                     },
                     "Roles": {
                       "x-cipp-field-source": "frontend"
                     },
-                    "RowKey": {
-                      "x-cipp-field-source": "storage"
-                    },
                     "TemplateId": {
                       "x-cipp-field-source": "backend,frontend"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
                     }
                   }
                 }
@@ -32255,6 +32458,14 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "partnerTenantId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "The partner to offboard from: explicit selection, else the tenant's owning partner."
+                  },
                   "RemoveCSPGuestUsers": {
                     "type": "boolean"
                   },
@@ -32577,6 +32788,9 @@
                   "ignoreMissingRoles": {
                     "type": "string"
                   },
+                  "partnerTenantId": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
                   "Retry": {
                     "type": "boolean"
                   },
@@ -32883,6 +33097,14 @@
                   "EventType": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
+                  "partnerTenantId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Multi-partner: manage the webhook of a specific partner tenant (defaults to the primary)"
+                  },
                   "standardsExcludeAllTenants": {
                     "type": "string"
                   }
@@ -32910,6 +33132,15 @@
           {
             "name": "CorrelationId",
             "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "partnerTenantId",
+            "in": "query",
+            "description": "Multi-partner: manage the webhook of a specific partner tenant (defaults to the primary)",
             "required": false,
             "schema": {
               "type": "string"
@@ -34611,6 +34842,135 @@
         "x-cipp-role": "Identity.User.ReadWrite"
       }
     },
+    "/api/ExecRemovePartnerTenant": {
+      "post": {
+        "summary": "ExecRemovePartnerTenant",
+        "operationId": "ExecRemovePartnerTenant",
+        "tags": [
+          "CIPP > Setup"
+        ],
+        "description": "Removes an additional partner tenant and its stored refresh token. RemoveTenants\nalso deletes its customer tenant rows immediately.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "partnerTenantId": {
+                    "type": "string"
+                  },
+                  "RemoveTenants": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "partnerTenantId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "properties": {
+                    "customerId": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "defaultDomainName": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "delegatedPrivilegeStatus": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "directTenantAuthDate": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "directTenantUserPrincipalName": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "displayName": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "domains": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Excluded": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ExcludeDate": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ExcludeUser": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "initialDomainName": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "LastGraphError": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "LastGraphTokenError": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "LastRefresh": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RequiresRefresh": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.SuperAdmin.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ExecRemoveRestrictedUser": {
       "post": {
         "summary": "ExecRemoveRestrictedUser",
@@ -35118,9 +35478,6 @@
                     "ExcludeUser": {
                       "x-cipp-field-source": "storage"
                     },
-                    "hasAutoExtend": {
-                      "x-cipp-field-source": "storage"
-                    },
                     "initialDomainName": {
                       "x-cipp-field-source": "storage"
                     },
@@ -35134,12 +35491,6 @@
                       "x-cipp-field-source": "storage"
                     },
                     "PartitionKey": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "relationshipCount": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "relationshipEnd": {
                       "x-cipp-field-source": "storage"
                     },
                     "RequiresRefresh": {
@@ -43188,10 +43539,19 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "addPartner": {
+                    "type": "boolean"
+                  },
+                  "orgName": {
+                    "type": "string"
+                  },
                   "refreshtoken": {
                     "type": "string"
                   },
                   "tenantId": {
+                    "type": "string"
+                  },
+                  "username": {
                     "type": "string"
                   }
                 }
@@ -43206,10 +43566,114 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
                   "properties": {
+                    "assignedPlans": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "businessPhones": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "city": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "country": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "countryLetterCode": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "createdDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "defaultUsageLocation": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "deletedDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "id": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "marketingNotificationEmails": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "mobileDeviceManagementAuthority": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesLastSyncDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesSyncEnabled": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "partnerTenantType": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "postalCode": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "preferredLanguage": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "privacyProfile": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "provisionedPlans": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
                     "Results": {
                       "x-cipp-field-source": "backend"
+                    },
+                    "securityComplianceNotificationMails": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "securityComplianceNotificationPhones": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "state": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "street": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "technicalNotificationMails": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "tenantType": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "verifiedDomains": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
                     }
                   }
                 }
@@ -54604,6 +55068,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "partnerTenantId",
+            "in": "query",
+            "description": "Multi-partner: act as the relationship's source partner (defaults to the primary)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -54779,6 +55252,10 @@
                         "x-cipp-field-source": "storage,frontend"
                       },
                       "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "partnerTenantId": {
+                        "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "Reference": {
@@ -54989,6 +55466,12 @@
                       },
                       "PartitionKey": {
                         "x-cipp-field-source": "storage"
+                      },
+                      "partnerDisplayName": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "partnerTenantId": {
+                        "x-cipp-field-source": "storage,backend"
                       },
                       "resultText": {
                         "x-cipp-field-source": "storage"
@@ -61502,10 +61985,19 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
                       "ContentHash": {
                         "x-cipp-field-source": "storage"
+                      },
+                      "defaultForTenant": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "department": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "displayName": {
+                        "x-cipp-field-source": "frontend"
                       },
                       "ETag": {
                         "type": "string",
@@ -61541,7 +62033,7 @@
                         "x-cipp-field-source": "storage"
                       },
                       "templateName": {
-                        "x-cipp-field-source": "storage"
+                        "x-cipp-field-source": "storage,frontend"
                       },
                       "Timestamp": {
                         "type": "string",
@@ -61549,6 +62041,15 @@
                       },
                       "UpdatedBy": {
                         "x-cipp-field-source": "storage"
+                      },
+                      "usageLocation": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "usernameFormat": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "usernameSpaceHandling": {
+                        "x-cipp-field-source": "frontend"
                       }
                     }
                   }
@@ -62514,6 +63015,80 @@
           }
         ],
         "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListPartnerTenants": {
+      "get": {
+        "summary": "ListPartnerTenants",
+        "operationId": "ListPartnerTenants",
+        "tags": [
+          "CIPP > Setup"
+        ],
+        "description": "Lists configured partner (CSP) tenants. Metadata and token health only - never\nsecret values.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "addedDate": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "authenticatedUserPrincipalName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "defaultDomainName": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "displayName": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "Enabled": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "IsPrimary": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "lastTokenRefresh": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "Managed": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "partnerTenantId": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "tenantCount": {
+                        "x-cipp-field-source": "backend,frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.SuperAdmin.Read",
         "x-cipp-any-tenant": true
       }
     },

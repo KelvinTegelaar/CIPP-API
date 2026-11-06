@@ -6,7 +6,8 @@ function Add-CIPPApplicationPermission {
         $ApplicationId,
         $TenantFilter
     )
-    if ($ApplicationId -eq $env:ApplicationID -and $TenantFilter -eq $env:TenantID) {
+    $IsPartnerTenant = $TenantFilter -eq 'PartnerTenant' -or $TenantFilter -eq $env:TenantID -or [bool](Get-CIPPPartnerTenant -PartnerTenantId $TenantFilter)
+    if ($ApplicationId -eq $env:ApplicationID -and $IsPartnerTenant) {
         $RequiredResourceAccess = 'CIPPDefaults'
     }
     if ($RequiredResourceAccess -eq 'CIPPDefaults') {

@@ -19,19 +19,28 @@ function Invoke-ExecOffboardTenant {
         $TenantId = $Tenant.customerId
         $TenantFilter = $Tenant.defaultDomainName
 
+        # The partner to offboard from: explicit selection, else the tenant's owning partner.
+        $PartnerTenantId = $Request.Body.partnerTenantId.value ?? $Request.Body.partnerTenantId
+        if ($PartnerTenantId -and $PartnerTenantId -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+            throw 'partnerTenantId must be a tenant id (GUID).'
+        }
+        if (!$PartnerTenantId) {
+            $PartnerTenantId = if ($Tenant.partnerTenantId) { "$($Tenant.partnerTenantId)" } else { "$env:TenantID" }
+        }
+
         $Results = [System.Collections.Generic.List[object]]::new()
         $Errors = [System.Collections.Generic.List[object]]::new()
 
         if (!$Tenant) {
             $Results.Add('Tenant has already been offboarded')
-        } elseif ($TenantId -eq $env:TenantID) {
-            $Errors.Add('You cannot offboard the CSP tenant')
+        } elseif ($TenantId -eq $env:TenantID -or $Tenant.isPartnerTenantRow -eq $true) {
+            $Errors.Add('You cannot offboard a partner tenant')
         } else {
             if ($Request.Body.RemoveCSPGuestUsers -eq $true) {
                 # Delete guest users who's domains match the CSP tenants
                 try {
                     try {
-                        $domains = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/domains?`$select=id" -tenantid $env:TenantID -NoAuthCheck:$true).id
+                        $domains = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/domains?`$select=id" -tenantid $PartnerTenantId -NoAuthCheck:$true).id
                         $DomainFilter = ($Domains | ForEach-Object { "endswith(mail, '$_')" }) -join ' or '
                         $CSPGuestUsers = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/users?`$select=id,mail&`$filter=userType eq 'Guest' and ($DomainFilter)&`$count=true" -tenantid $TenantFilter -ComplexFilter)
                     } catch {
@@ -63,7 +72,7 @@ function Invoke-ExecOffboardTenant {
                 # Remove all email addresses that match the CSP tenants domains from the contact properties in /organization
                 try {
                     try {
-                        $domains = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/domains?`$select=id" -tenantid $env:TenantID -NoAuthCheck:$true).id
+                        $domains = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/domains?`$select=id" -tenantid $PartnerTenantId -NoAuthCheck:$true).id
                     } catch {
                         throw "Failed to retrieve CSP domains: $($_.Exception.message)"
                     }
@@ -161,7 +170,7 @@ function Invoke-ExecOffboardTenant {
             if ($Request.Body.RemoveMultitenantCSPApps -eq $true) {
                 # Remove multi-tenant apps with the CSP tenant as origin
                 try {
-                    $MultiTenantCSPApps = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$count=true&`$select=displayName,appId,id,appOwnerOrganizationId&`$filter=appOwnerOrganizationId eq $($env:TenantID)" -tenantid $TenantFilter -ComplexFilter)
+                    $MultiTenantCSPApps = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$count=true&`$select=displayName,appId,id,appOwnerOrganizationId&`$filter=appOwnerOrganizationId eq $($PartnerTenantId)" -tenantid $TenantFilter -ComplexFilter)
                     $sortedArray = $MultiTenantCSPApps | Sort-Object @{Expression = { if ($_.appId -eq $env:ApplicationID) { 1 } else { 0 } }; Ascending = $true }
                     $sortedArray | ForEach-Object {
                         try {
@@ -183,10 +192,10 @@ function Invoke-ExecOffboardTenant {
                 # Terminate GDAP relationships
                 $ClearCache = $true
                 try {
-                    $delegatedAdminRelationships = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships?`$filter=(status eq 'active') AND (customer/tenantId eq '$tenantid')" -tenantid $env:TenantID)
+                    $delegatedAdminRelationships = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships?`$filter=(status eq 'active') AND (customer/tenantId eq '$tenantid')" -tenantid $PartnerTenantId)
                     $delegatedAdminRelationships | ForEach-Object {
                         try {
-                            $null = (New-GraphPostRequest -type 'POST' -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships/$($_.id)/requests" -body '{"action":"terminate"}' -ContentType 'application/json' -tenantid $env:TenantID)
+                            $null = (New-GraphPostRequest -type 'POST' -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships/$($_.id)/requests" -body '{"action":"terminate"}' -ContentType 'application/json' -tenantid $PartnerTenantId)
                             $Results.Add("Successfully terminated GDAP relationship $($_.displayName) from tenant $TenantFilter")
                             Write-LogMessage -headers $Headers -API $APIName -message "GDAP Relationship $($_.displayName) has been terminated" -Sev 'Info' -tenant $TenantFilter
 
@@ -206,7 +215,7 @@ function Invoke-ExecOffboardTenant {
             if ($Request.Body.TerminateContract -eq $true) {
                 # Terminate contract relationship
                 try {
-                    $null = (New-GraphPostRequest -type 'PATCH' -body '{ "relationshipToPartner": "none" }' -Uri "https://api.partnercenter.microsoft.com/v1/customers/$TenantFilter" -ContentType 'application/json' -scope 'https://api.partnercenter.microsoft.com/user_impersonation' -tenantid $env:TenantID)
+                    $null = (New-GraphPostRequest -type 'PATCH' -body '{ "relationshipToPartner": "none" }' -Uri "https://api.partnercenter.microsoft.com/v1/customers/$TenantFilter" -ContentType 'application/json' -scope 'https://api.partnercenter.microsoft.com/user_impersonation' -tenantid $PartnerTenantId)
                     $Results.Add('Successfully terminated contract relationship')
                     Write-LogMessage -headers $Headers -API $APIName -message 'Contract relationship terminated' -Sev 'Info' -tenant $TenantFilter
                 } catch {
@@ -219,11 +228,23 @@ function Invoke-ExecOffboardTenant {
         if ($ClearCache -eq $true) {
             try {
                 $TenantsTable = Get-CippTable -tablename 'Tenants'
-                $TenantRow = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$TenantId'" -Property RowKey, PartitionKey, customerId, displayName
+                $TenantRow = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$TenantId'"
                 if ($TenantRow) {
-                    Remove-CIPPAzDataTableEntity -Force @TenantsTable -Entity $TenantRow
-                    $Results.Add("$($Tenant.displayName) ($TenantId) has been deleted from CIPP")
-                    Write-LogMessage -headers $Headers -API $APIName -message "Tenant $($Tenant.displayName) ($TenantId) deleted from CIPP" -Sev 'Info' -tenant $TenantFilter
+                    # A relationship with another partner keeps the tenant managed - hand
+                    # ownership over instead of deleting the row.
+                    $RemainingPartners = @("$($TenantRow.knownPartners)" -split ',' | Where-Object { $_ -and $_ -ne $PartnerTenantId })
+                    if ($RemainingPartners.Count -gt 0) {
+                        $TenantRow | Add-Member -MemberType NoteProperty -Name 'partnerTenantId' -Value "$($RemainingPartners[0])" -Force
+                        $TenantRow | Add-Member -MemberType NoteProperty -Name 'partnerAssignmentMode' -Value 'auto' -Force
+                        $TenantRow | Add-Member -MemberType NoteProperty -Name 'knownPartners' -Value ($RemainingPartners -join ',') -Force
+                        Add-CIPPAzDataTableEntity @TenantsTable -Entity $TenantRow -Force | Out-Null
+                        $null = Clear-CippTokenCache -TenantFilter $TenantId
+                        $Results.Add("$($Tenant.displayName) is still managed via partner $($RemainingPartners[0]) and now uses that partner's credentials")
+                    } else {
+                        Remove-CIPPAzDataTableEntity -Force @TenantsTable -Entity $TenantRow
+                        $Results.Add("$($Tenant.displayName) ($TenantId) has been deleted from CIPP")
+                        Write-LogMessage -headers $Headers -API $APIName -message "Tenant $($Tenant.displayName) ($TenantId) deleted from CIPP" -Sev 'Info' -tenant $TenantFilter
+                    }
                 } else {
                     $Results.Add("Tenant $TenantId was not found in CIPP tenant list")
                 }

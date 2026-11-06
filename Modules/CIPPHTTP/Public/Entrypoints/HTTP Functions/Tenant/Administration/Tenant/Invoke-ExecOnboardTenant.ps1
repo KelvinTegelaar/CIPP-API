@@ -94,6 +94,7 @@ function Invoke-ExecOnboardTenant {
                         IgnoreMissingRoles         = $Request.Body.ignoreMissingRoles
                         AutoMapRoles               = $Request.Body.autoMapRoles
                         StandardsExcludeAllTenants = $StandardsExcludeAllTenants
+                        partnerTenantId            = $Request.Body.partnerTenantId.value ?? $Request.Body.partnerTenantId
                     }
 
                     $InputObject = @{

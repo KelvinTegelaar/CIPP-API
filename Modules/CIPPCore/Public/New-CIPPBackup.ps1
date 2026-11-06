@@ -59,6 +59,7 @@ function New-CIPPBackup {
                         'TenantProperties'
                         'TenantGroups'
                         'TenantGroupMembers'
+                        'PartnerTenants'
                         'BaselineRollouts'
                         'Baselines'
                         'BaselineRolloutState'

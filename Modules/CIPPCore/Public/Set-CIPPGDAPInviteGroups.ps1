@@ -6,9 +6,11 @@ function Set-CIPPGDAPInviteGroups {
     if ($Relationship) {
         $Invite = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Relationship.id)'"
         $APINAME = 'GDAPInvites'
+        # The invite row records which partner created the relationship
+        $PartnerTenantId = if ($Invite.partnerTenantId) { "$($Invite.partnerTenantId)" } elseif ($Relationship.partnerTenantId) { "$($Relationship.partnerTenantId)" } else { "$env:TenantID" }
         $RoleMappings = $Invite.RoleMappings | ConvertFrom-Json
         # Graph keeps removed assignments listed as deleted; their groups still need mapping again.
-        $AccessAssignments = @(New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($Relationship.id)/accessAssignments").Where({ $_.status -notin @('deleted', 'deleting') })
+        $AccessAssignments = @(New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($Relationship.id)/accessAssignments" -tenantid $PartnerTenantId).Where({ $_.status -notin @('deleted', 'deleting') })
         $Failed = $false
         foreach ($Role in $RoleMappings) {
             # Skip mapping if group is present in relationship
@@ -26,7 +28,7 @@ function Set-CIPPGDAPInviteGroups {
                     }
                 }
                 if ($PSCmdlet.ShouldProcess($Relationship.id, "Map group $($Role.GroupName) to customer $($Relationship.customer.displayName)")) {
-                    $null = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($Relationship.id)/accessAssignments" -tenantid $env:TenantID -type POST -body $MappingBody -verbose
+                    $null = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($Relationship.id)/accessAssignments" -tenantid $PartnerTenantId -type POST -body $MappingBody -verbose
                     Start-Sleep -Milliseconds 100
                 }
             } catch {
@@ -46,13 +48,16 @@ function Set-CIPPGDAPInviteGroups {
     } else {
         $InviteList = Get-CIPPAzDataTableEntity @Table
         if (($InviteList | Measure-Object).Count -gt 0) {
-            $Activations = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'"
-
-            $Batch = foreach ($Activation in $Activations) {
-                if ($InviteList.RowKey -contains $Activation.id) {
-                    Write-Information "Mapping groups for GDAP relationship: $($Activation.customer.displayName) - $($Activation.id)"
-                    $Activation | Add-Member -NotePropertyName FunctionName -NotePropertyValue 'ExecGDAPInviteQueue'
-                    $Activation
+            # Sweep every configured partner's active relationships
+            $Batch = foreach ($Partner in @(Get-CIPPPartnerTenant)) {
+                $Activations = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'" -tenantid $Partner.RowKey
+                foreach ($Activation in $Activations) {
+                    if ($InviteList.RowKey -contains $Activation.id) {
+                        Write-Information "Mapping groups for GDAP relationship: $($Activation.customer.displayName) - $($Activation.id)"
+                        $Activation | Add-Member -NotePropertyName FunctionName -NotePropertyValue 'ExecGDAPInviteQueue'
+                        $Activation | Add-Member -NotePropertyName partnerTenantId -NotePropertyValue "$($Partner.RowKey)" -Force
+                        $Activation
+                    }
                 }
             }
             if (($Batch | Measure-Object).Count -gt 0) {

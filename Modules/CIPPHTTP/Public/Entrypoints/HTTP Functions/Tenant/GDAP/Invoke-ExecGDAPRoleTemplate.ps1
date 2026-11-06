@@ -57,7 +57,12 @@ function Invoke-ExecGDAPRoleTemplate {
 
                 $NewRoles = @($Request.Body.NewRoles | Where-Object { $_ })
                 if ($NewRoles.Count -gt 0) {
-                    $NewMappings = New-CIPPGDAPRoleMapping -Roles $NewRoles -CustomSuffix $Request.Body.CustomSuffix
+                    # New groups are created in the selected partner tenant (defaults to the primary)
+                    $PartnerTenantId = $Request.Body.partnerTenantId.value ?? $Request.Body.partnerTenantId
+                    if (!$PartnerTenantId -or -not (Get-CIPPPartnerTenantList | Where-Object { $_.partnerTenantId -eq $PartnerTenantId })) {
+                        $PartnerTenantId = $env:TenantID
+                    }
+                    $NewMappings = New-CIPPGDAPRoleMapping -Roles $NewRoles -CustomSuffix $Request.Body.CustomSuffix -PartnerTenantId $PartnerTenantId
                     foreach ($Message in $NewMappings.Results) {
                         $SaveResults.Add([string]$Message)
                     }
@@ -132,10 +137,19 @@ function Invoke-ExecGDAPRoleTemplate {
             }
             default {
                 Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Retrieved $($Templates.Count) GDAP role templates" -Sev 'Info'
+                $RolesTable = Get-CIPPTable -TableName 'GDAPRoles'
+                $RoleRows = Get-CIPPAzDataTableEntity @RolesTable -Filter "PartitionKey eq 'Roles'"
+                $Partners = @(Get-CIPPPartnerTenantList)
                 $Results = foreach ($Template in $Templates) {
+                    $Mappings = @($Template.RoleMappings | ConvertFrom-Json)
+                    # A template belongs to whichever partner(s) own its groups
+                    $TemplatePartnerIds = @($Mappings | ForEach-Object { $GroupId = $_.GroupId; ($RoleRows | Where-Object { $_.RowKey -eq $GroupId } | Select-Object -First 1).partnerTenantId } | ForEach-Object { if ($_) { "$_" } else { "$env:TenantID" } } | Sort-Object -Unique)
+                    $TemplatePartnerNames = @($TemplatePartnerIds | ForEach-Object { $Id = $_; ($Partners | Where-Object { $_.partnerTenantId -eq $Id }).displayName ?? $Id })
                     [PSCustomObject]@{
-                        TemplateId   = $Template.RowKey
-                        RoleMappings = @($Template.RoleMappings | ConvertFrom-Json)
+                        TemplateId         = $Template.RowKey
+                        RoleMappings       = $Mappings
+                        partnerTenantId    = ($TemplatePartnerIds -join ',')
+                        partnerDisplayName = ($TemplatePartnerNames -join ', ')
                     }
                 }
                 $Body = @{

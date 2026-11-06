@@ -10,7 +10,12 @@ function Invoke-ListGDAPAccessAssignments {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $Id = $Request.Query.Id
-    $TenantFilter = $env:TenantID
+    # Multi-partner: act as the relationship's source partner (defaults to the primary)
+    $PartnerTenantId = $Request.Query.partnerTenantId ?? $Request.Body.partnerTenantId
+    if (!$PartnerTenantId -or -not (Get-CIPPPartnerTenantList | Where-Object { $_.partnerTenantId -eq $PartnerTenantId })) {
+        $PartnerTenantId = $env:TenantID
+    }
+    $TenantFilter = $PartnerTenantId
 
     Write-Information "Getting access assignments for $Id"
 

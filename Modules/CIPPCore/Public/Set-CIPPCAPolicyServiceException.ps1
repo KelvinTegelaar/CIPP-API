@@ -8,6 +8,8 @@ function Set-CIPPCAPolicyServiceException {
     if ([string]::IsNullOrWhiteSpace($env:TenantID)) {
         throw 'Environment variable TenantID is not set. Cannot configure service provider exception without the CSP tenant ID.'
     }
+    # The exclusion must name the partner that holds this tenant's GDAP relationship
+    $PartnerTenantId = Resolve-CIPPOwningPartner -TenantFilter $TenantFilter
 
     # Get the current policy
     $policy = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($PolicyId)" -tenantid $TenantFilter -AsApp $true
@@ -27,7 +29,7 @@ function Set-CIPPCAPolicyServiceException {
                 $externalTenants = $excludeConfig.externalTenants
                 $hasCorrectExternalTenants = $externalTenants.membershipKind -eq 'all' -or
                     ($externalTenants.membershipKind -eq 'enumerated' -and
-                    $externalTenants.members -contains $env:TenantID)
+                    $externalTenants.members -contains $PartnerTenantId)
 
                 # If already configured, exit without making changes
                 if ($hasServiceProvider -and $hasCorrectExternalTenants) {
@@ -46,7 +48,7 @@ function Set-CIPPCAPolicyServiceException {
                     '@odata.type'  = '#microsoft.graph.conditionalAccessEnumeratedExternalTenants'
                     membershipKind = 'enumerated'
                     members        = @(
-                        $env:TenantID
+                        $PartnerTenantId
                     )
                 }
             }
@@ -69,10 +71,12 @@ function Set-CIPPCAPolicyServiceException {
                     $policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants = [pscustomobject]@{
                         '@odata.type'  = '#microsoft.graph.conditionalAccessEnumeratedExternalTenants'
                         membershipKind = 'enumerated'
-                        members        = @($env:TenantID)
+                        members        = @($PartnerTenantId)
                     }
-                } elseif ($policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.membershipKind -eq 'enumerated' -and $policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.members -notcontains $env:TenantID) {
-                    $policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.members += $($env:TenantID)
+                } elseif ($policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.membershipKind -eq 'enumerated' -and $policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.members -notcontains $PartnerTenantId) {
+                    $Members = [System.Collections.Generic.List[string]]@($policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.members)
+                    $Members.Add($PartnerTenantId)
+                    $policy.conditions.users.excludeGuestsOrExternalUsers.externalTenants.members = $Members.ToArray()
                 }
             }
         }

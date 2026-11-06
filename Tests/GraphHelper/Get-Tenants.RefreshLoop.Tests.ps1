@@ -5,6 +5,11 @@
 # tenant was defeated by a matching Alias, the by-domain form of that refresh matched no
 # relationships at all, and a transient failure of the domains read could overwrite a good custom
 # default with the fallback's initial domain.
+#
+# The multi-partner build never reads beta/domains inline: a row that needs its domains re-read
+# goes through the batched findTenantInformationByTenantId lookup as its owning partner, is written
+# back provisional (RequiresRefresh) and the authoritative read is queued to Push-UpdateTenantDomains.
+# "Re-read" below therefore means the batched lookup ran and hydration was queued.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -16,10 +21,16 @@ BeforeAll {
     function Add-AzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Remove-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function New-GraphGetRequest { param($uri, $tenantid, $NoAuthCheck) }
+    function New-GraphBulkRequest { param($Requests, $tenantid, $NoAuthCheck, $Version) }
+    function Start-CIPPOrchestrator { param($InputObject) }
+    function Get-CIPPPartnerTenant { param($PartnerTenantId) }
+    function Get-CIPPFeatureFlag { param($Id) }
+    function Clear-CippTokenCache { param($TenantFilter) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData, $headers, $level) }
     function Get-CippException { param($Exception) }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) }
 
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Private/New-CIPPTenantRow.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-Tenants.ps1')
 
     $script:OrigRefreshToken = $env:RefreshToken
@@ -57,9 +68,10 @@ BeforeAll {
             endDateTime        = (Get-Date).AddYears(1).ToString('o')
         }
     }
-    function New-Domain {
-        param($Id, [bool]$IsDefault, [bool]$IsInitial)
-        [PSCustomObject]@{ id = $Id; isDefault = $IsDefault; isInitial = $IsInitial }
+    # Rows are written in one batch, so match inside the entity array rather than on the call.
+    function Test-WrittenRow {
+        param($Entity, [scriptblock]$Match)
+        @(@($Entity) | Where-Object $Match).Count -eq 1
     }
 }
 
@@ -73,8 +85,8 @@ Describe 'Get-Tenants refresh loop' {
         $script:RowsByKey = @{}
         $script:Relationships = @()
         $script:Aliases = @{}
-        $script:DomainsByTenant = @{}
-        $script:ThrowDomainsFor = @()
+        $script:LookupByTenant = @{}        # default domain the batched lookup returns per tenant
+        $script:LookupFailsFor = @()         # tenants the batched lookup returns nothing for
         $script:FallbackDomain = 'fallback.onmicrosoft.com'
 
         Mock Get-CippTable { @{} }
@@ -82,9 +94,14 @@ Describe 'Get-Tenants refresh loop' {
         Mock Write-LogMessage {}
         Mock Get-CippException { @{} }
         Mock Add-CIPPAzDataTableEntity {}
+        Mock Start-CIPPOrchestrator {}
+        Mock Clear-CippTokenCache {}
+        Mock Get-CIPPFeatureFlag { [PSCustomObject]@{ Id = $Id; Enabled = $false } }
+        Mock Get-CIPPPartnerTenant { @([PSCustomObject]@{ RowKey = $env:TenantID; IsPrimary = $true; Managed = $true }) }
         Mock Get-AzDataTableEntity {
-            if ($Filter -match "PartitionKey eq '([^']+)'" -and $script:Aliases.ContainsKey($Matches[1])) {
-                return [PSCustomObject]@{ Value = $script:Aliases[$Matches[1]] }
+            # Aliases are bulk-read once per build.
+            if ($Filter -like "*RowKey eq 'Alias'*") {
+                return @($script:Aliases.GetEnumerator() | ForEach-Object { [PSCustomObject]@{ PartitionKey = $_.Key; RowKey = 'Alias'; Value = $_.Value } })
             }
             $null
         }
@@ -96,12 +113,14 @@ Describe 'Get-Tenants refresh loop' {
         }
         Mock New-GraphGetRequest {
             if ($uri -like '*delegatedAdminRelationships*') { return $script:Relationships }
-            if ($uri -like '*beta/domains*') {
-                if ($script:ThrowDomainsFor -contains $tenantid) { throw 'domains read failed' }
-                return $script:DomainsByTenant[$tenantid]
-            }
-            if ($uri -like '*findTenantInformationByTenantId*') { return [PSCustomObject]@{ defaultDomainName = $script:FallbackDomain } }
             throw "unexpected Graph call: $uri"
+        }
+        Mock New-GraphBulkRequest {
+            foreach ($Request in $Requests) {
+                if ($script:LookupFailsFor -contains $Request.id) { continue }
+                $Domain = if ($script:LookupByTenant.ContainsKey($Request.id)) { $script:LookupByTenant[$Request.id] } else { $script:FallbackDomain }
+                [PSCustomObject]@{ id = $Request.id; status = 200; body = [PSCustomObject]@{ defaultDomainName = $Domain } }
+            }
         }
     }
 
@@ -120,10 +139,7 @@ Describe 'Get-Tenants refresh loop' {
     Context 'bulk refresh (no TenantFilter)' {
         BeforeEach {
             $script:Relationships = @(New-Relationship -Guid $script:GuidA -DisplayName 'Contoso')
-            $script:DomainsByTenant[$script:GuidA] = @(
-                (New-Domain -Id 'contoso.com' -IsDefault $true -IsInitial $false),
-                (New-Domain -Id 'contoso.onmicrosoft.com' -IsDefault $false -IsInitial $true)
-            )
+            $script:LookupByTenant[$script:GuidA] = 'contoso.com'
         }
 
         It 'trusts a fresh healthy row and does not re-read its domains' {
@@ -131,7 +147,8 @@ Describe 'Get-Tenants refresh loop' {
 
             $Result = Get-Tenants -IncludeAll -TriggerRefresh
 
-            Should -Invoke New-GraphGetRequest -ParameterFilter { $uri -like '*beta/domains*' } -Times 0 -Exactly
+            Should -Invoke New-GraphBulkRequest -Times 0 -Exactly
+            Should -Invoke Start-CIPPOrchestrator -Times 0 -Exactly
             @($Result).Count | Should -Be 1
             $Result.defaultDomainName | Should -Be 'contoso.com'
         }
@@ -142,9 +159,11 @@ Describe 'Get-Tenants refresh loop' {
 
             $Result = Get-Tenants -IncludeAll -TriggerRefresh
 
-            Should -Invoke New-GraphGetRequest -ParameterFilter { $uri -like '*beta/domains*' } -Times 1 -Exactly
+            Should -Invoke New-GraphBulkRequest -Times 1 -Exactly
             $Result.defaultDomainName | Should -Be 'contoso.com'
-            $Result.RequiresRefresh | Should -BeFalse
+            # Provisional until Push-UpdateTenantDomains confirms it - and that hydration must be queued.
+            $Result.RequiresRefresh | Should -BeTrue
+            Should -Invoke Start-CIPPOrchestrator -ParameterFilter { $InputObject.Batch.customerId -contains $script:GuidA } -Times 1 -Exactly
             $Result.LastRefresh | Should -BeGreaterThan (Get-Date).ToUniversalTime().AddMinutes(-1)
         }
 
@@ -153,10 +172,10 @@ Describe 'Get-Tenants refresh loop' {
 
             $null = Get-Tenants -IncludeAll -TriggerRefresh
 
-            Should -Invoke New-GraphGetRequest -ParameterFilter { $uri -like '*beta/domains*' } -Times 1 -Exactly
+            Should -Invoke New-GraphBulkRequest -Times 1 -Exactly
         }
 
-        It "does not let one tenant's fallback flag the next tenant for refresh" {
+        It "does not let one tenant's failed lookup affect the next tenant" {
             $script:Relationships = @(
                 (New-Relationship -Guid $script:GuidA -DisplayName 'Contoso'),
                 (New-Relationship -Guid $script:GuidB -DisplayName 'Fabrikam')
@@ -164,27 +183,21 @@ Describe 'Get-Tenants refresh loop' {
             $Stale = [DateTimeOffset]::UtcNow.AddDays(-30)
             $script:RowsByKey[$script:GuidA] = New-CachedRow -Guid $script:GuidA -DisplayName 'Contoso' -Default 'contoso.onmicrosoft.com' -Initial 'contoso.onmicrosoft.com' -LastRefresh $Stale
             $script:RowsByKey[$script:GuidB] = New-CachedRow -Guid $script:GuidB -DisplayName 'Fabrikam' -Default 'fabrikam.onmicrosoft.com' -Initial 'fabrikam.onmicrosoft.com' -LastRefresh $Stale
-            $script:DomainsByTenant[$script:GuidB] = @(
-                (New-Domain -Id 'fabrikam.com' -IsDefault $true -IsInitial $false),
-                (New-Domain -Id 'fabrikam.onmicrosoft.com' -IsDefault $false -IsInitial $true)
-            )
-            $script:ThrowDomainsFor = @($script:GuidA)
+            $script:LookupByTenant[$script:GuidB] = 'fabrikam.com'
+            $script:LookupFailsFor = @($script:GuidA)
 
             $null = Get-Tenants -IncludeAll -TriggerRefresh
 
-            # A fell back and is flagged; B read fine and must not inherit the flag.
-            Should -Invoke Add-CIPPAzDataTableEntity -ParameterFilter { $Entity.customerId -eq $script:GuidA -and $Entity.RequiresRefresh -eq $true } -Times 1 -Exactly
-            Should -Invoke Add-CIPPAzDataTableEntity -ParameterFilter { $Entity.customerId -eq $script:GuidB -and $Entity.defaultDomainName -eq 'fabrikam.com' -and $Entity.RequiresRefresh -eq $false } -Times 1 -Exactly
+            # A has nothing usable and is skipped; B resolves and is written with its own result.
+            Should -Invoke Add-CIPPAzDataTableEntity -ParameterFilter { Test-WrittenRow $Entity { $_.customerId -eq $script:GuidA } } -Times 0 -Exactly
+            Should -Invoke Add-CIPPAzDataTableEntity -ParameterFilter { Test-WrittenRow $Entity { $_.customerId -eq $script:GuidB -and $_.defaultDomainName -eq 'fabrikam.com' } } -Times 1 -Exactly
         }
     }
 
     Context 'refresh scoped to one tenant' {
         BeforeEach {
             $script:Relationships = @(New-Relationship -Guid $script:GuidA -DisplayName 'Contoso')
-            $script:DomainsByTenant[$script:GuidA] = @(
-                (New-Domain -Id 'contoso.com' -IsDefault $true -IsInitial $false),
-                (New-Domain -Id 'contoso.onmicrosoft.com' -IsDefault $false -IsInitial $true)
-            )
+            $script:LookupByTenant[$script:GuidA] = 'contoso.com'
             # Fresh and healthy: only the scoping should force the re-read.
             $script:RowsByKey[$script:GuidA] = New-CachedRow -Guid $script:GuidA -DisplayName 'Contoso' -Default 'contoso.onmicrosoft.com' -Initial 'contoso.onmicrosoft.com' -LastRefresh ([DateTimeOffset]::UtcNow.AddDays(-2))
         }
@@ -194,7 +207,7 @@ Describe 'Get-Tenants refresh loop' {
 
             $Result = Get-Tenants -TriggerRefresh -TenantFilter $script:GuidA
 
-            Should -Invoke New-GraphGetRequest -ParameterFilter { $uri -like '*beta/domains*' } -Times 1 -Exactly
+            Should -Invoke New-GraphBulkRequest -Times 1 -Exactly
             $Result.defaultDomainName | Should -Be 'contoso.com'
         }
 
@@ -202,34 +215,43 @@ Describe 'Get-Tenants refresh loop' {
             $Result = Get-Tenants -TriggerRefresh -TenantFilter 'contoso.onmicrosoft.com'
 
             Should -Invoke New-GraphGetRequest -ParameterFilter { $uri -like '*delegatedAdminRelationships*' -and $uri -like "*customer/tenantId eq '$($script:GuidA)'*" } -Times 1 -Exactly
-            Should -Invoke New-GraphGetRequest -ParameterFilter { $uri -like '*beta/domains*' } -Times 1 -Exactly
+            Should -Invoke New-GraphBulkRequest -Times 1 -Exactly
             @($Result).Count | Should -Be 1
             $Result.defaultDomainName | Should -Be 'contoso.com'
         }
     }
 
-    Context 'when the domains read fails' {
+    Context 'when the lookup returns the initial domain or nothing' {
         BeforeEach {
             $script:Relationships = @(New-Relationship -Guid $script:GuidA -DisplayName 'Contoso')
-            $script:ThrowDomainsFor = @($script:GuidA)
             $script:FallbackDomain = 'contoso.onmicrosoft.com'
         }
 
-        It "keeps a cached custom default over the fallback's initial domain and flags the row for retry" {
+        It "keeps a cached custom default over the lookup's initial domain and flags the row for retry" {
             $script:RowsByKey[$script:GuidA] = New-CachedRow -Guid $script:GuidA -DisplayName 'Contoso' -Default 'contoso.com' -Initial 'contoso.onmicrosoft.com' -LastRefresh ([DateTimeOffset]::UtcNow.AddDays(-30))
 
             $Result = Get-Tenants -IncludeAll -TriggerRefresh
 
-            Should -Invoke Add-CIPPAzDataTableEntity -ParameterFilter { $Entity.RequiresRefresh -eq $true -and $Entity.defaultDomainName -eq 'contoso.com' -and $Entity.initialDomainName -eq 'contoso.onmicrosoft.com' } -Times 1 -Exactly
+            Should -Invoke Add-CIPPAzDataTableEntity -ParameterFilter { Test-WrittenRow $Entity { $_.RequiresRefresh -eq $true -and $_.defaultDomainName -eq 'contoso.com' -and $_.initialDomainName -eq 'contoso.onmicrosoft.com' } } -Times 1 -Exactly
             $Result.defaultDomainName | Should -Be 'contoso.com'
         }
 
-        It 'takes the fallback value when there is no custom default to protect' {
+        It 'keeps a cached custom default even when the lookup returns nothing' {
+            $script:RowsByKey[$script:GuidA] = New-CachedRow -Guid $script:GuidA -DisplayName 'Contoso' -Default 'contoso.com' -Initial 'contoso.onmicrosoft.com' -LastRefresh ([DateTimeOffset]::UtcNow.AddDays(-30))
+            $script:LookupFailsFor = @($script:GuidA)
+
+            $Result = Get-Tenants -IncludeAll -TriggerRefresh
+
+            Should -Invoke Add-CIPPAzDataTableEntity -ParameterFilter { Test-WrittenRow $Entity { $_.RequiresRefresh -eq $true -and $_.defaultDomainName -eq 'contoso.com' } } -Times 1 -Exactly
+            $Result.defaultDomainName | Should -Be 'contoso.com'
+        }
+
+        It 'takes the lookup value when there is no custom default to protect' {
             $script:RowsByKey[$script:GuidA] = New-CachedRow -Guid $script:GuidA -DisplayName 'Contoso' -Default 'contoso.onmicrosoft.com' -Initial 'contoso.onmicrosoft.com' -LastRefresh ([DateTimeOffset]::UtcNow.AddDays(-30))
 
             $Result = Get-Tenants -IncludeAll -TriggerRefresh
 
-            Should -Invoke Add-CIPPAzDataTableEntity -ParameterFilter { $Entity.RequiresRefresh -eq $true -and $Entity.defaultDomainName -eq 'contoso.onmicrosoft.com' } -Times 1 -Exactly
+            Should -Invoke Add-CIPPAzDataTableEntity -ParameterFilter { Test-WrittenRow $Entity { $_.RequiresRefresh -eq $true -and $_.defaultDomainName -eq 'contoso.onmicrosoft.com' } } -Times 1 -Exactly
             $Result.defaultDomainName | Should -Be 'contoso.onmicrosoft.com'
         }
 

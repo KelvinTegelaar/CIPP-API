@@ -19,6 +19,7 @@ function Invoke-ExecCippFunction {
         'Get-GraphTokenFromCert'
         'New-CIPPCertificateAssertion'
         'Get-ClassicAPIToken'
+        'Remove-CIPPPartnerTenant'
         'Get-CIPPSAMCertificate'
         'Get-CIPPSAMCertificateVersions'
         'New-CIPPSAMCertificate'

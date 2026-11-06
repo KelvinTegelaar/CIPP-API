@@ -16,6 +16,7 @@ BeforeAll {
     function Get-CippException { param($Exception) }
     function Get-CIPPTable { param($TableName) }
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
+    function Resolve-CIPPOwningPartner { param($TenantFilter, $TenantRow) }
 
     . $FunctionPath
 }
@@ -28,6 +29,8 @@ Describe 'Test-CIPPAccessTenant' {
         Mock -CommandName Get-CippException -MockWith { @{ NormalizedError = 'stub error' } }
         Mock -CommandName Get-CIPPTable -MockWith { @{ Context = 'stub-table' } }
         Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { }
+        # Single-partner default: the owning partner is whichever tenant the service account runs as.
+        Mock -CommandName Resolve-CIPPOwningPartner -MockWith { $env:TenantID }
 
         # Skip the Exchange leg - it is identical for both tenant types and needs far more scaffolding.
         Mock -CommandName Test-CIPPStandardLicense -MockWith { $false }

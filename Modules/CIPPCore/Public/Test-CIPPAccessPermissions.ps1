@@ -3,7 +3,8 @@ function Test-CIPPAccessPermissions {
     param (
         $TenantFilter,
         $APIName = 'Access Check',
-        $Headers
+        $Headers,
+        [string]$PartnerTenantId
     )
 
     $User = $Headers
@@ -28,15 +29,19 @@ function Test-CIPPAccessPermissions {
     $Success = $true
     try {
         $null = Get-CIPPAuthentication
-        $GraphToken = Get-GraphToken -returnRefresh $true -SkipCache $true
+        if (!$PartnerTenantId) { $PartnerTenantId = $env:TenantID }
+        $IsPrimaryPartner = $PartnerTenantId -eq $env:TenantID
+        $GraphToken = Get-GraphToken -returnRefresh $true -SkipCache $true -tenantid $PartnerTenantId
         if ($GraphToken) {
             $GraphPermissions = Get-CippSamPermissions
         }
         if ($env:MSI_SECRET) {
             try {
                 $KV = Get-CippKeyVaultName
-                $KeyVaultRefresh = Get-CippKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -AsPlainText
-                if ($env:RefreshToken -ne $KeyVaultRefresh) {
+                $RefreshSecretName = if ($IsPrimaryPartner) { 'RefreshToken' } else { "partner-$PartnerTenantId" }
+                $CurrentRefreshToken = if ($IsPrimaryPartner) { $env:RefreshToken } else { (Get-Item -Path "env:\$RefreshSecretName" -ErrorAction SilentlyContinue).Value }
+                $KeyVaultRefresh = Get-CippKeyVaultSecret -VaultName $kv -Name $RefreshSecretName -AsPlainText
+                if ($CurrentRefreshToken -and $CurrentRefreshToken -ne $KeyVaultRefresh) {
                     $Success = $false
                     $ErrorMessages.Add('Your refresh token does not match key vault, wait 30 minutes for the function app to update.') | Out-Null
                 } else {
@@ -103,7 +108,7 @@ function Test-CIPPAccessPermissions {
             # non-interactive sign-ins, which are the redemptions themselves.
             try {
                 $SignInFilter = "appId eq '$($env:ApplicationID)' and signInEventTypes/any(t: t eq 'nonInteractiveUser')"
-                $SamSignIns = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&`$filter=$SignInFilter&`$top=10&`$select=createdDateTime,originalTransferMethod,authenticationProtocol" -tenantid $env:TenantID -NoAuthCheck $true -noPagination $true -ErrorAction Stop
+                $SamSignIns = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&`$filter=$SignInFilter&`$top=10&`$select=createdDateTime,originalTransferMethod,authenticationProtocol" -tenantid $PartnerTenantId -NoAuthCheck $true -noPagination $true -ErrorAction Stop
                 $DeviceCodeSignIn = $SamSignIns | Where-Object { $_.originalTransferMethod -eq 'deviceCodeFlow' -or $_.authenticationProtocol -eq 'deviceCode' } | Select-Object -First 1
                 if ($DeviceCodeSignIn) {
                     $ErrorMessages.Add('Your refresh token came from a device code login and will fail Conditional Access in some tenants. Refresh your token in the Setup Wizard.') | Out-Null
@@ -161,7 +166,7 @@ function Test-CIPPAccessPermissions {
             $Messages.Add('You have all the required permissions.') | Out-Null
         }
 
-        $ApplicationToken = Get-GraphToken -returnRefresh $true -SkipCache $true -AsApp $true
+        $ApplicationToken = Get-GraphToken -returnRefresh $true -SkipCache $true -AsApp $true -tenantid $PartnerTenantId
         $ApplicationTokenDetails = Read-JwtAccessDetails -Token $ApplicationToken.access_token -erroraction SilentlyContinue | Select-Object
 
         # The table records what CIPP asked for; the tokens show what the partner tenant actually granted.
@@ -211,7 +216,8 @@ function Test-CIPPAccessPermissions {
                 $KvApplicationSecret = $env:ApplicationSecret
             }
 
-            if ($env:ApplicationID -and $KvApplicationSecret -and $KvApplicationSecret -notmatch $PlaceholderPattern) {
+            if ($IsPrimaryPartner -and $env:ApplicationID -and $KvApplicationSecret -and $KvApplicationSecret -notmatch $PlaceholderPattern) {
+                # The app registration only exists in the primary partner tenant
                 $AppRegistration = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$($env:ApplicationID)')?`$select=passwordCredentials" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
                 $PasswordCredentials = @($AppRegistration.passwordCredentials)
 
@@ -239,7 +245,10 @@ function Test-CIPPAccessPermissions {
         $LastUpdate = [DateTime]::SpecifyKind($GraphPermissions.Timestamp.ToString('yyyy-MM-ddTHH:mm:ssZ'), [DateTimeKind]::Utc)
         $CpvTable = Get-CippTable -tablename 'cpvtenants'
         $CpvRefresh = Get-CippAzDataTableEntity @CpvTable -Filter "PartitionKey eq 'Tenant'"
-        $TenantList = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $env:TenantID -and $_.Excluded -eq $false }
+        $TenantList = Get-Tenants -IncludeErrors | Where-Object {
+            $_.customerId -ne $env:TenantID -and $_.Excluded -eq $false -and $_.isPartnerTenantRow -ne $true -and
+            (($_.partnerTenantId ?? $env:TenantID) -eq $PartnerTenantId)
+        }
         $CPVRefreshList = [System.Collections.Generic.List[object]]::new()
         $CPVSuccess = $true
         foreach ($Tenant in $TenantList) {
@@ -268,7 +277,7 @@ function Test-CIPPAccessPermissions {
         $ErrorMessages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $($ErrorMessage.NormalizedError)") | Out-Null
 
         try {
-            $MFAServicePolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mfaServicePolicy' -tenantid $env:TenantID -AsApp $true -NoAuthCheck $true
+            $MFAServicePolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mfaServicePolicy' -tenantid $PartnerTenantId -AsApp $true -NoAuthCheck $true
             if ($MFAServicePolicy.rememberMfaOnTrustedDevice.isEnabled -eq $true -and $MFAServicePolicy.rememberMfaOnTrustedDevice.allowedNumberOfDays -gt 0) {
                 $ErrorMessages.Add("MFA Service Policy has a session lifetime of $($MFAServicePolicy.rememberMfaOnTrustedDevice.allowedNumberOfDays) days. This may cause authentication issues for your service account.") | Out-Null
                 $Links.Add([PSCustomObject]@{
@@ -286,6 +295,15 @@ function Test-CIPPAccessPermissions {
         $Messages.Add('No service account issues have been found. CIPP is ready for use.') | Out-Null
     }
 
+    # Always surface the configured app id when present, even when no token could be
+    # obtained - its presence tells the UI that setup completed.
+    if (-not $AccessTokenDetails.AppId -and $env:ApplicationID -and $env:ApplicationID -notmatch '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$') {
+        $AccessTokenDetails | Add-Member -MemberType NoteProperty -Name 'AppId' -Value "$env:ApplicationID" -Force
+        if (-not $AccessTokenDetails.AppName) {
+            $AccessTokenDetails | Add-Member -MemberType NoteProperty -Name 'AppName' -Value 'CIPP-SAM' -Force
+        }
+    }
+
     $AccessCheck = [PSCustomObject]@{
         AccessTokenDetails      = $AccessTokenDetails
         ApplicationTokenDetails = $ApplicationTokenDetails
@@ -300,13 +318,14 @@ function Test-CIPPAccessPermissions {
     }
 
     $Table = Get-CIPPTable -TableName AccessChecks
-    $Data = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AccessCheck' and RowKey eq 'AccessPermissions'"
+    $CacheRowKey = if ($IsPrimaryPartner) { 'AccessPermissions' } else { "AccessPermissions-$PartnerTenantId" }
+    $Data = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AccessCheck' and RowKey eq '$CacheRowKey'"
     if ($Data) {
         $Data.Data = [string](ConvertTo-Json -InputObject $AccessCheck -Depth 10 -Compress)
     } else {
         $Data = @{
             PartitionKey = 'AccessCheck'
-            RowKey       = 'AccessPermissions'
+            RowKey       = $CacheRowKey
             Data         = [string](ConvertTo-Json -InputObject $AccessCheck -Depth 10 -Compress)
         }
     }

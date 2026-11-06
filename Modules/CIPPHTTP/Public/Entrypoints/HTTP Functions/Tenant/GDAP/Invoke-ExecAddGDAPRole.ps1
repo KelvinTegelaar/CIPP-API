@@ -9,20 +9,26 @@ function Invoke-ExecAddGDAPRole {
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
+
+    # Multi-partner: create the GDAP groups in the selected partner tenant (defaults to the primary)
+    $PartnerTenantId = $Request.Body.partnerTenantId.value ?? $Request.Body.partnerTenantId ?? $Request.Query.partnerTenantId
+    if (!$PartnerTenantId -or -not (Get-CIPPPartnerTenantList | Where-Object { $_.partnerTenantId -eq $PartnerTenantId })) {
+        $PartnerTenantId = $env:TenantID
+    }
     $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'AddRoleSimple'
     $GroupBlockList = @('All Users', 'AdminAgents', 'HelpdeskAgents', 'SalesAgents')
     $StatusCode = [HttpStatusCode]::OK
 
     switch ($Action) {
         'ListGroups' {
-            $Groups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $env:TenantID -AsApp $true | Where-Object -Property displayName -NotIn $GroupBlockList
+            $Groups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $PartnerTenantId -AsApp $true | Where-Object -Property displayName -NotIn $GroupBlockList
             $Results = @($Groups)
         }
         'AddRoleAdvanced' {
             try {
                 $Mappings = $Request.Body.mappings
                 $Table = Get-CIPPTable -TableName 'GDAPRoles'
-                $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $env:TenantID -AsApp $true
+                $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $PartnerTenantId -AsApp $true
                 $Results = [System.Collections.Generic.List[object]]::new()
                 $ErrorsFound = $false
                 $Entities = foreach ($Mapping in $Mappings) {
@@ -43,6 +49,7 @@ function Invoke-ExecAddGDAPRole {
                                 GroupName        = $ExistingGroup.displayName
                                 GroupId          = $GroupId
                                 roleDefinitionId = $Mapping.roleDefinitionId
+                                partnerTenantId  = "$PartnerTenantId"
                             }
                             $Results.Add(@{
                                     state      = 'success'
@@ -103,7 +110,7 @@ function Invoke-ExecAddGDAPRole {
                 $Groups = $Request.Body.gdapRoles ?? $CippDefaults
                 $CustomSuffix = $Request.Body.customSuffix
 
-                $Mapping = New-CIPPGDAPRoleMapping -Roles $Groups -CustomSuffix $CustomSuffix
+                $Mapping = New-CIPPGDAPRoleMapping -Roles $Groups -CustomSuffix $CustomSuffix -PartnerTenantId $PartnerTenantId
                 $Results = $Mapping.Results
                 $RoleMappings = $Mapping.RoleMappings
 

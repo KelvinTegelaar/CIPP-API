@@ -32,17 +32,29 @@ function Invoke-ExecAccessChecks {
     # get the refreshed result. Query or body, as with Type.
     $TenantId = $Request.Body.TenantId ?? $Request.Query.TenantId
 
+    # Multi-partner: run the check as a specific partner tenant. Defaults to the primary.
+    $PartnerTenantId = $Request.Query.partnerTenantId ?? $Request.Body.partnerTenantId
+    if ($PartnerTenantId) {
+        if ($PartnerTenantId -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' -or -not (Get-CIPPPartnerTenantList | Where-Object { $_.partnerTenantId -eq $PartnerTenantId })) {
+            throw 'partnerTenantId must be a configured partner tenant id.'
+        }
+    } else {
+        $PartnerTenantId = $env:TenantID
+    }
+    $IsPrimaryPartner = $PartnerTenantId -eq $env:TenantID
+
     switch ($Type) {
         'Permissions' {
             if (-not $SkipCache) {
                 try {
-                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions' and Timestamp ge datetime'$TimestampFilter'"
+                    $PermissionsRowKey = if ($IsPrimaryPartner) { 'AccessPermissions' } else { "AccessPermissions-$PartnerTenantId" }
+                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$PermissionsRowKey' and Timestamp ge datetime'$TimestampFilter'"
                     $Results = $Cache.Data | ConvertFrom-Json -ErrorAction Stop
                 } catch {
                     $Results = $null
                 }
                 if (!$Results) {
-                    $Results = Test-CIPPAccessPermissions -tenantfilter $env:TenantID -APIName $APINAME -Headers $Request.Headers
+                    $Results = Test-CIPPAccessPermissions -tenantfilter $PartnerTenantId -PartnerTenantId $PartnerTenantId -APIName $APINAME -Headers $Request.Headers
                 } else {
                     try {
                         $LastRun = [DateTime]::SpecifyKind($Cache.Timestamp.DateTime, [DateTimeKind]::Utc)
@@ -51,7 +63,7 @@ function Invoke-ExecAccessChecks {
                     }
                 }
             } else {
-                $Results = Test-CIPPAccessPermissions -tenantfilter $env:TenantID -APIName $APINAME -Headers $Request.Headers
+                $Results = Test-CIPPAccessPermissions -tenantfilter $PartnerTenantId -PartnerTenantId $PartnerTenantId -APIName $APINAME -Headers $Request.Headers
             }
         }
         'Tenants' {
@@ -66,7 +78,10 @@ function Invoke-ExecAccessChecks {
             } else {
                 $AccessChecks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantAccessChecks'"
                 try {
-                    $Tenants = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $env:TenantID }
+                    $Tenants = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $env:TenantID -and $_.isPartnerTenantRow -ne $true }
+                    if (-not $IsPrimaryPartner) {
+                        $Tenants = $Tenants | Where-Object { ($_.partnerTenantId ?? $env:TenantID) -eq $PartnerTenantId }
+                    }
                     # Narrow to a single tenant when TenantId is supplied (customerId or domain).
                     if ($TenantId) {
                         $Tenants = $Tenants | Where-Object { $_.customerId -eq $TenantId -or $_.defaultDomainName -eq $TenantId }
@@ -139,13 +154,14 @@ function Invoke-ExecAccessChecks {
         'GDAP' {
             if (-not $SkipCache) {
                 try {
-                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships' and Timestamp ge datetime'$TimestampFilter'"
+                    $GDAPRowKey = if ($IsPrimaryPartner) { 'GDAPRelationships' } else { "GDAPRelationships-$PartnerTenantId" }
+                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$GDAPRowKey' and Timestamp ge datetime'$TimestampFilter'"
                     $Results = $Cache.Data | ConvertFrom-Json -ErrorAction Stop
                 } catch {
                     $Results = $null
                 }
                 if (!$Results) {
-                    $Results = Test-CIPPGDAPRelationships
+                    $Results = Test-CIPPGDAPRelationships -PartnerTenantId $PartnerTenantId
                 } else {
                     try {
                         $LastRun = [DateTime]::SpecifyKind($Cache.Timestamp.DateTime, [DateTimeKind]::Utc)
@@ -154,7 +170,7 @@ function Invoke-ExecAccessChecks {
                     }
                 }
             } else {
-                $Results = Test-CIPPGDAPRelationships
+                $Results = Test-CIPPGDAPRelationships -PartnerTenantId $PartnerTenantId
             }
         }
     }

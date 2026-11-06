@@ -68,6 +68,10 @@ function Invoke-ExecGDAPTrace {
         }
     }
 
+    # The trace runs from the perspective of the customer's owning partner
+    $TraceTenant = Get-Tenants -TenantFilter $TenantFilter -IncludeErrors | Select-Object -First 1
+    $PartnerTenantId = if ($TraceTenant.partnerTenantId) { "$($TraceTenant.partnerTenantId)" } else { "$env:TenantID" }
+
     try {
         # ============================================================================
         # STEP 1: Define all 15 standard GDAP roles
@@ -131,7 +135,7 @@ function Invoke-ExecGDAPTrace {
         $BaseUri = 'https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships'
         $FilterValue = "status eq 'active' and customer/tenantId eq '$CustomerTenantId'"
         $RelationshipsUri = "$($BaseUri)?`$filter=$($FilterValue)"
-        $Relationships = New-GraphGetRequest -uri $RelationshipsUri -tenantid $env:TenantID -NoAuthCheck $true
+        $Relationships = New-GraphGetRequest -uri $RelationshipsUri -tenantid $PartnerTenantId -NoAuthCheck $true
 
         # If no active relationships exist, return early with an informative message
         if (-not $Relationships -or $Relationships.Count -eq 0) {
@@ -160,7 +164,7 @@ function Invoke-ExecGDAPTrace {
         $User = $null
         try {
             # Filter didn't work, try direct lookup by UPN (works if UPN is unique identifier)
-            $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UPN" -tenantid $env:TenantID -NoAuthCheck $true
+            $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UPN" -tenantid $PartnerTenantId -NoAuthCheck $true
         } catch {
             Write-LogMessage -Headers $Headers -API $APIName -message "Could not find user $UPN in partner tenant: $($_.Exception.Message)" -sev 'Warning'
         }
@@ -200,7 +204,7 @@ function Invoke-ExecGDAPTrace {
         $UserGroupMemberships = @{}
         try {
             # Use AsApp=true to get all memberships regardless of current user context
-            $PartnerUserMemberships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserId/transitiveMemberOf?`$select=id,displayName" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -ErrorAction SilentlyContinue
+            $PartnerUserMemberships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserId/transitiveMemberOf?`$select=id,displayName" -tenantid $PartnerTenantId -NoAuthCheck $true -AsApp $true -ErrorAction SilentlyContinue
             if ($PartnerUserMemberships) {
                 foreach ($Membership in $PartnerUserMemberships) {
                     # Only include groups, not role assignments
@@ -250,7 +254,7 @@ function Invoke-ExecGDAPTrace {
 
             try {
                 # Check if user is directly in target group
-                $DirectMembers = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups/$TargetGroupId/members?`$select=id,displayName,userPrincipalName" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -ErrorAction SilentlyContinue
+                $DirectMembers = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups/$TargetGroupId/members?`$select=id,displayName,userPrincipalName" -tenantid $PartnerTenantId -NoAuthCheck $true -AsApp $true -ErrorAction SilentlyContinue
                 if ($DirectMembers.value | Where-Object { $_.id -eq $UserId }) {
                     # User is directly in target group
                     return @(
@@ -264,7 +268,7 @@ function Invoke-ExecGDAPTrace {
                 }
 
                 # User is not directly in target group, check nested groups
-                $GroupMembers = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups/$TargetGroupId/members?`$select=id,displayName,@odata.type" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -ErrorAction SilentlyContinue
+                $GroupMembers = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups/$TargetGroupId/members?`$select=id,displayName,@odata.type" -tenantid $PartnerTenantId -NoAuthCheck $true -AsApp $true -ErrorAction SilentlyContinue
 
                 if ($GroupMembers.value) {
                     foreach ($Member in $GroupMembers.value) {
@@ -369,7 +373,7 @@ function Invoke-ExecGDAPTrace {
             # Get access assignments (mapped security groups) for this relationship
             $AccessAssignments = @()
             try {
-                $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$RelationshipId/accessAssignments" -tenantid $env:TenantID -NoAuthCheck $true
+                $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$RelationshipId/accessAssignments" -tenantid $PartnerTenantId -NoAuthCheck $true
 
                 # Handle case where response might be a single object instead of array
                 if ($AccessAssignments -and -not ($AccessAssignments -is [System.Array])) {
@@ -429,7 +433,7 @@ function Invoke-ExecGDAPTrace {
 
         try {
             # Fetch all groups at once (similar to Set-CIPPDBCacheGroups)
-            $AllGroups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName' -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
+            $AllGroups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName' -tenantid $PartnerTenantId -NoAuthCheck $true -AsApp $true
 
             # Handle case where response might be a single object instead of array
             if ($AllGroups -and -not ($AllGroups -is [System.Array])) {
@@ -598,7 +602,7 @@ function Invoke-ExecGDAPTrace {
                         # Check if the group has any members at all (for diagnostic purposes)
                         $GroupHasMembers = $false
                         try {
-                            $GroupMembers = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups/$GroupId/members?`$top=1" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true -ErrorAction SilentlyContinue
+                            $GroupMembers = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups/$GroupId/members?`$top=1" -tenantid $PartnerTenantId -NoAuthCheck $true -AsApp $true -ErrorAction SilentlyContinue
                             $GroupHasMembers = $GroupMembers.value.Count -gt 0
                         } catch {
                             $GroupHasMembers = $false

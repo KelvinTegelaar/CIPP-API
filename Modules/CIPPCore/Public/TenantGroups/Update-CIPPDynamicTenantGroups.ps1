@@ -190,7 +190,8 @@ function Update-CIPPDynamicTenantGroups {
 
                 if ($Group.ExcludePartnerTenant -eq $true -and $env:TenantID) {
                     $BeforeCount = ($MatchingTenants | Measure-Object).Count
-                    $MatchingTenants = @($MatchingTenants | Where-Object { $_.customerId -ne $env:TenantID })
+                    $PartnerIds = @((Get-CIPPPartnerTenant).RowKey)
+                    $MatchingTenants = @($MatchingTenants | Where-Object { $_.customerId -notin $PartnerIds -and $_.isPartnerTenantRow -ne $true })
                     $RemovedCount = $BeforeCount - ($MatchingTenants | Measure-Object).Count
                     if ($RemovedCount -gt 0) {
                         Write-Information "ExcludePartnerTenant is enabled for group '$($Group.Name)'; removed $RemovedCount partner tenant from results"
