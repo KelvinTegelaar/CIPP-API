@@ -6,19 +6,19 @@ function Invoke-CippTestZTNA21868 {
     param($Tenant)
 
     try {
-        $Guests = Get-CIPPTestData -TenantFilter $Tenant -Type 'Guests'
+        $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
         $Apps = Get-CIPPTestData -TenantFilter $Tenant -Type 'Apps'
         $ServicePrincipals = Get-CIPPTestData -TenantFilter $Tenant -Type 'ServicePrincipals'
 
-        if (-not $Guests -or -not $Apps -or -not $ServicePrincipals) {
+        if (-not $Users -or -not $Apps -or -not $ServicePrincipals) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21868' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Guests do not own apps in the tenant' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
             return
         }
 
         # Create a HashSet of guest user IDs for fast lookups
         $GuestUserIds = [System.Collections.Generic.HashSet[string]]::new()
-        foreach ($guest in $Guests) {
-            [void]$GuestUserIds.Add($guest.id)
+        foreach ($User in $Users) {
+            if ($User.userType -eq 'Guest') { [void]$GuestUserIds.Add($User.id) }
         }
 
         # Initialize lists for guest owners
@@ -68,6 +68,8 @@ function Invoke-CippTestZTNA21868 {
 
         if ($HasGuestAppOwners -or $HasGuestSpOwners) {
             $Status = 'Failed'
+            $AppPortalLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Owners/appId/{0}/isMSAApp~/false'
+            $SpPortalLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/ManagedAppMenuBlade/~/Owners/objectId/{0}/appId/{1}/preferredSingleSignOnMode~/null/servicePrincipalType/Application/fromNav/'
             $sb = [System.Text.StringBuilder]::new()
             $null = $sb.Append("Guest users own applications or service principals`n`n")
 
@@ -76,21 +78,21 @@ function Invoke-CippTestZTNA21868 {
                 $null = $sb.Append("### Applications owned by guest users`n`n")
                 $null = $sb.Append("| User Display Name | User Principal Name | Application |`n")
                 $null = $sb.Append("| :---------------- | :------------------ | :---------- |`n")
-                $null = $sb.Append((($GuestAppOwners | ForEach-Object { "| $($_.displayName) | $($_.userPrincipalName) | $($_.appDisplayName) |" }) -join "`n"))
+                $null = $sb.Append((@(foreach ($Owner in $GuestAppOwners) { "| $($Owner.displayName) | $($Owner.userPrincipalName) | [$($Owner.appDisplayName)]($($AppPortalLink -f $Owner.appId)) |" }) -join "`n"))
                 $null = $sb.Append("`n`n### Service principals owned by guest users`n`n")
                 $null = $sb.Append("| User Display Name | User Principal Name | Service Principal |`n")
                 $null = $sb.Append("| :---------------- | :------------------ | :---------------- |`n")
-                $null = $sb.Append((($GuestSpOwners | ForEach-Object { "| $($_.displayName) | $($_.userPrincipalName) | $($_.spDisplayName) |" }) -join "`n"))
+                $null = $sb.Append((@(foreach ($Owner in $GuestSpOwners) { "| $($Owner.displayName) | $($Owner.userPrincipalName) | [$($Owner.spDisplayName)]($($SpPortalLink -f $Owner.spObjectId, $Owner.spAppId)) |" }) -join "`n"))
             } elseif ($HasGuestAppOwners) {
                 $null = $sb.Append("## Guest users own applications`n`n")
                 $null = $sb.Append("| User Display Name | User Principal Name | Application |`n")
                 $null = $sb.Append("| :---------------- | :------------------ | :---------- |`n")
-                $null = $sb.Append((($GuestAppOwners | ForEach-Object { "| $($_.displayName) | $($_.userPrincipalName) | $($_.appDisplayName) |" }) -join "`n"))
+                $null = $sb.Append((@(foreach ($Owner in $GuestAppOwners) { "| $($Owner.displayName) | $($Owner.userPrincipalName) | [$($Owner.appDisplayName)]($($AppPortalLink -f $Owner.appId)) |" }) -join "`n"))
             } elseif ($HasGuestSpOwners) {
                 $null = $sb.Append("## Guest users own service principals`n`n")
                 $null = $sb.Append("| User Display Name | User Principal Name | Service Principal |`n")
                 $null = $sb.Append("| :---------------- | :------------------ | :---------------- |`n")
-                $null = $sb.Append((($GuestSpOwners | ForEach-Object { "| $($_.displayName) | $($_.userPrincipalName) | $($_.spDisplayName) |" }) -join "`n"))
+                $null = $sb.Append((@(foreach ($Owner in $GuestSpOwners) { "| $($Owner.displayName) | $($Owner.userPrincipalName) | [$($Owner.spDisplayName)]($($SpPortalLink -f $Owner.spObjectId, $Owner.spAppId)) |" }) -join "`n"))
             }
             $Result = $sb.ToString()
         } else {

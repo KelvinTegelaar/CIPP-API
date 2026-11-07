@@ -6,6 +6,11 @@ function Invoke-CippTestZTNA21801 {
     param($Tenant)
 
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName 'ZTNA21801' -TenantFilter $Tenant -Preset Entra -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21801' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Microsoft Entra ID P1. Required capabilities: AAD_PREMIUM, AAD_PREMIUM_P2.' -Risk 'Medium' -Name 'Users have strong authentication methods configured' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Credential Management'
+            return
+        }
+
         $UserRegistrationDetails = Get-CIPPTestData -TenantFilter $Tenant -Type 'UserRegistrationDetails'
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
 
@@ -50,11 +55,10 @@ function Invoke-CippTestZTNA21801 {
             }
         }
 
+        $results = @($results)
         $totalUserCount = $results.Count
-        $phishResistantUsers = $results.Where({ $_.phishResistantAuthMethod })
-        $phishableUsers = $results.Where({ !$_.phishResistantAuthMethod })
-
-        $phishResistantUserCount = $phishResistantUsers.Count
+        $phishResistantUserCount = $results.Where({ $_.phishResistantAuthMethod }).Count
+        $phishableUsers = @($results.Where({ !$_.phishResistantAuthMethod }))
 
         $passed = $totalUserCount -eq $phishResistantUserCount
 
@@ -64,52 +68,27 @@ function Invoke-CippTestZTNA21801 {
             "Found users that have not yet registered phishing resistant authentication methods`n`n%TestResult%"
         }
 
-        $mdInfo = "## Users strong authentication methods`n`n"
+        $mdInfo = [System.Text.StringBuilder]::new("## Users strong authentication methods`n`n")
+        $null = $mdInfo.Append("Total users assessed: $totalUserCount`n`n")
+        $null = $mdInfo.Append("Users with phishing-resistant authentication methods: $phishResistantUserCount`n`n")
+        $null = $mdInfo.Append("Users without phishing-resistant authentication methods: $($phishableUsers.Count)`n`n")
 
-        if ($passed) {
-            $mdInfo = "All users have registered phishing resistant authentication methods.`n`n"
-        } else {
-            $mdInfo = "Found users that have not registered phishing resistant authentication methods.`n`n"
-        }
-
-        # Limit output to prevent performance issues with large user sets
-        $maxUsersToDisplay = 500
-
-        $mdInfo = $mdInfo + "| User | Last sign in | Phishing resistant method registered |`n"
-        $mdInfo = $mdInfo + "| :--- | :--- | :---: |`n"
-
-        $userLinkFormat = 'https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/UserAuthMethods/userId/{0}/hidePreviewBanner~/true'
-
-        # Show phishable users first (up to limit)
-        $phishableUsersToShow = $phishableUsers | Sort-Object displayName | Select-Object -First $maxUsersToDisplay
-        $mdLines = @($phishableUsersToShow | ForEach-Object {
-                $userLink = $userLinkFormat -f $_.id
-                $lastSignInDate = if ($_.lastSuccessfulSignInDateTime) { (Get-Date $_.lastSuccessfulSignInDateTime -Format 'yyyy-MM-dd') } else { 'Never' }
-                "|[$($_.displayName)]($userLink)| $lastSignInDate | ❌ |`n"
-            })
-        $mdInfo = $mdInfo + ($mdLines -join '')
-
-        if ($phishableUsers.Count -gt $maxUsersToDisplay) {
-            $mdInfo = $mdInfo + "|... and $($phishableUsers.Count - $maxUsersToDisplay) more users without phish-resistant methods|||`n"
-        }
-
-        # Show phish-resistant users (up to remaining limit)
-        $remainingSlots = $maxUsersToDisplay - [Math]::Min($phishableUsers.Count, $maxUsersToDisplay)
-        if ($remainingSlots -gt 0) {
-            $phishResistantUsersToShow = $phishResistantUsers | Sort-Object displayName | Select-Object -First $remainingSlots
-            $mdLines = @($phishResistantUsersToShow | ForEach-Object {
-                    $userLink = $userLinkFormat -f $_.id
-                    $lastSignInDate = if ($_.lastSuccessfulSignInDateTime) { (Get-Date $_.lastSuccessfulSignInDateTime -Format 'yyyy-MM-dd') } else { 'Never' }
-                    "|[$($_.displayName)]($userLink)| $lastSignInDate | ✅ |`n"
-                })
-            $mdInfo = $mdInfo + ($mdLines -join '')
-
-            if ($phishResistantUsers.Count -gt $remainingSlots) {
-                $mdInfo = $mdInfo + "|... and $($phishResistantUsers.Count - $remainingSlots) more users with phish-resistant methods|||`n"
+        $reportedPhishableUsers = @($phishableUsers | Sort-Object displayName, id).Where({ $true }, 'First', 50)
+        if ($reportedPhishableUsers.Count -gt 0) {
+            $null = $mdInfo.Append("| User | Last sign in | Phishing resistant method registered |`n")
+            $null = $mdInfo.Append("| :--- | :--- | :---: |`n")
+            $userLinkFormat = 'https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/UserAuthMethods/userId/{0}/hidePreviewBanner~/true'
+            foreach ($user in $reportedPhishableUsers) {
+                $lastSignInDate = if ($user.lastSuccessfulSignInDateTime) { (Get-Date $user.lastSuccessfulSignInDateTime -Format 'yyyy-MM-dd') } else { 'Never' }
+                $null = $mdInfo.Append("|[$($user.displayName)]($($userLinkFormat -f $user.id))| $lastSignInDate | ❌ |`n")
+            }
+            $omittedUserCount = $phishableUsers.Count - $reportedPhishableUsers.Count
+            if ($omittedUserCount -gt 0) {
+                $null = $mdInfo.Append("`nShowing 50 of $($phishableUsers.Count) users without phishing-resistant authentication methods; $omittedUserCount more omitted.`n")
             }
         }
 
-        $testResultMarkdown = $testResultMarkdown -replace '%TestResult%', $mdInfo
+        $testResultMarkdown = $testResultMarkdown.Replace('%TestResult%', $mdInfo.ToString())
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21801' -TestType 'Identity' -Status $(if ($passed) { 'Passed' } else { 'Failed' }) -ResultMarkdown $testResultMarkdown -Risk 'Medium' -Name 'Users have strong authentication methods configured' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Credential Management'
 

@@ -7,3 +7,4 @@ Without strict validation of redirect URIs, attackers can bypass security contro
 - [Check the redirect URIs for your application registrations.](https://learn.microsoft.com/entra/identity-platform/reply-url?wt.mc_id=zerotrustrecommendations_automation_content_cnl_csasci) Make sure the redirect URIs don't have localhost, *.azurewebsites.net, wildcards, or URL shorteners.
 <!--- Results --->
 %TestResult%
+

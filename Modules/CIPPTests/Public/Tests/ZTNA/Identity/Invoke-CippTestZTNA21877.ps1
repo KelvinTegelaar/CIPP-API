@@ -6,6 +6,12 @@ function Invoke-CippTestZTNA21877 {
     param($Tenant)
     #Tested
     try {
+        $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
+        if ($Users -and -not $Users.Where({ $_.userType -eq 'Guest' }, 'First')) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21877' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No guest accounts found in the tenant' -Risk 'Medium' -Name 'All guests have a sponsor' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Application management'
+            return
+        }
+
         $Guests = Get-CIPPTestData -TenantFilter $Tenant -Type 'Guests'
         if (-not $Guests) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21877' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'All guests have a sponsor' -UserImpact 'Medium' -ImplementationEffort 'Medium' -Category 'Application management'

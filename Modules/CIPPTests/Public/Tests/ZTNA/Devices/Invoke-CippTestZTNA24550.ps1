@@ -8,81 +8,71 @@ function Invoke-CippTestZTNA24550 {
 
     try {
         $ConfigurationPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'IntuneConfigurationPolicies'
-        if (-not $ConfigurationPolicies) {
+        $DeviceConfigs = Get-CIPPTestData -TenantFilter $Tenant -Type 'IntuneDeviceConfigurations'
+        if (-not $ConfigurationPolicies -and -not $DeviceConfigs) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24550' -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Data on Windows is protected by BitLocker encryption' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 
-        $WindowsPolicies = $ConfigurationPolicies.Where({
-            $_.platforms -match 'windows10'
-        })
-
-        $WindowsBitLockerPolicies = [System.Collections.Generic.List[object]]::new()
-        foreach ($WindowsPolicy in $WindowsPolicies) {
-            $ValidSettingValues = @('device_vendor_msft_bitlocker_requiredeviceencryption_1')
-
-            if ($WindowsPolicy.settings.settinginstance.choicesettingvalue.value) {
-                $PolicySettingValues = $WindowsPolicy.settings.settinginstance.choicesettingvalue.value
-                if ($PolicySettingValues -isnot [array]) {
-                    $PolicySettingValues = @($PolicySettingValues)
+        $BitLockerPolicies = foreach ($Policy in @($ConfigurationPolicies).Where({ $_.platforms -match 'windows10' })) {
+            $Stack = [System.Collections.Generic.Stack[object]]::new()
+            foreach ($Instance in @($Policy.settings.settingInstance)) { if ($Instance) { $Stack.Push($Instance) } }
+            while ($Stack.Count -gt 0) {
+                $Instance = $Stack.Pop()
+                if ($Instance.choiceSettingValue.value -eq 'device_vendor_msft_bitlocker_requiredeviceencryption_1') {
+                    $Policy
+                    break
                 }
-
-                $HasValidSetting = $false
-                foreach ($SettingValue in $PolicySettingValues) {
-                    if ($ValidSettingValues -contains $SettingValue) {
-                        $HasValidSetting = $true
-                        break
-                    }
-                }
-
-                if ($HasValidSetting) {
-                    $WindowsBitLockerPolicies.Add($WindowsPolicy)
+                foreach ($Child in @($Instance.groupSettingCollectionValue.children; $Instance.groupSettingValue.children; $Instance.choiceSettingValue.children; $Instance.choiceSettingCollectionValue.children)) {
+                    if ($Child) { $Stack.Push($Child) }
                 }
             }
         }
+        $BitLockerPolicies = @($BitLockerPolicies)
 
-        $AssignedPolicies = $WindowsBitLockerPolicies.Where({
-            $_.assignments -and $_.assignments.Count -gt 0
-        })
+        # Graph returns the bitLocker*DrivePolicy objects on every endpoint protection profile, so only the explicit switches mean BitLocker is enforced.
+        $LegacyProfiles = @(@($DeviceConfigs).Where({
+                    $_.'@odata.type' -in @('#microsoft.graph.windows10EndpointProtectionConfiguration', '#microsoft.graph.windows10GeneralConfiguration') -and
+                    ($_.storageRequireDeviceEncryption -eq $true -or $_.bitLockerEncryptDevice -eq $true)
+                }))
 
-        if ($AssignedPolicies.Count -gt 0) {
+        $Assigned = @($BitLockerPolicies; $LegacyProfiles).Where({ $_.assignments -and $_.assignments.Count -gt 0 })
+
+        $ResultLines = [System.Collections.Generic.List[string]]::new()
+        if ($Assigned.Count -gt 0) {
             $Status = 'Passed'
-            $ResultLines = [System.Collections.Generic.List[string]]::new()
             $ResultLines.Add('At least one Windows BitLocker policy is configured and assigned.')
+        } else {
+            $Status = 'Failed'
+            $ResultLines.Add('No Windows BitLocker policy is configured or assigned.')
+        }
+
+        if ($BitLockerPolicies.Count -gt 0) {
             $ResultLines.Add('')
             $ResultLines.Add('**Windows BitLocker Policies:**')
             $ResultLines.Add('')
-            $ResultLines.Add('| Policy Name | Status | Assignment Count |')
-            $ResultLines.Add('| :---------- | :----- | :--------------- |')
-
-            foreach ($Policy in $WindowsBitLockerPolicies) {
-                $PolicyStatus = if ($Policy.assignments -and $Policy.assignments.Count -gt 0) {
-                    '✅ Assigned'
-                } else {
-                    '❌ Not assigned'
-                }
-                $AssignmentCount = if ($Policy.assignments) { $Policy.assignments.Count } else { 0 }
-                $ResultLines.Add("| $($Policy.name) | $PolicyStatus | $AssignmentCount |")
+            $ResultLines.Add('| Policy Name | Template Family | Status | Assignment Count |')
+            $ResultLines.Add('| :---------- | :-------------- | :----- | :--------------- |')
+            foreach ($Policy in $BitLockerPolicies) {
+                $PolicyStatus = if ($Policy.assignments -and $Policy.assignments.Count -gt 0) { '✅ Assigned' } else { '❌ Not assigned' }
+                $ResultLines.Add("| $($Policy.name) | $($Policy.templateReference.templateFamily) | $PolicyStatus | $(@($Policy.assignments).Count) |")
             }
-
-            $Result = $ResultLines -join "`n"
-        } else {
-            $Status = 'Failed'
-            if ($WindowsBitLockerPolicies.Count -gt 0) {
-                $ResultLines = [System.Collections.Generic.List[string]]::new()
-                $ResultLines.Add('Windows BitLocker policies exist but none are assigned.')
-                $ResultLines.Add('')
-                $ResultLines.Add('**Unassigned BitLocker Policies:**')
-                $ResultLines.Add('')
-                foreach ($Policy in $WindowsBitLockerPolicies) {
-                    $ResultLines.Add("- $($Policy.name)")
-                }
-            } else {
-                $ResultLines = @('No Windows BitLocker policy is configured or assigned.')
-            }
-            $Result = $ResultLines -join "`n"
         }
 
+        if ($LegacyProfiles.Count -gt 0) {
+            $ResultLines.Add('')
+            $ResultLines.Add('**Legacy Windows BitLocker Profiles:**')
+            $ResultLines.Add('')
+            $ResultLines.Add('| Profile Name | Profile Type | Status | Assignment Count |')
+            $ResultLines.Add('| :----------- | :----------- | :----- | :--------------- |')
+            foreach ($LegacyProfile in $LegacyProfiles) {
+                $PolicyStatus = if ($LegacyProfile.assignments -and $LegacyProfile.assignments.Count -gt 0) { '✅ Assigned' } else { '❌ Not assigned' }
+                $ProfileType = $LegacyProfile.'@odata.type' -replace '#microsoft.graph.', ''
+                $ResultLines.Add("| $($LegacyProfile.displayName) | $ProfileType | $PolicyStatus | $(@($LegacyProfile.assignments).Count) |")
+            }
+        }
+
+        $Result = $ResultLines -join "`n"
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24550' -TestType 'Devices' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Data on Windows is protected by BitLocker encryption' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

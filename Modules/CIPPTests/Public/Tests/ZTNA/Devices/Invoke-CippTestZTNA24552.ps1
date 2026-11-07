@@ -1,7 +1,7 @@
 function Invoke-CippTestZTNA24552 {
     <#
     .SYNOPSIS
-    Data on macOS is protected by firewall
+    macOS Firewall policies protect against unauthorized network access
     #>
     param($Tenant)
     #Tested - Device
@@ -9,84 +9,56 @@ function Invoke-CippTestZTNA24552 {
     try {
         $ConfigurationPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'IntuneConfigurationPolicies'
         if (-not $ConfigurationPolicies) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24552' -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Data on macOS is protected by firewall' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24552' -TestType 'Devices' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'macOS Firewall policies protect against unauthorized network access' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 
-        $MacOSPolicies = $ConfigurationPolicies.Where({
-            $_.platforms -match 'macOS'
-        })
+        $FirewallSettingId = 'com.apple.security.firewall_com.apple.security.firewall'
+        $FirewallPolicies = $ConfigurationPolicies.Where({
+                $_.platforms -match 'macOS' -and
+                $_.technologies -match 'mdm' -and
+                $_.technologies -match 'appleRemoteManagement' -and
+                $_.settings.settingInstance.settingDefinitionId -contains $FirewallSettingId
+            })
 
-        $MacOSFirewallPolicies = [System.Collections.Generic.List[object]]::new()
-        foreach ($MacOSPolicy in $MacOSPolicies) {
-            $ValidSettingValues = @('com.apple.security.firewall_enablefirewall_true')
-
-            if ($MacOSPolicy.settings.settinginstance.choicesettingvalue.value) {
-                $PolicySettingValues = $MacOSPolicy.settings.settinginstance.choicesettingvalue.value
-                if ($PolicySettingValues -isnot [array]) {
-                    $PolicySettingValues = @($PolicySettingValues)
-                }
-
-                $HasValidSetting = $false
-                foreach ($SettingValue in $PolicySettingValues) {
-                    if ($ValidSettingValues -contains $SettingValue) {
-                        $HasValidSetting = $true
-                        break
-                    }
-                }
-
-                if ($HasValidSetting) {
-                    $MacOSFirewallPolicies.Add($MacOSPolicy)
-                }
+        $FirewallRows = foreach ($Policy in $FirewallPolicies) {
+            $FirewallSetting = $Policy.settings.settingInstance.Where({ $_.settingDefinitionId -eq $FirewallSettingId }, 'First')[0]
+            $Values = @($FirewallSetting.groupSettingCollectionValue)[0].children.choiceSettingValue.value
+            [pscustomobject]@{
+                Policy   = $Policy
+                Enabled  = $Values -contains 'com.apple.security.firewall_enablefirewall_true'
+                Assigned = [bool]($Policy.assignments -and $Policy.assignments.Count -gt 0)
             }
         }
+        $FirewallRows = @($FirewallRows)
 
-        $AssignedPolicies = $MacOSFirewallPolicies.Where({
-            $_.assignments -and $_.assignments.Count -gt 0
-        })
-
-        if ($AssignedPolicies.Count -gt 0) {
+        $ResultLines = [System.Collections.Generic.List[string]]::new()
+        if ($FirewallRows.Where({ $_.Enabled -and $_.Assigned }).Count -gt 0) {
             $Status = 'Passed'
-            $ResultLines = [System.Collections.Generic.List[string]]::new()
-            $ResultLines.Add('At least one macOS Firewall policy is configured and assigned.')
+            $ResultLines.Add('A macOS firewall policy is configured and assigned in Intune.')
+        } else {
+            $Status = 'Failed'
+            $ResultLines.Add('No assigned macOS firewall policy was found in Intune.')
+        }
+
+        if ($FirewallRows.Count -gt 0) {
             $ResultLines.Add('')
             $ResultLines.Add('**macOS Firewall Policies:**')
             $ResultLines.Add('')
-            $ResultLines.Add('| Policy Name | Status | Assignment Count |')
-            $ResultLines.Add('| :---------- | :----- | :--------------- |')
-
-            foreach ($Policy in $MacOSFirewallPolicies) {
-                $PolicyStatus = if ($Policy.assignments -and $Policy.assignments.Count -gt 0) {
-                    '✅ Assigned'
-                } else {
-                    '❌ Not assigned'
-                }
-                $AssignmentCount = if ($Policy.assignments) { $Policy.assignments.Count } else { 0 }
-                $ResultLines.Add("| $($Policy.name) | $PolicyStatus | $AssignmentCount |")
+            $ResultLines.Add('| Policy Name | Status | Assignment Count | Firewall Status |')
+            $ResultLines.Add('| :---------- | :----- | :--------------- | :-------------- |')
+            foreach ($Row in $FirewallRows) {
+                $PolicyStatus = if ($Row.Assigned) { '✅ Assigned' } else { '❌ Not assigned' }
+                $FirewallStatus = if ($Row.Enabled) { '✅ Enabled' } else { '❌ Disabled' }
+                $ResultLines.Add("| $($Row.Policy.name) | $PolicyStatus | $(@($Row.Policy.assignments).Count) | $FirewallStatus |")
             }
-
-            $Result = $ResultLines -join "`n"
-        } else {
-            $Status = 'Failed'
-            if ($MacOSFirewallPolicies.Count -gt 0) {
-                $ResultLines = [System.Collections.Generic.List[string]]::new()
-                $ResultLines.Add('macOS Firewall policies exist but none are assigned.')
-                $ResultLines.Add('')
-                $ResultLines.Add('**Unassigned Firewall Policies:**')
-                $ResultLines.Add('')
-                foreach ($Policy in $MacOSFirewallPolicies) {
-                    $ResultLines.Add("- $($Policy.name)")
-                }
-            } else {
-                $ResultLines = @('No macOS Firewall policy is configured or assigned.')
-            }
-            $Result = $ResultLines -join "`n"
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24552' -TestType 'Devices' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Data on macOS is protected by firewall' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
+        $Result = $ResultLines -join "`n"
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24552' -TestType 'Devices' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'macOS Firewall policies protect against unauthorized network access' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Device'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24552' -TestType 'Devices' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Data on macOS is protected by firewall' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Device'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24552' -TestType 'Devices' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'Medium' -Name 'macOS Firewall policies protect against unauthorized network access' -UserImpact 'High' -ImplementationEffort 'Low' -Category 'Device'
     }
 }
