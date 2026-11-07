@@ -22,7 +22,8 @@ function Get-CippMcpKnownClients {
           entry covers VS Code (33418) and Copilot CLI (random ports).
         - ConfidentialRedirectUris -> 'web'. For clients that authenticate with a client secret,
           i.e. the Power Platform connector behind Copilot Studio / M365 Copilot agents, whose
-          wizard collects a client ID and secret.
+          wizard collects a client ID and secret, and Microsoft 365 Copilot / Copilot Cowork plugins,
+          whose OAuth client registration in the Teams developer portal holds the ID and secret.
         - PreAuthorizedClientIds: first-party Entra applications that bring their own client ID
           (VS Code, also used by GitHub Copilot Chat). These need pre-authorization on the
           user_impersonation scope and an EasyAuth allowedApplications entry, not a redirect URI.
@@ -52,6 +53,9 @@ function Get-CippMcpKnownClients {
         ConfidentialRedirectUris = @(
             # Copilot Studio / M365 Copilot agents (Power Platform connector redirect)
             'https://global.consent.azure-apim.net/redirect'
+            # Microsoft 365 Copilot / Copilot Cowork plugins (agentConnectors with OAuthPluginVault). The Teams
+            # Enterprise Token Store redeems the code server-side with the client secret, so this is a Web callback.
+            'https://teams.microsoft.com/api/platform/v1.0/oAuthRedirect'
         )
         PreAuthorizedClientIds   = @(
             # Visual Studio Code (first-party; also used by GitHub Copilot Chat in VS Code)
