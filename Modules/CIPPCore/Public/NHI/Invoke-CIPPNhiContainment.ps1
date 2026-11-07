@@ -199,8 +199,8 @@ function Invoke-CIPPNhiContainment {
                                     }
                                     'Eligible directory role' {
                                         @(New-GraphGetRequest -uri "$Graph/roleManagement/directory/roleEligibilitySchedules?`$filter=principalId eq '$($Row.RecipientId)' and roleDefinitionId eq '$($Row.ElevationRoleId)'" -tenantid $TenantFilter -AsApp $true | ForEach-Object {
-                                                $Body = @{ action = 'adminRemove'; principalId = $Row.RecipientId; roleDefinitionId = $Row.ElevationRoleId; directoryScopeId = [string]($_.directoryScopeId ?? '/'); justification = "NHI containment [case $CaseId]" }
-                                                $null = New-GraphPOSTRequest -uri "$Graph/roleManagement/directory/roleEligibilityScheduleRequests" -tenantid $TenantFilter -type POST -body (ConvertTo-Json -InputObject $Body -Compress) -AsApp $true
+                                                $Req = New-CIPPPIMScheduleRequest -Kind Eligibility -Action adminRemove -PrincipalId $Row.RecipientId -RoleDefinitionId $Row.ElevationRoleId -DirectoryScopeId ([string]$_.directoryScopeId) -Justification "NHI containment [case $CaseId]"
+                                                $null = New-GraphPOSTRequest -uri $Req.Uri -tenantid $TenantFilter -type POST -body (ConvertTo-Json -InputObject $Req.Body -Compress) -AsApp $true
                                                 $_.id
                                             })
                                     }
