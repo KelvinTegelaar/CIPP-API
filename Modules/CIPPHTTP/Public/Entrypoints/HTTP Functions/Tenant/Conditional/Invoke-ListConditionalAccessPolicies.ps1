@@ -120,7 +120,7 @@ function Invoke-ListConditionalAccessPolicies {
             $Requests = @(
                 @{
                     id     = 'policies'
-                    url    = 'identity/conditionalAccess/policies'
+                    url    = 'identity/conditionalAccess/policies?$orderby=displayName'
                     method = 'GET'
                 }
                 @{
@@ -281,7 +281,7 @@ function Invoke-ListConditionalAccessPolicies {
     if (!$Body) {
         $StatusCode = [HttpStatusCode]::OK
         $Body = [PSCustomObject]@{
-            Results  = @($GraphRequest | Where-Object -Property id -NE $null | Sort-Object id -Descending)
+            Results  = @($GraphRequest | Where-Object -Property id -NE $null)
             Metadata = $Metadata
         }
     }
