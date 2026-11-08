@@ -13,7 +13,10 @@ function Start-CIPPStatsTimer {
         if ($env:ApplicationID -ne 'LongApplicationID') {
             $SetupComplete = $true
         }
-        $TenantCount = (Get-Tenants -IncludeAll).count
+        $AllTenants = @(Get-Tenants -IncludeAll)
+        $TenantCount = $AllTenants.Count
+        $DirectAddTenants = @($AllTenants | Where-Object { $_.delegatedPrivilegeStatus -eq 'directTenant' }).Count
+        $GDAPTenants = $TenantCount - $DirectAddTenants
 
 
         $APIVersion = if ($env:CIPPNG -eq 'true') {
@@ -37,7 +40,7 @@ function Start-CIPPStatsTimer {
         # Get counts of various entities across all tenants: one key read per tenant per type, since a count read without a type scans the whole table
         $IntunePolicyTypes = @(@(Get-CIPPIntunePolicyListDefinitions).CacheType) + @('IntuneAppProtectionManagedAppPolicies') |
             Where-Object { $_ -match 'Intune' -and $_ -match 'Policies|Policy' } | Sort-Object -Unique
-        $counts = foreach ($Type in @('Users', 'Devices', 'Groups', 'ManagedDevices', 'IntuneApplications') + $IntunePolicyTypes) {
+        $counts = foreach ($Type in @('Users', 'Devices', 'Groups', 'ManagedDevices', 'IntuneApplications', 'ConditionalAccessPolicies') + $IntunePolicyTypes) {
             Get-CIPPDbItem -TenantFilter AllTenants -CountsOnly -Type $Type
         }
         $userCount = ($counts | Where-Object { $_.RowKey -eq 'Users-Count' } | Measure-Object -Property DataCount -Sum).Sum
@@ -46,12 +49,17 @@ function Start-CIPPStatsTimer {
         $managedDevicesCount = ($counts | Where-Object { $_.RowKey -eq 'ManagedDevices-Count' } | Measure-Object -Property DataCount -Sum).Sum
         $policyCount = ($counts | Where-Object { $_.RowKey -match 'Intune' -and $_.RowKey -match 'Policies|Policy' } | Measure-Object -Property DataCount -Sum).Sum
         $deployedApps = ($counts | Where-Object { $_.RowKey -eq 'IntuneApplications-Count' } | Measure-Object -Property DataCount -Sum).Sum
+        $caPolicyCounts = @($counts | Where-Object { $_.RowKey -eq 'ConditionalAccessPolicies-Count' })
+        $caPolicyCount = ($caPolicyCounts | Measure-Object -Property DataCount -Sum).Sum
         $ReportsTable = Get-CippTable -tablename 'ReportBuilderTemplates'
         $CustomReportCount = (Get-CIPPAzDataTableEntity @ReportsTable -Filter "PartitionKey eq 'ReportBuilderTemplates'").count
         $uniqueStandardsApplied = Get-CIPPStatsUniqueStandardsApplied
         $driftStandardsCount = Get-CIPPStatsDriftStandardsCount
         $mobileEnrollment = Get-CIPPStatsMobileEnrollment
         $baselineStats = Get-CIPPStatsBaselines
+        $licenseTotals = Get-CIPPStatsLicenseTotals
+        $enterpriseApps = Get-CIPPStatsEnterpriseApps
+        $tenantSecurity = Get-CIPPStatsTenantSecurity -Tenants $AllTenants -CACounts $caPolicyCounts
 
         # Feature flags
         $FeatureFlags = @{}
@@ -115,6 +123,13 @@ function Start-CIPPStatsTimer {
             BaselineCount          = $baselineStats.BaselineCount
             BaselineTenantCount    = $baselineStats.BaselineTenantCount
             BaselineStandardsCount = $baselineStats.BaselineStandardsCount
+            Licenses               = ($licenseTotals | ConvertTo-Json -Compress -Depth 5)
+            EnterpriseApps         = ($enterpriseApps | ConvertTo-Json -Compress -Depth 5 -AsArray)
+            TenantCapabilities     = ($tenantSecurity.TenantCapabilities | ConvertTo-Json -Compress -Depth 5)
+            CAPolicies             = $caPolicyCount
+            SecuritySettings       = ($tenantSecurity.SecuritySettings | ConvertTo-Json -Compress -Depth 5)
+            GDAPTenants            = $GDAPTenants
+            DirectAddTenants       = $DirectAddTenants
         } | ConvertTo-Json
 
         try {
