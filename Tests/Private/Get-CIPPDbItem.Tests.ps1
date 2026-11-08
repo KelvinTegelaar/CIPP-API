@@ -1,6 +1,5 @@
 # Pester tests for Get-CIPPDbItem's allTenants read and Get-CIPPMailboxRulesReport built on it.
-# A tenant-restricted caller must only read its own tenants' partitions; an unrestricted one
-# reads the table once.
+# Reads walk managed tenants' partitions; only an unrestricted plain (non -ByTenant) read scans the table.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -79,11 +78,17 @@ Describe 'Get-CIPPDbItem allTenants' {
         $script:Filters | Should -Be @("PartitionKey eq 'a.com' and RowKey eq 'MailboxRules-Count'", "PartitionKey eq 'b.com' and RowKey eq 'MailboxRules-Count'")
     }
 
-    It '-ByTenant groups data rows by managed tenant, without count rows' {
+    It '-ByTenant reads each managed tenant''s partition in ordinal order, without count rows' {
         $script:CippAllowedTenantsStorage.Value = $null
-        Mock Get-Tenants { @($script:TenantA, $script:TenantB) }
-        Mock Get-CIPPAzDataTableEntity { $script:Rows; [pscustomobject]@{ PartitionKey = 'a.com'; RowKey = 'MailboxRules-Count'; DataCount = 2 } }
+        Mock Get-Tenants { @($script:TenantB, $script:TenantA) }
+        Mock Get-CIPPAzDataTableEntity {
+            $script:Filters.Add($Filter)
+            $P = if ($Filter -match "PartitionKey eq '([^']+)'") { $Matches[1] }
+            $script:Rows | Where-Object PartitionKey -EQ $P
+            [pscustomobject]@{ PartitionKey = $P; RowKey = 'MailboxRules-Count'; DataCount = 2 }
+        }
         $Result = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'MailboxRules' -ByTenant
+        $script:Filters | Should -Be @("PartitionKey eq 'a.com' and RowKey ge 'MailboxRules-' and RowKey lt 'MailboxRules.'", "PartitionKey eq 'b.com' and RowKey ge 'MailboxRules-' and RowKey lt 'MailboxRules.'")
         @($Result.Keys) | Should -Be @('a.com', 'b.com')
         $Result['a.com'].RowKey | Should -Be @('MailboxRules-1', 'MailboxRules-2')
         $Result['b.com'].Count | Should -Be 1
@@ -130,9 +135,9 @@ Describe 'Get-CIPPMailboxRulesReport' {
         }
     }
 
-    It 'reads AllTenants once, drops unmanaged tenants and stamps each tenant''s latest timestamp' {
+    It 'reads AllTenants one managed partition at a time and stamps each tenant''s latest timestamp' {
         $Result = Get-CIPPMailboxRulesReport -TenantFilter 'AllTenants'
-        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 2 -Exactly
         @($Result.Name | Sort-Object) | Should -Be @('a1', 'a2', 'b1')
         ($Result | Where-Object Name -EQ 'a1').CacheTimestamp | Should -Be ([datetimeoffset]'2026-09-29T02:00:00Z')
         ($Result | Where-Object Name -EQ 'b1').CacheTimestamp | Should -Be ([datetimeoffset]'2026-09-29T01:00:00Z')

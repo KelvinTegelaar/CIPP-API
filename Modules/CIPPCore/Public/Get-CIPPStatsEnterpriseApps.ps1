@@ -17,13 +17,18 @@ function Get-CIPPStatsEnterpriseApps {
         $VendorTenants = Get-CIPPVendorTenantMap
         $CippAppId = [string]$env:ApplicationID
         $Fields = [string[]]@('appId', 'displayName', 'appOwnerOrganizationId', 'servicePrincipalType')
+        # Through MethodInfo.Invoke: PowerShell copies a large string passed straight to a method several times per call
+        $ParseJson = [CIPP.CippJson].GetMethod('ConvertFromJson', [type[]]@([string], [string[]]))
 
         $Apps = @{}
-        $Rows = Get-CIPPDbItem -TenantFilter allTenants -Type 'ServicePrincipals' -ByTenant
-        foreach ($Tenant in $Rows.Keys) {
-            foreach ($Row in $Rows[$Tenant]) {
-                if ([string]::IsNullOrWhiteSpace($Row.Data)) { continue }
-                $Parsed = try { [CIPP.CippJson]::ConvertFromJson([string]$Row.Data, $Fields) } catch { $null }
+        # One tenant at a time: service principal rows are large, and holding every tenant's peaks the heap.
+        # Ordinal order, as a table read returns them: an app's display name is the first one seen.
+        $Tenants = [string[]]@((Get-Tenants -IncludeErrors).defaultDomainName | Where-Object { $_ })
+        [Array]::Sort($Tenants, [StringComparer]::Ordinal)
+        foreach ($Tenant in $Tenants) {
+            foreach ($Row in (Get-CIPPDbItem -Partition $Tenant -Type 'ServicePrincipals')) {
+                if (-not $Row.Data) { continue }
+                $Parsed = try { $ParseJson.Invoke($null, [object[]]@([string]$Row.Data, $Fields)) } catch { $null }
                 foreach ($Sp in @($Parsed)) {
                     $AppId = [string]$Sp.appId
                     if ([string]::IsNullOrWhiteSpace($AppId)) { continue }

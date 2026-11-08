@@ -3,7 +3,8 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     if (-not ('CIPP.CippJson' -as [type])) { Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll') }
-    function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$ByTenant) }
+    function Get-CIPPDbItem { param($Partition, $Type) }
+    function Get-Tenants { param([switch]$IncludeErrors) }
     function Get-CIPPVendorTenantMap { }
     function Write-LogMessage { param($API, $tenant, $message, $sev) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPStatsEnterpriseApps.ps1')
@@ -23,8 +24,9 @@ Describe 'Get-CIPPStatsEnterpriseApps' {
 
     It 'counts non-Microsoft apps once per tenant and skips Microsoft, CIPP, managed identity and other default principals' {
         $env:ApplicationID = 'cipp-sam-app'
+        Mock Get-Tenants { [pscustomobject]@{ defaultDomainName = 't1.com' }; [pscustomobject]@{ defaultDomainName = 't2.com' } }
         Mock Get-CIPPDbItem {
-            $Rows = [ordered]@{}
+            $Rows = @{}
             $Rows['t1.com'] = @(
                 (New-Row @{ id = '1'; appId = 'app-a'; displayName = 'MyEnterpriseApp'; appOwnerOrganizationId = '11111111-1111-1111-1111-111111111111'; servicePrincipalType = 'Application' })
                 (New-Row @{ id = '2'; appId = 'app-a'; displayName = 'MyEnterpriseApp'; appOwnerOrganizationId = '11111111-1111-1111-1111-111111111111'; servicePrincipalType = 'Application' })
@@ -38,7 +40,7 @@ Describe 'Get-CIPPStatsEnterpriseApps' {
                 (New-Row @{ id = '6'; appId = 'app-c'; displayName = 'OtherApp'; appOwnerOrganizationId = '22222222-2222-2222-2222-222222222222'; servicePrincipalType = 'Application' })
                 (New-Row @{ id = '9'; appId = 'cipp-sam-app'; displayName = 'CIPP-SAM'; appOwnerOrganizationId = '33333333-3333-3333-3333-333333333333'; servicePrincipalType = 'Application' })
             )
-            $Rows
+            $Rows[$Partition]
         }
         $r = @(Get-CIPPStatsEnterpriseApps)
         $r.Count | Should -Be 2
@@ -47,10 +49,11 @@ Describe 'Get-CIPPStatsEnterpriseApps' {
         $r[0].Count | Should -Be 2
         $r[1].ID | Should -Be 'app-c'
         $r[1].Count | Should -Be 1
-        Should -Invoke Get-CIPPDbItem -Times 1 -ParameterFilter { $TenantFilter -eq 'allTenants' -and $Type -eq 'ServicePrincipals' -and $ByTenant }
+        Should -Invoke Get-CIPPDbItem -Times 2 -Exactly -ParameterFilter { $Partition -in 't1.com', 't2.com' -and $Type -eq 'ServicePrincipals' }
     }
 
     It 'returns an empty list when the read fails' {
+        Mock Get-Tenants { [pscustomobject]@{ defaultDomainName = 't1.com' } }
         Mock Get-CIPPDbItem { throw 'boom' }
         @(Get-CIPPStatsEnterpriseApps).Count | Should -Be 0
     }

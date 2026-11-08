@@ -57,7 +57,6 @@ function Get-CIPPDbItem {
 
         # $null = whole table; a scoped caller asking for allTenants reads only the tenants it may see
         $Partitions = $null
-        $Managed = $null
         if ($Partition) {
             $TenantFilter = $Partition
             $Partitions = @($Partition)
@@ -72,8 +71,9 @@ function Get-CIPPDbItem {
             # One count row per tenant is a key lookup each; a RowKey-only filter scans the whole table
             $Partitions = @((Get-Tenants -IncludeErrors).defaultDomainName | Where-Object { $_ })
         } elseif ($ByTenant) {
-            # A whole-table read also returns rows of tenants no longer managed
-            $Managed = [System.Collections.Generic.HashSet[string]]::new([string[]]@((Get-Tenants -IncludeErrors).defaultDomainName), [StringComparer]::OrdinalIgnoreCase)
+            # A RowKey-only filter scans the whole table; one range read per managed tenant uses the partition index
+            $Partitions = [string[]]@((Get-Tenants -IncludeErrors).defaultDomainName | Where-Object { $_ })
+            [Array]::Sort($Partitions, [StringComparer]::Ordinal)
         }
 
         $Query = @{}
@@ -99,7 +99,7 @@ function Get-CIPPDbItem {
         if ($ByTenant) {
             $Grouped = [ordered]@{}
             foreach ($Row in $Results) {
-                if ($Row.RowKey -eq "$Type-Count" -or ($Managed -and -not $Managed.Contains([string]$Row.PartitionKey))) { continue }
+                if ($Row.RowKey -eq "$Type-Count") { continue }
                 if (-not $Grouped.Contains($Row.PartitionKey)) { $Grouped[$Row.PartitionKey] = [System.Collections.Generic.List[object]]::new() }
                 $Grouped[$Row.PartitionKey].Add($Row)
             }
