@@ -50,6 +50,9 @@ function Invoke-ExecIncidentsList {
 
         $GraphRequest = foreach ($incident in $Incidents) {
             if ($null -eq $incident.id) { continue }
+            $Tags = [System.Collections.Generic.List[string]]::new()
+            foreach ($Tag in $incident.customTags) { if ($Tag) { $Tags.Add($Tag) } }
+            foreach ($Tag in $incident.systemTags) { if ($Tag) { $Tags.Add($Tag) } }
             [PSCustomObject]@{
                 Tenant         = $incident.Tenant ?? $TenantFilter
                 Id             = $incident.id
@@ -63,7 +66,7 @@ function Invoke-ExecIncidentsList {
                 Classification = $incident.classification
                 Determination  = $incident.determination
                 Severity       = $incident.severity
-                Tags           = ($incident.tags -join ', ')
+                Tags           = $Tags -join ', '
                 Comments       = @($incident.comments)
             }
         }

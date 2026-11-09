@@ -38,3 +38,18 @@ Describe 'Invoke-ExecIncidentsList for AllTenants' {
         @($response.Body.Results).ForEach({ "$($_.Tenant)/$($_.DisplayName)" }) | Should -Be 'b.com/In range'
     }
 }
+
+Describe 'Invoke-ExecIncidentsList tags' {
+    It 'joins custom and system tags' {
+        Mock New-GraphGetRequest {
+            [pscustomobject]@{ id = '3'; createdDateTime = [datetime]'2026-10-03T10:00:00Z'; customTags = @('VIP'); systemTags = @('Credential Phish') }
+            [pscustomobject]@{ id = '2'; createdDateTime = [datetime]'2026-10-02T10:00:00Z'; customTags = @(); systemTags = @('Credential Phish') }
+            [pscustomobject]@{ id = '1'; createdDateTime = [datetime]'2026-10-01T10:00:00Z'; customTags = @(); systemTags = @() }
+        }
+        $request = [pscustomobject]@{ Query = [pscustomobject]@{ tenantFilter = 'a.com' } }
+
+        $response = Invoke-ExecIncidentsList -Request $request -TriggerMetadata $null
+
+        @($response.Body.Results).ForEach({ $_.Tags }) | Should -Be @('VIP, Credential Phish', 'Credential Phish', '')
+    }
+}
