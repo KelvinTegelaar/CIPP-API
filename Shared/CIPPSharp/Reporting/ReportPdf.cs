@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using OfficeIMO;
 using OfficeIMO.Pdf;
+using static OfficeIMO.OfficeLength;
 
 namespace CIPP.Reporting
 {
@@ -51,15 +52,15 @@ namespace CIPP.Reporting
                 blocks.RemoveAll(b => b.Type == "cover");
             }
 
-            var logo = ReportComponents.DecodeImage(branding.Logo);
+            var logo = ReportComponents.DecodeImage(branding.Logo, background: false);
             // The cover photo, resolved the way the client's resolveCoverImage did: an uploaded cover wins,
             // then the stock photo the branding picked ("none" means no cover at all), then the report's
             // own %coverfallbackimage% (e.g. "/reportImages/soc.jpg"), so a report without configured
             // branding still gets a cover.
-            var coverImage = ReportComponents.DecodeImage(branding.CoverImage)
+            var coverImage = ReportComponents.DecodeImage(branding.CoverImage, background: true)
                 ?? (branding.CoverStock == "none" ? null
-                    : ReportComponents.DecodeImage(branding.CoverStock)
-                        ?? (variables.TryGetValue("coverfallbackimage", out var coverFallback) ? ReportComponents.DecodeImage(coverFallback) : null));
+                    : ReportComponents.DecodeImage(branding.CoverStock, background: true)
+                        ?? (variables.TryGetValue("coverfallbackimage", out var coverFallback) ? ReportComponents.DecodeImage(coverFallback, background: true) : null));
             ReportContext Context(byte[]? logoBytes) => new()
             {
                 Theme = theme,
@@ -84,7 +85,9 @@ namespace CIPP.Reporting
             // with room behind them for the line moves LiftWatermark writes in their place.
             var markLines = ReportComponents.WrapLines(watermark, ReportStyles.ContentWidth(pageSize, landscape) + 2 * ReportStyles.PagePadding, WatermarkSize, bold: true, tracking: 4);
             if (markLines.Count > 1) watermark = string.Join(" ", markLines) + new string(' ', MarkLineRoom * (markLines.Count - 1));
-            byte[] Finish(PdfDocument doc) => chrome ? LiftWatermark(doc.ToBytes(), watermark, markLines) : doc.ToBytes();
+            // The report is written as laid out: OfficeIMO counts a glyph it cannot measure as loss (the standard
+            // fonts' Euro has no ink box) and refuses the save, and a save that allows loss skips its diagnostics.
+            byte[] Finish(PdfDocument doc) => chrome ? LiftWatermark(doc.ToBytes(SaveAsLaidOut), watermark, markLines) : doc.ToBytes(SaveAsLaidOut);
             try { return Finish(Compose(Context(logo), groups, chrome, watermark)); }
             catch when (logo is not null) { return Finish(Compose(Context(null), groups, chrome, watermark)); }
         }
@@ -107,7 +110,7 @@ namespace CIPP.Reporting
                 {
                     p.Size(ResolveSize(ctx.PageSize));
                     if (ctx.Landscape) p.Landscape();
-                    p.Margin(ReportStyles.PagePadding);
+                    p.Margin(Points(ReportStyles.PagePadding));
                 }
 
                 // Cover - its own page, no header/footer/watermark. Skipped in chrome-less mode (used by
@@ -133,7 +136,7 @@ namespace CIPP.Reporting
                         // Full-bleed divider: a dark page with an optional cover photo behind the big figure,
                         // no header/footer chrome. The photo is a page background image (edge to edge); the
                         // text is drawn over it, vertically centred, with the footer note bottom-right.
-                        var heroImage = ReportComponents.DecodeImage(group.Block!.Str("heroImage") ?? group.Block!.Str("backgroundImage"));
+                        var heroImage = ReportComponents.DecodeImage(group.Block!.Str("heroImage") ?? group.Block!.Str("backgroundImage"), background: true);
                         compose.Section(p =>
                         {
                             ApplyPageDefaults(p);
@@ -146,7 +149,7 @@ namespace CIPP.Reporting
                             // The client's watermarkTextOnDark: the same mark in the divider's text colour and a
                             // little stronger, since an 8% brand-colour mark disappears on a dark page.
                             if (!string.IsNullOrEmpty(watermark))
-                                p.Watermark(watermark.ToUpperInvariant(), fontSize: WatermarkSize, color: ReportComponents.Pdf(ctx.Theme.OnInfographic), opacity: 0.12, rotationAngle: DividerWatermarkAngle, bold: true);
+                                p.Watermark(watermark.ToUpperInvariant(), fontSize: Points(WatermarkSize), color: ReportComponents.Pdf(ctx.Theme.OnInfographic), opacity: 0.12, rotationAngle: DividerWatermarkAngle, bold: true);
                             p.Content(cc => cc.Item(i => ReportComponents.RenderHeroDrawing(ctx, i, group.Block!)));
                         });
                         continue;
@@ -189,9 +192,11 @@ namespace CIPP.Reporting
         // emoji code point through it (per character - the surrounding text stays in the standard font), in
         // table cells and paragraphs alike. The report's three status emoji are tinted per run downstream;
         // everything else renders in the surrounding text colour.
-        private static PdfOptions BuildOptions()
+        private static readonly PdfSaveOptions SaveAsLaidOut = new() { AllowLoss = true };
+
+        private static PdfCreateOptions BuildOptions()
         {
-            var options = new PdfOptions();
+            var options = new PdfCreateOptions { EmbedDefaultFonts = false, CompressContentStreams = false, TextKerning = false, SplitWordsAtLineEnd = false };
             if (EmojiFallbacks.Value is { } fallbacks)
             {
                 options.CompressEmbeddedFonts = true;
@@ -265,10 +270,10 @@ namespace CIPP.Reporting
             var titleColour = ctx.Theme.Palette["title"];
             var subtitleColour = ctx.Theme.Palette["subtitle"];
             var titleText = title ?? ctx.ReportName;
-            Action<PdfParagraphBuilder> titleRun = b => { b.FontSize(ReportStyles.PageTitle); ReportComponents.EmitInline(b, titleText, titleColour, ReportStyles.PageTitle, bold: true); };
-            Action<PdfParagraphBuilder>? subtitleRun = string.IsNullOrEmpty(subtitle) ? null
-                : b => { b.FontSize(ReportStyles.PageSubtitle); ReportComponents.EmitInline(b, subtitle!, subtitleColour, ReportStyles.PageSubtitle); };
-            var subtitleStyle = new PdfParagraphStyle { LineHeight = 14 / ReportStyles.PageSubtitle, SpacingAfter = 0 };
+            Action<PdfParagraph> titleRun = b => { b.RunDefaults.FontSize = Points(ReportStyles.PageTitle); ReportComponents.EmitInline(b, titleText, titleColour, ReportStyles.PageTitle, bold: true); };
+            Action<PdfParagraph>? subtitleRun = string.IsNullOrEmpty(subtitle) ? null
+                : b => { b.RunDefaults.FontSize = Points(ReportStyles.PageSubtitle); ReportComponents.EmitInline(b, subtitle!, subtitleColour, ReportStyles.PageSubtitle); };
+            var subtitleStyle = new PdfParagraphStyle { LineSpacing = ReportComponents.Leading(14 / ReportStyles.PageSubtitle, ReportStyles.PageSubtitle), SpacingAfter = Points(0) };
             var titleSeat = 0.9 * ReportStyles.PageTitle - ReportComponents.FlowBaseline;
 
             // Client pageHeader: the title block takes the width (flex 1) and the branding logo sits at the
@@ -283,32 +288,32 @@ namespace CIPP.Reporting
             var titleLines = ReportComponents.WrappedLines(ReportMarkdown.Sanitize(titleText), ctx.ContentWidth - box.w, ReportStyles.PageTitle, bold: true);
             var titleStyle = new PdfParagraphStyle
             {
-                LineHeight = titleLines > 1 ? 1.15 : (14 + 8 - 0.9 * (ReportStyles.PageTitle - ReportStyles.PageSubtitle)) / ReportStyles.PageTitle,
-                SpacingAfter = 0,
+                LineSpacing = ReportComponents.Leading(titleLines > 1 ? 1.15 : (14 + 8 - 0.9 * (ReportStyles.PageTitle - ReportStyles.PageSubtitle)) / ReportStyles.PageTitle, ReportStyles.PageTitle),
+                SpacingAfter = Points(0),
             };
             if (logoType is null)
             {
-                item.Spacer(titleSeat);
-                item.Paragraph(titleRun, PdfAlign.Left, null, titleStyle);
-                if (subtitleRun is not null) item.Paragraph(subtitleRun, PdfAlign.Left, null, subtitleStyle);
+                item.Spacer(Points(titleSeat));
+                item.AddParagraph(titleRun, OfficeAlignment.Left, null, titleStyle);
+                if (subtitleRun is not null) item.AddParagraph(subtitleRun, OfficeAlignment.Left, null, subtitleStyle);
             }
             else
             {
                 item.Row(r =>
                 {
-                    r.Gap(0);
+                    r.Gap(Points(0));
                     r.RelativeColumn(c =>
                     {
-                        c.Spacer(titleSeat);
-                        c.Paragraph(titleRun, PdfAlign.Left, null, titleStyle);
-                        if (subtitleRun is not null) c.Paragraph(subtitleRun, PdfAlign.Left, null, subtitleStyle);
+                        c.Spacer(Points(titleSeat));
+                        c.AddParagraph(titleRun, OfficeAlignment.Left, null, titleStyle);
+                        if (subtitleRun is not null) c.AddParagraph(subtitleRun, OfficeAlignment.Left, null, subtitleStyle);
                     });
-                    r.FixedColumn(box.w, c => c.Image(ctx.Logo!, box.w, box.h, PdfAlign.Right));
+                    r.FixedColumn(Points(box.w), c => c.AddImage(ctx.Logo!, Points(box.w), Points(box.h), OfficeAlignment.Right));
                 });
             }
             // Full-width brand rule under the header (HR auto-fits the content width; a fixed-width
             // rectangle risks exceeding it).
-            item.HR(1, ReportComponents.Pdf(ctx.Theme.Palette["heading"]), spacingBefore: 6.2, spacingAfter: 14);
+            item.HR(Points(1), ReportComponents.Pdf(ctx.Theme.Palette["heading"]), spacingBefore: Points(6.2), spacingAfter: Points(14));
         }
 
         // Client PageFooter: a 20pt box 14pt above the paper edge with a 1pt rule along its top, 5pt of padding
@@ -329,7 +334,7 @@ namespace CIPP.Reporting
         private static void ApplyContentChrome(PdfPageBuilder p, ReportContext ctx, string footerText, string watermark)
         {
             // Client content page padding: 28 above (the header, or a continued table), 40 below (the footer).
-            p.Margin(ReportStyles.PagePadding, PagePaddingTop, ReportStyles.PagePadding, FooterReserve);
+            p.Margin(Points(ReportStyles.PagePadding), Points(PagePaddingTop), Points(ReportStyles.PagePadding), Points(FooterReserve));
             var showText = ctx.Theme.FooterShow && !string.IsNullOrEmpty(footerText);
             if (showText || ctx.Theme.ShowPageNumbers)
             {
@@ -350,17 +355,17 @@ namespace CIPP.Reporting
                 var numberPad = OfficeIMO.Drawing.OfficeShape.Rectangle(80 - 4 - ReportComponents.TextEm("Page 8 of 8", bold: true) * ReportStyles.FooterText, 1);
                 p.Footer(f =>
                 {
-                    f.FontSize(ReportStyles.FooterText).Offset(FooterReserve - baseline);
-                    f.Shape(rule, PdfAlign.Center);
-                    if (ctx.Theme.ShowPageNumbers) f.Shape(numberPad, PdfAlign.Right);
+                    f.FontSize(Points(ReportStyles.FooterText)).Offset(Points(FooterReserve - baseline));
+                    f.Shape(rule, OfficeAlignment.Center);
+                    if (ctx.Theme.ShowPageNumbers) f.Shape(numberPad, OfficeAlignment.Right);
                     // The client's label wraps beside the page number's 80pt box; a zone would run under it, so a
                     // label too long for the room left of the box is cut with an ellipsis. The 16pt spare covers
                     // the number growing left past its box with two- and three-digit page counts.
                     var text = ReportMarkdown.Sanitize(footerText);
                     if (ctx.Theme.ShowPageNumbers) text = FitLine(text, w - 80 - 16, ReportStyles.FooterText);
-                    var label = new PdfTextRun(text, color: ReportComponents.Pdf(ctx.Theme.Palette["footer"]), fontSize: ReportStyles.FooterText);
-                    var number = new PdfTextRun(" ", bold: true, color: ReportComponents.Pdf(ReportColours.Faint), fontSize: ReportStyles.FooterText);
-                    PdfTextRun Number(string s) => new(s, bold: true, color: number.Color, fontSize: ReportStyles.FooterText);
+                    var label = new PdfTextRun(text, color: ReportComponents.Pdf(ctx.Theme.Palette["footer"]), fontSize: Points(ReportStyles.FooterText));
+                    var number = new PdfTextRun(" ", bold: true, color: ReportComponents.Pdf(ReportColours.Faint), fontSize: Points(ReportStyles.FooterText));
+                    PdfTextRun Number(string s) => new(s, bold: true, color: number.Color, fontSize: Points(ReportStyles.FooterText));
                     f.StyledZones(
                         showText ? z => z.Run(label) : null,
                         null,
@@ -371,7 +376,7 @@ namespace CIPP.Reporting
             // Watermark(text, 0.08, colour) asks for a 0.08pt watermark - drawn, but invisible. The values
             // mirror the client's watermarkText style: 72pt bold, uppercase, 8% opacity.
             if (!string.IsNullOrEmpty(watermark))
-                p.Watermark(watermark.ToUpperInvariant(), fontSize: WatermarkSize, color: ReportComponents.Pdf(ctx.Theme.Palette["watermark"]), opacity: 0.08, rotationAngle: WatermarkAngle, bold: true);
+                p.Watermark(watermark.ToUpperInvariant(), fontSize: Points(WatermarkSize), color: ReportComponents.Pdf(ctx.Theme.Palette["watermark"]), opacity: 0.08, rotationAngle: WatermarkAngle, bold: true);
         }
 
         // The client's mark is rotated -45deg in CSS, rising from bottom left to top right; OfficeIMO turns a
@@ -557,13 +562,13 @@ namespace CIPP.Reporting
             return groups;
         }
 
-        private static PageSize ResolveSize(string size) => (size ?? "A4").ToUpperInvariant() switch
+        private static PdfPageSize ResolveSize(string size) => (size ?? "A4").ToUpperInvariant() switch
         {
-            "LETTER" => PageSizes.Letter,
-            "LEGAL" => PageSizes.Legal,
-            "A3" => PageSizes.A3,
-            "A5" => PageSizes.A5,
-            _ => PageSizes.A4,
+            "LETTER" => PdfPageSizes.Letter,
+            "LEGAL" => PdfPageSizes.Legal,
+            "A3" => PdfPageSizes.A3,
+            "A5" => PdfPageSizes.A5,
+            _ => PdfPageSizes.A4,
         };
 
         private static Dictionary<string, string> ParseVariables(string? json)

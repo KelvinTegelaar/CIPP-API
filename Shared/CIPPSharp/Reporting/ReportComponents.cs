@@ -7,7 +7,9 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using OfficeIMO.Drawing;
+using OfficeIMO;
 using OfficeIMO.Pdf;
+using static OfficeIMO.OfficeLength;
 
 namespace CIPP.Reporting
 {
@@ -24,15 +26,16 @@ namespace CIPP.Reporting
         private static string San(string? s) => ReportMarkdown.Sanitize(s);
 
         // -- colour bridge --
-        public static PdfColor Pdf(string hex)
+        public static OfficeColor Pdf(string hex)
         {
             var (r, g, b) = ColourMath.ToRgb(hex);
-            return PdfColor.FromRgb((byte)r, (byte)g, (byte)b);
+            return OfficeColor.FromRgb((byte)r, (byte)g, (byte)b);
         }
 
         // -- images --
-        /// <summary>Decode a data-URL/base64 image (or resolve a bundled /reportImages/ path) into bytes OfficeIMO can draw anywhere, or null.</summary>
-        public static byte[]? DecodeImage(string? dataUrl)
+        /// <summary>Decode a data-URL/base64 image (or resolve a bundled /reportImages/ path) into bytes OfficeIMO can draw anywhere, or null.
+        /// <paramref name="background"/> is a cover or hero photo filling a page; otherwise the image is a logo.</summary>
+        public static byte[]? DecodeImage(string? dataUrl, bool background)
         {
             if (string.IsNullOrWhiteSpace(dataUrl)) return null;
             var s = dataUrl.Trim();
@@ -45,19 +48,21 @@ namespace CIPP.Reporting
             if (stock.Success) return ReportImage(stock.Groups[1].Value);
 
             // A branding logo or uploaded cover is the same data URL on every render for a tenant, so it is
-            // decoded (and an SVG rasterised) once, and every render hands OfficeIMO the same array - which
-            // also lets OfficeIMO's per-array prepared-image cache hit across renders. Keyed by the data URL
-            // itself: a lookup is a fast string hash and compare, where a digest of a large upload is not.
-            var key = s;
+            // decoded and sized once, and every render hands OfficeIMO the same array - which also lets
+            // OfficeIMO's per-array prepared-image cache hit across renders. Keyed by the data URL itself, a
+            // fast string hash and compare; an upload too large to hold as a key goes by its digest instead.
+            var key = (background ? "b:" : "l:") + (s.Length > MaxImageKeyChars
+                ? Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Runtime.InteropServices.MemoryMarshal.AsBytes(s.AsSpan())))
+                : s);
             if (DecodedImageCache.TryGetValue(key, out var cached)) return cached;
             var comma = s.IndexOf("base64,", StringComparison.OrdinalIgnoreCase);
             if (comma >= 0) s = s.Substring(comma + "base64,".Length);
             byte[]? bytes;
-            try { bytes = NormaliseImage(Convert.FromBase64String(s.Trim())); } catch { bytes = null; }
+            try { bytes = NormaliseImage(Convert.FromBase64String(s.Trim()), background); } catch { bytes = null; }
             // ponytail: clear-on-overflow, not LRU; a byte budget keeps a burst of distinct brandings bounded.
-            // An entry bigger than a quarter of the budget (an upload of roughly 3 MB, counting its data URL)
-            // is not kept, so one huge image cannot clear everything else for itself. Each cached array also
-            // keeps OfficeIMO's prepared copy of it alive, so what this retains is a few times the budget.
+            // An entry bigger than a quarter of the budget is not kept, so one huge image cannot clear everything
+            // else for itself. Each cached array also keeps OfficeIMO's prepared copy of it alive, so what this
+            // retains is a few times the budget.
             var size = 2L * key.Length + (bytes?.Length ?? 0);
             if (size > DecodedImageCacheBudget / 4) return bytes;
             if (Interlocked.Add(ref decodedImageCacheBytes, size) > DecodedImageCacheBudget)
@@ -70,6 +75,7 @@ namespace CIPP.Reporting
         }
 
         private const long DecodedImageCacheBudget = 32L * 1024 * 1024;
+        private const int MaxImageKeyChars = 256 * 1024;
         private static long decodedImageCacheBytes;
         private static readonly ConcurrentDictionary<string, byte[]?> DecodedImageCache = new(StringComparer.Ordinal);
 
@@ -79,17 +85,74 @@ namespace CIPP.Reporting
         // crisp at logo and cover sizes and a few KB for a typical logo - and then behaves like a PNG.
         // Anything OfficeIMO cannot identify is dropped here rather than left to fail at serialisation.
         // Add-CIPPImage enforces the same list at upload time.
+        // Rasters are sized for their use (logos drawn at most 260x100pt get 4px per point, page photos 2000px)
+        // with metadata stripped, and an opaque page photo of a megapixel or more becomes JPEG: a smaller one is
+        // magnified on the page, and its JPEG artefacts with it, for a saving of a few KB.
         private const double SvgRasterSize = 1200;
-        private static byte[]? NormaliseImage(byte[] bytes)
+        private const int LogoMaxWidth = 1040, LogoMaxHeight = 400, BackgroundMaxSide = 2000, BackgroundJpegQuality = 80;
+        private static byte[]? NormaliseImage(byte[] bytes, bool background)
+        {
+            OfficeImageInfo info;
+            try
+            {
+                if (!OfficeImageReader.TryIdentifyByContent(bytes, null, out info)) return null;
+                if (info.Format == OfficeImageFormat.Svg)
+                {
+                    if (!OfficeSvgDrawingReader.TryRead(bytes, out var drawing) || drawing.Width <= 0 || drawing.Height <= 0) return null;
+                    return OfficeDrawingRasterRenderer.ToPng(drawing, SvgRasterSize / Math.Max(drawing.Width, drawing.Height), null);
+                }
+            }
+            catch { return null; }
+            return SizeImage(bytes, info, background);
+        }
+
+        /// <summary>A raster sized for the report as <see cref="DecodeImage"/> would draw it, which is what Add-CIPPImage stores.
+        /// An SVG, or anything OfficeIMO cannot identify or process, comes back as given.</summary>
+        public static byte[] SizeImage(byte[] bytes, bool background)
         {
             try
             {
-                if (!OfficeImageReader.TryIdentifyByContent(bytes, null, out var info)) return null;
-                if (info.Format != OfficeImageFormat.Svg) return bytes;
-                if (!OfficeSvgDrawingReader.TryRead(bytes, out var drawing) || drawing.Width <= 0 || drawing.Height <= 0) return null;
-                return OfficeDrawingRasterRenderer.ToPng(drawing, SvgRasterSize / Math.Max(drawing.Width, drawing.Height), null);
+                return OfficeImageReader.TryIdentifyByContent(bytes, null, out var info) && info.Format != OfficeImageFormat.Svg
+                    ? SizeImage(bytes, info, background)
+                    : bytes;
             }
-            catch { return null; }
+            catch { return bytes; }
+        }
+
+        private static byte[] SizeImage(byte[] bytes, OfficeImageInfo info, bool background)
+        {
+            // Sizing is an optimisation: an image it cannot process is drawn as uploaded.
+            var sized = bytes;
+            try
+            {
+                var scale = background
+                    ? (double)BackgroundMaxSide / Math.Max(info.Width, info.Height)
+                    : Math.Min((double)LogoMaxWidth / info.Width, (double)LogoMaxHeight / info.Height);
+                // A PDF shows only a GIF's first frame, which the optimizer will not extract from an animation.
+                if (scale < 1 || info.Format == OfficeImageFormat.Gif)
+                {
+                    int w = Math.Max(1, (int)Math.Round(info.Width * Math.Min(scale, 1))), h = Math.Max(1, (int)Math.Round(info.Height * Math.Min(scale, 1)));
+                    var result = info.Format == OfficeImageFormat.Gif ? null : OfficeImageOptimizer.Optimize(bytes, new OfficeImageOptimizationRequest(w, h)
+                    {
+                        ResamplingMode = OfficeRasterResamplingMode.Area,
+                        JpegQuality = BackgroundJpegQuality,
+                        MetadataPolicy = OfficeImageMetadataPolicy.Strip,
+                    });
+                    if (result?.Changed == true) sized = result.Bytes;
+                    else if (result is null or { Status: OfficeImageOptimizationStatus.UnsupportedFormat or OfficeImageOptimizationStatus.DecodeFailed })
+                    {
+                        var frame = OfficeRasterImageDecoder.Decode(bytes);
+                        sized = OfficePngWriter.Encode(scale < 1 ? OfficeRasterResampler.Resize(frame, w, h, OfficeRasterResamplingMode.Area) : frame);
+                    }
+                }
+                if (!background || info.Format == OfficeImageFormat.Jpeg || info.Width * Math.Min(scale, 1) * info.Height * Math.Min(scale, 1) < 1_000_000) return sized;
+                var raster = OfficeRasterImageDecoder.Decode(sized);
+                var pixels = raster.GetPixels();
+                for (var i = 3; i < pixels.Length; i += 4) if (pixels[i] != 255) return sized;
+                var jpeg = OfficeJpegCodec.Encode(raster, new OfficeJpegEncodeOptions { Quality = BackgroundJpegQuality });
+                return jpeg.Length < sized.Length ? jpeg : sized;
+            }
+            catch { return sized; }
         }
 
         private static readonly Regex ReportImagesPathPattern =
@@ -165,10 +228,10 @@ namespace CIPP.Reporting
         // `size` is the base font size for the paragraph's runs (markdown has no size marks, so every run
         // in a paragraph shares it). Without an explicit size OfficeIMO falls back to its ~12pt default,
         // which is why body copy rendered far larger than the client's 9pt.
-        private static void ApplyRuns(PdfParagraphBuilder b, IReadOnlyList<TextRun> runs, string bodyColour, double size)
+        private static void ApplyRuns(PdfParagraph b, IReadOnlyList<TextRun> runs, string bodyColour, double size)
         {
-            if (runs.Count == 0) { b.Text(" "); return; }
-            b.Color(Pdf(bodyColour)).FontSize(size);
+            if (runs.Count == 0) { b.AddText(" "); return; }
+            b.RunDefaults.Color = Pdf(bodyColour); b.RunDefaults.FontSize = Points(size);
             foreach (var r in runs)
             {
                 // Emoji split out to inline colour images (or a monochrome glyph) so the surrounding copy
@@ -178,18 +241,25 @@ namespace CIPP.Reporting
                     switch (seg.Kind)
                     {
                         case EmojiSegKind.Image:
-                            b.InlineImage(seg.Image!, size, size, seg.Text, OfficeImageFit.Contain, EmojiOffset(size));
+                            b.AddInlineImage(seg.Image!, Points(size), Points(size), seg.Text, OfficeImageFit.Contain, Points(EmojiOffset(size)));
                             break;
                         case EmojiSegKind.Mono:
-                            b.Bold(false).Italic(false).Underline(false).Strike(false).Font(PdfStandardFont.Helvetica).Color(Pdf(seg.Tint ?? bodyColour)).Text(seg.Text);
+                            SetRun(b, false, false, false, false, PdfStandardFont.Helvetica, Pdf(seg.Tint ?? bodyColour)); b.AddText(seg.Text);
                             break;
                         default:
-                            b.Bold(r.Bold).Italic(r.Italic).Underline(r.Underline).Strike(r.Strike)
-                             .Font(r.Code ? PdfStandardFont.Courier : PdfStandardFont.Helvetica).Color(Pdf(bodyColour)).Text(seg.Text);
+                            SetRun(b, r.Bold, r.Italic, r.Underline, r.Strike, r.Code ? PdfStandardFont.Courier : PdfStandardFont.Helvetica, Pdf(bodyColour)); b.AddText(seg.Text);
                             break;
                     }
                 }
             }
+        }
+
+        private static void SetRun(PdfParagraph b, bool bold, bool italic, bool underline, bool strike, PdfStandardFont font, OfficeColor colour)
+        {
+            var d = b.RunDefaults;
+            d.Bold = bold; d.Italic = italic; d.StandardFont = font; d.Color = colour;
+            d.UnderlineStyle = underline ? OfficeTextDecorationStyle.Single : OfficeTextDecorationStyle.None;
+            d.StrikeStyle = strike ? OfficeTextDecorationStyle.Single : OfficeTextDecorationStyle.None;
         }
 
         // -- primitives --
@@ -200,8 +270,8 @@ namespace CIPP.Reporting
             var size = level switch { 1 => ReportStyles.Heading1, 2 => ReportStyles.Heading2, _ => ReportStyles.Heading3 };
             // A markdown heading is drawn as a bold paragraph (rather than item.H1/H2/H3) so an emoji in the
             // heading renders as an inline colour image instead of a monochrome font glyph.
-            item.Paragraph(b => { b.FontSize(size); EmitInline(b, text, colour, size, bold: true); },
-                PdfAlign.Left, null, new PdfParagraphStyle { LineHeight = 1.15, SpacingAfter = 6 });
+            item.AddParagraph(b => { b.RunDefaults.FontSize = Points(size); EmitInline(b, text, colour, size, bold: true); },
+                OfficeAlignment.Left, null, new PdfParagraphStyle { LineSpacing = Leading(1.15, size), SpacingAfter = Points(6) });
         }
 
         // The text style a run of copy is drawn with. Threaded from the enclosing component so body copy,
@@ -211,42 +281,43 @@ namespace CIPP.Reporting
         {
             public double Size { get; init; }
             public string Colour { get; init; }
-            public PdfAlign Align { get; init; }
+            public OfficeAlignment Align { get; init; }
             public double LineHeight { get; init; }
             public double SpacingAfter { get; init; }
         }
 
-        // OfficeIMO leads a flow paragraph off the document's 11pt default size rather than its runs' size (a
-        // larger run raises its line by the same ratio) and seats the first baseline FlowBaseline under the
-        // paragraph's top. A client line is its lineHeight x the size, with the baseline 0.9x the size under
-        // the line top. So a client lineHeight becomes a LineHeight scaled by size / 11, and a paragraph of
-        // runs larger than 9pt needs (0.9 x size - FlowBaseline) of space above it to seat its baseline.
+        // Flow paragraphs are led off the document's 11pt default size rather than their runs' size, and with
+        // Exact spacing OfficeIMO seats the first baseline FlowBaseline under the paragraph's top whatever the
+        // runs' size. A client line is its lineHeight x the size, with the baseline 0.9x the size under the
+        // line top. So a client lineHeight becomes a LineHeight scaled by size / 11, and a paragraph of runs
+        // larger than 9pt needs (0.9 x size - FlowBaseline) of space above it to seat its baseline.
         internal const double FlowBaseSize = 11, FlowBaseline = 8.1;
         private static double FlowLineHeight(double clientLineHeight, double size) => clientLineHeight * size / Math.Max(size, FlowBaseSize);
+        internal static PdfLineSpacing Leading(double lineHeight, double size) => PdfLineSpacing.Exact(Points(lineHeight * Math.Max(size, FlowBaseSize)));
 
         // Body copy (client bodyText): 9pt at lineHeight 1.5, 8pt after, justified.
         public static TextStyle BodyStyle(ReportContext ctx) => new()
         {
-            Size = ReportStyles.Body, Colour = ctx.Theme.Palette["body"], Align = PdfAlign.Justify, LineHeight = FlowLineHeight(1.5, ReportStyles.Body), SpacingAfter = 8,
+            Size = ReportStyles.Body, Colour = ctx.Theme.Palette["body"], Align = OfficeAlignment.Justify, LineHeight = FlowLineHeight(1.5, ReportStyles.Body), SpacingAfter = 8,
         };
 
         public static void Paragraph(ReportContext ctx, PdfContentBuilder item, IReadOnlyList<TextRun> runs, TextStyle? style = null)
         {
             var st = style ?? BodyStyle(ctx);
-            item.Paragraph(b => ApplyRuns(b, runs, st.Colour, st.Size), st.Align, null,
-                new PdfParagraphStyle { LineHeight = st.LineHeight, SpacingAfter = st.SpacingAfter });
+            item.AddParagraph(b => ApplyRuns(b, runs, st.Colour, st.Size), st.Align, null,
+                new PdfParagraphStyle { LineSpacing = Leading(st.LineHeight, st.Size), SpacingAfter = Points(st.SpacingAfter) });
         }
 
         // Section title (client sectionTitle): 14pt bold heading colour on the page's 14pt line, marginBottom 8.
         // The space above seats the baseline 0.9x the size under the line top, and comes out of the 8 below.
         private const double SectionTitleSeat = 0.9 * ReportStyles.SectionTitle - FlowBaseline;
         public static void SectionTitle(ReportContext ctx, PdfContentBuilder item, string title)
-            => item.Paragraph(b => { b.FontSize(ReportStyles.SectionTitle); EmitInline(b, title, ctx.Theme.Palette["heading"], ReportStyles.SectionTitle, bold: true); },
-                PdfAlign.Left, null, new PdfParagraphStyle
+            => item.AddParagraph(b => { b.RunDefaults.FontSize = Points(ReportStyles.SectionTitle); EmitInline(b, title, ctx.Theme.Palette["heading"], ReportStyles.SectionTitle, bold: true); },
+                OfficeAlignment.Left, null, new PdfParagraphStyle
                 {
-                    LineHeight = FlowLineHeight(14 / ReportStyles.SectionTitle, ReportStyles.SectionTitle),
-                    SpacingBefore = SectionTitleSeat,
-                    SpacingAfter = 8 - SectionTitleSeat,
+                    LineSpacing = Leading(FlowLineHeight(14 / ReportStyles.SectionTitle, ReportStyles.SectionTitle), ReportStyles.SectionTitle),
+                    SpacingBefore = Points(SectionTitleSeat),
+                    SpacingAfter = Points(8 - SectionTitleSeat),
                 });
 
         // A callout's list rendered as one paragraph, a line break between items (a panel ignores list
@@ -255,16 +326,16 @@ namespace CIPP.Reporting
         private static void BulletLines(ReportContext ctx, PdfContentBuilder item, IReadOnlyList<string> items, TextStyle ts, Func<int, string> marker)
         {
             if (items.Count == 0) return;
-            item.Paragraph(b =>
+            item.AddParagraph(b =>
             {
-                b.FontSize(ts.Size).Color(Pdf(ts.Colour));
+                b.RunDefaults.FontSize = Points(ts.Size); b.RunDefaults.Color = Pdf(ts.Colour);
                 for (var i = 0; i < items.Count; i++)
                 {
-                    if (i > 0) b.LineBreak();
-                    b.Color(Pdf(ts.Colour)).Text(marker(i));
+                    if (i > 0) b.AddLineBreak();
+                    b.RunDefaults.Color = Pdf(ts.Colour); b.AddText(marker(i));
                     EmitToBuilder(b, San(items[i]), ts.Colour, ts.Size);
                 }
-            }, PdfAlign.Left, null, new PdfParagraphStyle { LeftIndent = 12, SpacingAfter = ts.SpacingAfter, LineHeight = ts.LineHeight });
+            }, OfficeAlignment.Left, null, new PdfParagraphStyle { LeftIndent = Points(12), SpacingAfter = Points(ts.SpacingAfter), LineSpacing = Leading(ts.LineHeight, ts.Size) });
         }
 
         public static void Bullets(ReportContext ctx, PdfContentBuilder item, IEnumerable<string> items, double? size = null)
@@ -280,12 +351,12 @@ namespace CIPP.Reporting
             for (var i = 0; i < items.Count; i++)
             {
                 var idx = i;
-                item.Paragraph(b =>
+                item.AddParagraph(b =>
                 {
-                    b.FontSize(size);
-                    b.Bold(true).Color(Pdf(markerColour)).Text(marker(idx));
+                    b.RunDefaults.FontSize = Points(size);
+                    b.RunDefaults.Bold = true; b.RunDefaults.Color = Pdf(markerColour); b.AddText(marker(idx));
                     EmitToBuilder(b, San(items[idx]), body, size);
-                }, PdfAlign.Left, null, new PdfParagraphStyle { LeftIndent = 12, SpacingAfter = 4, LineHeight = 1.3 });
+                }, OfficeAlignment.Left, null, new PdfParagraphStyle { LeftIndent = Points(12), SpacingAfter = Points(4), LineSpacing = Leading(1.3, size) });
             }
         }
 
@@ -333,8 +404,9 @@ namespace CIPP.Reporting
             var dateLine = 9 * lineBox;
             var headerH = Math.Max(dateLine, logoBox.h);
             if (logoType is not null)
-                dw.AddImage(ctx.Logo!, logoType, new OfficeImageProjection(
-                    new OfficeImagePlacement(leftPad, headerTop, logoBox.w, logoBox.h), new OfficeImageSourceCrop(0, 0, 0, 0), 0, null, null, false, false));
+                // Uninterpolated like the page-header logo, so the two placements share one image object.
+                dw.AddImageWithInterpolation(ctx.Logo!, logoType, new OfficeImageProjection(
+                    new OfficeImagePlacement(leftPad, headerTop, logoBox.w, logoBox.h), new OfficeImageSourceCrop(0, 0, 0, 0), 0, null, null, false, false), interpolate: false);
             if (!string.IsNullOrEmpty(ctx.GeneratedOn))
                 Line(San(ctx.GeneratedOn).ToUpperInvariant(), 0, headerTop + (headerH - dateLine) / 2, ctx.ContentWidth - leftPad, 9, coverText, OfficeTextAlignment.Right);
 
@@ -424,7 +496,7 @@ namespace CIPP.Reporting
             for (var i = 0; i < noteLines.Count; i++)
                 Line(noteLines[i], 0, noteTop + i * 9 * lineBox, w, 9, ctx.Theme.Palette["footer"], OfficeTextAlignment.Center);
 
-            item.Drawing(dw, PdfAlign.Left);
+            item.Drawing(dw, OfficeAlignment.Left);
         }
 
         // Full-bleed hero content (client HeroPage overlay): the big highlight figure plus overtitle/
@@ -462,7 +534,7 @@ namespace CIPP.Reporting
                 var fy = h - 40 - (fLines.Length - 1) * 16;
                 foreach (var line in fLines) { AddT(dw, San(line), 0, fy, w - leftPad, 16, 12, onDark, OfficeTextAlignment.Right, true); fy += 16; }
             }
-            item.Drawing(dw, PdfAlign.Left);
+            item.Drawing(dw, OfficeAlignment.Left);
         }
 
         /// <summary>Rich bullets (client BulletList with {label, text}): an orange marker, a bold label, then
@@ -490,20 +562,21 @@ namespace CIPP.Reporting
                 var oneLine = WrappedLines(copy, ctx.ContentWidth - listInset - hang, ReportStyles.BulletText, bold: false) == 1;
                 var style = new PdfParagraphStyle
                 {
-                    LeftIndent = listInset + hang,
-                    FirstLineIndent = -hang,
-                    LineHeight = FlowLineHeight(1.4, ReportStyles.BulletText),
-                    SpacingAfter = itemGap + (oneLine ? 1 + 14 - textLine : 0) + (i == items.Count - 1 ? listGap : 0),
+                    LeftIndent = Points(listInset + hang),
+                    FirstLineIndent = Points(-hang),
+                    LineSpacing = Leading(FlowLineHeight(1.4, ReportStyles.BulletText), ReportStyles.BulletText),
+                    SpacingAfter = Points(itemGap + (oneLine ? 1 + 14 - textLine : 0) + (i == items.Count - 1 ? listGap : 0)),
                 };
-                style.AddTabStop(0.01);
-                item.Paragraph(b =>
+                style.AddTabStop(Points(0.01));
+                item.AddParagraph(b =>
                 {
-                    b.FontSize(ReportStyles.BulletText);
-                    b.Bold(true).Color(Pdf(ctx.Theme.Palette["heading"])).FontSize(markerSize).Text(marker).Text("\t").FontSize(ReportStyles.BulletText);
+                    var d = b.RunDefaults;
+                    d.Bold = true; d.Color = Pdf(ctx.Theme.Palette["heading"]); d.FontSize = Points(markerSize);
+                    b.AddText(marker); b.AddText("\t"); d.FontSize = Points(ReportStyles.BulletText);
                     var body = ctx.Theme.Palette["body"];
                     if (!string.IsNullOrEmpty(label)) EmitToBuilder(b, San(label) + " ", body, ReportStyles.BulletText, bold: true);
                     EmitToBuilder(b, San(text), body, ReportStyles.BulletText, bold: false);
-                }, PdfAlign.Left, null, style);
+                }, OfficeAlignment.Left, null, style);
             }
         }
 
@@ -513,17 +586,17 @@ namespace CIPP.Reporting
             HeaderFill = Pdf(ctx.Theme.Palette["table"]),
             HeaderTextColor = Pdf(ctx.Theme.OnTable),
             HeaderBold = true,
-            HeaderFontSize = ReportStyles.TableHeaderCell,
+            HeaderFontSize = Points(ReportStyles.TableHeaderCell),
             RowStripeFill = Pdf(ReportColours.Panel),
             BorderColor = Pdf(ReportColours.Line),
-            BorderWidth = 0.5,
+            BorderWidth = Points(0.5),
             RowSeparatorColor = Pdf(ReportColours.Line),
-            RowSeparatorWidth = 0.5,
+            RowSeparatorWidth = Points(0.5),
             TextColor = Pdf(ReportColours.Body),
-            FontSize = ReportStyles.TableCell,
+            FontSize = Points(ReportStyles.TableCell),
             RepeatHeaderRowCount = 1,
-            CellPaddingX = 12,   // client TABLE_ROW_PADDING (horizontal cell inset)
-            CellPaddingY = 6,    // client tableRow paddingVertical
+            CellPaddingX = Points(12),   // client TABLE_ROW_PADDING (horizontal cell inset)
+            CellPaddingY = Points(6),    // client tableRow paddingVertical
         };
 
         /// <summary>
@@ -571,16 +644,20 @@ namespace CIPP.Reporting
         {
             if (columns.Count == 0) return;
             var widths = new List<double>();
-            var aligns = new List<PdfColumnAlign>();
+            var aligns = new List<OfficeAlignment>();
             var header = new List<PdfTableCell>();
             foreach (var c in columns)
             {
                 var w = ReportNode.RowNum(c, "width"); if (w <= 0) w = 1;
                 widths.Add(w);
-                aligns.Add((ReportNode.RowStr(c, "align")) switch { "center" => PdfColumnAlign.Center, "right" => PdfColumnAlign.Right, _ => PdfColumnAlign.Left });
+                aligns.Add((ReportNode.RowStr(c, "align")) switch { "center" => OfficeAlignment.Center, "right" => OfficeAlignment.Right, _ => OfficeAlignment.Left });
                 // Header runs (not a plain string) so an emoji in a column header renders as a colour image;
                 // the brand header fill/uppercase come from the table style, the text colour is OnTable bold.
-                header.Add(CellRuns((ReportNode.RowStr(c, "header") ?? string.Empty).ToUpperInvariant(), ctx.Theme.OnTable, bold: true, size: ReportStyles.TableHeaderCell));
+                // A line break at the header row's size ends the label, so the 7pt label seats on that line.
+                var headerRuns = new List<PdfTextRun>();
+                EmitRuns(headerRuns, (ReportNode.RowStr(c, "header") ?? string.Empty).ToUpperInvariant(), ctx.Theme.OnTable, ReportStyles.TableHeaderCell, bold: true);
+                headerRuns.Add(Run("\n", ctx.Theme.OnTable, TableHeaderLine));
+                header.Add(new PdfTableCell(headerRuns));
             }
 
             var shown = limit > 0 ? rows.Take(limit).ToList() : rows;
@@ -638,8 +715,30 @@ namespace CIPP.Reporting
                 for (var ri = 1; ri <= shown.Count; ri++)
                 {
                     var pad = style.CellPaddings!.TryGetValue((ri, ci), out var p) ? p : new PdfCellPadding();
-                    pad.Top = (pad.Top ?? style.CellPaddingTop) + 0.9;
-                    pad.Bottom = (pad.Bottom ?? style.CellPaddingBottom) + 1.4;
+                    pad.Top = (pad.Top ?? style.CellPaddingTop) + Points(0.9);
+                    pad.Bottom = (pad.Bottom ?? style.CellPaddingBottom) + Points(1.4);
+                    style.CellPaddings[(ri, ci)] = pad;
+                }
+            }
+            // OfficeIMO seats a cell's first baseline CellAscent x its first line's largest run under the padding.
+            // The body pads above are worked out for a line at the table's size, so a cell whose first line runs
+            // larger or smaller moves by the difference.
+            var rowSize = style.FontSize!.Value.ToPoints();
+            for (var ri = 1; ri < cells.Count; ri++)
+            {
+                for (var ci = 0; ci < cells[ri].Length; ci++)
+                {
+                    var lineSize = 0.0;
+                    foreach (var run in cells[ri][ci].Runs)
+                    {
+                        if (run.InlineElement is null) lineSize = Math.Max(lineSize, run.FontSize?.ToPoints() ?? rowSize);
+                        if (run.Text == "\n") break;
+                    }
+                    var shift = CellAscent * (lineSize - rowSize);
+                    if (lineSize == 0 || Math.Abs(shift) < 0.005) continue;
+                    var pad = style.CellPaddings!.TryGetValue((ri, ci), out var p) ? p : new PdfCellPadding();
+                    pad.Top = (pad.Top ?? style.CellPaddingTop) - Points(shift);
+                    pad.Bottom = (pad.Bottom ?? style.CellPaddingBottom) + Points(shift);
                     style.CellPaddings[(ri, ci)] = pad;
                 }
             }
@@ -659,10 +758,10 @@ namespace CIPP.Reporting
                     var bold = RowBool(columns[ci], "bold") || !string.IsNullOrEmpty(ReportNode.RowStr(columns[ci], "colourField"));
                     lines = Math.Max(lines, WrappedLines(text, textWidth, ReportStyles.TableCell, bold));
                 }
-                keepWhole.Add(lines * ReportStyles.TableCell * 1.3 + style.CellPaddingTop + style.CellPaddingBottom < ctx.ContentHeight / 2 ? false : null);
+                keepWhole.Add(lines * ReportStyles.TableCell * 1.3 + style.CellPaddingTop?.ToPoints() + style.CellPaddingBottom?.ToPoints() < ctx.ContentHeight / 2 ? false : null);
             }
             style.RowAllowBreakAcrossPages = keepWhole;
-            item.Table(cells, PdfAlign.Left, style);
+            item.AddTable(cells, OfficeAlignment.Left, style);
             if (hidden > 0)
                 Note(ctx, item, $"... and {hidden} more. Export the table from the report page for the full list.");
         }
@@ -686,18 +785,18 @@ namespace CIPP.Reporting
             var total = weights.Sum();
             var inner = ctx.ContentWidth - 2 * edge;
             style.ColumnWidthWeights = weights.Select((w, i) => w / total * inner + (i == 0 ? edge : 0) + (i == cols - 1 ? edge : 0)).ToList();
-            style.BorderWidth = 0;
+            style.BorderWidth = Points(0);
             style.RowSeparatorColor = Pdf(ReportColours.Panel);
-            style.RowSeparatorWidth = 1;
+            style.RowSeparatorWidth = Points(1);
             style.HeaderSeparatorColor = Pdf(ctx.Theme.Palette["table"]); // no line under the band
-            style.HeaderSeparatorWidth = 1;
+            style.HeaderSeparatorWidth = Points(1);
             style.LineHeight = 1.3;                                      // client tableCell lineHeight
-            style.HeaderFontSize = 14 / 1.3;                             // header leading 14 (runs stay 7pt)
-            style.CellPaddingLeft = 0;
-            style.CellPaddingRight = TableGutter;
-            style.CellPaddingTop = 7.3;
-            style.CellPaddingBottom = 5.7;
-            style.SpacingAfter = noteFollows ? 4 : 16;
+            style.HeaderFontSize = Points(TableHeaderLine);                      // header leading 14 (runs stay 7pt)
+            style.CellPaddingLeft = Points(0);
+            style.CellPaddingRight = Points(TableGutter);
+            style.CellPaddingTop = Points(7.3);
+            style.CellPaddingBottom = Points(5.7);
+            style.SpacingAfter = Points(noteFollows ? 4 : 16);
             // The client's header repeats on each page and its rows move whole, so a table starts on the page
             // as soon as the header and one row fit there (OfficeIMO's default waits for two).
             style.MinimumBodyRowsOnFirstPage = 1;
@@ -715,13 +814,13 @@ namespace CIPP.Reporting
                     if (first || last || top || bottom)
                         style.CellPaddings[(r, c)] = new PdfCellPadding
                         {
-                            Left = first ? edge : null,
-                            Right = last ? edge : null,
-                            Top = top ? 5.4 + TableBorder : null,
-                            Bottom = (top ? 6.7 + TableBorder : style.CellPaddingBottom) + (bottom ? TableBorder : 0),
+                            Left = first ? Points(edge) : null,
+                            Right = last ? Points(edge) : null,
+                            Top = top ? Points(5.4 + TableBorder) : null,
+                            Bottom = (top ? Points(6.7 + TableBorder) : style.CellPaddingBottom) + Points(bottom ? TableBorder : 0),
                         };
                     if (first || last || top || bottom)
-                        style.CellBorders[(r, c)] = new PdfCellBorder { Color = line, Width = TableBorder, Left = first, Right = last, Top = top, Bottom = bottom };
+                        style.CellBorders[(r, c)] = new PdfCellBorder { Color = line, Width = Points(TableBorder), Left = first, Right = last, Top = top, Bottom = bottom };
                 }
             }
             // The empty-state row (client tableEmpty: 12pt all round inside the 1pt border) is one cell
@@ -730,26 +829,26 @@ namespace CIPP.Reporting
             if (emptyRow)
             {
                 for (var c = 1; c < cols; c++) { style.CellPaddings.Remove((1, c)); style.CellBorders.Remove((1, c)); }
-                style.CellPaddings[(1, 0)] = new PdfCellPadding { Left = TableBorder + 12, Right = TableBorder + 12, Top = 13.5, Bottom = 15.3 + TableBorder };
-                style.CellBorders[(1, 0)] = new PdfCellBorder { Color = line, Width = TableBorder, Left = true, Right = true, Top = false, Bottom = true };
+                style.CellPaddings[(1, 0)] = new PdfCellPadding { Left = Points(TableBorder + 12), Right = Points(TableBorder + 12), Top = Points(13.5), Bottom = Points(15.3 + TableBorder) };
+                style.CellBorders[(1, 0)] = new PdfCellBorder { Color = line, Width = Points(TableBorder), Left = true, Right = true, Top = false, Bottom = true };
             }
         }
 
         public static void Code(ReportContext ctx, PdfContentBuilder item, string text)
-            => item.Paragraph(b =>
+            => item.AddParagraph(b =>
             {
-                b.Font(PdfStandardFont.Courier).FontSize(CodeParagraphSize).Color(Pdf(ReportColours.Body));
+                b.RunDefaults.StandardFont = PdfStandardFont.Courier; b.RunDefaults.FontSize = Points(CodeParagraphSize); b.RunDefaults.Color = Pdf(ReportColours.Body);
                 var lines = San(text).Replace("\r\n", "\n").Split('\n');
-                for (var i = 0; i < lines.Length; i++) { if (i > 0) b.LineBreak(); b.Text(lines[i]); }
-            });
+                for (var i = 0; i < lines.Length; i++) { if (i > 0) b.AddLineBreak(); b.AddText(lines[i]); }
+            }, OfficeAlignment.Left, null, new PdfParagraphStyle { LineSpacing = Leading(1.4, CodeParagraphSize), SpacingAfter = Points(0.42 * FlowBaseSize) });
 
         public static void Hr(ReportContext ctx, PdfContentBuilder item) => item.HR();
 
         // A small italic aside after a truncated list (client styles.truncationNote): 8pt faint italic,
         // indented to the table's inner padding.
         public static void Note(ReportContext ctx, PdfContentBuilder item, string text)
-            => item.Paragraph(b => { b.Italic(true).FontSize(ReportStyles.TableCell); EmitInline(b, text, ReportColours.Faint, ReportStyles.TableCell); },
-                PdfAlign.Left, null, new PdfParagraphStyle { LeftIndent = 12, SpacingAfter = 4 });
+            => item.AddParagraph(b => { b.RunDefaults.Italic = true; b.RunDefaults.FontSize = Points(ReportStyles.TableCell); EmitInline(b, text, ReportColours.Faint, ReportStyles.TableCell); },
+                OfficeAlignment.Left, null, new PdfParagraphStyle { LeftIndent = Points(12), SpacingAfter = Points(4), LineSpacing = Leading(1.4, ReportStyles.TableCell) });
 
         // -- callouts (InfoBox / AlertBox / ClearBox) --
         // Callouts are drawn as a single-cell bordered TABLE, not a Panel: OfficeIMO panels apply a fixed
@@ -767,7 +866,7 @@ namespace CIPP.Reporting
         private const double SectionGap = 12;    // space before a new section's heading (client section marginBottom 12)
 
         private static PdfTextRun Run(string text, string colour, double size, bool bold = false, bool italic = false, bool underline = false, bool strike = false)
-            => new(San(text), bold, underline, Pdf(colour), italic, strike, size);
+            => new(San(text), bold, underline, Pdf(colour), italic, strike, Points(size));
 
         // The brand tint for the three report emoji when they fall back to the monochrome font (no colour
         // image bundled); every other emoji renders untinted. Null for anything that is not a report emoji.
@@ -796,33 +895,28 @@ namespace CIPP.Reporting
         // report emoji); everything else stays as text, so ordinary copy is untouched.
         private static IEnumerable<EmojiSegment> SegmentEmoji(string text)
         {
-            var list = new List<EmojiSegment>();
             // Most copy has no character above U+00FF, so no emoji: one text segment, without walking it
             // cluster by cluster (a string per character).
             if (!text.AsSpan().ContainsAnyExceptInRange('\0', 'ÿ'))
             {
-                if (text.Length > 0) list.Add(new EmojiSegment { Kind = EmojiSegKind.Text, Text = text });
-                return list;
+                if (text.Length > 0) yield return new EmojiSegment { Kind = EmojiSegKind.Text, Text = text };
+                yield break;
             }
             var sb = new System.Text.StringBuilder();
-            void FlushText() { if (sb.Length > 0) { list.Add(new EmojiSegment { Kind = EmojiSegKind.Text, Text = sb.ToString() }); sb.Clear(); } }
             var e = System.Globalization.StringInfo.GetTextElementEnumerator(text);
             while (e.MoveNext())
             {
                 var cluster = (string)e.Current;
                 if (cluster.Length == 1 && cluster[0] <= 'ÿ') { sb.Append(cluster); continue; }
                 var bytes = TwemojiAssets.Enabled ? TwemojiAssets.Bytes(cluster) : null;
-                if (bytes is not null) { FlushText(); list.Add(new EmojiSegment { Kind = EmojiSegKind.Image, Image = bytes, Text = cluster }); continue; }
-                if (cluster.Length <= 2 && ReportMarkdown.RenderEmojiGlyphs)
-                {
-                    var cp = char.ConvertToUtf32(cluster, 0);
-                    if (ReportMarkdown.EmojiCoverage.Contains(cp) || EmojiTint(cp) is not null)
-                    { FlushText(); list.Add(new EmojiSegment { Kind = EmojiSegKind.Mono, Text = cluster, Tint = EmojiTint(cp) }); continue; }
-                }
-                sb.Append(cluster);
+                var cp = bytes is null && cluster.Length <= 2 && ReportMarkdown.RenderEmojiGlyphs ? char.ConvertToUtf32(cluster, 0) : -1;
+                if (bytes is null && (cp < 0 || !ReportMarkdown.EmojiCoverage.Contains(cp) && EmojiTint(cp) is null)) { sb.Append(cluster); continue; }
+                if (sb.Length > 0) { yield return new EmojiSegment { Kind = EmojiSegKind.Text, Text = sb.ToString() }; sb.Clear(); }
+                yield return bytes is not null
+                    ? new EmojiSegment { Kind = EmojiSegKind.Image, Image = bytes, Text = cluster }
+                    : new EmojiSegment { Kind = EmojiSegKind.Mono, Text = cluster, Tint = EmojiTint(cp) };
             }
-            FlushText();
-            return list;
+            if (sb.Length > 0) yield return new EmojiSegment { Kind = EmojiSegKind.Text, Text = sb.ToString() };
         }
 
         // Emit text as OfficeIMO runs for table-cell content (callouts): each emoji becomes an inline colour-
@@ -836,20 +930,22 @@ namespace CIPP.Reporting
             // offset (the stat card's big number sizes the emoji to ~the digit height and drops it onto the
             // number's cap box, so it doesn't raise the line's ascent and push the number below a sibling card
             // whose number has no emoji).
+            // A cell line is seated on its tallest ascent, so a cell emoji is dropped to the text's ascent and
+            // never lowers its line.
             var es = emojiSize ?? size;
-            var eo = emojiOffset ?? EmojiOffset(es);
+            var eo = emojiOffset ?? es * (CellAscent - 1);
             foreach (var seg in SegmentEmoji(San(text)))
             {
                 switch (seg.Kind)
                 {
                     case EmojiSegKind.Image:
-                        dest.Add(PdfTextRun.Inline(new PdfInlineImage(seg.Image!, es, es, seg.Text, OfficeImageFit.Contain, eo)));
+                        dest.Add(PdfTextRun.Inline(new PdfInlineImage(seg.Image!, Points(es), Points(es), seg.Text, OfficeImageFit.Contain, Points(eo))));
                         break;
                     case EmojiSegKind.Mono:
-                        dest.Add(new PdfTextRun(seg.Text, false, false, Pdf(seg.Tint ?? colour), false, false, size));
+                        dest.Add(new PdfTextRun(seg.Text, false, false, Pdf(seg.Tint ?? colour), false, false, Points(size)));
                         break;
                     default:
-                        dest.Add(new PdfTextRun(seg.Text, bold, underline, Pdf(colour), italic, strike, size));
+                        dest.Add(new PdfTextRun(seg.Text, bold, underline, Pdf(colour), italic, strike, Points(size)));
                         break;
                 }
             }
@@ -857,6 +953,8 @@ namespace CIPP.Reporting
 
         // A table cell whose text renders emoji as inline colour images (via EmitRuns) at the given colour
         // and weight, so a body cell like "ok ✅" shows a colour glyph rather than a monochrome one.
+        private const double TableHeaderLine = 14 / 1.3;
+
         private static PdfTableCell CellRuns(string text, string colour, bool bold = false, bool italic = false, double? size = null)
         {
             var runs = new List<PdfTextRun>();
@@ -866,7 +964,7 @@ namespace CIPP.Reporting
 
         // Emit inline text (with colour-image emoji) into a paragraph builder. For callers that compose on a
         // builder outside the component kit - the page header title/subtitle in ReportPdf.
-        public static void EmitInline(PdfParagraphBuilder b, string text, string colour, double size, bool bold = false)
+        public static void EmitInline(PdfParagraph b, string text, string colour, double size, bool bold = false)
             => EmitToBuilder(b, San(text), colour, size, bold);
 
         // Convert parsed inline runs to OfficeIMO runs at a callout's size/colour, marks carried through,
@@ -928,65 +1026,70 @@ namespace CIPP.Reporting
         private static List<PdfTableCell[]> CalloutRows(string? title, string titleColour, double titleSize, List<PdfTextRun> bodyRuns, double bodySize)
         {
             // One cell, one row: a multi-row table always draws a divider between rows (OfficeIMO borders are
-            // a grid), so title and body live in the same cell. A cell line is as tall as its largest run at
-            // the style's 1.4 leading and every line's baseline sits at the same depth in it, so the title
-            // line is sized to the client's baseline-to-baseline step from the title to the body: the title's
-            // 14pt page line plus its 6pt marginBottom, less the 0.9x-size baseline difference of the two.
-            // (A bare line break carries no size, so a no-break space at that size ends the title line.)
+            // a grid), so title and body live in the same cell. A no-break space ends the title line at the
+            // TitleLine size, the client's step from the title's baseline to the body's.
             var runs = new List<PdfTextRun>();
             if (!string.IsNullOrEmpty(title))
             {
                 EmitRuns(runs, title!, titleColour, titleSize, bold: true);
-                runs.Add(Run("\u00A0", titleColour, (14 + 6 - 0.9 * (titleSize - bodySize)) / 1.4));
+                runs.Add(Run("\u00A0", titleColour, TitleLine(titleSize, bodySize)));
                 runs.Add(Run("\n", titleColour, bodySize));
             }
             runs.AddRange(bodyRuns);
             return new List<PdfTableCell[]> { new[] { new PdfTableCell(runs) } };
         }
 
+        // A cell line is LineHeight (1.4 here) x its largest run tall, with its baseline CellAscent x that size
+        // under the line top. The client steps from the title's baseline to the body's by the title's 14pt page
+        // line plus its 6pt marginBottom, less the 0.9x-size baseline difference of the two; this is the title
+        // line size that gives that step over a body line.
+        private static double TitleLine(double titleSize, double bodySize)
+            => (14 + 6 - 0.9 * (titleSize - bodySize) - CellAscent * bodySize) / (1.4 - CellAscent);
+
         private static PdfTableStyle CalloutStyle(string bgHex, string? stripeHex, double stripeWidth, string borderHex, double borderWidth, double bodySize, double firstSize, bool keepTogether = true)
         {
             // The client pads 12 inside the border (the stripe, on the left) and sets a line's baseline 0.9x its
-            // size under the line top; OfficeIMO sets a cell's first baseline CellAscent x the table's font size
-            // under its padding, and ends the cell that much above the last line's foot. The top and bottom
-            // pads carry the difference, so every line lands where the client's does.
+            // size under the line top; OfficeIMO sets a cell's first baseline CellAscent x its first line's size
+            // under its padding, and ends the cell CellAscent x the body size above the last line's foot. The
+            // top and bottom pads carry the difference, so every line lands where the client's does.
+            var firstLine = firstSize > bodySize ? TitleLine(firstSize, bodySize) : bodySize;
             var padding = new PdfCellPadding
             {
-                Left = CalloutPadX + (stripeHex is null ? borderWidth : stripeWidth),
-                Right = CalloutPadX + borderWidth,
-                Top = CalloutPadY + borderWidth + 0.9 * firstSize - CellAscent * bodySize,
-                Bottom = CalloutPadY + borderWidth - (0.9 - CellAscent) * bodySize,
+                Left = Points(CalloutPadX + (stripeHex is null ? borderWidth : stripeWidth)),
+                Right = Points(CalloutPadX + borderWidth),
+                Top = Points(CalloutPadY + borderWidth + 0.9 * firstSize - CellAscent * firstLine),
+                Bottom = Points(CalloutPadY + borderWidth - (0.9 - CellAscent) * bodySize),
             };
             // Single cell -> the table's BorderWidth draws just the perimeter box (no interior grid). The left
             // edge is overridden with the accent stripe via a per-cell LeftBorder when the callout has one.
             var style = new PdfTableStyle
             {
                 HeaderRowCount = 0,
-                FontSize = bodySize,
+                FontSize = Points(bodySize),
                 LineHeight = 1.4,
                 BorderColor = Pdf(borderHex),
-                BorderWidth = borderWidth,
-                CornerRadius = CardCornerRadius,  // softly rounded box; stripe/border are clipped to the rounded corners
-                RowSeparatorWidth = 0,
-                CellPaddingX = CalloutPadX,
-                CellPaddingY = CalloutPadY,
+                BorderWidth = Points(borderWidth),
+                CornerRadius = Points(CardCornerRadius),  // softly rounded box; stripe/border are clipped to the rounded corners
+                RowSeparatorWidth = Points(0),
+                CellPaddingX = Points(CalloutPadX),
+                CellPaddingY = Points(CalloutPadY),
                 CellPaddings = new Dictionary<(int, int), PdfCellPadding>
                 {
                     [(0, 0)] = padding,
                 },
-                SpacingAfter = 0,                 // the gap after a callout is an explicit Spacer, not the table's
+                SpacingAfter = Points(0),                 // the gap after a callout is an explicit Spacer, not the table's
                 // Client keeps each callout whole, but OfficeIMO throws when a keep-together table is taller
                 // than the page (BEC's multi-line skipped-collector / signals boxes). Leave KeepTogether on
                 // only when the measured height fits; otherwise let the cell split across pages.
                 KeepTogether = keepTogether,
-                CellFills = new Dictionary<(int, int), PdfColor> { [(0, 0)] = Pdf(bgHex) },
+                CellFills = new Dictionary<(int, int), OfficeColor> { [(0, 0)] = Pdf(bgHex) },
             };
             if (stripeHex is not null)
                 style.CellBorders = new Dictionary<(int, int), PdfCellBorder>
                 {
                     // only the left stripe; disable the class-default grey sides so 3.4.x's general
                     // cell-border renderer doesn't lay grey over the accent at the rounded corners.
-                    [(0, 0)] = new PdfCellBorder { LeftBorder = new PdfCellBorderSide { Color = Pdf(stripeHex), Width = stripeWidth }, Top = false, Right = false, Bottom = false },
+                    [(0, 0)] = new PdfCellBorder { LeftBorder = new PdfCellBorderSide { Color = Pdf(stripeHex), Width = Points(stripeWidth) }, Top = false, Right = false, Bottom = false },
                 };
             return style;
         }
@@ -1034,9 +1137,9 @@ namespace CIPP.Reporting
             var body = CalloutBodyRuns(ctx, content, lines, ReportStyles.InfoText, ctx.Theme.Palette["subtitle"]);
             var firstSize = string.IsNullOrEmpty(title) ? ReportStyles.InfoText : ReportStyles.InfoTitle;
             var keep = CalloutFitsOnPage(ctx, title, content, lines, ReportStyles.InfoTitle, ReportStyles.InfoText, 4, 1);
-            item.Table(CalloutRows(title, titleColour, ReportStyles.InfoTitle, body, ReportStyles.InfoText), PdfAlign.Left,
+            item.AddTable(CalloutRows(title, titleColour, ReportStyles.InfoTitle, body, ReportStyles.InfoText), OfficeAlignment.Left,
                 CalloutStyle(bg, accent, 4, ReportColours.Line, 1, ReportStyles.InfoText, firstSize, keep));
-            item.Spacer(CalloutGap);
+            item.Spacer(Points(CalloutGap));
         }
 
         // An InfoBox's stripe accent, background tint and title colour: `tone` (ok/warn) picks the tint,
@@ -1062,9 +1165,9 @@ namespace CIPP.Reporting
             var firstSize = string.IsNullOrEmpty(title) ? ReportStyles.AlertText : ReportStyles.AlertTitle;
             // AlertBox has no left stripe: left chrome is the 2pt border (same as CalloutStyle).
             var keep = CalloutFitsOnPage(ctx, title, content, lines, ReportStyles.AlertTitle, ReportStyles.AlertText, 2, 2);
-            item.Table(CalloutRows(title, accent, ReportStyles.AlertTitle, body, ReportStyles.AlertText), PdfAlign.Left,
+            item.AddTable(CalloutRows(title, accent, ReportStyles.AlertTitle, body, ReportStyles.AlertText), OfficeAlignment.Left,
                 CalloutStyle(ReportColours.AlertBg, null, 0, accent, 2, ReportStyles.AlertText, firstSize, keep));
-            item.Spacer(AlertGap);
+            item.Spacer(Points(AlertGap));
         }
 
         /// <summary>The all-clear counterpart to AlertBox - a green InfoBox for a check that found nothing.</summary>
@@ -1075,29 +1178,29 @@ namespace CIPP.Reporting
         // for the BEC summary lines that introduce a check's detail callouts.
         public static void IndentedParagraph(ReportContext ctx, PdfContentBuilder item, string text)
         {
-            item.Spacer(4);
+            item.Spacer(Points(4));
             var body = ctx.Theme.Palette["body"];
-            item.Paragraph(b => { b.FontSize(ReportStyles.Body); EmitToBuilder(b, San(text), body, ReportStyles.Body); },
-                PdfAlign.Left, null, new PdfParagraphStyle { LeftIndent = 12, LineHeight = 1.3, SpacingAfter = 0 });
+            item.AddParagraph(b => { b.RunDefaults.FontSize = Points(ReportStyles.Body); EmitToBuilder(b, San(text), body, ReportStyles.Body); },
+                OfficeAlignment.Left, null, new PdfParagraphStyle { LeftIndent = Points(12), LineSpacing = Leading(1.3, ReportStyles.Body), SpacingAfter = Points(0) });
         }
 
         // Write text into a paragraph builder: emoji as inline colour images (or a monochrome glyph), the
         // rest as coloured text - the paragraph equivalent of EmitRuns, for contexts that compose directly
-        // on a PdfParagraphBuilder.
-        private static void EmitToBuilder(PdfParagraphBuilder b, string text, string colour, double size, bool bold = false)
+        // on a PdfParagraph.
+        private static void EmitToBuilder(PdfParagraph b, string text, string colour, double size, bool bold = false)
         {
             foreach (var seg in SegmentEmoji(text))
             {
                 switch (seg.Kind)
                 {
                     case EmojiSegKind.Image:
-                        b.InlineImage(seg.Image!, size, size, seg.Text, OfficeImageFit.Contain, EmojiOffset(size));
+                        b.AddInlineImage(seg.Image!, Points(size), Points(size), seg.Text, OfficeImageFit.Contain, Points(EmojiOffset(size)));
                         break;
                     case EmojiSegKind.Mono:
-                        b.Bold(false).Color(Pdf(seg.Tint ?? colour)).Text(seg.Text);
+                        b.RunDefaults.Bold = false; b.RunDefaults.Color = Pdf(seg.Tint ?? colour); b.AddText(seg.Text);
                         break;
                     default:
-                        b.Bold(bold).Color(Pdf(colour)).Text(seg.Text);
+                        b.RunDefaults.Bold = bold; b.RunDefaults.Color = Pdf(colour); b.AddText(seg.Text);
                         break;
                 }
             }
@@ -1118,7 +1221,7 @@ namespace CIPP.Reporting
                 var slice = items.Skip(start).Take(cols).ToList();
                 item.Row(r =>
                 {
-                    r.Gap(10);
+                    r.Gap(Points(10));
                     foreach (var node in slice)
                         r.PercentColumn(width, col => InfoBoxCol(ctx, col,
                             ReportNode.RowStr(node, "title"), ReportNode.RowStr(node, "tone"),
@@ -1126,7 +1229,7 @@ namespace CIPP.Reporting
                             ReportNode.RowStr(node, "content") ?? string.Empty));
                     for (var k = slice.Count; k < cols; k++) r.PercentColumn(width, _ => { });
                 });
-                item.Spacer(CalloutGap);
+                item.Spacer(Points(CalloutGap));
             }
         }
 
@@ -1139,7 +1242,7 @@ namespace CIPP.Reporting
             var firstSize = string.IsNullOrEmpty(title) ? ReportStyles.InfoText : ReportStyles.InfoTitle;
             // Column width is unknown here; short column callouts keep together (client). A rare oversized
             // one still hits the full-width InfoBox path in practice - column items are captions.
-            col.Table(CalloutRows(title, titleColour, ReportStyles.InfoTitle, body, ReportStyles.InfoText), PdfAlign.Left,
+            col.AddTable(CalloutRows(title, titleColour, ReportStyles.InfoTitle, body, ReportStyles.InfoText), OfficeAlignment.Left,
                 CalloutStyle(bg, accent, 4, ReportColours.Line, 1, ReportStyles.InfoText, firstSize));
         }
 
@@ -1178,7 +1281,7 @@ namespace CIPP.Reporting
             var tallest = textHeights.Max();
             item.Row(r =>
             {
-                r.Gap(StatGap);
+                r.Gap(Points(StatGap));
                 for (var i = 0; i < stats.Count; i++)
                 {
                     var s = stats[i];
@@ -1190,18 +1293,22 @@ namespace CIPP.Reporting
                     r.PercentColumn(width, col => StatCard(ctx, col, value, label, caption, colour, accent, stretch, valueWidth));
                 }
             });
-            item.Spacer(14);                           // client statsGrid marginBottom
+            item.Spacer(Points(14));                           // client statsGrid marginBottom
         }
 
         private const double StatGap = 10, StatPadX = 6;
 
         // Client statCard: the figure on a 23pt line (20pt at lineHeight 1.15) with 7pt under it, then the 7pt
         // label and any caption on the page's 14pt lines. A cell line is its largest run x LineHeight but never
-        // under the table's size x LineHeight, so StatLeading makes the figure's line the client's step from
-        // the figure's baseline to the label's, and a table size of StatLine / StatLeading makes every other
-        // line (a label, a wrapped label line, a caption) the 14pt page line.
+        // under the table's size x LineHeight, with its baseline CellAscent x its largest run under its top. So
+        // StatLeading makes the figure's line the client's step from the figure's baseline to the label's, and
+        // a table size of StatLine / StatLeading makes every other line (a label, a wrapped label line, a
+        // caption) the 14pt page line.
         private const double StatLine = 14;
-        private const double StatLeading = (ReportStyles.StatNumber * 1.15 + 7 + 0.9 * (ReportStyles.StatLabel - ReportStyles.StatNumber)) / ReportStyles.StatNumber;
+        private const double StatLeading = (ReportStyles.StatNumber * 1.15 + 7 + 0.9 * (ReportStyles.StatLabel - ReportStyles.StatNumber)
+            + CellAscent * (ReportStyles.StatNumber - ReportStyles.StatLabel)) / ReportStyles.StatNumber;
+        // A caption's line is sized, by the line break that ends it, to sit 4pt under the label's 14pt line.
+        private const double StatCaptionLine = ReportStyles.StatLabel + 4 / CellAscent;
 
         // Helvetica and Helvetica-Bold advance widths (per 1000 em) for the WinAnsi code points ' '..U+00FF, the
         // metrics OfficeIMO lays the standard font out with (the oblique faces share them): ASCII, then 0x7F-0x9F
@@ -1255,12 +1362,13 @@ namespace CIPP.Reporting
         internal static double TextEm(string s, bool bold)
         {
             var widths = bold ? HelveticaBoldWidths : HelveticaWidths;
-            return s.Sum(ch =>
+            var em = 0.0;
+            foreach (var ch in s)
             {
-                var special = WinAnsiSpecials.IndexOf(ch);
-                var code = special >= 0 ? 0x80 + special : ch;
-                return (code >= ' ' && code <= 0xFF ? widths[code - ' '] : 556) / 1000.0;
-            });
+                var code = ch < 0x80 ? ch : WinAnsiSpecials.IndexOf(ch) is var special and >= 0 ? 0x80 + special : ch;
+                em += (code >= ' ' && code <= 0xFF ? widths[code - ' '] : 556) / 1000.0;
+            }
+            return em;
         }
 
         // How many lines `text` takes in a column `width` points wide: each '\n' line word-wrapped greedily,
@@ -1351,7 +1459,7 @@ namespace CIPP.Reporting
                 var at = StatStrutAt(value);
                 var head = at < 0 ? value : value[..at];
                 EmitRuns(runs, head, colour, size, bold: true, emojiSize: size * 0.55, emojiOffset: size * -0.18);
-                runs.Add(new PdfTextRun("\u00A0", true, false, Pdf(colour), false, false, ReportStyles.StatNumber));
+                runs.Add(new PdfTextRun("\u00A0", true, false, Pdf(colour), false, false, Points(ReportStyles.StatNumber)));
                 if (at >= 0) EmitRuns(runs, value[(at + 1)..], colour, size, bold: true, emojiSize: size * 0.55, emojiOffset: size * -0.18);
             }
             else
@@ -1360,47 +1468,49 @@ namespace CIPP.Reporting
             }
             runs.Add(Run("\n", colour, ReportStyles.StatNumber));
             EmitRuns(runs, label, ReportColours.Muted, ReportStyles.StatLabel, bold: true);
-            // A caption sits 4pt under the label's 14pt line: a no-break space that tall ends the label line.
+            var lastLine = ReportStyles.StatLabel;
             if (!string.IsNullOrEmpty(caption))
             {
-                runs.Add(new PdfTextRun("\u00A0", true, false, Pdf(ReportColours.Muted), false, false, (StatLine + 4) / StatLeading));
                 runs.Add(Run("\n", ctx.Theme.Palette["subtitle"], ReportStyles.StatCaption));
                 EmitRuns(runs, caption!, ctx.Theme.Palette["subtitle"], ReportStyles.StatCaption);
+                runs.Add(Run("\n", ctx.Theme.Palette["subtitle"], StatCaptionLine));
+                lastLine = StatCaptionLine;
             }
             var rows = new List<PdfTableCell[]> { new[] { new PdfTableCell(runs) } };
             var style = new PdfTableStyle
             {
                 HeaderRowCount = 0,
-                FontSize = StatLine / StatLeading,
+                FontSize = Points(StatLine / StatLeading),
                 LineHeight = StatLeading,
                 BorderColor = Pdf(ReportColours.Line),
-                BorderWidth = 1,
-                CornerRadius = CardCornerRadius,  // softly rounded card; top accent bar is clipped to the rounded corners
-                RowSeparatorWidth = 0,
-                CellPaddingX = 6,
-                CellPaddingY = 8,
+                BorderWidth = Points(1),
+                CornerRadius = Points(CardCornerRadius),  // softly rounded card; top accent bar is clipped to the rounded corners
+                RowSeparatorWidth = Points(0),
+                CellPaddingX = Points(6),
+                CellPaddingY = Points(8),
                 // The first baseline where the client's figure sits (3pt accent, 10pt padding, 0.9x the figure
                 // size under its line top), and the card's foot 10pt of padding and the 1pt border under the
-                // last 14pt line, stretched to the row's tallest card.
+                // last 14pt line (its baseline 0.9x the label size down it), stretched to the row's tallest card.
                 CellPaddings = new Dictionary<(int, int), PdfCellPadding>
                 {
                     [(0, 0)] = new PdfCellPadding
                     {
-                        Left = StatPadX, Right = StatPadX,
-                        Top = 3 + 10 + 0.9 * ReportStyles.StatNumber - CellAscent * StatLine / StatLeading,
-                        Bottom = 10 + 1 - 0.9 * ReportStyles.StatLabel + CellAscent * StatLine / StatLeading + stretch,
+                        Left = Points(StatPadX), Right = Points(StatPadX),
+                        Top = Points(3 + 10 + 0.9 * ReportStyles.StatNumber - CellAscent * ReportStyles.StatNumber),
+                        Bottom = Points(10 + 1 + StatLine - 0.9 * ReportStyles.StatLabel
+                            - (StatLeading * Math.Max(StatLine / StatLeading, lastLine) - CellAscent * lastLine) + stretch),
                     },
                 },
-                Alignments = new List<PdfColumnAlign> { PdfColumnAlign.Center },
-                CellFills = new Dictionary<(int, int), PdfColor> { [(0, 0)] = Pdf(ReportColours.White) },
+                Alignments = new List<OfficeAlignment> { OfficeAlignment.Center },
+                CellFills = new Dictionary<(int, int), OfficeColor> { [(0, 0)] = Pdf(ReportColours.White) },
                 CellBorders = new Dictionary<(int, int), PdfCellBorder>
                 {
                     // only the top accent bar; disable the class-default grey sides so 3.4.x's general
                     // cell-border renderer doesn't lay grey over the accent at the rounded corners.
-                    [(0, 0)] = new PdfCellBorder { TopBorder = new PdfCellBorderSide { Color = Pdf(accent), Width = 3 }, Left = false, Right = false, Bottom = false },
+                    [(0, 0)] = new PdfCellBorder { TopBorder = new PdfCellBorderSide { Color = Pdf(accent), Width = Points(3) }, Left = false, Right = false, Bottom = false },
                 },
             };
-            col.Table(rows, PdfAlign.Left, style);
+            col.AddTable(rows, OfficeAlignment.Left, style);
         }
 
         // Labelled progress bars (client ProgressList): each item is its own bordered row box holding a
@@ -1432,18 +1542,20 @@ namespace CIPP.Reporting
                 {
                     HeaderRowCount = 0,
                     BorderColor = Pdf(ReportColours.Line),
-                    BorderWidth = 1,
-                    RowSeparatorWidth = 0,
-                    CellPaddingX = 10,
-                    CellPaddingY = 7,
+                    BorderWidth = Points(1),
+                    RowSeparatorWidth = Points(0),
+                    CellPaddingX = Points(10),
+                    CellPaddingY = Points(7),
                     ColumnWidthWeights = new List<double> { 28, 58, 14 },
-                    Alignments = new List<PdfColumnAlign> { PdfColumnAlign.Left, PdfColumnAlign.Left, PdfColumnAlign.Right },
+                    Alignments = new List<OfficeAlignment> { OfficeAlignment.Left, OfficeAlignment.Left, OfficeAlignment.Right },
                     VerticalAlignments = new List<PdfCellVerticalAlign> { PdfCellVerticalAlign.Middle, PdfCellVerticalAlign.Middle, PdfCellVerticalAlign.Middle },
-                    CellFills = new Dictionary<(int, int), PdfColor> { [(0, 1)] = Pdf(ReportColours.Line) },
+                    CellFills = new Dictionary<(int, int), OfficeColor> { [(0, 1)] = Pdf(ReportColours.Line) },
                     CellDataBars = new Dictionary<(int, int), PdfCellDataBar> { [(0, 1)] = new PdfCellDataBar { Color = Pdf(colour), Ratio = pct, StartRatio = 0 } },
+                    // The row is laid out on the document's 11pt line with the 8pt runs seated where an 11pt one is.
+                    RowBaselineOffset = Points(-CellAscent * (FlowBaseSize - ReportStyles.TableCell)),
                 };
-                item.Table(rows, PdfAlign.Left, style);
-                item.Spacer(6);
+                item.AddTable(rows, OfficeAlignment.Left, style);
+                item.Spacer(Points(6));
             }
         }
 
@@ -1521,8 +1633,8 @@ namespace CIPP.Reporting
             if (hasCaption)
                 AddT(dw, San(caption!), 0, captionTop, w, captionH, ChartCaptionSize, ctx.Theme.Palette["chart"], OfficeTextAlignment.Center, true);
 
-            item.Drawing(dw, PdfAlign.Left);
-            item.Spacer(20);                           // client chartContainer marginBottom
+            item.Drawing(dw, OfficeAlignment.Left);
+            item.Spacer(Points(20));                           // client chartContainer marginBottom
         }
 
         /// <summary>A chart block flagged to render at half the page width (so two can sit side by side).</summary>
@@ -1544,7 +1656,7 @@ namespace CIPP.Reporting
             var colWidth = (ctx.ContentWidth - gap) / 2;
             item.Row(r =>
             {
-                r.Gap(gap);
+                r.Gap(Points(gap));
                 r.PercentColumn(50, col => ChartFromBlock(ctx, col, a, colWidth));
                 r.PercentColumn(50, col => ChartFromBlock(ctx, col, b, colWidth));
             });
@@ -1806,8 +1918,8 @@ namespace CIPP.Reporting
             if (hasCaption)
                 AddT(dw, San(caption!), 0, plotTop + plotH + captionGap, w, captionH, ChartLabelSize, ctx.Theme.Palette["chart"], OfficeTextAlignment.Center);
 
-            item.Drawing(dw, PdfAlign.Left);
-            item.Spacer(12);
+            item.Drawing(dw, OfficeAlignment.Left);
+            item.Spacer(Points(12));
         }
 
         // Read the nodes/links payload, assign columns, scale node heights to the plot, and relax the vertical
@@ -2113,7 +2225,7 @@ namespace CIPP.Reporting
             var title = block.Str("title");
             if (!string.IsNullOrEmpty(title))
             {
-                if (!firstOnPage) item.Spacer(SectionGap);
+                if (!firstOnPage) item.Spacer(Points(SectionGap));
                 SectionTitle(ctx, item, title);
             }
 

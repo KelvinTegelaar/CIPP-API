@@ -274,7 +274,7 @@ Describe 'License report tree' {
         $Data.Summary.TotalPotentialAnnual = 13580460
         $r = Build-CippLicenseReportTree -Data $Data
         $Bytes = ConvertTo-CippReportPdf -Blocks $r.Blocks -Variables $r.Variables -TenantName 'Contoso' -ReportName 'T'
-        $Doc = [OfficeIMO.Pdf.PdfReadDocument]::Open($Bytes)
+        $Doc = [OfficeIMO.Pdf.PdfDocument]::Load([IO.MemoryStream]::new($Bytes))
         $Text = ($Doc.Pages | ForEach-Object { $_.ExtractText() }) -join "`n"
         # The stat row reads as one line of whole figures (the cover meta line quotes them too, so match the row).
         $Text | Should -Match 'CHF[ \xA0]3,285,563 CHF[ \xA0]838 CHF[ \xA0]13,580,460 27'

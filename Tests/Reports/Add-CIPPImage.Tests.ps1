@@ -10,6 +10,7 @@ BeforeAll {
     $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Add-CIPPImage.ps1' -File -ErrorAction SilentlyContinue |
         Select-Object -First 1 -ExpandProperty FullName
     if (-not $FunctionPath) { throw 'Could not locate Add-CIPPImage.ps1 under Modules/' }
+    [void][System.Reflection.Assembly]::LoadFrom((Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll'))
 
     function Get-CIPPTable { param($TableName) @{} }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) $script:SavedEntity = $Entity }
@@ -63,6 +64,39 @@ Describe 'Add-CIPPImage' {
             $First = Add-CIPPImage -PartitionKey 'logo' -Data (New-DataUrl)
             $Second = Add-CIPPImage -PartitionKey 'logo' -Data (New-DataUrl)
             $First.id | Should -Not -Be $Second.id
+        }
+    }
+
+    Context 'Sizing for reports' {
+        It 'stores an oversized logo at 1040x400 at most' {
+            $Png = [OfficeIMO.Drawing.OfficePngWriter]::Encode([OfficeIMO.Drawing.OfficeRasterImage]::new(3000, 1500, [OfficeIMO.OfficeColor]::FromRgb(20, 120, 200)))
+            $Result = Add-CIPPImage -PartitionKey 'logo' -Data "data:image/png;base64,$([Convert]::ToBase64String($Png))"
+
+            $Result.contentType | Should -Be 'image/png'
+            $Stored = [Convert]::FromBase64String(($script:SavedEntity.data -replace '^data:image/png;base64,', ''))
+            $Size = [CIPP.Reporting.ReportComponents]::ImageSize($Stored)
+            $Size.Item1 | Should -Be 800
+            $Size.Item2 | Should -Be 400
+        }
+
+        It 'stores an opaque cover photo as a 2000px JPEG' {
+            $Pixels = [byte[]]::new(2400 * 600 * 4)
+            [Random]::new(1).NextBytes($Pixels)
+            for ($i = 3; $i -lt $Pixels.Length; $i += 4) { $Pixels[$i] = 255 }
+            $Png = [OfficeIMO.Drawing.OfficePngWriter]::Encode([OfficeIMO.Drawing.OfficeRasterImage]::FromRgba32(2400, 600, $Pixels))
+            $Result = Add-CIPPImage -PartitionKey 'brandingCover' -Data "data:image/png;base64,$([Convert]::ToBase64String($Png))"
+
+            $Result.contentType | Should -Be 'image/jpeg'
+            $script:SavedEntity.contentType | Should -Be 'image/jpeg'
+            $script:SavedEntity.data | Should -BeLike 'data:image/jpeg;base64,*'
+            [CIPP.Reporting.ReportComponents]::ImageSize([Convert]::FromBase64String(($script:SavedEntity.data -replace '^data:image/jpeg;base64,', ''))).Item1 | Should -Be 2000
+        }
+
+        It 'stores an image already within its size as uploaded' {
+            $Png = [OfficeIMO.Drawing.OfficePngWriter]::Encode([OfficeIMO.Drawing.OfficeRasterImage]::new(240, 80, [OfficeIMO.OfficeColor]::FromRgb(20, 120, 200)))
+            $Url = "data:image/png;base64,$([Convert]::ToBase64String($Png))"
+            Add-CIPPImage -PartitionKey 'logo' -Data $Url | Out-Null
+            $script:SavedEntity.data | Should -Be $Url
         }
     }
 

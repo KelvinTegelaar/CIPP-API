@@ -3,7 +3,7 @@ function Add-CIPPImage {
     .FUNCTIONALITY
         Internal
     .SYNOPSIS
-        Stores an image in the Images table and returns its id.
+        Stores an image in the Images table, sized for the reports that draw it, and returns its id.
     .PARAMETER PartitionKey
         Image kind / purpose (e.g. logo, brandingCover).
     .PARAMETER Data
@@ -49,6 +49,14 @@ function Add-CIPPImage {
     $MaxImageBytes = 5242880
     if ($ImageBytes.Length -gt $MaxImageBytes) {
         throw 'Image size must be less than 5MB.'
+    }
+
+    if ($Subtype -ne 'svg+xml') {
+        $Sized = [CIPP.Reporting.ReportComponents]::SizeImage($ImageBytes, $PartitionKey -eq 'brandingCover')
+        if ($Sized.Length -lt $ImageBytes.Length) {
+            $ContentType = [CIPP.Reporting.ReportComponents]::ImageContentType($Sized)
+            $Data = "data:$ContentType;base64,$([Convert]::ToBase64String($Sized))"
+        }
     }
 
     $Id = [guid]::NewGuid().ToString()
