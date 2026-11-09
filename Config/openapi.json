@@ -7045,6 +7045,9 @@
                   "displayName": {
                     "type": "string"
                   },
+                  "mailNickname": {
+                    "type": "string"
+                  },
                   "owner": {
                     "type": "string"
                   },
