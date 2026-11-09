@@ -74,10 +74,12 @@ function Invoke-ListSiteUserAccess {
         $AssignmentUri = if ($Inherits) { "$($SPScope.BaseUri)/web/roleassignments" } else { $SPScope.AssignmentUri }
 
         $Paths = [System.Collections.Generic.List[object]]::new()
+        # Owner ids per group, read the first time that group's owners claim comes up.
+        $OwnerIdsByGroup = @{}
 
         # Matches a role assignment principal against the user, returning how it matched.
         function Get-PrincipalMatch {
-            param($Member, $User, $GroupIds, $GroupNameById)
+            param($Member, $User, $GroupIds, $GroupNameById, $TenantFilter, $OwnerIdsByGroup)
 
             $LoginName = [string]$Member.LoginName
 
@@ -99,7 +101,25 @@ function Invoke-ListSiteUserAccess {
             if ($LoginName -match '(?i)(?:federateddirectoryclaimprovider|tenant)\|([0-9a-fA-F-]{36})(_o)?') {
                 $GroupId = $Matches[1]
                 $OwnersOnly = [bool]$Matches[2]
-                if ($GroupIds.Contains($GroupId)) {
+                if ($OwnersOnly) {
+                    # '_o' is the group's Owners claim: it holds the owners, not everyone in the group, so
+                    # transitiveMemberOf cannot answer it. A failed read leaves the claim unmatched, as a failed
+                    # membership read does above.
+                    if (-not $OwnerIdsByGroup.ContainsKey($GroupId)) {
+                        $OwnerIds = @()
+                        try {
+                            $Owners = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/groups/$GroupId/owners?`$select=id&`$top=999" -tenantid $TenantFilter -AsApp $true)
+                            $OwnerIds = @($Owners.id)
+                        } catch {
+                            Write-Information "Could not read owners of group $GroupId : $($_.Exception.Message)"
+                        }
+                        $OwnerIdsByGroup[$GroupId] = $OwnerIds
+                    }
+                    $IsInGroup = $OwnerIdsByGroup[$GroupId] -contains $User.id
+                } else {
+                    $IsInGroup = $GroupIds.Contains($GroupId)
+                }
+                if ($IsInGroup) {
                     $GroupLabel = $GroupNameById[$GroupId] ?? $Member.Title ?? $GroupId
                     $Suffix = if ($OwnersOnly) { ' (owners)' } else { '' }
                     return @{ Route = 'Directory group'; Via = "Member of $GroupLabel$Suffix" }
@@ -116,14 +136,14 @@ function Invoke-ListSiteUserAccess {
             $Member = $Assignment.Member
             if (-not $Member) { continue }
 
-            $Match = Get-PrincipalMatch -Member $Member -User $User -GroupIds $GroupIds -GroupNameById $GroupNameById
+            $Match = Get-PrincipalMatch -Member $Member -User $User -GroupIds $GroupIds -GroupNameById $GroupNameById -TenantFilter $TenantFilter -OwnerIdsByGroup $OwnerIdsByGroup
 
             # SharePoint groups hold their own membership, so they need expanding to check.
             if (-not $Match -and $Member.PrincipalType -eq 8) {
                 try {
                     $GroupUsers = @(New-GraphGetRequest -uri "$($SPScope.BaseUri)/web/sitegroups($($Member.Id))/users?`$select=Id,Title,LoginName,PrincipalType" -tenantid $TenantFilter -scope $SPScope.Scope -extraHeaders $SPScope.Headers -UseCertificate -AsApp $true)
                     foreach ($GroupUser in $GroupUsers) {
-                        $Inner = Get-PrincipalMatch -Member $GroupUser -User $User -GroupIds $GroupIds -GroupNameById $GroupNameById
+                        $Inner = Get-PrincipalMatch -Member $GroupUser -User $User -GroupIds $GroupIds -GroupNameById $GroupNameById -TenantFilter $TenantFilter -OwnerIdsByGroup $OwnerIdsByGroup
                         if ($Inner) {
                             # Report the SharePoint group as the route, noting how they are in it.
                             $Detail = if ($Inner.Route -eq 'Direct grant') { 'directly a member' } else { $Inner.Via.ToLower() }
@@ -154,7 +174,7 @@ function Invoke-ListSiteUserAccess {
         try {
             $Admins = @(New-GraphGetRequest -uri "$($SPScope.BaseUri)/web/siteusers?`$filter=IsSiteAdmin eq true&`$select=Id,Title,LoginName,PrincipalType" -tenantid $TenantFilter -scope $SPScope.Scope -extraHeaders $SPScope.Headers -UseCertificate -AsApp $true)
             foreach ($Admin in $Admins) {
-                $Match = Get-PrincipalMatch -Member $Admin -User $User -GroupIds $GroupIds -GroupNameById $GroupNameById
+                $Match = Get-PrincipalMatch -Member $Admin -User $User -GroupIds $GroupIds -GroupNameById $GroupNameById -TenantFilter $TenantFilter -OwnerIdsByGroup $OwnerIdsByGroup
                 if ($Match) {
                     $Paths.Add([PSCustomObject]@{
                             Route            = 'Site collection admin'
