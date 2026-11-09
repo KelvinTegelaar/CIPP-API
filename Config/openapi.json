@@ -39805,6 +39805,79 @@
         "x-cipp-role": "Exchange.Mailbox.ReadWrite"
       }
     },
+    "/api/ExecSetMailboxTimeZone": {
+      "post": {
+        "summary": "Set the time zone of a mailbox",
+        "operationId": "ExecSetMailboxTimeZone",
+        "tags": [
+          "Email-Exchange > Administration"
+        ],
+        "description": "Sets the mailbox time zone and the working hours time zone to the selected Windows time zone ID, for example British Columbia Standard Time. Existing calendar items are not moved; use ExecCalendarTimeZoneMigration for that.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Identity": {
+                    "type": "string",
+                    "description": "Mailbox ExchangeGuid"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "TimeZone": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Windows time zone ID to set, e.g. British Columbia Standard Time"
+                  },
+                  "UPN": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.Mailbox.ReadWrite"
+      }
+    },
     "/api/ExecSetMdoAlert": {
       "post": {
         "summary": "ExecSetMdoAlert",
