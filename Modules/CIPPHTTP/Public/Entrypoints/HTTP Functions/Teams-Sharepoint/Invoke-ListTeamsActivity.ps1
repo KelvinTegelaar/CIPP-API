@@ -38,6 +38,9 @@ Function Invoke-ListTeamsActivity {
             })
     }
 
+    if (-not $type) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Type is required' } })
+    }
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($type)Detail(period='D30')" -tenantid $TenantFilter | ConvertFrom-Csv | Select-Object @{ Name = 'UPN'; Expression = { $_.'User Principal Name' } },
     @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
     @{ Name = 'TeamsChat'; Expression = { $_.'Team Chat Message Count' } },

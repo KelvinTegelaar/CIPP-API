@@ -55,7 +55,8 @@ function Set-CIPPDBCacheGroups {
             $MembersByGroupId = @{}
             if ($MemberRequests) {
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Fetching group members for batch of $($Batch.Count)" -sev Debug
-                $MemberResults = New-GraphBulkRequest -Requests @($MemberRequests) -tenantid $TenantFilter
+                # A batch of 50 groups is three $batch calls; sent together they take a third of the time
+                $MemberResults = New-GraphBulkRequest -Requests @($MemberRequests) -tenantid $TenantFilter -MaxConcurrency 3
                 foreach ($Result in $MemberResults) {
                     if ($Result.id) { $MembersByGroupId[$Result.id] = $Result.body.value }
                 }

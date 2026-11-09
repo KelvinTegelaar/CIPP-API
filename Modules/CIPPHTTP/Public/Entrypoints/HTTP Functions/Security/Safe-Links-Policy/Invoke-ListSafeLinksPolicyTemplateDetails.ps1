@@ -19,11 +19,10 @@ function Invoke-ListSafeLinksPolicyTemplateDetails {
 
     $Result = @{}
 
+    if (-not $ID) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Template ID is required' } })
+    }
     try {
-        if (-not $ID) {
-            throw 'Template ID is required'
-        }
-
         # Get the specific template from Azure Table Storage
         $Table = Get-CippTable -tablename 'templates'
         $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type String

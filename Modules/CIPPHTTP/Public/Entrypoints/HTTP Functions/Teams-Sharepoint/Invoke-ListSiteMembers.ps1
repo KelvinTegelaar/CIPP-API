@@ -20,6 +20,9 @@ Function Invoke-ListSiteMembers {
     $SiteId = $Request.Query.SiteId
     $SiteUrl = $Request.Query.SiteUrl
     $Filter = $Request.Query.Filter
+    if (-not $SiteId -and -not $SiteUrl) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'SiteId or SiteUrl is required' } })
+    }
 
     # A SharePoint user entity is a guest/external identity when either guest flag is set or
     # the claims login carries the external-user or spo-guest marker.

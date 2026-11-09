@@ -14,6 +14,9 @@ function Invoke-ListSPOVersionCleanup {
     $Headers = $Request.Headers
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $SiteUrl = $Request.Query.SiteUrl ?? $Request.Body.SiteUrl
+    if (-not $SiteUrl) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'SiteUrl is required' } })
+    }
 
     try {
         $Result = Get-CIPPSiteVersionCleanupStatus -TenantFilter $TenantFilter -SiteUrl $SiteUrl

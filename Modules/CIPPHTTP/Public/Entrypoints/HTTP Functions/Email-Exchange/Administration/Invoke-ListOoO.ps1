@@ -16,6 +16,9 @@ Function Invoke-ListOoO {
 
     $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.userid
+    if (-not $UserID) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'UserID is required' } })
+    }
     try {
         $Results = Get-CIPPOutOfOffice -UserID $UserID -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK

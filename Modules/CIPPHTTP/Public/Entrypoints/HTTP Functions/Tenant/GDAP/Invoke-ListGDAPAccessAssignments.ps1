@@ -10,6 +10,9 @@ function Invoke-ListGDAPAccessAssignments {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $Id = $Request.Query.Id
+    if (-not $Id) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Id is required' } })
+    }
     # Multi-partner: act as the relationship's source partner (defaults to the primary)
     $PartnerTenantId = $Request.Query.partnerTenantId ?? $Request.Body.partnerTenantId
     if (!$PartnerTenantId -or -not (Get-CIPPPartnerTenantList | Where-Object { $_.partnerTenantId -eq $PartnerTenantId })) {
