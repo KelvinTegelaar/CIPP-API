@@ -45784,6 +45784,58 @@
         "x-cipp-role": "Tenant.Administration.Read"
       }
     },
+    "/api/ListAppDeploymentStatus": {
+      "get": {
+        "summary": "ListAppDeploymentStatus",
+        "operationId": "ListAppDeploymentStatus",
+        "tags": [
+          "Endpoint > Applications"
+        ],
+        "description": "Lists the per-device and per-user install status of one Intune app, like the Device install status and User install status pages in Intune. Same response as ListIntuneDeploymentStatus, readable with application permissions only.",
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "description": "Id of the app",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.Application.Read"
+      }
+    },
     "/api/ListAppleEnrollmentProfiles": {
       "get": {
         "summary": "ListAppleEnrollmentProfiles",
@@ -57791,6 +57843,69 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.MEM.Read"
+      }
+    },
+    "/api/ListIntuneDeploymentStatus": {
+      "get": {
+        "summary": "ListIntuneDeploymentStatus",
+        "operationId": "ListIntuneDeploymentStatus",
+        "tags": [
+          "Endpoint > MEM"
+        ],
+        "description": "Lists the per-device and per-user deployment status of one Intune app, policy or script, like the Device status and User status pages in Intune. Devices or Users is null when Intune has no status for that side of the object type.",
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "description": "Id of the app, policy or script",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "Type",
+            "in": "query",
+            "description": "Graph collection of the object: mobileApps, configurationPolicies, deviceCompliancePolicies, deviceManagementScripts, an app protection type, ...",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
