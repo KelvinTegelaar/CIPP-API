@@ -17,7 +17,8 @@ BeforeAll {
     function Get-CIPPSchedulerBlockedCommands { @() }
     function Get-CIPPScheduledTaskNextRun { param($Recurrence, $ScheduledTime) 5000 }
     function Write-LogMessage { param($headers, $API, $message, $sev, $tenant, $tenantid, $LogData) }
-    function Invoke-CIPPIntuneApprovalRetry { param($TenantFilter) }
+    # The executor only runs functions from the CIPP modules, so the command lives in a module of that name.
+    $null = New-Module -Name CIPPCore -ScriptBlock { function Invoke-CIPPIntuneApprovalRetry { param($TenantFilter) } } | Import-Module -Force -PassThru
 
     . $FunctionPath
 
@@ -37,6 +38,10 @@ BeforeAll {
     }
 }
 
+AfterAll {
+    Remove-Module -Name CIPPCore -Force -ErrorAction SilentlyContinue
+}
+
 Describe 'Push-ExecScheduledCommand recurrence ended by the command' {
     BeforeEach {
         Mock Set-CippScheduledTaskContext {}
@@ -46,7 +51,6 @@ Describe 'Push-ExecScheduledCommand recurrence ended by the command' {
         Mock Get-Tenants { [pscustomobject]@{ customerId = 'cust-a' } }
         Mock Write-LogMessage {}
         Mock Invoke-CIPPIntuneApprovalRetry { 'checked' }
-        Mock Get-Command { [pscustomobject]@{ Module = 'CIPPCore'; Parameters = @{ TenantFilter = $null } } }
         $script:Item.TaskInfo.Recurrence = '1h'
     }
 

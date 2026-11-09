@@ -79,8 +79,7 @@ function Start-UserTasksOrchestrator {
                     continue
                 }
 
-                # Cache Get-Command result to avoid repeated expensive reflection calls
-                $CommandInfo = Get-Command -Name $task.Command -ErrorAction SilentlyContinue
+                $CommandInfo = $ExecutionContext.InvokeCommand.GetCommand($task.Command, 'All')
                 if (-not $CommandInfo) {
                     # Resolve the required module from standardised command name patterns
                     $ModuleToImport = switch -Wildcard ($task.Command) {

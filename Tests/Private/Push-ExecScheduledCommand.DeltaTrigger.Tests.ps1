@@ -25,7 +25,8 @@ BeforeAll {
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function Get-CIPPSchedulerBlockedCommands { }
     function Send-CIPPScheduledTaskAlert { param($Results, $TaskInfo, $TenantFilter, $TaskType, $Attachments) }
-    function Clear-CIPPImmutableID { param($UserID, $TenantFilter, $APIName) }
+    # The executor only runs functions from the CIPP modules, so the command lives in a module of that name.
+    $null = New-Module -Name CIPPCore -ScriptBlock { function Clear-CIPPImmutableID { param($UserID, $TenantFilter, $APIName) } } | Import-Module -Force -PassThru
 
     . $FunctionPath
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPScheduledTaskNextRun.ps1')
@@ -68,6 +69,10 @@ BeforeAll {
     }
 }
 
+AfterAll {
+    Remove-Module -Name CIPPCore -Force -ErrorAction SilentlyContinue
+}
+
 Describe 'Push-ExecScheduledCommand delta trigger' {
     BeforeEach {
         $script:Writes = [System.Collections.Generic.List[object]]::new()
@@ -86,11 +91,6 @@ Describe 'Push-ExecScheduledCommand delta trigger' {
         Mock -CommandName New-GraphDeltaQuery -MockWith { @{ value = @() } }
         Mock -CommandName Test-DeltaQueryConditions -MockWith { @{ ConditionsMet = $false; MatchedData = @() } }
         Mock -CommandName Clear-CIPPImmutableID -MockWith { 'cleared' }
-        # The module allow-list check reads Get-Command; only intercept the scheduled command itself
-        # so Pester's own use of Get-Command is untouched.
-        Mock -CommandName Get-Command -ParameterFilter { $Name -eq 'Clear-CIPPImmutableID' } -MockWith {
-            [pscustomobject]@{ Name = 'Clear-CIPPImmutableID'; Module = 'CIPPCore'; Parameters = @{ TenantFilter = 1; UserID = 1 } }
-        }
     }
 
     Context 'The delta lookup fails' {

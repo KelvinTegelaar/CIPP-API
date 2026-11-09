@@ -221,7 +221,7 @@ function Push-ExecScheduledCommand {
         }
     }
 
-    $Command = Get-Command -Name $Item.Command -ErrorAction SilentlyContinue
+    $Command = $ExecutionContext.InvokeCommand.GetCommand($Item.Command, 'Function')
     if ($null -eq $Command) {
         $Results = "Task Failed: The command $($Item.Command) does not exist."
         $State = 'Failed'
@@ -239,7 +239,7 @@ function Push-ExecScheduledCommand {
         return
     }
 
-    if ($Command.Module -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPBaselines', 'CIPPTests', 'CIPPDB', 'CippExtensions', 'CIPPActivityTriggers')) {
+    if ($Command.ModuleName -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPBaselines', 'CIPPTests', 'CIPPDB', 'CippExtensions', 'CIPPActivityTriggers')) {
         $State = 'Failed'
         Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Blocked attempt to schedule command from unauthorized module: $($Command.ModuleName)\$($Item.Command)" -Sev 'Warning'
         $Results = "Task blocked: The command '$($Item.Command)' is not permitted to run as a scheduled task."

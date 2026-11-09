@@ -23,8 +23,7 @@ function Push-CIPPOffboardingTask {
         if ($Step) { Set-CIPPAsyncDeploymentStep @Step -StepStatus 'running' -Message 'In progress' }
 
         # Check if cmdlet exists
-        $CmdletInfo = Get-Command -Name $Cmdlet -Module CIPPCore -ErrorAction SilentlyContinue
-        if (-not $CmdletInfo) {
+        if ($ExecutionContext.InvokeCommand.GetCommand($Cmdlet, 'Function').ModuleName -ne 'CIPPCore') {
             throw "Cmdlet $Cmdlet does not exist"
         }
 

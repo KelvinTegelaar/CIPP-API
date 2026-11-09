@@ -221,6 +221,32 @@ Describe 'Get-Tenants refresh loop' {
         }
     }
 
+    Context 'a TenantFilter that is not in the cache' {
+        BeforeEach {
+            $script:Relationships = @(New-Relationship -Guid $script:GuidA -DisplayName 'Contoso')
+            $script:LookupByTenant[$script:GuidA] = 'contoso.com'
+        }
+
+        It 'does not pull GDAP relationships for <Filter>, which no relationship can match' -ForEach @(
+            @{ Filter = 'unknown.example.com' }
+            @{ Filter = 'AllTenants' }
+        ) {
+            $Result = Get-Tenants -IncludeErrors -TenantFilter $Filter
+
+            Should -Invoke New-GraphGetRequest -Times 0 -Exactly
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+            $Result | Should -BeNullOrEmpty
+        }
+
+        It 'still discovers a newly delegated tenant looked up by its customerId' {
+            $Result = Get-Tenants -TenantFilter $script:GuidA
+
+            Should -Invoke New-GraphGetRequest -ParameterFilter { $uri -like '*delegatedAdminRelationships*' -and $uri -like "*customer/tenantId eq '$($script:GuidA)'*" } -Times 1 -Exactly
+            Should -Invoke Start-CIPPOrchestrator -ParameterFilter { $InputObject.Batch.customerId -contains $script:GuidA } -Times 1 -Exactly
+            $Result.defaultDomainName | Should -Be 'contoso.com'
+        }
+    }
+
     Context 'when the lookup returns the initial domain or nothing' {
         BeforeEach {
             $script:Relationships = @(New-Relationship -Guid $script:GuidA -DisplayName 'Contoso')

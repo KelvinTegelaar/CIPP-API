@@ -267,17 +267,16 @@ function Get-CIPPBaseline {
                 } elseif ("$EnteredStageAt") {
                     [int64]$EnteredStageAt
                 } else { $null }
-                # A tenant outside the group an AND stage requires never reaches that stage or any after it.
-                $TotalStages = $Stages.Count
-                for ($i = 1; $i -lt $Stages.Count -and $TotalStages -eq $Stages.Count; $i++) {
-                    if ($Stages[$i].logic -eq 'or') { continue }
-                    foreach ($Condition in @($Stages[$i].conditions).Where({ $_.type -eq 'group' })) {
+                $NextStageDef = if ($CurrentStage -lt $Stages.Count) { $Stages[$CurrentStage] } else { $null }
+                # A tenant outside the group an AND stage requires cannot be moved into it until it joins.
+                $GroupBlocked = $false
+                if ($NextStageDef.logic -ne 'or') {
+                    foreach ($Condition in @($NextStageDef.conditions).Where({ $_.type -eq 'group' })) {
                         $GroupKey = "$($Condition.group.value ?? $Condition.group)"
                         $Group = $Groups.Where({ $_.Id -eq $GroupKey -or $_.Name -eq $GroupKey }, 'First')[0]
-                        if (@($Group.Members.defaultDomainName) -notcontains $TenantDomain) { $TotalStages = [Math]::Max($i, $CurrentStage) }
+                        if (@($Group.Members.defaultDomainName) -notcontains $TenantDomain) { $GroupBlocked = $true }
                     }
                 }
-                $NextStageDef = if ($CurrentStage -lt $TotalStages) { $Stages[$CurrentStage] } else { $null }
                 $TimeCondition = $NextStageDef.conditions | Where-Object { $_.type -eq 'time' } | Select-Object -First 1
                 $EstimatedAdvanceAt = if ($TimeCondition -and $EnteredStageAt) {
                     $Multiplier = if ($TimeCondition.unit -eq 'weeks') { 7 } else { 1 }
@@ -288,13 +287,14 @@ function Get-CIPPBaseline {
                     customerId         = $TenantLookup[$TenantDomain].customerId
                     tenantName         = $TenantNames[$TenantDomain] ?? $TenantDomain
                     currentStage       = $CurrentStage
-                    totalStages        = $TotalStages
+                    totalStages        = $Stages.Count
                     stageName          = $Stages[$CurrentStage - 1].name
                     enteredStageAt     = $EnteredStageAt
                     nextStage          = $NextStageDef
                     nextStageName      = $NextStageDef.name
                     estimatedAdvanceAt = $EstimatedAdvanceAt
-                    manualAdvance      = [bool]($NextStageDef.conditions | Where-Object { $_.type -eq 'manual' })
+                    groupBlocked       = $GroupBlocked
+                    manualAdvance      = -not $GroupBlocked -and [bool]($NextStageDef.conditions | Where-Object { $_.type -eq 'manual' })
                 }
             }
 

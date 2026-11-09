@@ -68,7 +68,7 @@ function Invoke-CIPPDBCacheCollection {
         $FullFunctionName = "Set-CIPPDBCache$CacheType"
         $ItemStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         try {
-            $Function = Get-Command -Name $FullFunctionName -ErrorAction SilentlyContinue
+            $Function = $ExecutionContext.InvokeCommand.GetCommand($FullFunctionName, 'Function')
             if (-not $Function) {
                 throw "Function $FullFunctionName not found"
             }

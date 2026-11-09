@@ -133,7 +133,7 @@ function New-CippCoreRequest {
         # Set script scope variables for Graph API to indicate HTTP request/high priority
         $script:XMsThrottlePriority = 'high'
 
-        if ((Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) -or $FunctionName -eq 'Invoke-Me') {
+        if ($ExecutionContext.InvokeCommand.GetCommand($FunctionName, 'Function') -or $FunctionName -eq 'Invoke-Me') {
             try {
                 $swAccess = [System.Diagnostics.Stopwatch]::StartNew()
                 $Access = Test-CIPPAccess -Request $Request

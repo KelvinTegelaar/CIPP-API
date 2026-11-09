@@ -128,7 +128,7 @@ Describe 'Baseline tenant identity (#941)' {
         $States[0].customerId | Should -Be $script:CustomerId
     }
 
-    It 'counts a stage gated on group <Group> only for its members (member: <Member>)' -ForEach @(
+    It 'keeps a stage gated on group <Group> visible but only lets members be moved into it (member: <Member>)' -ForEach @(
         @{ Group = 'g1'; Member = $true }
         @{ Group = 'other'; Member = $false }
     ) {
@@ -138,8 +138,21 @@ Describe 'Baseline tenant identity (#941)' {
 
         $State = @((Get-CIPPBaseline -ID 'b-gated').tenantStates)[0]
 
-        $State.totalStages | Should -Be $(if ($Member) { 2 } else { 1 })
-        [bool]$State.nextStage | Should -Be $Member
+        $State.totalStages | Should -Be 2
+        $State.nextStageName | Should -Be 'Two'
+        $State.groupBlocked | Should -Be (-not $Member)
+        $State.manualAdvance | Should -Be $Member
+    }
+
+    It 'never blocks an OR stage on its group condition' {
+        $Stages = '[{"name":"One"},{"name":"Two","logic":"or","conditions":[{"type":"manual"},{"type":"group","group":{"value":"other"}}]}]'
+        $script:Rollouts = @((New-Rollout 'b-or' -Stages $Stages))
+        $script:Deltas = @((New-Delta 'b-or' 'group' 'g1' $false))
+
+        $State = @((Get-CIPPBaseline -ID 'b-or').tenantStates)[0]
+
+        $State.groupBlocked | Should -BeFalse
+        $State.manualAdvance | Should -BeTrue
     }
 
     It 'stores tenant assignments and exclusions by customerId' {

@@ -28,8 +28,8 @@ function Get-CIPPFeatureFlag {
     )
 
     try {
-        # Get feature flags from JSON
-        $FeatureFlags = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\FeatureFlags.json')) | ConvertFrom-Json
+        # The definitions only change with a deploy, so parse them once per worker
+        $FeatureFlags = $script:CIPPFeatureFlagDefinitions ??= ([System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\FeatureFlags.json')) | ConvertFrom-Json)
 
         if ($Id) {
             $FeatureFlags = @($FeatureFlags | Where-Object { $_.Id -eq $Id })

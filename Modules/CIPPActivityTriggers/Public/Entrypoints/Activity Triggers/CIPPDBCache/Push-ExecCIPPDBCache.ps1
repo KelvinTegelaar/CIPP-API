@@ -53,7 +53,7 @@ function Push-ExecCIPPDBCache {
 
         # Build the full function name
         $FullFunctionName = "Set-CIPPDBCache$Name"
-        $Function = Get-Command -Name $FullFunctionName -ErrorAction SilentlyContinue
+        $Function = $ExecutionContext.InvokeCommand.GetCommand($FullFunctionName, 'Function')
         if (-not $Function) {
             throw "Function $FullFunctionName does not exist"
         }
