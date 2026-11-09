@@ -28,7 +28,8 @@ BeforeAll {
         }
     }
     function Write-LogMessage { param($Headers, $API, $tenant, $message, $sev, $LogData) }
-    function Get-CippException { param($Exception) [PSCustomObject]@{ NormalizedError = $Exception.Message } }
+    # Like the real helper, read the message from the ErrorRecord's exception.
+    function Get-CippException { param($Exception) [PSCustomObject]@{ NormalizedError = $Exception.Exception.Message } }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
 
     . $ExecPath
@@ -38,6 +39,11 @@ BeforeAll {
 Describe 'Invoke-ExecEmptySiteRecycleBin' {
     BeforeEach {
         $script:GraphPostCalls = 0
+        $script:PostUris = [System.Collections.Generic.List[string]]::new()
+        $script:PostBodies = [System.Collections.Generic.List[string]]::new()
+        $script:GetUris = [System.Collections.Generic.List[string]]::new()
+        # Pages the mocked recycle bin read returns, one per call; an empty bin once they run out.
+        $script:BinPages = [System.Collections.Generic.Queue[object]]::new()
         function global:New-GraphPostRequest {
             param(
                 $uri, $tenantid, $scope, $type, $body, $contentType, $AddedHeaders,
@@ -45,6 +51,8 @@ Describe 'Invoke-ExecEmptySiteRecycleBin' {
                 $AsApp
             )
             $script:GraphPostCalls++
+            $script:PostUris.Add($uri)
+            $script:PostBodies.Add([string]$body)
         }
         function global:New-GraphGetRequest {
             param(
@@ -53,6 +61,9 @@ Describe 'Invoke-ExecEmptySiteRecycleBin' {
                 [bool]$noPagination,
                 [switch]$SkipValueExtraction
             )
+            $script:GetUris.Add($uri)
+            if ($script:BinPages.Count -gt 0) { return $script:BinPages.Dequeue() }
+            [PSCustomObject]@{ value = @() }
         }
     }
 
@@ -81,7 +92,8 @@ Describe 'Invoke-ExecEmptySiteRecycleBin' {
         $Response.Body.Results | Should -Match 'Invalid Stage'
     }
 
-    It 'calls deleteAll endpoints for Both' {
+    It 'deletes first-stage items by id and empties the second stage for Both' {
+        $script:BinPages.Enqueue([PSCustomObject]@{ value = @([PSCustomObject]@{ Id = 'a1' }) })
         $Response = Invoke-ExecEmptySiteRecycleBin -Request ([pscustomobject]@{
                 Params  = @{ CIPPEndpoint = 'ExecEmptySiteRecycleBin' }
                 Headers = @{}
@@ -93,8 +105,68 @@ Describe 'Invoke-ExecEmptySiteRecycleBin' {
             })
 
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
-        $script:GraphPostCalls | Should -Be 2
+        $script:PostUris | Should -Be @(
+            'https://contoso.sharepoint.com/sites/a/_api/site/RecycleBin/DeleteByIds'
+            'https://contoso.sharepoint.com/sites/a/_api/site/RecycleBin/deleteAllSecondStageItems'
+        )
         $Response.Body.Results | Should -Match 'Emptied recycle bin'
+    }
+
+    It 'deletes first-stage items by id from the site collection bin, not web deleteAll' {
+        # web/RecycleBin/deleteAll() succeeds for the app-only caller without removing items other users deleted.
+        $script:BinPages.Enqueue([PSCustomObject]@{ value = @([PSCustomObject]@{ Id = 'a1' }, [PSCustomObject]@{ Id = 'a2' }) })
+        $Response = Invoke-ExecEmptySiteRecycleBin -Request ([pscustomobject]@{
+                Params  = @{ CIPPEndpoint = 'ExecEmptySiteRecycleBin' }
+                Headers = @{}
+                Body    = [pscustomobject]@{
+                    tenantFilter = 'contoso.onmicrosoft.com'
+                    SiteUrl      = 'https://contoso.sharepoint.com/sites/a'
+                    Stage        = 'First'
+                }
+            })
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        $script:PostUris | Should -Be @('https://contoso.sharepoint.com/sites/a/_api/site/RecycleBin/DeleteByIds')
+        ($script:PostBodies[0] | ConvertFrom-Json).ids | Should -Be @('a1', 'a2')
+        $script:GetUris[0] | Should -Match '/_api/site/RecycleBin\?'
+        $script:GetUris[0] | Should -Match '\$filter=ItemState eq 1'
+        $script:GetUris.Count | Should -Be 2
+        $Response.Body.Results | Should -Match 'Deleted 2 first-stage item'
+    }
+
+    It 'fails when SharePoint keeps first-stage items it accepted for deletion' {
+        $Page = [PSCustomObject]@{ value = @([PSCustomObject]@{ Id = 'a1' }) }
+        $script:BinPages.Enqueue($Page)
+        $script:BinPages.Enqueue($Page)
+        $Response = Invoke-ExecEmptySiteRecycleBin -Request ([pscustomobject]@{
+                Params  = @{ CIPPEndpoint = 'ExecEmptySiteRecycleBin' }
+                Headers = @{}
+                Body    = [pscustomobject]@{
+                    tenantFilter = 'contoso.onmicrosoft.com'
+                    SiteUrl      = 'https://contoso.sharepoint.com/sites/a'
+                    Stage        = 'First'
+                }
+            })
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::InternalServerError)
+        $Response.Body.Results | Should -Match 'did not delete'
+        $script:GraphPostCalls | Should -Be 1
+    }
+
+    It 'leaves first-stage items alone when only the second stage is emptied' {
+        $Response = Invoke-ExecEmptySiteRecycleBin -Request ([pscustomobject]@{
+                Params  = @{ CIPPEndpoint = 'ExecEmptySiteRecycleBin' }
+                Headers = @{}
+                Body    = [pscustomobject]@{
+                    tenantFilter = 'contoso.onmicrosoft.com'
+                    SiteUrl      = 'https://contoso.sharepoint.com/sites/a'
+                    Stage        = 'Second'
+                }
+            })
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        $script:PostUris | Should -Be @('https://contoso.sharepoint.com/sites/a/_api/site/RecycleBin/deleteAllSecondStageItems')
+        $script:GetUris.Count | Should -Be 0
     }
 }
 
