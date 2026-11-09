@@ -20281,7 +20281,8 @@
                     "type": "string"
                   },
                   "DaysAfterRenewal": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Committed (NCE) subscriptions can only be decreased in the first seven days of a new term, so the task must run just AFTER the renewal date, never before it. Clamp to 1-6 days so it always lands inside that window while giving Sherweb a day to process the renewal."
                   },
                   "Quantity": {
                     "type": "string"
