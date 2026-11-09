@@ -69,6 +69,16 @@ Describe 'ConvertTo-CippReportPdf' {
             $branding = @{ colour = '#0E4C92'; secondaryColour = '#F77F00'; watermarkText = 'DRAFT'; watermarkEnabled = $true; footerText = '%tenantname% report' }
             Test-IsPdf (ConvertTo-CippReportPdf -Blocks $b -Branding $branding -TenantName 'Contoso') | Should -BeTrue
         }
+        It 'renders text carrying control characters instead of failing the encoding preflight' {
+            # A `v escape in a double-quoted PowerShell string left a vertical tab (U+000B) in a stored ORCA
+            # result and the whole report failed to render (CyberDrain/CIPP#1180). Stored results are not
+            # regenerated on fix, so the sanitizer has to absorb the character.
+            $md = "**Remediation:** Publish an SPF TXT record. For Microsoft 365 only: $([char]0x0B)=spf1 include:spf.protection.outlook.com -all.`tTabbed$([char]0x0C)form feed$([char]0x00)nul"
+            $b = @(@{ type = 'test'; title = 'SPF'; status = 'Failed'; static = $false; content = $md })
+            Test-IsPdf (ConvertTo-CippReportPdf -Blocks $b) | Should -BeTrue
+            # Whitespace-like controls collapse to one space, other controls (NUL, C1) are dropped.
+            [CIPP.Reporting.ReportMarkdown]::Sanitize("a$([char]0x0B)$([char]0x0C)b$([char]0x00)c$([char]0x80)d") | Should -Be 'a bcd'
+        }
         It 'still renders when the branding logo cannot be embedded (skips it gracefully)' {
             $b = @(@{ type = 'blank'; content = '<p>x</p>' })
             # An unusable logo (here a PNG OfficeIMO rejects) must not sink the whole report.
