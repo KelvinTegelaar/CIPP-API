@@ -7,7 +7,7 @@ function Invoke-ExecBECBulkCheck {
     .SYNOPSIS
         Queues Business Email Compromise investigations for many users at once.
     .DESCRIPTION
-        Queues one BEC investigation per user, each its own sequential orchestration, with a queue entry for progress. Accepts either an array of { UserIds, tenantFilter } items (the Users table bulk action) or one object with UserIds[]. Each run gets its own case id; results appear on the BEC Reports page and each user's Compromise Remediation tab.
+        Queues one BEC investigation per user, each its own sequential orchestration, with a queue entry for progress. Accepts either an array of { UserIds, tenantFilter } items (the Users table bulk action) or one object with UserIds[]. An optional windowDays (1-30) sets how many days of history every run covers, ending now; omitted, a run covers 7 days, or 30 when the user holds Entra ID P1/P2. Each run gets its own case id; results appear on the BEC Reports page and each user's Compromise Remediation tab.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -24,6 +24,10 @@ function Invoke-ExecBECBulkCheck {
         # object ids of the users to investigate
         $UserIds = @($Entries | ForEach-Object { @($_.UserIds) } | Where-Object { $_ } | ForEach-Object { [string](& $Unwrap $_) } | Where-Object { $_ } | Select-Object -Unique)
         if ($UserIds.Count -eq 0) { throw 'No users to check' }
+        # Days of history every run covers, ending now (1-30); omitted = 7 days, or 30 when the user holds Entra ID P1/P2
+        $WindowRaw = [string](& $Unwrap ($Entries | ForEach-Object { $_.windowDays } | Where-Object { $_ } | Select-Object -First 1))
+        $WindowDays = $WindowRaw -as [int]
+        if (-not [string]::IsNullOrWhiteSpace($WindowRaw) -and ($null -eq $WindowDays -or $WindowDays -lt 1 -or $WindowDays -gt 30)) { throw 'windowDays must be a whole number of days between 1 and 30' }
 
         # Resolve UPN and display name in chunks of 15 ids
         $Resolved = @{}
@@ -47,7 +51,7 @@ function Invoke-ExecBECBulkCheck {
                 $Cases.Add([pscustomobject]@{ UserId = $UserId; UserPrincipalName = $null; CaseId = $null; Error = 'User not found' })
                 continue
             }
-            $Prepared = New-CIPPBecRunRequest -TenantFilter $TenantFilter -UserId ([string]$User.id) -UserPrincipalName ([string]$User.userPrincipalName) -DisplayName ([string]$User.displayName) -RequestedBy ([string]$RequestedBy) -QueueId ([string]$Queue.RowKey) -RequestedFromIP ([string]$RequestedFromIP)
+            $Prepared = New-CIPPBecRunRequest -TenantFilter $TenantFilter -UserId ([string]$User.id) -UserPrincipalName ([string]$User.userPrincipalName) -DisplayName ([string]$User.displayName) -RequestedBy ([string]$RequestedBy) -QueueId ([string]$Queue.RowKey) -RequestedFromIP ([string]$RequestedFromIP) -WindowDays ([int]$WindowDays)
             $Runs.Add($Prepared.InputObject)
             $Cases.Add([pscustomobject]@{ UserId = [string]$User.id; UserPrincipalName = [string]$User.userPrincipalName; CaseId = $Prepared.CaseId })
         }

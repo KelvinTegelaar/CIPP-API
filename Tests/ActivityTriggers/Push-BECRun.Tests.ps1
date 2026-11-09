@@ -494,6 +494,26 @@ Describe 'Push-BECRun' {
         $script:Saved.Results.AnalysisWindowDays | Should -Be 7
     }
 
+    It 'uses the window the technician chose (1-30 days) and never asks about the licence then' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ assignedPlans = @([pscustomobject]@{ service = 'AADPremiumService'; capabilityStatus = 'Enabled' }) } } -ParameterFilter { $uri -like '*assignedPlans*' }
+        Invoke-BecRun -Item ($script:Item + @{ WindowDays = 14 })
+        $script:Saved.Results.AnalysisWindowDays | Should -Be 14
+        Should -Invoke Get-CIPPBecMessageTrace -ParameterFilter { ($EndDate - $StartDate).TotalDays -eq 14 }
+        Should -Invoke New-GraphGetRequest -Times 0 -ParameterFilter { $uri -like '*assignedPlans*' } -Because 'the chosen window replaces the licence-based default'
+        Invoke-BecRun -Item ($script:Item + @{ WindowDays = '3' })
+        $script:Saved.Results.AnalysisWindowDays | Should -Be 3 -Because 'a queue item carries the number as text'
+    }
+
+    It 'falls back to the licence-based window when the chosen one is out of range or not a number' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ assignedPlans = @([pscustomobject]@{ service = 'AADPremiumService'; capabilityStatus = 'Enabled' }) } } -ParameterFilter { $uri -like '*assignedPlans*' }
+        Invoke-BecRun -Item ($script:Item + @{ WindowDays = 45 })
+        $script:Saved.Results.AnalysisWindowDays | Should -Be 30
+        Invoke-BecRun -Item ($script:Item + @{ WindowDays = 0 })
+        $script:Saved.Results.AnalysisWindowDays | Should -Be 30
+        Invoke-BecRun -Item ($script:Item + @{ WindowDays = 'soon' })
+        $script:Saved.Results.AnalysisWindowDays | Should -Be 30
+    }
+
     It 'classifies a user without a mailbox as skipped mailbox checks, not failed ones' {
         Mock Get-CIPPBecMailboxInventory { $E = New-CIPPBecCollectorResult -Data @() -Error 'Get-Mailbox: Ex41BAF5|Microsoft.Exchange.Configuration.Tasks.ManagementObjectNotFoundException|The specified mailbox doesn''t exist.'; [pscustomobject]@{ MailboxState = $E; Delegations = $E; AddIns = $E } }
         Invoke-BecRun -Item $script:Item

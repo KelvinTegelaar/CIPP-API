@@ -58,15 +58,21 @@ function Push-BECRun {
             return
         }
         $Heuristics = Get-CIPPBecHeuristics
-        $WindowDays = [int]($Heuristics.window.days ?? 7)
-        # A user licensed for Entra ID P1/P2 gets the 30-day window those plans keep sign-in and directory audit logs for.
-        try {
-            $UserPlans = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($SuspectUser)?`$select=assignedPlans" -tenantid $TenantFilter -AsApp $true
-            if (@($UserPlans.assignedPlans | Where-Object { $_.service -eq 'AADPremiumService' -and $_.capabilityStatus -eq 'Enabled' }).Count -gt 0) {
-                $WindowDays = [int]($Heuristics.window.premiumDays ?? $WindowDays)
+        # The window the technician chose when starting the run (1-30 days) wins; anything else is decided here.
+        $RequestedWindow = $Item.WindowDays -as [int]
+        if ($RequestedWindow -ge 1 -and $RequestedWindow -le 30) {
+            $WindowDays = $RequestedWindow
+        } else {
+            $WindowDays = [int]($Heuristics.window.days ?? 7)
+            # A user licensed for Entra ID P1/P2 gets the 30-day window those plans keep sign-in and directory audit logs for.
+            try {
+                $UserPlans = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($SuspectUser)?`$select=assignedPlans" -tenantid $TenantFilter -AsApp $true
+                if (@($UserPlans.assignedPlans | Where-Object { $_.service -eq 'AADPremiumService' -and $_.capabilityStatus -eq 'Enabled' }).Count -gt 0) {
+                    $WindowDays = [int]($Heuristics.window.premiumDays ?? $WindowDays)
+                }
+            } catch {
+                Write-Information "BEC: could not read the plans of $SuspectUser, using the $WindowDays-day window: $($_.Exception.Message)"
             }
-        } catch {
-            Write-Information "BEC: could not read the plans of $SuspectUser, using the $WindowDays-day window: $($_.Exception.Message)"
         }
         $endDate = (Get-Date).ToUniversalTime()
         $startDate = $endDate.AddDays(-$WindowDays)

@@ -18,6 +18,33 @@ Describe 'New-CIPPBecRunRequest requester address' {
     }
 }
 
+Describe 'New-CIPPBecRunRequest window' {
+    BeforeEach {
+        Mock Set-CIPPBecReport { $script:RequestProperties = $Properties }
+        Mock New-CIPPAsyncDeployment { $JobId }
+    }
+
+    It 'carries a chosen window (1-30 days) on the case row and every phase of the run' {
+        $Prepared = New-CIPPBecRunRequest -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -WindowDays 14
+        $Prepared.Item.WindowDays | Should -Be 14
+        $script:RequestProperties.WindowDays | Should -Be 14
+        @($Prepared.InputObject.Batch | Where-Object { $_.WindowDays -eq 14 }).Count | Should -Be @(Get-CIPPBecRunSteps).Count
+    }
+
+    It 'leaves the window to the run when none was chosen' {
+        $Prepared = New-CIPPBecRunRequest -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com'
+        $Prepared.Item.ContainsKey('WindowDays') | Should -BeFalse
+        $script:RequestProperties.ContainsKey('WindowDays') | Should -BeFalse
+        $Prepared = New-CIPPBecRunRequest -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -WindowDays 0
+        $Prepared.Item.ContainsKey('WindowDays') | Should -BeFalse
+    }
+
+    It 'refuses a window over 30 days or under zero' {
+        { New-CIPPBecRunRequest -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -WindowDays 31 } | Should -Throw
+        { New-CIPPBecRunRequest -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -WindowDays -1 } | Should -Throw
+    }
+}
+
 Describe 'Get-CIPPBecRunSteps' {
     It 'defines the fifteen phases of the investigation in order, with the score last' {
         $Steps = @(Get-CIPPBecRunSteps)

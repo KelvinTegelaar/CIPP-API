@@ -7,7 +7,7 @@ function Invoke-ExecBECCheck {
     .SYNOPSIS
         Reads, polls or starts a Business Email Compromise investigation.
     .DESCRIPTION
-        GET with GUID (or caseId) returns that run: while it is queued or running { Waiting = true, Progress } where Progress is the job status (queued until a worker picks it up, then running) and the per-step state the page renders; { Error, Progress } when it failed; otherwise the results payload with the server-side Score, per-collector Completeness and a Run block. GET without a GUID returns the user's latest run as { GUID, Status } and starts nothing (GUID is null when the user has no runs). POST with tenantFilter, userid and userName queues a new run and returns its { GUID }. Every run is the full investigation and is kept in the BecReports table; metadata only, never message content.
+        GET with GUID (or caseId) returns that run: while it is queued or running { Waiting = true, Progress } where Progress is the job status (queued until a worker picks it up, then running) and the per-step state the page renders; { Error, Progress } when it failed; otherwise the results payload with the server-side Score, per-collector Completeness and a Run block. GET without a GUID returns the user's latest run as { GUID, Status } and starts nothing (GUID is null when the user has no runs). POST with tenantFilter, userid and userName queues a new run and returns its { GUID }; windowDays (1-30) sets how many days of history it covers, ending now, and defaults to 7 days (30 when the user holds Entra ID P1/P2). Every run is the full investigation and is kept in the BecReports table; metadata only, never message content.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -24,6 +24,9 @@ function Invoke-ExecBECCheck {
     $UserName = [string](& $Pick $Request.Query.userName $Payload.userName)
     # The run to read; GUID keeps the original poll contract
     $CaseId = [string](& $Pick $Request.Query.GUID $Request.Query.caseId)
+    # Days of history the run covers, ending now (1-30); omitted = 7 days, or 30 when the user holds Entra ID P1/P2
+    $WindowRaw = [string](& $Pick $Request.Query.windowDays $Payload.windowDays)
+    $WindowDays = $WindowRaw -as [int]
     # A POST body with a userid starts a new run
     $Start = -not [string]::IsNullOrWhiteSpace([string]$Payload.userid)
 
@@ -72,10 +75,11 @@ function Invoke-ExecBECCheck {
             }
         } elseif ($Start) {
             if (-not $UserId) { throw 'userid is required' }
+            if (-not [string]::IsNullOrWhiteSpace($WindowRaw) -and ($null -eq $WindowDays -or $WindowDays -lt 1 -or $WindowDays -gt 30)) { throw 'windowDays must be a whole number of days between 1 and 30' }
             $RequestedBy = try { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } catch { 'CIPP' }
             # the technician's own address (first x-forwarded-for hop) is never the user's or the attacker's
             $RequestedFromIP = ConvertTo-CIPPBecHostAddress -Address ([string](([string]$Headers.'x-forwarded-for' -split ',')[0])).Trim()
-            $Prepared = New-CIPPBecRunRequest -TenantFilter $TenantFilter -UserId $UserId -UserPrincipalName $UserName -RequestedBy ([string]$RequestedBy) -RequestedFromIP ([string]$RequestedFromIP)
+            $Prepared = New-CIPPBecRunRequest -TenantFilter $TenantFilter -UserId $UserId -UserPrincipalName $UserName -RequestedBy ([string]$RequestedBy) -RequestedFromIP ([string]$RequestedFromIP) -WindowDays ([int]$WindowDays)
             $null = Start-CIPPOrchestrator -InputObject $Prepared.InputObject
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Queued a BEC investigation for $UserName [case $($Prepared.CaseId)]" -Sev 'Info'
             $Body = @{ GUID = $Prepared.CaseId; CaseId = $Prepared.CaseId; Status = 'Waiting' }

@@ -94,6 +94,31 @@ Describe 'Invoke-ExecBECCheck' {
             Should -Invoke Set-CIPPBecReport -Times 1 -ParameterFilter { $Properties.RequestedFromIP -eq '2001:db8::77' } -Because "the requester's first x-forwarded-for hop, without port or brackets, is recorded as the technician's address"
         }
 
+        It 'passes a chosen window (1-30 days) to the run and records it on the case' {
+            Mock Get-CIPPBecReport { @($script:Completed) }
+            $Response = Invoke-ExecBECCheck -Request (New-Request -Body ([pscustomobject]@{ tenantFilter = 'contoso.com'; userid = 'u1'; userName = 'user@contoso.com'; windowDays = 14 })) -TriggerMetadata $null
+            $Response.StatusCode | Should -Be 200
+            Should -Invoke Start-CIPPOrchestrator -Times 1 -ParameterFilter { $InputObject.Batch[0].WindowDays -eq 14 }
+            Should -Invoke Set-CIPPBecReport -Times 1 -ParameterFilter { $Properties.WindowDays -eq 14 }
+        }
+
+        It 'leaves the window to the run when none (or an empty one) is given' {
+            Mock Get-CIPPBecReport { @($script:Completed) }
+            $Response = Invoke-ExecBECCheck -Request (New-Request -Body ([pscustomobject]@{ tenantFilter = 'contoso.com'; userid = 'u1'; userName = 'user@contoso.com'; windowDays = '' })) -TriggerMetadata $null
+            $Response.StatusCode | Should -Be 200
+            Should -Invoke Start-CIPPOrchestrator -Times 1 -ParameterFilter { -not $InputObject.Batch[0].ContainsKey('WindowDays') }
+        }
+
+        It 'refuses a window over 30 days, under one, or not a number, without queueing' {
+            Mock Get-CIPPBecReport { @($script:Completed) }
+            foreach ($Bad in @(31, 0, 'soon')) {
+                $Response = Invoke-ExecBECCheck -Request (New-Request -Body ([pscustomobject]@{ tenantFilter = 'contoso.com'; userid = 'u1'; userName = 'user@contoso.com'; windowDays = $Bad })) -TriggerMetadata $null
+                $Response.StatusCode | Should -Be 500
+                $Response.Body.Error | Should -Match 'windowDays'
+            }
+            Should -Invoke Start-CIPPOrchestrator -Times 0
+        }
+
         It 'POST without a userid fails cleanly and queues nothing' {
             $Response = Invoke-ExecBECCheck -Request (New-Request -Body ([pscustomobject]@{ tenantFilter = 'contoso.com'; userid = '' })) -TriggerMetadata $null
             $Response.StatusCode | Should -Be 500

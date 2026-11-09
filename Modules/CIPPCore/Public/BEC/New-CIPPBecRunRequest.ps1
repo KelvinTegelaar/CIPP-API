@@ -24,6 +24,9 @@ function New-CIPPBecRunRequest {
     .PARAMETER RequestedFromIP
         The requesting technician's address (first x-forwarded-for hop). The run treats it as the
         technician's, never the user's or the attacker's.
+    .PARAMETER WindowDays
+        How many days of history the run covers, ending now (1-30). 0 (the default) lets the run
+        decide: 7 days, or 30 for a user licensed for Entra ID P1/P2.
     .FUNCTIONALITY
         Internal
     #>
@@ -35,7 +38,8 @@ function New-CIPPBecRunRequest {
         [string]$DisplayName,
         [string]$RequestedBy = 'CIPP',
         [string]$QueueId,
-        [string]$RequestedFromIP
+        [string]$RequestedFromIP,
+        [ValidateRange(0, 30)][int]$WindowDays = 0
     )
 
     # The UPN drives every mailbox-scoped collector and the audit-record attribution in the run; a blank
@@ -66,6 +70,7 @@ function New-CIPPBecRunRequest {
         if ($DisplayName) { $Properties.DisplayName = $DisplayName }
         if ($QueueId) { $Properties.QueueId = $QueueId }
         if ($RequestedFromIP) { $Properties.RequestedFromIP = $RequestedFromIP }
+        if ($WindowDays -gt 0) { $Properties.WindowDays = $WindowDays }
         $null = Set-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -Replace -Properties $Properties
         # The progress job: every step pending, row status queued, until Push-BECRun takes over.
         $null = New-CIPPAsyncDeployment -JobId $CaseId -Names @($Name) -StepTitles @($RunSteps.Title) -Source 'BEC' -TenantFilter $TenantFilter
@@ -79,6 +84,7 @@ function New-CIPPBecRunRequest {
         CaseId       = $CaseId
     }
     if ($RequestedFromIP) { $Item.RequestedFromIP = $RequestedFromIP; $Item.RequestedBy = $RequestedBy }
+    if ($WindowDays -gt 0) { $Item.WindowDays = $WindowDays }
     if ($QueueId) {
         $Item.QueueId = $QueueId
         $Item.QueueName = "BEC investigation $Name"
