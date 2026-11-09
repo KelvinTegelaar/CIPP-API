@@ -18,13 +18,10 @@ Function Invoke-ListAllTenantDeviceCompliance {
             $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances' | Select-CippAllowedTenantData -TenantProperty 'organizationId'
             $StatusCode = [HttpStatusCode]::OK
         } else {
-            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances?`$top=999&`$filter=organizationId eq '$TenantFilter'"
+            # organizationId is the tenant's customerId, so a domain has to be resolved first
+            $CustomerId = (Get-Tenants -TenantFilter $TenantFilter | Select-Object -First 1).customerId ?? $TenantFilter
+            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances?`$top=999&`$filter=organizationId eq '$CustomerId'"
             $StatusCode = [HttpStatusCode]::OK
-        }
-
-        if ($GraphRequest.value.count -lt 1) {
-            $StatusCode = [HttpStatusCode]::Forbidden
-            $GraphRequest = 'No data found - This client might not be onboarded in Lighthouse'
         }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
