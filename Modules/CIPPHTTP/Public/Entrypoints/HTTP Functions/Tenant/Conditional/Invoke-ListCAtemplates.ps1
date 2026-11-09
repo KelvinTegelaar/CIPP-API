@@ -62,7 +62,9 @@ function Invoke-ListCAtemplates {
         } | Sort-Object -Property label)
     } else {
         if ($GUID) {
-            $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type Guid
+            # The GUID column is '<guid>.CATemplate.json' for the templates imported from Config above, so it
+            # is not always a bare GUID. Accept the value the list publishes and escape it like the other readers.
+            $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type String
             $Filter = "PartitionKey eq 'CATemplate' and GUID eq '$SafeGUID'"
             $RawTemplates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
         }
