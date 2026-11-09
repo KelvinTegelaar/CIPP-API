@@ -86,6 +86,20 @@ function Set-SherwebSubscription {
             if ($FinalQuantity -lt 0) {
                 throw "Cannot remove more licenses than currently allocated. Current: $CurrentQuantity, Attempting to remove: $Remove."
             }
+
+            # Committed subscriptions (NCE) can only be decreased in the days right after a purchase or
+            # renewal. Sherweb publishes the current floor; refuse up front with a plain explanation
+            # rather than relaying the raw 412 commitment-term-violations error.
+            $Minimum = Get-SherwebMinimumQuantity -Subscription $ExistingSubscription[0]
+            if ($Minimum -and $FinalQuantity -lt $Minimum.MinimumQuantity) {
+                $ProductName = $ExistingSubscription[0].productName
+                $RenewalText = if ($Minimum.RenewsOn) { " The term next renews on $($Minimum.RenewsOn.ToString('yyyy-MM-dd'))." } else { '' }
+                if ($Minimum.MinimumQuantity -ge $CurrentQuantity) {
+                    throw "Sherweb will not accept this decrease: '$ProductName' is on a $($Minimum.TermType) commitment term and its quantity of $CurrentQuantity is locked until the term renews. Committed subscriptions can only be decreased in the first days after a purchase or renewal.$RenewalText Use the 'Schedule decrease at next renewal' action to run the decrease just after that date."
+                }
+                $UntilText = if ($Minimum.AllowedUntil) { " until $($Minimum.AllowedUntil.ToString('yyyy-MM-dd'))" } else { '' }
+                throw "Sherweb will not accept this decrease: '$ProductName' is on a $($Minimum.TermType) commitment term and can currently only be decreased to $($Minimum.MinimumQuantity) license(s)$UntilText, not to $FinalQuantity. Committed subscriptions can only be decreased in the first days after a purchase or renewal.$RenewalText"
+            }
         } else {
             if (-not $Quantity -or $Quantity -le 0) {
                 throw 'A valid Quantity must be specified if Add/Remove are not used.'

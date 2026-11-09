@@ -20280,7 +20280,7 @@
                   "Add": {
                     "type": "string"
                   },
-                  "DaysBeforeRenewal": {
+                  "DaysAfterRenewal": {
                     "type": "string"
                   },
                   "Quantity": {
