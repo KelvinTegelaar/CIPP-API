@@ -55,7 +55,7 @@ function Test-CIPPAccess {
             $PermissionData = $script:CIPPFunctionPermissions[$FunctionName]
             $APIRole = $PermissionData['Role']
             $Functionality = $PermissionData['Functionality']
-            Write-Debug "Loaded function permission data from cache for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
+            if ($DebugPreference -ne 'SilentlyContinue') { Write-Debug "Loaded function permission data from cache for '$FunctionName': Role='$APIRole', Functionality='$Functionality'" }
         } else {
             try {
                 $Help = Get-Help $FunctionName -ErrorAction Stop
@@ -494,9 +494,11 @@ function Test-CIPPAccess {
     if ($TenantList.IsPresent) {
         $AccessTotalSw.Stop()
         $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
-        $AccessTimingsRounded = [ordered]@{}
-        foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
-        Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
+        if ($DebugPreference -ne 'SilentlyContinue') {
+            $AccessTimingsRounded = [ordered]@{}
+            foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
+            Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
+        }
         return @('AllTenants')
     }
     # A built-in role with no custom role limiting it sees every group, as it sees every tenant.
@@ -505,8 +507,10 @@ function Test-CIPPAccess {
     }
     $AccessTotalSw.Stop()
     $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
-    $AccessTimingsRounded = [ordered]@{}
-    foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
-    Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
+    if ($DebugPreference -ne 'SilentlyContinue') {
+        $AccessTimingsRounded = [ordered]@{}
+        foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
+        Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
+    }
     return $true
 }
