@@ -7,9 +7,17 @@ BeforeAll {
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPLicenseSkuName.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPConversionTable.ps1')
+    $script:SavedRoot = $env:CIPPRootPath
+    $env:CIPPRootPath = $RepoRoot
+    $script:CsvSku = '4b74a65c-8b4a-4fc8-9f6b-5177ed11ddfa'
 
     $script:Known = '11111111-1111-1111-1111-111111111111'
     $script:Unknown = '22222222-2222-2222-2222-222222222222'
+}
+
+AfterAll {
+    $env:CIPPRootPath = $script:SavedRoot
 }
 
 Describe 'Get-CIPPLicenseSkuName' {
@@ -27,6 +35,20 @@ Describe 'Get-CIPPLicenseSkuName' {
         }
         Mock Add-CIPPAzDataTableEntity { $script:Written = @($Entity) }
         Mock Get-Tenants { [PSCustomObject]@{ defaultDomainName = 'contoso.com' } }
+    }
+
+    It 'names a SKU the shipped CSV lists without reading any table, using its current name' {
+        $Result = @(Get-CIPPLicenseSkuName -SkuIds $script:CsvSku.ToUpper(), $script:Known -TenantFilter 'contoso.com')
+
+        $Result.skuId | Should -Be @($script:CsvSku, $script:Known)
+        $Result[0].displayName | Should -Be 'Microsoft Copilot Studio User License'
+        $script:Reads.Count | Should -Be 1
+        $script:Reads[0].Filter | Should -Not -Match $script:CsvSku
+    }
+
+    It 'reads no table when the CSV names every SKU' {
+        @(Get-CIPPLicenseSkuName -SkuIds $script:CsvSku -TenantFilter 'contoso.com').Count | Should -Be 1
+        $script:Reads.Count | Should -Be 0
     }
 
     It 'returns a table hit without reading the reporting cache' {

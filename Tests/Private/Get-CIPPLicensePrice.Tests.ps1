@@ -11,11 +11,13 @@ BeforeAll {
     function Get-CIPPLicenseCatalog { param([switch]$Force) }
 
     . $FunctionPath
+    . (Join-Path (Split-Path $FunctionPath) 'Get-CIPPConversionTable.ps1')
 
-    # The function joins $env:CIPPRootPath to locate the SKU list; the read itself is mocked, so
-    # any non-empty base path is enough to get past Join-Path.
+    # The SKU list is read from $env:CIPPRootPath\Config\ConversionTable.csv, so cases write it to TestDrive
     $script:SavedRoot = $env:CIPPRootPath
     $env:CIPPRootPath = "$TestDrive"
+    New-Item -ItemType Directory -Path (Join-Path $TestDrive 'Config') -Force | Out-Null
+    function Set-TestSkuList { param($Csv) [System.IO.File]::WriteAllText((Join-Path $env:CIPPRootPath 'Config/ConversionTable.csv'), $Csv); $script:CIPPConversionTable = $null }
 
     # SKU GUIDs used across the cases
     $script:E5 = '06ebc4ee-1bb5-47dd-8120-11324bc54e06'
@@ -85,9 +87,7 @@ Describe 'Get-CIPPLicensePrice' {
 
     It 'lists every SKU from the shipped SKU list when IncludeUnknown is set, named from that list' {
         Mock -CommandName Test-Path -MockWith { $true }
-        Mock -CommandName Get-Content -MockWith {
-            "Product_Display_Name,String_Id,GUID,Service_Plan_Name,Service_Plan_Id`nOffice 365 E5 (from list),ENTERPRISEPREMIUM,$($script:E5),EXCHANGE_S_ENTERPRISE,efb87545`nExchange Online Kiosk,EXCHANGEDESKLESS,80b2d799-d2ba-4d2a-8842-fb0d0f3a4b82,EXCHANGE_S_DESKLESS,4a82b400`nExchange Online Kiosk,EXCHANGEDESKLESS,80b2d799-d2ba-4d2a-8842-fb0d0f3a4b82,INTUNE_O365,882e1d05"
-        }
+        Set-TestSkuList "Product_Display_Name,String_Id,GUID,Service_Plan_Name,Service_Plan_Id`nOffice 365 E5 (from list),ENTERPRISEPREMIUM,$($script:E5),EXCHANGE_S_ENTERPRISE,efb87545`nExchange Online Kiosk,EXCHANGEDESKLESS,80b2d799-d2ba-4d2a-8842-fb0d0f3a4b82,EXCHANGE_S_DESKLESS,4a82b400`nExchange Online Kiosk,EXCHANGEDESKLESS,80b2d799-d2ba-4d2a-8842-fb0d0f3a4b82,INTUNE_O365,882e1d05"
 
         $Result = @(Get-CIPPLicensePrice -IncludeUnknown)
 
@@ -178,9 +178,7 @@ Describe 'Get-CIPPLicensePrice - SKU ID normalization' {
     BeforeEach {
         $script:DirtyE5 = "$($script:E5)$([char]0xA0)"
         Mock -CommandName Test-Path -MockWith { $true }
-        Mock -CommandName Get-Content -MockWith {
-            "Product_Display_Name,String_Id,GUID`nOffice 365 E5,ENTERPRISEPREMIUM,$($script:DirtyE5)"
-        }
+        Set-TestSkuList "Product_Display_Name,String_Id,GUID`nOffice 365 E5,ENTERPRISEPREMIUM,$($script:DirtyE5)"
         Mock -CommandName Get-CIPPLicenseCatalog -MockWith {
             [pscustomobject]@{
                 products = @(
@@ -223,9 +221,7 @@ Describe 'Get-CIPPLicensePrice - SKU ID normalization' {
 Describe 'Get-CIPPLicensePrice - FailOnError' {
     BeforeEach {
         Mock -CommandName Test-Path -MockWith { $true }
-        Mock -CommandName Get-Content -MockWith {
-            "Product_Display_Name,String_Id,GUID`nOffice 365 E5,ENTERPRISEPREMIUM,$($script:E5)"
-        }
+        Set-TestSkuList "Product_Display_Name,String_Id,GUID`nOffice 365 E5,ENTERPRISEPREMIUM,$($script:E5)"
         Mock -CommandName Get-CIPPLicenseCatalog -MockWith {
             [pscustomobject]@{ products = @([pscustomobject]@{ skuId = $script:E5; skuPartNumber = 'ENTERPRISEPREMIUM'; name = 'Office 365 E5'; prices = [pscustomobject]@{ GBP = 30.0 } }) }
         }

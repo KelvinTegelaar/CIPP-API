@@ -54,8 +54,7 @@ function Get-CIPPLicenseOverview {
         Licenses = $LicRequest
     }
     # GUID -> display name, last row wins
-    $SkuNames = @{}
-    foreach ($Row in [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv) { $SkuNames[$Row.GUID] = $Row.Product_Display_Name }
+    $SkuNames = (Get-CIPPConversionTable).NameBySkuId
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
 
@@ -121,6 +120,17 @@ function Get-CIPPLicenseOverview {
             $GroupsBySku[$LicenseSkuId].Add($GroupInfo)
         }
     }
+    # Names stored for SKUs the CSV does not list; a live admin portal name that differs replaces them
+    $StoredNames = @{}
+    $NewNames = [System.Collections.Generic.List[object]]::new()
+    try {
+        $NotInCsv = @(foreach ($sku in $LicRequest) { if ($sku.skuId -and -not $SkuNames.ContainsKey([string]$sku.skuId)) { [string]$sku.skuId } })
+        if ($NotInCsv.Count -gt 0) {
+            foreach ($Stored in Get-CIPPLicenseSkuName -SkuIds $NotInCsv) { $StoredNames[$Stored.skuId] = $Stored.displayName }
+        }
+    } catch {
+        Write-Verbose "LicenseSkuNames read skipped: $($_.Exception.Message)"
+    }
     $GraphRequest = foreach ($singleReq in $RawGraphRequest) {
         $skuId = $singleReq.Licenses
         foreach ($sku in $skuId) {
@@ -129,7 +139,10 @@ function Get-CIPPLicenseOverview {
             }
             $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.aadSkuId -eq $sku.skuId } | Select-Object -ExpandProperty displayName -First 1
             $PrettyNameCSV = $SkuNames[[string]$sku.skuid]
-            $PrettyName = $PrettyNameAdmin ?? $PrettyNameCSV ?? $sku.skuPartNumber
+            $PrettyName = $PrettyNameAdmin ?? $PrettyNameCSV ?? $StoredNames[([string]$sku.skuId).ToLowerInvariant()] ?? $sku.skuPartNumber
+            if ($PrettyNameAdmin -and -not $PrettyNameCSV -and $PrettyNameAdmin -cne $StoredNames[([string]$sku.skuId).ToLowerInvariant()]) {
+                $NewNames.Add(@{ PartitionKey = 'Sku'; RowKey = ([string]$sku.skuId).ToLowerInvariant(); DisplayName = [string]$PrettyNameAdmin })
+            }
 
             # Initialize $Term with the default value
             $TermInfo = foreach ($Subscription in $sku.subscriptionIds) {
@@ -176,24 +189,14 @@ function Get-CIPPLicenseOverview {
             }
         }
     }
-    # New SKU names go into the shared name table now, so user pages resolve them before the next cache run
-    try {
-        $LiveNames = @{}
-        foreach ($Row in $GraphRequest) {
-            if ($Row.skuId -and $Row.License) { $LiveNames[$Row.skuId.ToLowerInvariant()] = $Row.License }
+    # Names the CSV lacks go into the shared name table now, so user pages resolve them before the next cache run
+    if ($NewNames.Count -gt 0) {
+        try {
+            $NameTable = Get-CIPPTable -TableName 'LicenseSkuNames'
+            Add-CIPPAzDataTableEntity @NameTable -Entity @($NewNames) -Force
+        } catch {
+            Write-Verbose "LicenseSkuNames write skipped: $($_.Exception.Message)"
         }
-        if ($LiveNames.Count -gt 0) {
-            $Known = @(Get-CIPPLicenseSkuName -SkuIds @($LiveNames.Keys)).skuId
-            $NewNames = @(foreach ($SkuId in $LiveNames.Keys) {
-                    if ($SkuId -notin $Known) { @{ PartitionKey = 'Sku'; RowKey = $SkuId; DisplayName = $LiveNames[$SkuId] } }
-                })
-            if ($NewNames.Count -gt 0) {
-                $NameTable = Get-CIPPTable -TableName 'LicenseSkuNames'
-                Add-CIPPAzDataTableEntity @NameTable -Entity $NewNames
-            }
-        }
-    } catch {
-        Write-Verbose "LicenseSkuNames insert skipped: $($_.Exception.Message)"
     }
 
     return ($GraphRequest | Sort-Object -Property License)

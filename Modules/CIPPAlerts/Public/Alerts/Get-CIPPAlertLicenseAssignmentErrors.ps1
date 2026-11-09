@@ -74,7 +74,7 @@ function Get-CIPPAlertLicenseAssignmentErrors {
                     "Unknown license assignment error: $($Violation.error)"
                 }
 
-                $PrettyName = Convert-SKUname -SkuID $Violation.skuId
+                $PrettyName = (Get-CIPPLicenseSkuName -SkuIds @($Violation.skuId) -TenantFilter $TenantFilter).displayName ?? $Violation.skuId
 
                 $Message = "$($User.userPrincipalName): $HumanReadableError (License: $PrettyName)"
                 [PSCustomObject]@{

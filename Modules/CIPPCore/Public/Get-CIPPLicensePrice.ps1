@@ -65,10 +65,9 @@ function Get-CIPPLicensePrice {
         $TablePath = Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv'
         if ($FailOnError -and -not (Test-Path $TablePath)) { throw "SKU list not found at $TablePath" }
         if (Test-Path $TablePath) {
-            foreach ($Row in (Get-Content -Path $TablePath -Raw | ConvertFrom-Csv)) {
-                $Key = ([string]$Row.GUID).Trim().ToLowerInvariant()
-                if ([string]::IsNullOrWhiteSpace($Key) -or $SkuMeta.ContainsKey($Key)) { continue }
-                $SkuMeta[$Key] = [pscustomobject]@{ skuPartNumber = [string]$Row.String_Id; Product_Display_Name = [string]$Row.Product_Display_Name }
+            $ConversionTable = Get-CIPPConversionTable
+            foreach ($Key in $ConversionTable.NameBySkuId.Keys) {
+                $SkuMeta[$Key] = [pscustomobject]@{ skuPartNumber = $ConversionTable.PartNumberBySkuId[$Key]; Product_Display_Name = $ConversionTable.NameBySkuId[$Key] }
             }
         }
     } catch {

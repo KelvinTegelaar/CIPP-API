@@ -7,6 +7,7 @@
 
 BeforeAll {
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Gradient/New-GradientServiceSyncRun.ps1"
+    . "$PSScriptRoot/../../Modules/CIPPCore/Public/Get-CIPPConversionTable.ps1"
 
     function Get-CIPPTable { param($TableName) }
     function Get-CIPPAzDataTableEntity { param($Filter) }

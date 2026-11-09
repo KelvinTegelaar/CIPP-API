@@ -26,15 +26,6 @@ Function Invoke-ListUsers {
                 Body       = @{ Results = 'A specific tenant is required when requesting a single user.' }
             })
     }
-    # GUID -> display name, first row wins. Parsing the 6,000-row CSV costs ~80 ms and ~20 MB, so build the map once per worker.
-    if (-not $script:CippSkuNameMap) {
-        $SkuNames = @{}
-        foreach ($Row in [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv) {
-            if (-not $SkuNames.ContainsKey($Row.GUID)) { $SkuNames[$Row.GUID] = $Row.Product_Display_Name }
-        }
-        $script:CippSkuNameMap = $SkuNames
-    }
-    $SkuNames = $script:CippSkuNameMap
 
     # When fetching a single user, use an explicit $select so directory/schema extension properties are
     # returned. Covers the properties the user view and edit form consume, any attributes added via
@@ -124,6 +115,11 @@ Function Invoke-ListUsers {
             $User
         }
     }
+
+    $UsedSkuIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($User in $UserData) { foreach ($Sku in $User.assignedLicenses.skuId) { if ($Sku) { [void]$UsedSkuIds.Add($Sku) } } }
+    $SkuNames = @{}
+    foreach ($Sku in Get-CIPPLicenseSkuName -SkuIds @($UsedSkuIds)) { $SkuNames[$Sku.skuId] = $Sku.displayName }
 
     $GraphRequest = foreach ($User in $UserData) {
         $SkuID = $User.AssignedLicenses.skuid
