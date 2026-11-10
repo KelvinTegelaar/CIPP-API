@@ -28,6 +28,9 @@ function New-GraphBulkRequest {
         if ($script:XMsThrottlePriority) {
             $headers['x-ms-throttle-priority'] = $script:XMsThrottlePriority
         }
+        # Entra audit logs record the $batch request's own User-Agent for every write inside it
+        if (!$headers['User-Agent']) { $headers['User-Agent'] = Get-CippUserAgent }
+        $UserAgent = $headers['User-Agent']
 
         $URL = "https://graph.microsoft.com/$Version/`$batch"
         # a $batch lands its sub-requests at once, so the rate limiter can only space whole batches: no batch holds more
@@ -95,6 +98,7 @@ function New-GraphBulkRequest {
                     if ($Return.headers.'retry-after') {
                         #Revist this when we are pushing this data into our custom schema instead.
                         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+                        $headers['User-Agent'] = $UserAgent
                         Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $ReqBody
                     }
                     $Return
@@ -158,6 +162,7 @@ function New-GraphBulkRequest {
                     $NextReturn = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $NextReqBody
                     if ($NextReturn.headers.'retry-after') {
                         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+                        $headers['User-Agent'] = $UserAgent
                         $NextReturn = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $NextReqBody
                     }
 

@@ -8,6 +8,7 @@ BeforeAll {
 
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
     function Set-CippBaselineRunContext { param($RunId) }
+    function Set-CippUserAgentContext { param($Headers, $Source, $TaskId, $TemplateId) }
     function Update-CippQueueEntry { param($RowKey, $Status, $Name) }
     function Get-CIPPBaselineDefinition { param($Name) }
     function Get-CippTable { param($tablename) @{} }
@@ -411,13 +412,19 @@ Describe 'Get-CIPPBaselineDetectCADriftState SharePoint side-effect policies' {
 Describe 'Push-CIPPBaselineStandard deferred verification' {
     BeforeEach {
         Mock Set-CippBaselineRunContext { }
+        Mock Set-CippUserAgentContext { }
         Mock Set-CIPPDBCacheTestCache { }
         Mock Add-CIPPAzDataTableEntity { }
         Mock Invoke-CIPPBaselineStandard { [PSCustomObject]@{ Remediated = $true; CacheType = @('TestCache') } }
         $script:PushItem = @{
             RunId = 'run-1'; Mode = 'oneoff'; TriggeredBy = 'operator@contoso.com'
-            Item  = @{ TenantFilter = $script:Tenant; Standard = 'TestStd'; BaseName = 'TestStd' }
+            Item  = @{ TenantFilter = $script:Tenant; Standard = 'TestStd'; BaseName = 'TestStd'; TemplateId = 'tpl-1' }
         }
+    }
+
+    It 'attributes its outbound requests to the baseline template' {
+        $null = Push-CIPPBaselineStandard -Item $script:PushItem
+        Should -Invoke Set-CippUserAgentContext -Times 1 -Exactly -ParameterFilter { $Source -eq 'baseline' -and $TemplateId -eq 'tpl-1' }
     }
 
     It 'a <Mode> remediation returns impact records with its standard and never refreshes inline' -ForEach @(@{ Mode = 'oneoff' }, @{ Mode = 'run' }) {

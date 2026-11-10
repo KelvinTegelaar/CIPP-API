@@ -26,21 +26,7 @@ function Push-DomainAnalyserTenant {
                 return
             }
 
-            # Remove domains that are not wanted, and used for cloud signature services. Same exclusions also found in Invoke-CIPPStandardAddDKIM
-            $ExclusionDomains = @(
-                '*.microsoftonline.com'
-                '*.mail.onmicrosoft.com'
-                '*.exclaimer.cloud'
-                '*.excl.cloud'
-                '*.codetwo.online'
-                '*.call2teams.com'
-                '*.signature365.net'
-                '*.myteamsconnect.io'
-                '*.teams.dstny.com'
-                '*.msteams.8x8.com'
-                '*.ucconnect.co.uk'
-                '*.teams-sbc.dk'
-            )
+            $ExclusionDomains = Get-CIPPDomainExclusionList
             $Domains = $Domains | Where-Object { $_.isVerified -eq $true } | ForEach-Object {
                 $Domain = $_
                 foreach ($ExclusionDomain in $ExclusionDomains) {

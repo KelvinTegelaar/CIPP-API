@@ -7,9 +7,9 @@ function Get-CIPPBaselineAddDKIMState {
         disabled - the two lists the classic remediated differently (New- vs Set-), which is
         why both are carried separately for the executor.
 
-        The exclusion list is the classic's, shared with the domain analyser: service
-        domains (onmicrosoft, signature services, Teams SBCs) never get DKIM through
-        Exchange and would otherwise be permanent false drift.
+        The exclusion list is shared with the domain analyser (built-in service domains plus
+        the global list in Settings): those domains never get DKIM through Exchange and would
+        otherwise be permanent false drift.
     .FUNCTIONALITY
         Internal
     #>
@@ -25,9 +25,7 @@ function Get-CIPPBaselineAddDKIMState {
         return @{ Current = $null }
     }
 
-    $Exclusions = @('*.microsoftonline.com', '*.mail.onmicrosoft.com', '*.exclaimer.cloud', '*.excl.cloud', '*.codetwo.online',
-        '*.call2teams.com', '*.signature365.net', '*.myteamsconnect.io', '*.teams.dstny.com', '*.msteams.8x8.com',
-        '*.ucconnect.co.uk', '*.teams-sbc.dk')
+    $Exclusions = Get-CIPPDomainExclusionList
     $IsExcluded = { param($Name) foreach ($Pattern in $Exclusions) { if ($Name -like $Pattern) { return $true } } $false }
 
     $AllDomains = @($Domains | ForEach-Object { "$($_.DomainName)" } | Where-Object { $_ -and -not (& $IsExcluded $_) })

@@ -78,6 +78,9 @@ Describe 'ConvertTo-CippReportPdf' {
             Test-IsPdf (ConvertTo-CippReportPdf -Blocks $b) | Should -BeTrue
             # Whitespace-like controls collapse to one space, other controls (NUL, C1) are dropped.
             [CIPP.Reporting.ReportMarkdown]::Sanitize("a$([char]0x0B)$([char]0x0C)b$([char]0x00)c$([char]0x80)d") | Should -Be 'a bcd'
+            # A line feed is the kit's line break (a stat card's figure over its label), so it survives.
+            [CIPP.Reporting.ReportMarkdown]::Sanitize("`n") | Should -Be "`n"
+            [CIPP.Reporting.ReportMarkdown]::Sanitize("a`n$([char]0x0B)b") | Should -Be "a`n b"
         }
         It 'still renders when the branding logo cannot be embedded (skips it gracefully)' {
             $b = @(@{ type = 'blank'; content = '<p>x</p>' })

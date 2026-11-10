@@ -34,7 +34,7 @@ function Invoke-CIPPBaselineDeviceRegistrationPolicy {
     param(
         $Remediate,
         $TenantFilter,
-        # The read result. Unused - the merge base has to be live, see above.
+        # The read result. Only its resolved join group ids are used - the merge base has to be live, see above.
         $Current
     )
 
@@ -69,6 +69,13 @@ function Invoke-CIPPBaselineDeviceRegistrationPolicy {
         $Assigned++
     }
     if ($Assigned -eq 0) { throw 'DeviceRegistrationPolicy: nothing configured to write.' }
+
+    # Selected groups are resolved to ids by the prepare hook; the definition can only name the membership type
+    $Join = $Policy.azureADJoin.allowedToJoin
+    if ($Current.allowedToJoinGroupIds -and "$($Join.'@odata.type')" -eq '#microsoft.graph.enumeratedDeviceRegistrationMembership') {
+        $Join.groups = @($Current.allowedToJoinGroupIds)
+        $Join.users = @()
+    }
 
     $null = New-GraphPostRequest -tenantid $TenantFilter -uri $Uri -Type PUT -Body (ConvertTo-Json -Compress -Depth 10 -InputObject $Policy) -ContentType 'application/json'
 }

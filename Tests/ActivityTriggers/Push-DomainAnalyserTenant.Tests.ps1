@@ -1,6 +1,7 @@
 BeforeAll {
     $BackendRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     . (Join-Path $BackendRoot 'Modules/CIPPActivityTriggers/Public/Entrypoints/Activity Triggers/Domain Analyser/Push-DomainAnalyserTenant.ps1')
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Get-CIPPDomainExclusionList.ps1')
 
     function Get-Tenants { param($TenantFilter, [switch]$IncludeAll) }
     function Get-CippTable { param($tablename) @{ Name = $tablename } }
@@ -57,5 +58,22 @@ Describe 'Push-DomainAnalyserTenant' {
         Push-DomainAnalyserTenant -Item @{ customerId = 'g1' }
 
         Should -Invoke Remove-CIPPAzDataTableEntity -Times 0 -Exactly
+    }
+
+    It 'drops domains matching the global exclusion list' {
+        Mock Get-CIPPAzDataTableEntity {
+            if ($Filter -like "*RowKey eq 'Domains'*") { [pscustomobject]@{ DomainExclusions = '["*.voice.example.com"]' } }
+        }
+        Mock New-CIPPDbRequest {
+            @(
+                [pscustomobject]@{ id = 'contoso.com'; isVerified = $true }
+                [pscustomobject]@{ id = 'contoso.voice.example.com'; isVerified = $true }
+            )
+        }
+        Mock Add-CIPPAzDataTableEntity { $script:Added = $Entity }
+
+        Push-DomainAnalyserTenant -Item @{ customerId = 'g1' }
+
+        @($script:Added.RowKey) | Should -Be @('contoso.com')
     }
 }

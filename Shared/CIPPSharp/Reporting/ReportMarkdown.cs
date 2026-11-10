@@ -297,7 +297,8 @@ namespace CIPP.Reporting
         /// emoji that font actually carries (BMP or astral). Any remaining non-encodable character becomes
         /// '?' so OfficeIMO's encoding preflight never throws. Control characters (a vertical tab or form
         /// feed left in stored text, a stray NUL, a C1 control) have no glyph and the preflight rejects
-        /// them outright: whitespace-like ones collapse to a single space and the rest are dropped.
+        /// them outright: whitespace-like ones collapse to a single space and the rest are dropped. A line
+        /// feed is kept: the kit's runs use it as their line break.
         /// </summary>
         public static string Sanitize(string? s)
         {
@@ -305,7 +306,7 @@ namespace CIPP.Reporting
             foreach (var g in GlyphMap) s = s.Replace(g.from, g.to);
             if (RenderEmojiGlyphs) foreach (var e in EmojiTokens) s = s.Replace(e.token, e.glyph);
             var needsFilter = false;
-            foreach (var c in s) { if ((c > 'ÿ' && !WinAnsiSpecials.Contains(c) && !EmojiKept.Contains(c)) || char.IsControl(c)) { needsFilter = true; break; } }
+            foreach (var c in s) { if ((c > 'ÿ' && !WinAnsiSpecials.Contains(c) && !EmojiKept.Contains(c)) || (char.IsControl(c) && c != '\n')) { needsFilter = true; break; } }
             if (!needsFilter) return s;
             var sb = new StringBuilder(s.Length);
             // Walk by grapheme cluster so a multi-code-point emoji (ZWJ sequence, flag, skin-tone) is judged
@@ -315,12 +316,12 @@ namespace CIPP.Reporting
             while (elements.MoveNext())
             {
                 var cluster = (string)elements.Current;
-                if (cluster.Length == 1 && cluster[0] <= 'ÿ' && !char.IsControl(cluster[0])) { sb.Append(cluster); continue; }
+                if (cluster.Length == 1 && cluster[0] <= 'ÿ' && (cluster[0] == '\n' || !char.IsControl(cluster[0]))) { sb.Append(cluster); continue; }
                 if (RenderEmojiImages && TwemojiAssets.Has(cluster)) { sb.Append(cluster); continue; }
                 for (var i = 0; i < cluster.Length; i++)
                 {
                     var c = cluster[i];
-                    if (char.IsControl(c))
+                    if (char.IsControl(c) && c != '\n')
                     {
                         if (char.IsWhiteSpace(c) && sb.Length > 0 && sb[sb.Length - 1] != ' ') sb.Append(' ');
                         continue;

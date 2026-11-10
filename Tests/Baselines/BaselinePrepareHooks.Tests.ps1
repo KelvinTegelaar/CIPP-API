@@ -29,6 +29,7 @@ BeforeAll {
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
     . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCommand.ps1')
     . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCacheRows.ps1')
+    . (Join-Path $Baselines 'Helpers/Test-CIPPBaselineCacheCollected.ps1')
     . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineDeviceRegistrationPolicyState.ps1')
     . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineDisableBasicAuthSMTPState.ps1')
     . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineActivityBasedTimeoutState.ps1')
@@ -104,6 +105,53 @@ Describe 'Get-CIPPBaselineDeviceRegistrationPolicyState' {
     It 'reports a null Current when nothing is cached' {
         Mock New-CIPPDbRequest { @() }
         (Get-CIPPBaselineDeviceRegistrationPolicyState -Item $null -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Get-CIPPBaselineDeviceRegistrationPolicyState selected join groups' {
+    BeforeAll {
+        $script:Enumerated = '#microsoft.graph.enumeratedDeviceRegistrationMembership'
+        $script:Groups = @(
+            @{ id = 'aaaa-1'; displayName = 'Device Joiners' }
+            @{ id = 'bbbb-2'; displayName = 'IT Staff' }
+            @{ id = 'cccc-3'; displayName = 'Twin' }
+            @{ id = 'dddd-4'; displayName = 'Twin' }
+        ) | ConvertTo-Cached
+        function New-JoinItem { param($Groups) [PSCustomObject]@{ Variables = [PSCustomObject]@{ allowedToJoin = @{ label = 'Selected groups'; value = $script:Enumerated }; allowedToJoinGroups = $Groups } } }
+    }
+    BeforeEach {
+        $script:PolicyGroups = @('bbbb-2', 'aaaa-1')
+        Mock New-CIPPDbRequest {
+            if ($Type -eq 'Groups') { return $script:Groups }
+            @(@{ azureADJoin = @{ isAdminConfigurable = $true; allowedToJoin = @{ '@odata.type' = $script:Enumerated; users = @(); groups = $script:PolicyGroups } } } | ConvertTo-Cached)
+        }
+    }
+
+    It 'resolves names and ids and grades the same groups compliant in any order' {
+        $Prepared = Get-CIPPBaselineDeviceRegistrationPolicyState -Item (New-JoinItem 'device joiners, bbbb-2') -TenantFilter $script:Tenant
+        $Prepared.Current.allowedToJoinGroupIds | Should -Be @('aaaa-1', 'bbbb-2')
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'drifts when the tenant allows a different set of groups' {
+        $script:PolicyGroups = @('aaaa-1')
+        $Prepared = Get-CIPPBaselineDeviceRegistrationPolicyState -Item (New-JoinItem 'Device Joiners, IT Staff') -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 1
+    }
+
+    It 'refuses to grade a name it cannot resolve to exactly one group' {
+        foreach ($Groups in @('Nobody', 'Twin', '')) {
+            $Prepared = Get-CIPPBaselineDeviceRegistrationPolicyState -Item (New-JoinItem $Groups) -TenantFilter $script:Tenant
+            $Prepared.Current | Should -BeNullOrEmpty
+            $Prepared.ConfigError | Should -BeTrue
+        }
+    }
+
+    It 'leaves the other modes to the definition and never reads groups' {
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ allowedToJoin = '#microsoft.graph.noDeviceRegistrationMembership' } }
+        $Prepared = Get-CIPPBaselineDeviceRegistrationPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected | Should -BeNullOrEmpty
+        Should -Invoke New-CIPPDbRequest -Times 0 -ParameterFilter { $Type -eq 'Groups' }
     }
 }
 

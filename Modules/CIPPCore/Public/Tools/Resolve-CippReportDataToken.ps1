@@ -41,7 +41,8 @@ function Resolve-CippReportDataToken {
     # One read per collection per render; a collection the database does not hold reads as $null. The
     # reserved collection 'TestResults' reads the in-app compliance test results (CippTestResults) instead
     # of the reporting database, so a chart/table/flow can be driven by test data (count by Status,
-    # Category, Risk...) the same way it is driven by reporting collections.
+    # Category, Risk...) the same way it is driven by reporting collections. 'CAGapFindings', 'CAPersonaCoverage'
+    # and 'CAPosture' are the Security Simulations gap analysis, computed once per render from cached policies.
     $Cache = @{}
     $RowsOf = {
         param([string]$Type)
@@ -50,6 +51,35 @@ function Resolve-CippReportDataToken {
             $Rows = try {
                 if ($Key -eq 'testresults') {
                     @((Get-CIPPTestResults -TenantFilter $TenantFilter).TestResults) | Where-Object { $null -ne $_ }
+                } elseif ($Key -in @('cagapfindings', 'capersonacoverage', 'caposture')) {
+                    # The Security Simulations Conditional Access gap analysis, built from cached policies only
+                    if (-not $Cache.ContainsKey('#cagap')) {
+                        $Cache['#cagap'] = $null
+                        if ((Test-CIPPStandardLicense -StandardName 'ConditionalAccessCache' -TenantFilter $TenantFilter -Preset Entra -SkipLog) -ne $false) {
+                            $Cache['#cagap'] = Get-CIPPCAGapAnalysis -TenantFilter $TenantFilter
+                        }
+                    }
+                    $Analysis = $Cache['#cagap']
+                    if ($Analysis) {
+                        switch ($Key) {
+                            'cagapfindings' { @($Analysis.findings) }
+                            'capersonacoverage' { @($Analysis.personaMatrix.cells) }
+                            default {
+                                [PSCustomObject]@{
+                                    score              = $Analysis.score.score
+                                    scoreMax           = $Analysis.score.scoreMax
+                                    enforcedControls   = $Analysis.score.enforcedControls
+                                    applicableControls = $Analysis.score.applicableControls
+                                    criticalFindings   = $Analysis.score.criticalFindings
+                                    highFindings       = $Analysis.score.highFindings
+                                    policyCount        = $Analysis.policyCount
+                                    enabledCount       = $Analysis.enabledCount
+                                    reportOnlyCount    = $Analysis.reportOnlyCount
+                                    disabledCount      = $Analysis.disabledCount
+                                }
+                            }
+                        }
+                    }
                 } else {
                     @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Type) | Where-Object { $null -ne $_ -and $_ -ne $false }
                 }

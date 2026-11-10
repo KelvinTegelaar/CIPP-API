@@ -15,6 +15,9 @@ BeforeAll {
     function Get-CIPPTextReplacement { param($TenantFilter, $Text) $Text }
     function Get-NormalizedError { param($Message) "$Message" }
 
+    function Get-CIPPTable { param($tablename) @{ Name = $tablename } }
+    function Get-CIPPAzDataTableEntity { param($Name, $Filter, $Property) }
+    . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPDomainExclusionList.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
     . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCommand.ps1')
@@ -209,6 +212,18 @@ Describe 'Get-CIPPBaselineAddDKIMState' {
         $Prepared.Current.domainsToCreate | Should -Be @('contoso.com')
         $Prepared.Current.domainsToEnable | Should -Be @('fabrikam.com')
         $Prepared.Current.domainsWithoutDkim | Should -Not -Contain 'contoso.mail.onmicrosoft.com'
+    }
+
+    It 'also skips domains matching the global exclusion list' {
+        Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ DomainExclusions = '["*.voice.fabrikam.com"]' } }
+        Mock New-CIPPDbRequest {
+            if ($Type -eq 'ExoAcceptedDomains') { @(
+                    (@{ DomainName = 'contoso.com' } | ConvertTo-Cached),
+                    (@{ DomainName = 'tenant1.voice.fabrikam.com' } | ConvertTo-Cached)
+                ) }
+        }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{} }
+        (Get-CIPPBaselineAddDKIMState -Item $Item -TenantFilter $script:Tenant).Current.domainsWithoutDkim | Should -Be @('contoso.com')
     }
 }
 

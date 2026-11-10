@@ -72,7 +72,8 @@ function Invoke-CIPPStandardSPGuestPeoplePicker {
         return
     }
 
-    $Sites = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'SPOSites' | Where-Object { $_ -and $_.Url })
+    # SharePoint refuses this setting on the My Site host
+    $Sites = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'SPOSites').Where({ $_ -and $_.Url -and $_.Template -ne 'SPSMSITEHOST#0' })
     $TenantValue = [bool]$CurrentTenant.ShowPeoplePickerSuggestionsForGuestUsers
     $NonCompliantSites = @($Sites | Where-Object { [bool]$_.ShowPeoplePickerSuggestionsForGuestUsers -ne $WantedState })
     $TenantIsCorrect = ($TenantValue -eq $WantedState)

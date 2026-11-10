@@ -15865,6 +15865,9 @@
                     "CredentialVersion": {
                       "x-cipp-field-source": "storage"
                     },
+                    "DomainExclusions": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -16353,7 +16356,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Queues one BEC investigation per user, each its own sequential orchestration, with a queue entry for progress. Accepts either an array of { UserIds, tenantFilter } items (the Users table bulk action) or one object with UserIds[]. Each run gets its own case id; results appear on the BEC Reports page and each user's Compromise Remediation tab.",
+        "description": "Queues one BEC investigation per user, each its own sequential orchestration, with a queue entry for progress. Accepts either an array of { UserIds, tenantFilter } items (the Users table bulk action) or one object with UserIds[]. An optional windowDays (1-30) sets how many days of history every run covers, ending now; omitted, a run covers 7 days, or 30 when the user holds Entra ID P1/P2. Each run gets its own case id; results appear on the BEC Reports page and each user's Compromise Remediation tab.",
         "responses": {
           "200": {
             "description": "Success",
@@ -16391,7 +16394,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "GET with GUID (or caseId) returns that run: while it is queued or running { Waiting = true, Progress } where Progress is the job status (queued until a worker picks it up, then running) and the per-step state the page renders; { Error, Progress } when it failed; otherwise the results payload with the server-side Score, per-collector Completeness and a Run block. GET without a GUID returns the user's latest run as { GUID, Status } and starts nothing (GUID is null when the user has no runs). POST with tenantFilter, userid and userName queues a new run and returns its { GUID }. Every run is the full investigation and is kept in the BecReports table; metadata only, never message content.",
+        "description": "GET with GUID (or caseId) returns that run: while it is queued or running { Waiting = true, Progress } where Progress is the job status (queued until a worker picks it up, then running) and the per-step state the page renders; { Error, Progress } when it failed; otherwise the results payload with the server-side Score, per-collector Completeness and a Run block. GET without a GUID returns the user's latest run as { GUID, Status } and starts nothing (GUID is null when the user has no runs). POST with tenantFilter, userid and userName queues a new run and returns its { GUID }; windowDays (1-30) sets how many days of history it covers, ending now, and defaults to 7 days (30 when the user holds Entra ID P1/P2). Every run is the full investigation and is kept in the BecReports table; metadata only, never message content.",
         "requestBody": {
           "required": true,
           "content": {
@@ -16409,6 +16412,10 @@
                   "userName": {
                     "type": "string",
                     "description": "The user's UPN (stored on the run and used by the collectors)"
+                  },
+                  "windowDays": {
+                    "type": "string",
+                    "description": "Days of history the run covers, ending now (1-30); omitted = 7 days, or 30 when the user holds Entra ID P1/P2"
                   }
                 },
                 "required": [
@@ -16453,6 +16460,15 @@
             "name": "userName",
             "in": "query",
             "description": "The user's UPN (stored on the run and used by the collectors)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "windowDays",
+            "in": "query",
+            "description": "Days of history the run covers, ending now (1-30); omitted = 7 days, or 30 when the user holds Entra ID P1/P2",
             "required": false,
             "schema": {
               "type": "string"
@@ -17244,6 +17260,9 @@
                     "CredentialVersion": {
                       "x-cipp-field-source": "storage"
                     },
+                    "DomainExclusions": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -17731,6 +17750,9 @@
                     "type": "string",
                     "description": "If UserId is a guid, get the user's UPN"
                   },
+                  "TravelAllowTrusted": {
+                    "type": "boolean"
+                  },
                   "TravelCountries": {
                     "allOf": [
                       {
@@ -17738,6 +17760,12 @@
                       }
                     ],
                     "description": "Optional: temporary travel policy that only allows sign-ins from the travel destination"
+                  },
+                  "TravelExistingLocations": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    }
                   },
                   "UserID": {
                     "type": "string"
@@ -21804,6 +21832,10 @@
                   "Domain": {
                     "type": "string"
                   },
+                  "ExclusionPatterns": {
+                    "type": "string",
+                    "description": "Wildcard patterns (*.voice.example.com) the Domain Analyser and DKIM baseline skip, comma or newline separated"
+                  },
                   "Resolver": {
                     "type": "string"
                   },
@@ -21864,6 +21896,12 @@
                   "type": "object",
                   "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                   "properties": {
+                    "ExclusionPatterns": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "Resolver": {
+                      "x-cipp-field-source": "backend"
+                    },
                     "Results": {
                       "x-cipp-field-source": "backend"
                     }
@@ -27852,6 +27890,9 @@
                     "CredentialVersion": {
                       "x-cipp-field-source": "storage"
                     },
+                    "DomainExclusions": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -28610,6 +28651,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "DomainExclusions": {
                       "x-cipp-field-source": "storage"
                     },
                     "Enabled": {
@@ -33202,6 +33246,9 @@
                     "CredentialVersion": {
                       "x-cipp-field-source": "storage"
                     },
+                    "DomainExclusions": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -35686,6 +35733,9 @@
                     "CredentialVersion": {
                       "x-cipp-field-source": "storage"
                     },
+                    "DomainExclusions": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Enabled": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
@@ -37211,6 +37261,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "CredentialVersion": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "DomainExclusions": {
                       "x-cipp-field-source": "storage"
                     },
                     "Enabled": {

@@ -3,6 +3,7 @@ BeforeAll {
     Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     function Get-AuthorisedRequest { param($Uri, $TenantID) $true }
     function Get-GraphToken { param($tenantid, $scope, $AsApp) @{ Authorization = 'Bearer x' } }
+    function Get-CippUserAgent { 'CIPP/test (baseline:tpl-1)' }
     function Get-CippTable { param($tablename) @{} }
     function Get-CIPPAzDataTableEntity { param($Filter) [pscustomobject]@{ RowKey = 't'; LastGraphError = '' } }
     function Update-AzDataTableEntity { param([switch]$Force, $Entity) }
@@ -15,6 +16,12 @@ Describe 'New-GraphBulkRequest' {
     BeforeEach {
         $script:Sent = [System.Collections.Generic.List[object]]::new()
         Mock Invoke-CIPPRestMethod { $Requests = @(($Body | ConvertFrom-Json).requests); $script:Sent.Add(@($Requests.id)); New-Ok $Requests }
+    }
+
+    It 'sends the CIPP user agent on the batch request, which Entra audits each write under' {
+        Mock Invoke-CIPPRestMethod { $script:SentHeaders = $Headers; New-Ok @(($Body | ConvertFrom-Json).requests) }
+        $null = New-GraphBulkRequest -tenantid 'contoso.com' -asapp $false -Requests @(@{ id = '1'; method = 'PATCH'; url = 'users/u1'; body = @{ accountEnabled = $false } })
+        $script:SentHeaders['User-Agent'] | Should -Be 'CIPP/test (baseline:tpl-1)'
     }
 
     It 'keeps the identity reports to their burst of 10 a batch and fills the rest up to 20' {

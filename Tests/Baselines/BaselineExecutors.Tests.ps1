@@ -267,6 +267,16 @@ Describe 'Invoke-CIPPBaselineDeviceRegistrationPolicy' {
         { Invoke-CIPPBaselineDeviceRegistrationPolicy -Remediate $Spec -TenantFilter $script:Tenant -Current $null } | Should -Throw '*nothing configured*'
         Should -Invoke New-GraphPostRequest -Times 0
     }
+
+    It 'writes the join groups the prepare hook resolved' {
+        $Spec = @{ set = @{ 'azureADJoin.allowedToJoin' = @{ '@odata.type' = '#microsoft.graph.enumeratedDeviceRegistrationMembership'; users = $null; groups = $null } } } | ConvertTo-Spec
+        $Current = [PSCustomObject]@{ allowedToJoinGroupIds = @('aaaa-1', 'bbbb-2') }
+        Invoke-CIPPBaselineDeviceRegistrationPolicy -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-GraphPostRequest -Times 1 -ParameterFilter {
+            $Join = ($Body | ConvertFrom-Json).azureADJoin.allowedToJoin
+            ($Join.groups -join ',') -eq 'aaaa-1,bbbb-2' -and @($Join.users).Count -eq 0
+        }
+    }
 }
 
 Describe 'Invoke-CIPPBaselineGraphBulkSweep' {

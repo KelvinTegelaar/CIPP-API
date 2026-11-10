@@ -13428,8 +13428,8 @@
       "CIS M365 7.0.0 (5.1.4.1)",
       "SMB1001 (2.8)"
     ],
-    "helpText": "Controls whether users can join devices to Entra. Tenants where Entra reports this setting as not admin-configurable are reported but not written to.",
-    "docsDescription": "Configures whether users can join devices to Entra. When disabled, users are unable to Entra-join devices, which prevents them from creating new Entra-joined (cloud-managed) device identities.",
+    "helpText": "Controls whether users can join devices to Entra: no users, all users, or only members of selected groups. Tenants where Entra reports this setting as not admin-configurable are reported but not written to.",
+    "docsDescription": "Configures whether users can join devices to Entra. With selected groups, only members of the listed groups (comma-separated names or IDs, custom variables including list variables allowed) can join, and the group list is graded against the tenant by ID. When disabled, users are unable to Entra-join devices, which prevents them from creating new Entra-joined (cloud-managed) device identities.",
     "executiveText": "Controls whether employees can join their devices to the corporate Entra directory. Disabling user device join prevents unauthorized or unmanaged devices from becoming corporate-managed identities, enhancing overall security posture.",
     "label": "Configure user restriction for Entra device join",
     "impact": "High Impact",
@@ -13453,10 +13453,27 @@
           {
             "label": "All users",
             "value": "#microsoft.graph.allDeviceRegistrationMembership"
+          },
+          {
+            "label": "Selected groups",
+            "value": "#microsoft.graph.enumeratedDeviceRegistrationMembership"
           }
         ],
         "default": "#microsoft.graph.noDeviceRegistrationMembership",
         "recommended": "#microsoft.graph.noDeviceRegistrationMembership"
+      },
+      {
+        "name": "standards.intuneRestrictUserDeviceJoin.allowedToJoinGroups",
+        "type": "textField",
+        "label": "Groups allowed to join devices",
+        "helperText": "Comma-separated group names or IDs. Custom variables work too, including list variables such as %DeviceJoinGroups%.",
+        "omitWhenBlank": true,
+        "default": "",
+        "condition": {
+          "field": "allowedToJoin",
+          "compareType": "contains",
+          "compareValue": "enumerated"
+        }
       }
     ]
   },

@@ -16,6 +16,7 @@ function Push-CIPPBaselineStandard {
         # Stamp every log line this invocation writes with the run's BaselineRunId column,
         # so ListLogs can filter to one exact run.
         Set-CippBaselineRunContext -RunId $Item.RunId
+        Set-CippUserAgentContext -Source 'baseline' -TemplateId $Item.Item.TemplateId
         $Result = Invoke-CIPPBaselineStandard -Item $Item.Item -Mode ($Item.Mode ?? 'run') -TriggeredBy ($Item.TriggeredBy ?? 'schedule') -Force:([bool]$Item.Force) -RunId $Item.RunId
         if ($Result.Remediated -and $Result.CacheType) {
             # One record per declared cache - the refresh dedupes across standards, so a
