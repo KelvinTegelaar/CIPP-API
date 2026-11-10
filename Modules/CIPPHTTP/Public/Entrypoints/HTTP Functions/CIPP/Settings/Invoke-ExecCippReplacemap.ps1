@@ -19,7 +19,7 @@ function Invoke-ExecCippReplacemap {
     # partition at once rather than about one tenant - so it is handled before the tenant is
     # resolved, and needs no tenantId.
     if ($Action -eq 'Usage') {
-        $AllRows = @(Get-CIPPAzDataTableEntity @Table)
+        $AllRows = @(Get-CIPPAzDataTableEntity @Table -ErrorAction Stop)
         # Global rows apply to every tenant; a tenant's own rows only reach callers whose roles cover it.
         $AllRows = @($AllRows.Where({ $_.PartitionKey -eq 'AllTenants' })) + @($AllRows.Where({ $_.PartitionKey -ne 'AllTenants' }) | Select-CippAllowedTenantData -TenantProperty 'PartitionKey')
 
@@ -125,7 +125,7 @@ function Invoke-ExecCippReplacemap {
     $StatusCode = [HttpStatusCode]::OK
     switch ($Action) {
         'List' {
-            $Variables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId'" | ForEach-Object {
+            $Variables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId'" -ErrorAction Stop | ForEach-Object {
                 $_ | Add-Member -NotePropertyName 'Scope' -NotePropertyValue $(if ($customerId -eq 'AllTenants') { 'Global' } else { 'Tenant' }) -PassThru
             }
             if (!$Variables) {
@@ -134,7 +134,7 @@ function Invoke-ExecCippReplacemap {
             # Also return the AllTenants-scoped variables alongside this tenant's own.
             $IncludeGlobal = ($Request.Query.includeGlobal -eq $true) -or ($Request.Body.includeGlobal -eq $true)
             if ($IncludeGlobal -and $customerId -ne 'AllTenants') {
-                $GlobalVariables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AllTenants'" | ForEach-Object {
+                $GlobalVariables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AllTenants'" -ErrorAction Stop | ForEach-Object {
                     $_ | Add-Member -NotePropertyName 'Scope' -NotePropertyValue 'Global' -PassThru
                 }
                 if ($GlobalVariables) {
@@ -244,7 +244,7 @@ function Invoke-ExecCippReplacemap {
         'Delete' {
             $VariableName = $Request.Body.RowKey
 
-            $VariableEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId' and RowKey eq '$VariableName'"
+            $VariableEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId' and RowKey eq '$VariableName'" -ErrorAction Stop
             if ($VariableEntity) {
                 Remove-CIPPAzDataTableEntity @Table -Entity $VariableEntity -Force
                 $Result = "Variable '$VariableName' deleted successfully"
