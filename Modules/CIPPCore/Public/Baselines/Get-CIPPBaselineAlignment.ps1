@@ -408,7 +408,14 @@ function Get-CIPPBaselineAlignment {
             $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
             $Expected = & $RenderExpected $Definition $Variables
             $Row = $Rows | Where-Object { $_.standardName -eq $Delta.standardName } | Select-Object -First 1
+            $OverrideFields = @{
+                overrideReason  = $Delta.reason
+                overrideBy      = $Delta.updatedBy
+                overrideAt      = $Delta.updatedAt
+                overrideExpires = $Delta.expires
+            }
             if ($Row) {
+                $Row | Add-Member -NotePropertyMembers $OverrideFields -Force
                 if ($Row.sourceTemplate -ne 'Tenant Override') {
                     $Inheritance = [System.Collections.Generic.List[object]]::new()
                     foreach ($Tier in @($Row.inheritance)) {
@@ -458,6 +465,10 @@ function Get-CIPPBaselineAlignment {
                         deviationAt         = $null
                         deviationExpires    = $null
                         remediateOnExpire   = $false
+                        overrideReason      = $OverrideFields.overrideReason
+                        overrideBy          = $OverrideFields.overrideBy
+                        overrideAt          = $OverrideFields.overrideAt
+                        overrideExpires     = $OverrideFields.overrideExpires
                         lastRun             = $null
                         lastRemediated      = $null
                         history             = @()

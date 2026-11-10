@@ -46,6 +46,7 @@ Describe 'Standards and baseline endpoints report missing items as 404' {
         @{ Endpoint = 'ExecBaselineAddStandard'; Case = 'an unknown standard'; Body = @{ baselineId = 'b1'; standard = 'NoSuchStandard' }; Status = 404 }
         @{ Endpoint = 'ExecBaselineAddStandard'; Case = 'missing fields'; Body = @{}; Status = 400 }
         @{ Endpoint = 'ExecBaselineOverride'; Case = 'missing fields'; Body = @{}; Status = 400 }
+        @{ Endpoint = 'ExecBaselineOverride'; Case = 'an override without a reason'; Body = @{ action = 'createOverride'; tenantFilter = 'contoso.com'; standard = 'DisableGuests' }; Status = 400 }
         @{ Endpoint = 'ExecUpdateBaselineDeviation'; Case = 'missing fields'; Body = @{}; Status = 400 }
         @{ Endpoint = 'ListBaselineAlignment'; Case = 'no tenant or byStandard'; Query = @{}; Status = 400 }
         @{ Endpoint = 'ListBaselineAlignment'; Case = 'an unknown baseline'; Query = @{ byStandard = 'true'; baselineId = 'nope' }; Status = 404 }

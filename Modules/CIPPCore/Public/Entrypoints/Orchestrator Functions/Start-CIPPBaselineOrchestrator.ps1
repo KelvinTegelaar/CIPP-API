@@ -51,6 +51,24 @@ function Start-CIPPBaselineOrchestrator {
         }
     }
 
+    # Expired tenant overrides are removed before resolving, so the baselines they replaced apply again.
+    try {
+        $DeltaTable = Get-CippTable -tablename 'Baselines'
+        $Now = [datetimeoffset]::UtcNow.ToUnixTimeSeconds()
+        $ExpiredOverrides = @(Get-CIPPAzDataTableEntity @DeltaTable -Filter "PartitionKey eq 'standardItem' and templateId eq '' and scope eq 'tenant'").Where({ "$($_.expires)" -match '^\d+$' -and [int64]$_.expires -le $Now })
+        if ($ExpiredOverrides.Count -gt 0) {
+            Remove-CIPPAzDataTableEntity -Force @DeltaTable -Entity @($ExpiredOverrides)
+            $TenantLookup = Get-CIPPTenantLookup
+            foreach ($Override in $ExpiredOverrides) {
+                $OverrideTenant = $TenantLookup["$($Override.scopeId)"].defaultDomainName ?? "$($Override.scopeId)"
+                $null = Add-CIPPBaselineHistoryEvent -TenantFilter $OverrideTenant -Standard $Override.standardName -Mode 'triage' -TriggeredBy 'CIPP' -Outcome 'Override Expired' -Detail "The tenant override expired - the standard falls back to the inherited configuration. It was set by $($Override.updatedBy): $($Override.reason)"
+                Write-LogMessage -API 'Baselines' -tenant $OverrideTenant -message "The tenant override of $($Override.standardName) expired and was removed." -Sev 'Info'
+            }
+        }
+    } catch {
+        Write-LogMessage -API 'Baselines' -message "Failed to remove expired tenant overrides: $($_.Exception.Message)" -Sev 'Error'
+    }
+
     # A manual run by a tenant-restricted role only reaches the tenants that role allows.
     $WorkItems = @(Get-CIPPBaselineWorkItems -TenantFilter $TenantFilter -StandardName $StandardName -TemplateId $TemplateId | Select-CippAllowedTenantData -TenantProperty 'TenantFilter')
 

@@ -14,6 +14,8 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $message, $Sev) }
     function Get-CippErrorStatusCode { param($ErrorRecord) 500 }
     . (Join-Path $BackendRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Tenant/Standards/Invoke-ExecBaselineOverride.ps1')
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Baselines/Resolve-CIPPBaselineExpiry.ps1')
+    function Get-CIPPBaselineExpiryPolicy { [pscustomobject]@{ defaultDays = 0; maxDays = 0 } }
 
     function New-Row($Tiers) {
         [pscustomobject]@{
@@ -55,5 +57,42 @@ Describe 'Invoke-ExecBaselineOverride deleteOverride' {
         $script:Row = New-Row @($script:OverrideTier)
         (Invoke-ExecBaselineOverride -Request $script:Request).StatusCode | Should -Be 200
         Should -Invoke Remove-CIPPAzDataTableEntity -Times 1 -ParameterFilter { $TableName -eq 'BaselineAlignment' }
+    }
+}
+
+Describe 'Invoke-ExecBaselineOverride createOverride' {
+    BeforeEach {
+        $script:Added = [System.Collections.Generic.List[object]]::new()
+        $script:Events = [System.Collections.Generic.List[string]]::new()
+        Mock Get-CIPPAzDataTableEntity { }
+        Mock Add-CIPPAzDataTableEntity { $script:Added.Add($Entity) }
+        Mock Add-CIPPBaselineHistoryEvent { $script:Events.Add($Detail) }
+        $Principal = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes('{"userDetails":"admin@contoso.com"}'))
+        $script:NewRequest = {
+            param($Body)
+            [pscustomobject]@{ Params = @{ CIPPEndpoint = 'ExecBaselineOverride' }; Headers = @{ 'x-ms-client-principal' = $Principal }; Body = [pscustomobject]$Body }
+        }
+    }
+
+    It 'stores the reason and expiry on the override and in its history event' {
+        $Response = Invoke-ExecBaselineOverride -Request (& $script:NewRequest @{
+                action = 'createOverride'; tenantFilter = 'contoso.com'; standard = 'DisableGuests'
+                reason = 'Change ticket 42'; expires = 1893456000; variables = @{}
+            })
+
+        $Response.StatusCode | Should -Be 200
+        $script:Added[0].reason | Should -Be 'Change ticket 42'
+        $script:Added[0].expires | Should -Be '1893456000'
+        $script:Added[0].updatedBy | Should -Be 'admin@contoso.com'
+        $Response.Body.Results | Should -Match 'expires on 2030-01-01'
+        $script:Events[0] | Should -Match 'Change ticket 42'
+    }
+
+    It 'stores no expiry when none is given' {
+        $null = Invoke-ExecBaselineOverride -Request (& $script:NewRequest @{
+                action = 'createOverride'; tenantFilter = 'contoso.com'; standard = 'DisableGuests'; reason = 'Customer request'
+            })
+
+        $script:Added[0].expires | Should -Be ''
     }
 }

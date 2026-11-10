@@ -16064,6 +16064,67 @@
         "x-cipp-role": "Tenant.Baselines.ReadWrite"
       }
     },
+    "/api/ExecBaselineExpiryPolicy": {
+      "post": {
+        "summary": "Set the baseline expiry policy",
+        "operationId": "ExecBaselineExpiryPolicy",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "Sets the instance-wide default and maximum expiry, in days, for accepted baseline\ndeviations and tenant overrides. 0 means no default or no maximum.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "defaultDays": {
+                    "type": "integer",
+                    "description": "Days from now that a new acceptance or override expires by default. 0 for no default."
+                  },
+                  "maxDays": {
+                    "type": "integer",
+                    "description": "Furthest away, in days, that an expiry may be. 0 for no maximum."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.AppSettings.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ExecBaselineMigrate": {
       "post": {
         "summary": "ExecBaselineMigrate",
@@ -16141,7 +16202,7 @@
         "tags": [
           "Tenant > Standards"
         ],
-        "description": "Creates or removes a tenant-scoped delta (design doc §4.1) overriding one standard for\none tenant. Presence is the override: the delta's expectedValue (the configured variable\nvalues) fully replaces what the baselines apply. The resolved row's §4.2 columns are\nupdated immediately so the UI reflects the new effective configuration; the engine\nenforces it on the next run.",
+        "description": "Creates or removes a tenant-scoped delta (design doc §4.1) overriding one standard for\none tenant. Presence is the override: the delta's expectedValue (the configured variable\nvalues) fully replaces what the baselines apply. The resolved row's §4.2 columns are\nupdated immediately so the UI reflects the new effective configuration; the engine\nenforces it on the next run. createOverride requires a reason and takes an optional\nexpiry, after which the next baseline run removes the override.",
         "requestBody": {
           "required": true,
           "content": {
@@ -16155,6 +16216,14 @@
                       "createOverride",
                       "deleteOverride"
                     ]
+                  },
+                  "expires": {
+                    "type": "string",
+                    "description": "Unix seconds after which the override stops applying. Empty keeps it until it is removed, unless the instance sets a maximum."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Why this tenant differs from its baselines. Required to create an override."
                   },
                   "standard": {
                     "type": "string"
@@ -43467,7 +43536,8 @@
                     "type": "string"
                   },
                   "expires": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Unix seconds when the acceptance lapses. Empty for none, unless the instance sets a maximum."
                   },
                   "method": {
                     "type": "string"
@@ -47970,6 +48040,48 @@
           }
         ],
         "x-cipp-role": "Tenant.Baselines.Read"
+      }
+    },
+    "/api/ListBaselineExpiryPolicy": {
+      "get": {
+        "summary": "Baseline expiry policy",
+        "operationId": "ListBaselineExpiryPolicy",
+        "tags": [
+          "Tenant > Standards"
+        ],
+        "description": "Returns the instance-wide default and maximum expiry, in days, for accepted baseline\ndeviations and tenant overrides. 0 means no default or no maximum.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Baselines.Read",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ListBaselines": {

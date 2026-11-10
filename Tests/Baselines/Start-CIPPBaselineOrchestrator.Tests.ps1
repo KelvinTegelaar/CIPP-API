@@ -52,3 +52,34 @@ Describe 'Start-CIPPBaselineOrchestrator' {
         Should -Invoke Start-CIPPOrchestrator -Times 1 -ParameterFilter { $InputObject.OrchestratorName -eq 'BaselineRun_compare' -and @($InputObject.Batch).Count -eq 4 }
     }
 }
+
+Describe 'Start-CIPPBaselineOrchestrator expired tenant overrides' {
+    BeforeAll {
+        function Get-CippTable { param($tablename) @{ TableName = $tablename } }
+        function Get-CIPPAzDataTableEntity { param($TableName, $Filter) }
+        function Remove-CIPPAzDataTableEntity { param($TableName, $Entity, [switch]$Force) }
+        function Get-CIPPTenantLookup { @{ 'tid-1' = [pscustomobject]@{ defaultDomainName = 'contoso.com' } } }
+        function Add-CIPPBaselineHistoryEvent { param($TenantFilter, $Standard, $Mode, $TriggeredBy, $Outcome, $Detail) }
+    }
+
+    BeforeEach {
+        Mock Start-CIPPOrchestrator { }
+        Mock Get-CIPPBaselineWorkItems { New-WorkItem 'contoso.com' 'DisableGuests' }
+        Mock Remove-CIPPAzDataTableEntity { }
+        Mock Add-CIPPBaselineHistoryEvent { }
+        Mock Get-CIPPAzDataTableEntity {
+            [pscustomobject]@{ RowKey = 'expired'; scopeId = 'tid-1'; standardName = 'DisableGuests'; expires = '1000'; reason = 'Pilot'; updatedBy = 'admin@contoso.com' }
+            [pscustomobject]@{ RowKey = 'future'; scopeId = 'tid-1'; standardName = 'EnableMailTips'; expires = '9999999999'; reason = 'Later' }
+            [pscustomobject]@{ RowKey = 'forever'; scopeId = 'tid-1'; standardName = 'DisableBasicAuth'; expires = ''; reason = 'Always' }
+        }
+    }
+
+    It 'removes only the expired override and records why' {
+        Start-CIPPBaselineOrchestrator -TenantFilter 'contoso.com' -Mode 'run' -TriggeredBy 'tester' -Force | Should -Be 1
+
+        Should -Invoke Remove-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { @($Entity).Count -eq 1 -and $Entity[0].RowKey -eq 'expired' }
+        Should -Invoke Add-CIPPBaselineHistoryEvent -Times 1 -Exactly -ParameterFilter {
+            $TenantFilter -eq 'contoso.com' -and $Standard -eq 'DisableGuests' -and $Outcome -eq 'Override Expired' -and $Detail -match 'Pilot'
+        }
+    }
+}

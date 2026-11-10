@@ -76,15 +76,17 @@ function Invoke-ExecUpdateBaselineDeviation {
 
         switch ($Action) {
             'Accept' {
+                # Unix seconds when the acceptance lapses. Empty for none, unless the instance sets a maximum.
+                $Expires = Resolve-CIPPBaselineExpiry -Expires $Request.Body.expires
                 & $Set 'Status' 'Accepted'
                 & $Set 'DeviationReason' "$($Request.Body.reason)"
                 & $Set 'DeviationBy' "$User"
                 & $Set 'DeviationAt' $Now
-                & $Set 'DeviationExpires' ($Request.Body.expires ?? '')
+                & $Set 'DeviationExpires' $(if ($Expires) { $Expires } else { '' })
                 & $Set 'RemediateOnExpire' ([bool]$Request.Body.remediateOnExpire)
                 $Message = "Accepted the deviation on $Standard for $TenantFilter."
                 $EventOutcome = 'Accepted'
-                $EventDetail = 'Accepted the deviation{0}{1}' -f $(if ($Request.Body.reason) { ": $($Request.Body.reason)" }), $(if ($Request.Body.expires) { " (expires $($Request.Body.expires))" })
+                $EventDetail = 'Accepted the deviation{0}{1}' -f $(if ($Request.Body.reason) { ": $($Request.Body.reason)" }), $(if ($Expires) { ' (expires {0:yyyy-MM-dd})' -f [datetimeoffset]::FromUnixTimeSeconds($Expires).UtcDateTime })
             }
             'Deny' {
                 $Method = $Request.Body.method ?? 'remediate'
