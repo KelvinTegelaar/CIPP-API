@@ -67,37 +67,110 @@ function Invoke-ListIntuneTemplates {
 
         } | Sort-Object -Property displayName
 
-        # Build a lookup of which standards templates reference each Intune template (by GUID or package)
+        # Build a lookup of what references each Intune template (by GUID or package): the
+        # legacy standards templates and the baselines (#1220 - templates deployed only through
+        # a baseline used to show as unused, which invites deleting the wrong one).
         $UsageByGuid = @{}
         $UsageByPackage = @{}
+        $AddUsage = {
+            param($Lookup, $Key, $Info)
+            if (-not $Lookup.ContainsKey($Key)) { $Lookup[$Key] = [System.Collections.Generic.List[object]]::new() }
+            $Lookup[$Key].Add($Info)
+        }
         $StdTemplates = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'StandardsTemplateV2'"
         foreach ($StdRaw in $StdTemplates) {
             try {
                 $StdData = $StdRaw.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
                 if (-not $StdData -or -not $StdData.standards) { continue }
                 $IsDrift = $StdData.type -eq 'drift'
-                $StdInfo = [pscustomobject]@{
-                    templateName = $StdData.templateName
-                    templateId   = $StdRaw.RowKey
-                    isDrift      = $IsDrift
-                    cippLink     = "/tenant/standards/templates/template?id=$($StdRaw.RowKey)$(if ($IsDrift) { '&type=drift' })"
-                }
                 $IntuneEntries = $StdData.standards.IntuneTemplate
                 if (-not $IntuneEntries) { continue }
                 $Items = if ($IntuneEntries -is [System.Collections.IEnumerable] -and $IntuneEntries -isnot [string]) { $IntuneEntries } else { @($IntuneEntries) }
                 foreach ($Item in $Items) {
-                    if ($Item.TemplateList.value) {
-                        $Guid = $Item.TemplateList.value
-                        if (-not $UsageByGuid.ContainsKey($Guid)) { $UsageByGuid[$Guid] = [System.Collections.Generic.List[object]]::new() }
-                        $UsageByGuid[$Guid].Add($StdInfo)
+                    $Actions = @($Item.action | ForEach-Object { $_.value ?? $_ })
+                    $StdInfo = [pscustomobject]@{
+                        kind             = 'Standards Template'
+                        templateName     = $StdData.templateName
+                        templateId       = $StdRaw.RowKey
+                        isDrift          = $IsDrift
+                        stage            = $null
+                        stageName        = $null
+                        stageCount       = $null
+                        remediateEnabled = [bool]($Actions -contains 'Remediate')
+                        cippLink         = "/tenant/standards/templates/template?id=$($StdRaw.RowKey)$(if ($IsDrift) { '&type=drift' })"
                     }
-                    if ($Item.'TemplateList-Tags'.value) {
-                        $Pkg = $Item.'TemplateList-Tags'.value
-                        if (-not $UsageByPackage.ContainsKey($Pkg)) { $UsageByPackage[$Pkg] = [System.Collections.Generic.List[object]]::new() }
-                        $UsageByPackage[$Pkg].Add($StdInfo)
-                    }
+                    if ($Item.TemplateList.value) { & $AddUsage $UsageByGuid "$($Item.TemplateList.value)" $StdInfo }
+                    if ($Item.'TemplateList-Tags'.value) { & $AddUsage $UsageByPackage "$($Item.'TemplateList-Tags'.value)" $StdInfo }
                 }
             } catch {}
+        }
+
+        # Baselines keep one delta row per standard instance per assignment scope. The
+        # IntuneTemplate instance names the template GUID, IntuneTemplatePackage names the
+        # package tag. Fold the scope rows together so a baseline is listed once per stage.
+        try {
+            $RolloutTable = Get-CippTable -tablename 'BaselineRollouts'
+            $Rollouts = @{}
+            foreach ($RolloutRow in @(Get-CIPPAzDataTableEntity @RolloutTable -Filter "PartitionKey eq 'rollout'")) {
+                $StageNames = @()
+                try { $StageNames = @(($RolloutRow.Stages | ConvertFrom-Json -ErrorAction Stop).name) } catch {}
+                $Rollouts["$($RolloutRow.RowKey)"] = [pscustomobject]@{ name = $RolloutRow.templateName; stageNames = $StageNames }
+            }
+            $DeltaTable = Get-CippTable -tablename 'Baselines'
+            # Prefix match: every instance key for both standards starts with 'IntuneTemplate'.
+            $Deltas = @(Get-CIPPAzDataTableEntity @DeltaTable -Filter "PartitionKey eq 'standardItem' and standardName ge 'IntuneTemplate' and standardName lt 'IntuneTemplatf'")
+            $BaselineUsage = @{}
+            foreach ($Delta in $Deltas) {
+                $BaseName = ("$($Delta.standardName)" -split '#')[0]
+                if ($BaseName -notin @('IntuneTemplate', 'IntuneTemplatePackage')) { continue }
+                $Rollout = $Rollouts["$($Delta.templateId)"]
+                if (-not $Rollout) { continue }
+                $Variables = $(try { $Delta.expectedValue | ConvertFrom-Json -Depth 100 } catch { $null })
+                $RawValue = if ($BaseName -eq 'IntuneTemplate') { $Variables.intuneTemplate } else { $Variables.intuneTemplatePackage }
+                # Stored as a bare id, an option object, or an array of either (older multi-selects).
+                $Values = @($RawValue | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
+                $Stage = [int]($Delta.stage ?? 1)
+                foreach ($Value in $Values) {
+                    $Key = "$($Delta.templateId)|$Stage|$BaseName|$Value"
+                    if ($BaselineUsage.ContainsKey($Key)) {
+                        # Any scope with remediation on counts as remediating.
+                        if ([bool]$Delta.remediateEnabled) { $BaselineUsage[$Key].remediateEnabled = $true }
+                        continue
+                    }
+                    $Info = [pscustomobject]@{
+                        kind             = 'Baseline'
+                        templateName     = $Rollout.name
+                        templateId       = "$($Delta.templateId)"
+                        isDrift          = $true
+                        stage            = $Stage
+                        stageName        = $Rollout.stageNames[$Stage - 1]
+                        stageCount       = $Rollout.stageNames.Count
+                        remediateEnabled = [bool]$Delta.remediateEnabled
+                        cippLink         = "/tenant/baselines/template?id=$($Delta.templateId)"
+                    }
+                    $BaselineUsage[$Key] = $Info
+                    if ($BaseName -eq 'IntuneTemplate') { & $AddUsage $UsageByGuid $Value $Info } else { & $AddUsage $UsageByPackage $Value $Info }
+                }
+            }
+        } catch {
+            Write-Information "ListIntuneTemplates: baseline usage lookup failed: $($_.Exception.Message)"
+        }
+
+        # One readable line per reference, shown as a chip in the Usage column.
+        $UsageLabel = {
+            param($Entry)
+            $Parts = [System.Collections.Generic.List[string]]::new()
+            $Parts.Add("$($Entry.templateName ?? $Entry.templateId)")
+            if ($Entry.kind -eq 'Baseline') {
+                $StageText = if ($Entry.stageName) { "Stage $($Entry.stage): $($Entry.stageName)" } else { "Stage $($Entry.stage)" }
+                if ($Entry.stageCount -gt 1) { $StageText += " of $($Entry.stageCount)" }
+                $Parts.Add($StageText)
+            } else {
+                $Parts.Add('Standards template')
+            }
+            $Parts.Add($(if ($Entry.remediateEnabled) { 'Remediate' } else { 'Report only' }))
+            if ($Entry.matchType -eq 'package') { $Parts.Add("via package $($Entry.package)") }
+            $Parts -join ' | '
         }
 
         # Attach usage list to each Intune template
@@ -107,16 +180,18 @@ function Invoke-ListIntuneTemplates {
                 foreach ($U in $UsageByGuid[$Tpl.GUID]) {
                     $Entry = $U | Select-Object *
                     $Entry | Add-Member -NotePropertyName 'matchType' -NotePropertyValue 'direct' -Force
+                    $Entry | Add-Member -NotePropertyName 'label' -NotePropertyValue (& $UsageLabel $Entry) -Force
                     $Usage.Add($Entry)
                 }
             }
             if ($Tpl.package -and $UsageByPackage.ContainsKey($Tpl.package)) {
                 foreach ($U in $UsageByPackage[$Tpl.package]) {
-                    # Avoid duplicates when the same template matches both GUID and package
-                    if (-not ($Usage | Where-Object { $_.templateId -eq $U.templateId })) {
+                    # Avoid duplicates when the same template (and, for a baseline, the same stage) matches both GUID and package
+                    if (-not ($Usage | Where-Object { $_.templateId -eq $U.templateId -and $_.stage -eq $U.stage })) {
                         $Entry = $U | Select-Object *
                         $Entry | Add-Member -NotePropertyName 'matchType' -NotePropertyValue 'package' -Force
                         $Entry | Add-Member -NotePropertyName 'package' -NotePropertyValue $Tpl.package -Force
+                        $Entry | Add-Member -NotePropertyName 'label' -NotePropertyValue (& $UsageLabel $Entry) -Force
                         $Usage.Add($Entry)
                     }
                 }
