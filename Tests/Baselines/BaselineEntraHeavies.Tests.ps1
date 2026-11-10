@@ -163,8 +163,9 @@ Describe 'Get-CIPPBaselineAuthenticationMethodsState' {
         }
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ SMSEnabled = $true; SMSGroup = 'CIPPTestPilot'; VoiceEnabled = $true } }
         $Prepared = Get-CIPPBaselineAuthenticationMethodsState -Item $Item -TenantFilter $script:Tenant
-        $Prepared.Current.remediationSets[0].Params.GroupIds | Should -Be @('g-pilot')
-        $Prepared.Current.remediationSets[1].Params.GroupIds | Should -Be @('all_users')
+        $Sets = $Prepared.Current.remediationSets
+        $Sets.Where({ $_.Label -eq 'SMS' })[0].Params.GroupIds | Should -Be @('g-pilot')
+        $Sets.Where({ $_.Label -eq 'Voice Call' })[0].Params.GroupIds | Should -Be @('all_users')
     }
 
     It 'writes each drifted method through the shared policy helper, compliant ones untouched' {

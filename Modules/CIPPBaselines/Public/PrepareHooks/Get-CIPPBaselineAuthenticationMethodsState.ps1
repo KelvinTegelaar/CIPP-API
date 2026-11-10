@@ -17,8 +17,8 @@ function Get-CIPPBaselineAuthenticationMethodsState {
         here because it depends on the same group resolution the grade used.
 
         A configured group name that resolves to nothing skips that method's targeting
-        grade exactly as the classic skipped it - half-resolved targeting must not drive
-        a write.
+        grade exactly as the classic skipped it, and its remediation leaves the include
+        and exclude targets as they are - half-resolved targeting must not drive a write.
     .FUNCTIONALITY
         Internal
     #>
@@ -99,8 +99,10 @@ function Get-CIPPBaselineAuthenticationMethodsState {
         }
 
         $Params = @{ AuthenticationMethodId = $Method.RemediationId; Enabled = $Method.Enabled }
-        if ($Method.Enabled -and ($ResolvedGroupIds -or [string]::IsNullOrWhiteSpace($Method.GroupName))) {
-            $Params['GroupIds'] = $(if ($ResolvedGroupIds) { @($ResolvedGroupIds) } else { @('all_users') })
+        if ($ResolvedGroupIds) {
+            $Params['GroupIds'] = @($ResolvedGroupIds)
+        } elseif ($Method.Enabled -and [string]::IsNullOrWhiteSpace($Method.GroupName)) {
+            $Params['GroupIds'] = @('all_users')
         }
         if ($Method.Enabled -and -not [string]::IsNullOrWhiteSpace($Method.ExcludeGroupName)) {
             $ExcludeIds = & $ResolveGroup $Method.ExcludeGroupName
