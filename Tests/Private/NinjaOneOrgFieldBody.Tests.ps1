@@ -103,11 +103,36 @@ Describe 'Get-NinjaOneOrgFieldBody' {
         $Models = New-TestModels
         $Models.UsersSummary.Users = @(1..120 | ForEach-Object { New-TestUser $_ })
         $Models.UsersSummary.Total = 250
-        $Body = Get-TestField UsersSummary $Models
+        $Body = Get-NinjaOneOrgFieldBody -Field UsersSummary -Model $Models.UsersSummary -MaxLength ([int]::MaxValue)
         ([regex]::Matches($Body, '<tr>').Count - 1) | Should -Be 100
         $Body | Should -Match '250 users found in Tenant'
         $Body | Should -Match 'Only the first 100 users are displayed here\. To see all users please <a href="https://cipp\.example/users"[^>]*>view users in CIPP</a>'
         $Body | Should -Match 'border-left:4px solid #F79009'
+    }
+
+    It 'drops users until the users table fits the field length budget' {
+        $Models = New-TestModels
+        $Models.UsersSummary.Users = @(1..100 | ForEach-Object { New-TestUser $_ })
+        $Models.UsersSummary.Total = 100
+        $Body = Get-TestField UsersSummary $Models
+        $Body.Length | Should -BeLessOrEqual 150000
+        $Rows = [regex]::Matches($Body, '<tr>').Count - 1
+        $Rows | Should -BeGreaterThan 0
+        $Rows | Should -BeLessThan 100
+        $Body | Should -Match '>User 1</td>'
+        $Body | Should -Match '100 users found in Tenant'
+        $Body | Should -Match "Only the first $Rows users are displayed here\."
+    }
+
+    It 'lists five devices per user and counts the rest so one enrollment account cannot fill the field' {
+        $Models = New-TestModels
+        $Models.UsersSummary.Users[0].Devices = @(1..400 | ForEach-Object { @{ Name = "PC-$_"; Url = 'https://app.ninjarmm.com/#/deviceDashboard/1/overview'; Compliant = $true; Os = 'Windows'; LastLogin = '2026-10-19' } })
+        $Body = Get-TestField UsersSummary $Models
+        ([regex]::Matches($Body, '>PC-\d+</a>').Count) | Should -Be 7
+        $Body | Should -Match '>PC-5</a>'
+        $Body | Should -Not -Match '>PC-6</a>'
+        $Body | Should -Match '\+395 more'
+        ([regex]::Matches($Body, '<tr>').Count - 1) | Should -Be 3
     }
 
     It 'uses nothing the NinjaOne sanitiser strips in <Field>' -ForEach @(@{ Field = 'TenantLinks' }, @{ Field = 'TenantSummary' }, @{ Field = 'UsersSummary' }) {
