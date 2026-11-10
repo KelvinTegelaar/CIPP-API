@@ -99,7 +99,7 @@ function Get-CIPPBaselineAuthenticationMethodsState {
         }
 
         $Params = @{ AuthenticationMethodId = $Method.RemediationId; Enabled = $Method.Enabled }
-        if ($Method.Enabled) {
+        if ($Method.Enabled -and ($ResolvedGroupIds -or [string]::IsNullOrWhiteSpace($Method.GroupName))) {
             $Params['GroupIds'] = $(if ($ResolvedGroupIds) { @($ResolvedGroupIds) } else { @('all_users') })
         }
         if ($Method.Enabled -and -not [string]::IsNullOrWhiteSpace($Method.ExcludeGroupName)) {
