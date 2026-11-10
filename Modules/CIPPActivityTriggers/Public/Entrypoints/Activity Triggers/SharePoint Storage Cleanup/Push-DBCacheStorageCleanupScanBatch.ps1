@@ -76,10 +76,8 @@ function Push-DBCacheStorageCleanupScanBatch {
         $SecondBytes = [int64]0
         $Seen = 0
         $Capped = $false
-        $NextUri = "$BaseUri/site/RecycleBin?`$select=Id,Size,ItemState&`$top=500&`$orderby=DeletedDate desc"
-
-        while ($NextUri) {
-            $Page = New-GraphGetRequest -uri $NextUri -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true -noPagination $true -SkipValueExtraction
+        while ($true) {
+            $Page = New-GraphGetRequest -uri "$BaseUri/site/RecycleBin?`$select=Id,Size,ItemState&`$top=500&`$skip=$Seen&`$orderby=DeletedDate desc" -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true -noPagination $true -SkipValueExtraction
             $Items = @()
             if ($null -ne $Page.value) {
                 $Items = @($Page.value)
@@ -109,7 +107,6 @@ function Push-DBCacheStorageCleanupScanBatch {
             }
 
             if ($Capped -or $Items.Count -lt 500) { break }
-            $NextUri = "$BaseUri/site/RecycleBin?`$select=Id,Size,ItemState&`$top=500&`$skip=$Seen&`$orderby=DeletedDate desc"
         }
 
         return [PSCustomObject]@{

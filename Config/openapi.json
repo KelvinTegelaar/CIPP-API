@@ -68056,6 +68056,24 @@
         "description": "Lists the contents of a SharePoint site's recycle bin (first and second stage) via the\nSharePoint REST API with certificate authentication.",
         "parameters": [
           {
+            "name": "MaxItems",
+            "in": "query",
+            "description": "Items to return in this call; Metadata.nextLink is set when the bin holds more.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Offset to resume from, taken from a previous call's Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "name": "SiteUrl",
             "in": "query",
             "required": true,
@@ -68114,6 +68132,15 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Offset to resume from, taken from a previous call's Metadata.nextLink; each call sums only its own items.",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           },
           {

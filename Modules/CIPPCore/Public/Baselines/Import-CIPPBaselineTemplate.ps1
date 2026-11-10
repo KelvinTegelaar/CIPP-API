@@ -9,12 +9,14 @@ function Import-CIPPBaselineTemplate {
         through the untouched Import-CommunityTemplate path (which preserves the file's
         own RowKey/GUID - critical, because the baseline's standard instances reference
         templates by exactly those ids). Only then is the baseline itself created via
-        New-CIPPBaseline, keeping the exported placeholder assignment ('Exported
-        Template') so the operator must consciously assign real tenants.
+        New-CIPPBaseline; a first import keeps the exported placeholder assignment
+        ('Exported Template') so the operator must consciously assign real tenants.
         Re-imports dedupe by (Source, templateName) on the rollout row with the same
         SHA-guard semantics as template imports: same blob sha -> skip unless -Force;
         a match updates the existing baseline in place (same GUID) so triage and
-        resolved rows survive an upstream update.
+        resolved rows survive an upstream update. An update keeps the baseline's
+        exclusions, alerting and schedule settings, and its assignments unless the
+        file names tenants of its own.
         Missing referenced files fall back to a tree lookup by sanitized display name
         under the partition folder; still-missing ones are reported, never fatal.
     .FUNCTIONALITY
@@ -41,8 +43,10 @@ function Import-CIPPBaselineTemplate {
     if ($Existing -and "$($Existing.SHA)" -eq "$SHA" -and -not $Force) {
         return "Baseline '$($Baseline.templateName)' is already up to date. Skipping import."
     }
-    # The import replaces the baseline's assignments with the file's, so a restricted caller needs both in scope (as AddBaseline)
-    $OutOfScope = @(Get-CIPPBaselineOutOfScopeAssignment -Assignments @($Baseline.assignedTenants; $(if ($Existing.assignedTo) { $Existing.assignedTo | ConvertFrom-Json })) | Select-Object -Unique)
+    $ExistingAssigned = @(if ($Existing.assignedTo) { $Existing.assignedTo | ConvertFrom-Json })
+    $ExistingExcluded = @(if ($Existing.excludedTo) { $Existing.excludedTo | ConvertFrom-Json })
+    # The import can replace the baseline's assignments and changes what its existing tenants get, so a restricted caller needs both in scope (as AddBaseline)
+    $OutOfScope = @(Get-CIPPBaselineOutOfScopeAssignment -Assignments @($Baseline.assignedTenants; $ExistingAssigned) | Select-Object -Unique)
     if ($OutOfScope.Count -gt 0) {
         throw [System.UnauthorizedAccessException]::new("Your role can't import this baseline, because it is assigned to tenants outside your access: $($OutOfScope -join ', ').")
     }
@@ -82,23 +86,24 @@ function Import-CIPPBaselineTemplate {
         }
     }
 
-    $KeepAssigned = $Existing.assignedTo -and @($Baseline.assignedTenants).Where({ $_.value -ne 'Exported Template' }).Count -eq 0
+    $IsTenant = { "$(if ($_ -is [string]) { $_ } else { $_.value })" -notin @('', 'Exported Template') }
+    $Assigned = @(if ($ExistingAssigned.Count -gt 0 -and @($Baseline.assignedTenants).Where($IsTenant).Count -eq 0) { $ExistingAssigned } else { $Baseline.assignedTenants })
     $Payload = [PSCustomObject]@{
-        GUID            = $(if ($Existing) { $Existing.RowKey } else { $null })
-        templateName    = "$($Baseline.templateName)"
-        description     = "$($Baseline.description)"
-        assignedTenants = @(if ($KeepAssigned) { $Existing.assignedTo | ConvertFrom-Json } else { $Baseline.assignedTenants })
-        excludedTenants = @(if ($Existing.excludedTo) { $Existing.excludedTo | ConvertFrom-Json })
-        alertEmails     = "$($Existing.alertEmails)"
-        alertWebhookUrl = "$($Existing.alertWebhookUrl)"
-        disableAlerts   = [bool]$Existing.disableAlerts
+        GUID                 = $(if ($Existing) { $Existing.RowKey } else { $null })
+        templateName         = "$($Baseline.templateName)"
+        description          = "$($Baseline.description)"
+        assignedTenants      = $Assigned
+        excludedTenants      = $ExistingExcluded
+        alertEmails          = "$($Existing.alertEmails)"
+        alertWebhookUrl      = "$($Existing.alertWebhookUrl)"
+        disableAlerts        = [bool]$Existing.disableAlerts
         disableScheduledRuns = [bool]$Existing.disableScheduledRuns
-        stages          = @($Baseline.stages)
+        stages               = @($Baseline.stages)
     }
     # An import lands the repo copy exactly as-is, so there is nothing local yet to push back.
     $Saved = New-CIPPBaseline -Baseline $Payload -User ("$User" ? "$User" : 'GitHub Import') -Source "$FullName" -SHA "$SHA" -SourcePath "$Path" -LocalChanges:$false
 
-    $Message = "Imported baseline '$($Baseline.templateName)' ($($Saved.DeltaCount) delta rows) with $ImportedCount related template$(if ($ImportedCount -eq 1) { '' } else { 's' }).$(if (-not $KeepAssigned) { " Assign it to real tenants in the editor - it arrives assigned to the 'Exported Template' placeholder." })"
+    $Message = "Imported baseline '$($Baseline.templateName)' ($($Saved.DeltaCount) delta rows) with $ImportedCount related template$(if ($ImportedCount -eq 1) { '' } else { 's' }).$(if ($Assigned.Where($IsTenant).Count -eq 0) { " Assign it to real tenants in the editor - it arrives assigned to the 'Exported Template' placeholder." })"
     if ($Failures.Count -gt 0) {
         $Message = "$Message Missing: $($Failures -join '; ')."
     }

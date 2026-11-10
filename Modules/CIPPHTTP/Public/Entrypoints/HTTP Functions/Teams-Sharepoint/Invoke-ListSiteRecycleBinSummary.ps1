@@ -16,7 +16,8 @@ function Invoke-ListSiteRecycleBinSummary {
     $SiteUrl = $Request.Query.SiteUrl ?? $Request.Body.SiteUrl
     $MaxItems = [int]($Request.Query.MaxItems ?? $Request.Body.MaxItems ?? 5000)
     if ($MaxItems -lt 1) { $MaxItems = 5000 }
-    if ($MaxItems -gt 20000) { $MaxItems = 20000 }
+    # Offset to resume from, taken from a previous call's Metadata.nextLink; each call sums only its own items.
+    $Start = [Math]::Max(0, [int]($Request.Query.nextLink -as [int]))
 
     if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
         return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'tenantFilter is required.' } })
@@ -37,10 +38,8 @@ function Invoke-ListSiteRecycleBinSummary {
         $SecondBytes = [int64]0
         $Seen = 0
         $Capped = $false
-        $NextUri = "$BaseUri/site/RecycleBin?`$select=Id,Size,ItemState&`$top=500&`$orderby=DeletedDate desc"
-
-        while ($NextUri) {
-            $Page = New-GraphGetRequest -uri $NextUri -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true -noPagination $true -SkipValueExtraction
+        while ($true) {
+            $Page = New-GraphGetRequest -uri "$BaseUri/site/RecycleBin?`$select=Id,Size,ItemState&`$top=500&`$skip=$($Start + $Seen)&`$orderby=DeletedDate desc" -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true -noPagination $true -SkipValueExtraction
             $Items = @()
             if ($null -ne $Page.value) {
                 $Items = @($Page.value)
@@ -70,7 +69,6 @@ function Invoke-ListSiteRecycleBinSummary {
             }
 
             if ($Capped -or $Items.Count -lt 500) { break }
-            $NextUri = "$BaseUri/site/RecycleBin?`$select=Id,Size,ItemState&`$top=500&`$skip=$Seen&`$orderby=DeletedDate desc"
         }
 
         $Body = [PSCustomObject]@{
@@ -84,6 +82,7 @@ function Invoke-ListSiteRecycleBinSummary {
             capped           = $Capped
             scannedItems     = $Seen
         }
+        $NextLink = if ($Capped) { [string]($Start + $Seen) }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
@@ -94,6 +93,6 @@ function Invoke-ListSiteRecycleBinSummary {
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @{ Results = $Body }
+            Body       = @{ Results = $Body; Metadata = @{ nextLink = $NextLink } }
         })
 }

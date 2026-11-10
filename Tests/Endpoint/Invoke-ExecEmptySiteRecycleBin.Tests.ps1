@@ -1,11 +1,13 @@
-# Pester tests for Invoke-ExecEmptySiteRecycleBin and Invoke-ListSiteRecycleBinSummary
+# Pester tests for Invoke-ExecEmptySiteRecycleBin, Invoke-ListSiteRecycleBin and Invoke-ListSiteRecycleBinSummary
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $ExecPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Teams-Sharepoint/Invoke-ExecEmptySiteRecycleBin.ps1'
     $SummaryPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Teams-Sharepoint/Invoke-ListSiteRecycleBinSummary.ps1'
+    $ListPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Teams-Sharepoint/Invoke-ListSiteRecycleBin.ps1'
     if (-not (Test-Path $ExecPath)) { throw "Could not locate $ExecPath" }
     if (-not (Test-Path $SummaryPath)) { throw "Could not locate $SummaryPath" }
+    if (-not (Test-Path $ListPath)) { throw "Could not locate $ListPath" }
 
     class HttpResponseContext {
         [object]$StatusCode
@@ -34,6 +36,7 @@ BeforeAll {
 
     . $ExecPath
     . $SummaryPath
+    . $ListPath
 }
 
 Describe 'Invoke-ExecEmptySiteRecycleBin' {
@@ -262,6 +265,21 @@ Describe 'Invoke-ListSiteRecycleBinSummary' {
             $Response.Body.Results.itemCount | Should -Be 510
             $Response.Body.Results.scannedItems | Should -Be 510
             $Response.Body.Results.capped | Should -BeTrue
+            $Response.Body.Metadata.nextLink | Should -Be '510'
+        }
+
+        It 'counts only the rest of the bin when resuming from nextLink' {
+            $script:Bin = @(1..520 | ForEach-Object { [PSCustomObject]@{ Id = "$_"; Size = 10; ItemState = 1 } })
+            $Response = Invoke-ListSiteRecycleBinSummary -Request ([pscustomobject]@{
+                    Params  = @{ CIPPEndpoint = 'ListSiteRecycleBinSummary' }
+                    Headers = @{}
+                    Query   = @{ tenantFilter = 'contoso.onmicrosoft.com'; SiteUrl = 'https://contoso.sharepoint.com/sites/a'; MaxItems = 510; nextLink = '510' }
+                    Body    = @{}
+                })
+
+            $Response.Body.Results.itemCount | Should -Be 10
+            $Response.Body.Results.capped | Should -BeFalse
+            $Response.Body.Metadata.nextLink | Should -BeNullOrEmpty
         }
 
         It 'does not report capped for a bin of exactly one page' {
@@ -277,5 +295,62 @@ Describe 'Invoke-ListSiteRecycleBinSummary' {
             $Response.Body.Results.secondStageCount | Should -Be 500
             $Response.Body.Results.capped | Should -BeFalse
         }
+    }
+}
+
+Describe 'Invoke-ListSiteRecycleBin' {
+    BeforeEach {
+        $script:GetUris = [System.Collections.Generic.List[string]]::new()
+        function global:New-GraphGetRequest {
+            param(
+                $uri, $tenantid, $scope, $AsApp, $extraHeaders,
+                [switch]$UseCertificate,
+                [bool]$noPagination,
+                [switch]$SkipValueExtraction
+            )
+            $script:GetUris.Add($uri)
+            $Skip = if ($uri -match '\$skip=(\d+)') { [int]$Matches[1] } else { 0 }
+            $Top = if ($uri -match '\$top=(\d+)') { [int]$Matches[1] } else { 100 }
+            [PSCustomObject]@{ value = @($script:Bin | Select-Object -Skip $Skip -First $Top) }
+        }
+    }
+
+    It 'lists every item of a bin larger than one page' {
+        $script:Bin = @(1..520 | ForEach-Object { [PSCustomObject]@{ Id = "$_"; LeafName = "f$_.txt"; ItemType = 1; ItemState = 1; Size = 10 } })
+        $Response = Invoke-ListSiteRecycleBin -Request ([pscustomobject]@{
+                Query = @{ tenantFilter = 'contoso.onmicrosoft.com'; SiteUrl = 'https://contoso.sharepoint.com/sites/a' }
+            })
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        @($Response.Body.Results).Count | Should -Be 520
+        @($Response.Body.Results.Id | Select-Object -Unique).Count | Should -Be 520
+        $Response.Body.Results[0].ItemType | Should -Be 'File'
+        $Response.Body.Results[0].ItemState | Should -Be 'First Stage'
+        $Response.Body.Metadata.nextLink | Should -BeNullOrEmpty
+    }
+
+    It 'stops at 5000 items by default and resumes from nextLink' {
+        $script:Bin = @(1..5200 | ForEach-Object { [PSCustomObject]@{ Id = "$_"; ItemType = 1; ItemState = 1 } })
+        $Query = @{ tenantFilter = 'contoso.onmicrosoft.com'; SiteUrl = 'https://contoso.sharepoint.com/sites/a' }
+        $First = Invoke-ListSiteRecycleBin -Request ([pscustomobject]@{ Query = $Query })
+
+        @($First.Body.Results).Count | Should -Be 5000
+        $script:GetUris.Count | Should -Be 10
+        $First.Body.Metadata.nextLink | Should -Be '5000'
+
+        $Query.nextLink = $First.Body.Metadata.nextLink
+        $Second = Invoke-ListSiteRecycleBin -Request ([pscustomobject]@{ Query = $Query })
+        @($Second.Body.Results.Id) | Should -Be @(5001..5200 | ForEach-Object { "$_" })
+        $Second.Body.Metadata.nextLink | Should -BeNullOrEmpty
+    }
+
+    It 'returns a larger MaxItems in one call' {
+        $script:Bin = @(1..5200 | ForEach-Object { [PSCustomObject]@{ Id = "$_"; ItemType = 1; ItemState = 1 } })
+        $Response = Invoke-ListSiteRecycleBin -Request ([pscustomobject]@{
+                Query = @{ tenantFilter = 'contoso.onmicrosoft.com'; SiteUrl = 'https://contoso.sharepoint.com/sites/a'; MaxItems = '10000' }
+            })
+
+        @($Response.Body.Results).Count | Should -Be 5200
+        $Response.Body.Metadata.nextLink | Should -BeNullOrEmpty
     }
 }

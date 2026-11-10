@@ -87,4 +87,17 @@ Describe 'Import-CIPPBaselineTemplate update' {
         $null = Import-Baseline @{ value = 'victim.com' }
         $script:Saved.assignedTenants.value | Should -Be 'victim.com'
     }
+
+    It 'keeps the assignments when the file has none or a plain-string placeholder' -ForEach @(
+        @{ Assigned = $null }, @{ Assigned = 'Exported Template' }
+    ) {
+        $null = Import-Baseline $Assigned
+        $script:Saved.assignedTenants.value | Should -Be 'mine.com'
+    }
+
+    It 'asks for real tenants only while the baseline has none' {
+        Import-Baseline @{ value = 'Exported Template' } | Should -Not -Match 'Assign it to real tenants'
+        $script:Existing.assignedTo = '[{"label":"Exported Template","value":"Exported Template","type":"Tenant"}]'
+        Import-Baseline @{ value = 'Exported Template' } | Should -Match 'Assign it to real tenants'
+    }
 }

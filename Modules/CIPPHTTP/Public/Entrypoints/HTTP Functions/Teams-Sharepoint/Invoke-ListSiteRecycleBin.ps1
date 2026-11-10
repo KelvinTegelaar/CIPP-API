@@ -13,6 +13,11 @@ function Invoke-ListSiteRecycleBin {
 
     $TenantFilter = $Request.Query.tenantFilter
     $SiteUrl = $Request.Query.SiteUrl
+    # Items to return in this call; Metadata.nextLink is set when the bin holds more.
+    $MaxItems = $Request.Query.MaxItems -as [int]
+    if ($MaxItems -lt 1) { $MaxItems = 5000 }
+    # Offset to resume from, taken from a previous call's Metadata.nextLink.
+    $Start = [Math]::Max(0, [int]($Request.Query.nextLink -as [int]))
 
     $ItemTypeNames = @{ 1 = 'File'; 2 = 'File Version'; 3 = 'List Item'; 4 = 'List'; 5 = 'Folder'; 6 = 'Folder'; 7 = 'Attachment'; 8 = 'List Item Version'; 10 = 'Web' }
     $ItemStateNames = @{ 1 = 'First Stage'; 2 = 'Second Stage' }
@@ -27,7 +32,14 @@ function Invoke-ListSiteRecycleBin {
         $JsonAccept = $RestContext.Headers
         $BaseUri = $RestContext.BaseUri
 
-        $Items = New-GraphGetRequest -uri "$BaseUri/site/RecycleBin?`$top=500&`$orderby=DeletedDate desc" -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true
+        # The recycle bin returns no next link, so page with $skip.
+        $Items = [System.Collections.Generic.List[object]]::new()
+        do {
+            $Top = [Math]::Min(500, $MaxItems - $Items.Count)
+            $Page = @((New-GraphGetRequest -uri "$BaseUri/site/RecycleBin?`$top=$Top&`$skip=$($Start + $Items.Count)&`$orderby=DeletedDate desc" -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true -noPagination $true -SkipValueExtraction).value)
+            $Items.AddRange($Page)
+        } while ($Page.Count -eq $Top -and $Items.Count -lt $MaxItems)
+        $NextLink = if ($Items.Count -eq $MaxItems) { [string]($Start + $MaxItems) }
 
         $Body = @($Items | ForEach-Object {
                 [PSCustomObject]@{
@@ -51,6 +63,6 @@ function Invoke-ListSiteRecycleBin {
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @{ 'Results' = $Body }
+            Body       = @{ 'Results' = $Body; 'Metadata' = @{ nextLink = $NextLink } }
         })
 }
