@@ -41854,6 +41854,76 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecSPOGuestAccess": {
+      "post": {
+        "summary": "ExecSPOGuestAccess",
+        "operationId": "ExecSPOGuestAccess",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Manages a guest's access on a single SharePoint site via the site-level guest\nexpiration feature (SP.User.Expiration):\n  Extend - sets Expiration to now + Days (1-90, default 90)\n  Expire - expires the guest's access on this site immediately\nThe Entra guest account and other site memberships are not touched. Graph has no\nequivalent, so this uses SharePoint REST with the SAM certificate (app-only).\n\nBody:\n  tenantFilter - tenant\n  SiteUrl      - full site URL\n  SiteUserId   - SharePoint site user ID (SiteAccess[].SiteUserId from ListSharePointExternalUsers)\n  Action       - 'Extend' or 'Expire'\n  Days         - Extend only; days from now, 1-90, default 90\n  DisplayName  - optional, for logging",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "Days": {
+                    "type": "integer"
+                  },
+                  "DisplayName": {
+                    "type": "string"
+                  },
+                  "SiteUrl": {
+                    "type": "string"
+                  },
+                  "SiteUserId": {
+                    "type": "integer"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.ReadWrite"
+      }
+    },
     "/api/ExecSPOVersionCleanup": {
       "post": {
         "summary": "ExecSPOVersionCleanup",
@@ -58830,11 +58900,8 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "description": "Derived from the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
                     "properties": {
-                      "ContentHash": {
-                        "x-cipp-field-source": "storage"
-                      },
                       "corrupt": {
                         "x-cipp-field-source": "backend"
                       },
@@ -58844,63 +58911,29 @@
                       "displayName": {
                         "x-cipp-field-source": "backend,frontend"
                       },
-                      "ETag": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
                       "guid": {
-                        "x-cipp-field-source": "storage,backend"
+                        "x-cipp-field-source": "backend"
                       },
                       "isSynced": {
                         "x-cipp-field-source": "backend,frontend"
-                      },
-                      "JSON": {
-                        "x-cipp-field-source": "storage"
                       },
                       "label": {
                         "x-cipp-field-source": "backend"
                       },
                       "package": {
-                        "x-cipp-field-source": "storage,backend,frontend"
+                        "x-cipp-field-source": "backend,frontend"
                       },
-                      "PartitionKey": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "Permissions": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
-                      "RowKey": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "SHA": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
-                      "Source": {
-                        "x-cipp-field-source": "storage,backend,frontend"
-                      },
-                      "SourcePath": {
-                        "x-cipp-field-source": "storage"
+                      "source": {
+                        "x-cipp-field-source": "backend,frontend"
                       },
                       "templateCount": {
                         "x-cipp-field-source": "backend"
                       },
-                      "TemplateName": {
-                        "x-cipp-field-source": "storage"
-                      },
                       "templates": {
                         "x-cipp-field-source": "backend"
                       },
-                      "Timestamp": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
                       "Type": {
                         "x-cipp-field-source": "backend,frontend"
-                      },
-                      "UpdatedBy": {
-                        "x-cipp-field-source": "storage"
                       },
                       "usage": {
                         "x-cipp-field-source": "frontend"
@@ -66779,7 +66812,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Lists external/guest users known to SharePoint from two sources: the tenant external\nusers store (populated when a guest first redeems a share) and a sweep of every site's\nuser list (which also catches guests who were granted membership but never signed in).\nEvery entry is classified against Entra: 'Entra B2B' (live Entra guest), 'Orphaned B2B'\n(the Entra guest was deleted but SharePoint still references them) or 'SharePoint-only'\n(legacy email-authenticated guest that never had an Entra object).",
+        "description": "Lists external/guest users known to SharePoint from two sources: the tenant external\nusers store (populated when a guest first redeems a share) and a sweep of every site's\nuser list (which also catches guests who were granted membership but never signed in).\nEvery entry is classified against Entra: 'Entra B2B' (live Entra guest), 'Orphaned B2B'\n(the Entra guest was deleted but SharePoint still references them) or 'SharePoint-only'\n(legacy email-authenticated guest that never had an Entra object).\n\nEach row also carries SiteAccess: one entry per site with the site user ID and the\nsite-level guest expiration (UserExpiration from the site's User Information List),\nfor use with ExecSPOGuestAccess (Extend / Expire on a single site).",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"
