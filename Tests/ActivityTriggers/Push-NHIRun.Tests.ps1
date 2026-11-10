@@ -8,6 +8,7 @@ BeforeAll {
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp, $SliceHours, [switch]$Stream) }
     function New-GraphBulkRequest { param($Requests, $tenantid, $asapp, $Version) }
     function Get-Tenants { param($TenantFilter) }
+    function Get-CIPPDbItem { param($TenantFilter, $Partition, $Type) }
     function Get-CIPPTenantCapabilities { param($TenantFilter) }
     function Get-CIPPGeoIPLocationBatch { param([string[]]$IPs) }
     function Get-CIPPBecIPGuidance { param($TenantFilter, $Anchor) }
@@ -87,15 +88,15 @@ Describe 'Push-NHIRun' {
             }
             if ($uri -like '*initiatedBy/app/appId*') {
                 return @(
-                    [pscustomobject]@{ activityDateTime = (& $script:Day -1); activityDisplayName = 'Add service principal credentials'; category = 'ApplicationManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'ServicePrincipal'; id = '22222222-2222-2222-2222-222222222222'; displayName = 'Payroll Connector' }) }
-                    [pscustomobject]@{ activityDateTime = (& $script:Day -1); activityDisplayName = 'Add service principal credentials'; category = 'ApplicationManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'ServicePrincipal'; id = 'sp-1'; displayName = 'Invoice Sync' }) }
-                    [pscustomobject]@{ activityDateTime = (& $script:Day -1); activityDisplayName = 'Add application'; category = 'ApplicationManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'Application'; id = '33333333-3333-3333-3333-333333333333'; displayName = 'Teams Sync' }) }
-                    [pscustomobject]@{ activityDateTime = (& $script:Day -1); activityDisplayName = 'Update user'; category = 'UserManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'User'; id = 'u9'; userPrincipalName = 'ceo@contoso.com' }) }
+                    [pscustomobject]@{ id = 'd1'; activityDateTime = (& $script:Day -1); activityDisplayName = 'Add service principal credentials'; category = 'ApplicationManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'ServicePrincipal'; id = '22222222-2222-2222-2222-222222222222'; displayName = 'Payroll Connector' }) }
+                    [pscustomobject]@{ id = 'd2'; activityDateTime = (& $script:Day -1); activityDisplayName = 'Add service principal credentials'; category = 'ApplicationManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'ServicePrincipal'; id = 'sp-1'; displayName = 'Invoice Sync' }) }
+                    [pscustomobject]@{ id = 'd3'; activityDateTime = (& $script:Day -1); activityDisplayName = 'Add application'; category = 'ApplicationManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'Application'; id = '33333333-3333-3333-3333-333333333333'; displayName = 'Teams Sync' }) }
+                    [pscustomobject]@{ id = 'd4'; activityDateTime = (& $script:Day -1); activityDisplayName = 'Update user'; category = 'UserManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'User'; id = 'u9'; userPrincipalName = 'ceo@contoso.com' }) }
                     # elevation: Graph Mail.ReadWrite to another app and to itself, a delegated grant to itself, Global Administrator to a user
-                    [pscustomobject]@{ activityDateTime = (& $script:Day -1); activityDisplayName = 'Add app role assignment to service principal'; category = 'ApplicationManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'ServicePrincipal'; id = 'res-graph'; displayName = 'Microsoft Graph'; modifiedProperties = @([pscustomobject]@{ displayName = 'AppRole.Id'; newValue = '"e2a3a72e-5f79-4c64-b1b1-878b674786c9"' }, [pscustomobject]@{ displayName = 'AppRole.Value'; newValue = '"Mail.ReadWrite"' }, [pscustomobject]@{ displayName = 'ServicePrincipal.ObjectID'; newValue = '"22222222-2222-2222-2222-222222222222"' }, [pscustomobject]@{ displayName = 'ServicePrincipal.DisplayName'; newValue = '"Payroll Connector"' }) }) }
-                    [pscustomobject]@{ activityDateTime = (& $script:Day -1); activityDisplayName = 'Add app role assignment to service principal'; category = 'ApplicationManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'ServicePrincipal'; id = 'res-graph'; displayName = 'Microsoft Graph'; modifiedProperties = @([pscustomobject]@{ displayName = 'AppRole.Id'; newValue = '"e2a3a72e-5f79-4c64-b1b1-878b674786c9"' }, [pscustomobject]@{ displayName = 'AppRole.Value'; newValue = '"Mail.ReadWrite"' }, [pscustomobject]@{ displayName = 'ServicePrincipal.ObjectID'; newValue = '"sp-1"' }) }) }
-                    [pscustomobject]@{ activityDateTime = (& $script:Day -1); activityDisplayName = 'Add delegated permission grant'; category = 'ApplicationManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'ServicePrincipal'; id = 'res-graph'; displayName = 'Microsoft Graph'; modifiedProperties = @([pscustomobject]@{ displayName = 'ServicePrincipal.ObjectID'; newValue = '"sp-1"' }, [pscustomobject]@{ displayName = 'DelegatedPermissionGrant.Scope'; newValue = '"Mail.ReadWrite"' }, [pscustomobject]@{ displayName = 'DelegatedPermissionGrant.ConsentType'; newValue = '"AllPrincipals"' }) }) }
-                    [pscustomobject]@{ activityDateTime = (& $script:Day -1); activityDisplayName = 'Add member to role'; category = 'RoleManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'User'; id = 'u-helpdesk'; userPrincipalName = 'helpdesk@contoso.com'; modifiedProperties = @([pscustomobject]@{ displayName = 'Role.TemplateId'; newValue = '"62e90394-69f5-4237-9190-012177145e10"' }, [pscustomobject]@{ displayName = 'Role.DisplayName'; newValue = '"Global Administrator"' }) }) }
+                    [pscustomobject]@{ id = 'd5'; activityDateTime = (& $script:Day -1); activityDisplayName = 'Add app role assignment to service principal'; category = 'ApplicationManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'ServicePrincipal'; id = 'res-graph'; displayName = 'Microsoft Graph'; modifiedProperties = @([pscustomobject]@{ displayName = 'AppRole.Id'; newValue = '"e2a3a72e-5f79-4c64-b1b1-878b674786c9"' }, [pscustomobject]@{ displayName = 'AppRole.Value'; newValue = '"Mail.ReadWrite"' }, [pscustomobject]@{ displayName = 'ServicePrincipal.ObjectID'; newValue = '"22222222-2222-2222-2222-222222222222"' }, [pscustomobject]@{ displayName = 'ServicePrincipal.DisplayName'; newValue = '"Payroll Connector"' }) }) }
+                    [pscustomobject]@{ id = 'd6'; activityDateTime = (& $script:Day -1); activityDisplayName = 'Add app role assignment to service principal'; category = 'ApplicationManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'ServicePrincipal'; id = 'res-graph'; displayName = 'Microsoft Graph'; modifiedProperties = @([pscustomobject]@{ displayName = 'AppRole.Id'; newValue = '"e2a3a72e-5f79-4c64-b1b1-878b674786c9"' }, [pscustomobject]@{ displayName = 'AppRole.Value'; newValue = '"Mail.ReadWrite"' }, [pscustomobject]@{ displayName = 'ServicePrincipal.ObjectID'; newValue = '"sp-1"' }) }) }
+                    [pscustomobject]@{ id = 'd7'; activityDateTime = (& $script:Day -1); activityDisplayName = 'Add delegated permission grant'; category = 'ApplicationManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'ServicePrincipal'; id = 'res-graph'; displayName = 'Microsoft Graph'; modifiedProperties = @([pscustomobject]@{ displayName = 'ServicePrincipal.ObjectID'; newValue = '"sp-1"' }, [pscustomobject]@{ displayName = 'DelegatedPermissionGrant.Scope'; newValue = '"Mail.ReadWrite"' }, [pscustomobject]@{ displayName = 'DelegatedPermissionGrant.ConsentType'; newValue = '"AllPrincipals"' }) }) }
+                    [pscustomobject]@{ id = 'd8'; activityDateTime = (& $script:Day -1); activityDisplayName = 'Add member to role'; category = 'RoleManagement'; result = 'success'; targetResources = @([pscustomobject]@{ type = 'User'; id = 'u-helpdesk'; userPrincipalName = 'helpdesk@contoso.com'; modifiedProperties = @([pscustomobject]@{ displayName = 'Role.TemplateId'; newValue = '"62e90394-69f5-4237-9190-012177145e10"' }, [pscustomobject]@{ displayName = 'Role.DisplayName'; newValue = '"Global Administrator"' }) }) }
                 )
             }
             @()
@@ -107,7 +108,9 @@ Describe 'Push-NHIRun' {
                     'AppRoles' { @{ value = @([pscustomobject]@{ id = 'ara-1'; resourceId = 'res-graph'; resourceDisplayName = 'Microsoft Graph'; appRoleId = 'role-mail'; createdDateTime = (& $script:Day -3) }) } }
                     'Grants' { @{ value = @() } }
                     'Roles' { @{ value = @() } }
-                    'App' { [pscustomobject]@{ id = 'reg-1'; appId = 'app-1'; signInAudience = 'AzureADMyOrg'; owners = @() } }
+                    'App' { [pscustomobject]@{ id = 'reg-1'; appId = 'app-1'; signInAudience = 'AzureADMultipleOrgs'; owners = @() } }
+                    # an app that changed this one, known only by its service principal: CIPP's
+                    '55555555-5555-5555-5555-555555555555' { [pscustomobject]@{ id = '55555555-5555-5555-5555-555555555555'; appId = 'app-cipp'; appOwnerOrganizationId = 'partner-guid' } }
                     'res-graph' { [pscustomobject]@{ id = 'res-graph'; appRoles = @([pscustomobject]@{ id = 'role-mail'; value = 'Mail.Read' }) } }
                     # the persistence targets: an existing app (by service principal) and a new registration (by appId)
                     '22222222-2222-2222-2222-222222222222' { [pscustomobject]@{ id = '22222222-2222-2222-2222-222222222222'; appId = 'app-payroll'; displayName = 'Payroll Connector'; appOwnerOrganizationId = 'tenant-guid' } }
@@ -217,6 +220,60 @@ Describe 'Push-NHIRun' {
         $script:Saved.Results.Completeness.SubjectOwners.Complete | Should -BeTrue
         Should -Invoke New-GraphBulkRequest -ParameterFilter { @($Requests.id) -contains 'Risk' -and -not $asapp } -Because 'Identity Protection for workload identities has delegated permissions only'
         Should -Invoke New-GraphBulkRequest -Times 0 -ParameterFilter { @($Requests.id) -contains 'Risk' -and $asapp }
+    }
+
+    It 'finds what the app did by its names, as the audit log leaves the acting appId empty, keeping only its own actions' {
+        Mock New-GraphGetRequest {
+            @(
+                [pscustomobject]@{ id = 'n1'; activityDateTime = (& $script:Day -1); activityDisplayName = 'Add application'; category = 'ApplicationManagement'; result = 'success'; initiatedBy = [pscustomobject]@{ app = [pscustomobject]@{ servicePrincipalId = 'sp-1'; displayName = 'Invoice Sync' } }; targetResources = @([pscustomobject]@{ type = 'Application'; id = '44444444-4444-4444-4444-444444444444'; displayName = 'Shadow App' }) }
+                [pscustomobject]@{ id = 'n2'; activityDateTime = (& $script:Day -1); activityDisplayName = 'Add application'; category = 'ApplicationManagement'; result = 'success'; initiatedBy = [pscustomobject]@{ app = [pscustomobject]@{ servicePrincipalId = 'sp-lookalike'; displayName = 'Invoice Sync' } }; targetResources = @([pscustomobject]@{ type = 'Application'; id = '66666666-6666-6666-6666-666666666666'; displayName = 'Not Ours' }) }
+            )
+        } -ParameterFilter { $uri -like '*initiatedBy/app/displayName*' }
+
+        Invoke-NhiRun -Item $script:Item
+
+        $Created = @($script:Saved.Results.DirectoryActions | Where-Object CreatedApp)
+        @($Created.Targets.DisplayName) | Should -Contain 'Shadow App'
+        @($Created.Targets.DisplayName) | Should -Not -Contain 'Not Ours' -Because 'an app that only shares the name is another app'
+        Should -Invoke New-GraphGetRequest -ParameterFilter { $uri -like "*initiatedBy/app/displayName eq 'Invoice%20Sync'*" }
+    }
+
+    It 'knows a change was made by CIPP from the acting service principal, as the audit log leaves its appId empty' {
+        $OldAppId = $env:ApplicationID
+        $env:ApplicationID = 'app-cipp'
+        try {
+            Mock New-GraphGetRequest {
+                @([pscustomobject]@{ id = 'k1'; activityDateTime = (& $script:Day -2); activityDisplayName = 'Add service principal credentials'; result = 'success'; initiatedBy = [pscustomobject]@{ app = [pscustomobject]@{ servicePrincipalId = '55555555-5555-5555-5555-555555555555'; displayName = 'CIPP-SAM' } }; targetResources = @([pscustomobject]@{ id = 'sp-1'; modifiedProperties = @([pscustomobject]@{ displayName = 'KeyDescription' }) }) })
+            } -ParameterFilter { $uri -like '*targetResources/any*sp-1*' }
+
+            Invoke-NhiRun -Item $script:Item
+
+            $Change = @($script:Saved.Results.Changes | Where-Object InitiatedBy -EQ 'CIPP-SAM')[0]
+            $Change.ByCipp | Should -BeTrue
+            $Change.ByApp | Should -BeFalse
+            $Change.InitiatedById | Should -BeExactly 'app-cipp'
+        } finally {
+            $env:ApplicationID = $OldAppId
+        }
+    }
+
+    It 'looks the app up in the reporting database of the other tenants, without investigating it there' {
+        Mock Get-Tenants { @('contoso.com', 'fabrikam.com', 'northwind.com' | ForEach-Object { [pscustomobject]@{ defaultDomainName = $_; customerId = "$_-guid" } }) } -ParameterFilter { -not $TenantFilter }
+        Mock Get-CIPPDbItem {
+            switch ($Partition) {
+                'fabrikam.com' { @([pscustomobject]@{ Data = '{"id":"sp-f","appId":"app-1","displayName":"Invoice Sync","accountEnabled":true}' }, [pscustomobject]@{ Data = '{"id":"sp-x","appId":"app-2","displayName":"Other"}' }) }
+                'northwind.com' { @([pscustomobject]@{ Data = '{"id":"sp-y","appId":"app-3","displayName":"Other"}' }) }
+                default { throw "the case's own tenant is not searched: $Partition" }
+            }
+        }
+
+        Invoke-NhiRun -Item $script:Item
+
+        $Found = @($script:Saved.Results.OtherTenants)
+        $Found.Tenant | Should -Be @('fabrikam.com')
+        $Found[0].ServicePrincipalId | Should -BeExactly 'sp-f'
+        $script:Saved.Results.Completeness.OtherTenants.Complete | Should -BeTrue
+        Should -Invoke Search-CIPPBecSignIn -Times 0 -ParameterFilter { $TenantFilter -ne 'contoso.com' }
     }
 
     It 'skips the sign-in phases without Entra ID P1 and still scores the case on what it could read' {

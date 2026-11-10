@@ -22,6 +22,7 @@ function Get-CIPPNhiRunSteps {
         [pscustomobject]@{ Key = 'DirectoryActions'; Title = 'What the app changed in the directory'; Running = 'Reading the directory audit log for changes the app made' }
         [pscustomobject]@{ Key = 'WorkloadBaseline'; Title = 'Mail and files the app reached before the window'; Running = 'Searching the unified audit log for what the app reached before the window' }
         [pscustomobject]@{ Key = 'WorkloadActivity'; Title = 'Mail and files the app reached'; Running = 'Searching the unified audit log for mail and file activity of the app' }
+        [pscustomobject]@{ Key = 'OtherTenants'; Title = 'The app in your other tenants'; Running = 'Looking for the app in the reporting database of your other tenants' }
         [pscustomobject]@{ Key = 'Score'; Title = 'Address verdicts, threat score and report'; Running = 'Judging the addresses and computing the threat score' }
     )
 }

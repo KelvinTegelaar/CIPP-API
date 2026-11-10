@@ -53,6 +53,19 @@ Describe 'Get-CIPPNhiScore' {
         ($Score.Breakdown | Where-Object Signal -EQ 'NewCredentialInUse').Applied | Should -BeFalse -Because 'a flagged credential is counted once'
     }
 
+    It 'scores an app new to the tenant, and more when another app created it' {
+        $Created = { param($ByApp) [pscustomobject]@{ Kind = 'Created'; Activity = 'Add service principal'; InWindow = $true; ByApp = $ByApp; BySelf = $false } }
+        $ByPerson = Get-CIPPNhiScore -Results (New-Results @{ Subject = [pscustomobject]@{ CreatedDateTime = '2026-11-01T00:00:00Z' }; Changes = @(& $Created $false) }) -Heuristics $script:Heuristics
+        @($ByPerson.Breakdown | Where-Object Applied).Signal | Should -Be @('NewApp')
+
+        $ByApp = Get-CIPPNhiScore -Results (New-Results @{ Subject = [pscustomobject]@{ CreatedDateTime = '2026-11-01T00:00:00Z' }; Changes = @(& $Created $true) }) -Heuristics $script:Heuristics
+        @($ByApp.Breakdown | Where-Object Applied).Signal | Should -Be @('NewApp', 'NewAppByApp')
+        $ByApp.Value | Should -Be (1 + 4)
+
+        $Old = Get-CIPPNhiScore -Results (New-Results @{ Subject = [pscustomobject]@{ CreatedDateTime = '2025-01-01T00:00:00Z' } }) -Heuristics $script:Heuristics
+        @($Old.Breakdown | Where-Object Applied).Count | Should -Be 0
+    }
+
     It 'crosses the evidence with the impact of the app''s access' {
         $Evidence = @{ RogueMatch = [pscustomobject]@{ Name = 'Bad' }; IPVerdicts = @($script:Attacker) }
         foreach ($Case in @(

@@ -47,7 +47,7 @@ function Push-NHIRun {
         $State = @{ Completeness = [ordered]@{} }
     } else {
         # Only what this phase reads is built (Score reads everything); Push-NHIRun.Tests checks the lists against each phase
-        $StateNames = @('SubjectName', 'WindowDays', 'BaselineDays', 'StartDate', 'EndDate', 'BaselineStart', 'Subject')
+        $StateNames = @('SubjectName', 'WindowDays', 'BaselineDays', 'StartDate', 'EndDate', 'BaselineStart', 'Subject', 'AppNames')
         $State = if ($Key -eq 'Score') { Get-CIPPBecRunState -CaseId $CaseId } else { Get-CIPPBecRunState -CaseId $CaseId -Name $StateNames }
         if ([string]::IsNullOrWhiteSpace([string]$State.SubjectName)) {
             Write-Information "NHI: case $CaseId has no run state; skipping phase $Key"
@@ -387,15 +387,30 @@ function Push-NHIRun {
                             if ($AuditEvent.id) { $Events[[string]$AuditEvent.id] = $AuditEvent }
                         }
                     }
-                    # The owner organisation of every app that changed this one: a Microsoft service is housekeeping.
-                    $ActorOwners = @{}
+                    # Every app that changed this one, by service principal: the audit log leaves its appId empty.
+                    # A Microsoft service is housekeeping, and CIPP's app is managing the tenant.
+                    $ActorApps = @{}
                     $ActorIds = @($Events.Values | ForEach-Object { [string]$_.initiatedBy.app.servicePrincipalId } | Where-Object { $_ -match '^[0-9a-fA-F-]{36}$' } | Select-Object -Unique)
                     if ($ActorIds.Count -gt 0) {
                         try {
-                            foreach ($Response in @(New-GraphBulkRequest -Requests @($ActorIds | ForEach-Object { @{ id = $_; method = 'GET'; url = "servicePrincipals/$($_)?`$select=id,appOwnerOrganizationId" } }) -tenantid $TenantFilter -asapp $true)) {
-                                if ([int]$Response.status -eq 200) { $ActorOwners[[string]$Response.id] = [string]$Response.body.appOwnerOrganizationId }
+                            foreach ($Response in @(New-GraphBulkRequest -Requests @($ActorIds | ForEach-Object { @{ id = $_; method = 'GET'; url = "servicePrincipals/$($_)?`$select=id,appId,appOwnerOrganizationId" } }) -tenantid $TenantFilter -asapp $true)) {
+                                if ([int]$Response.status -eq 200) { $ActorApps[[string]$Response.id] = $Response.body }
                             }
                         } catch { Write-Information "NHI: actor apps unavailable: $($_.Exception.Message)" }
+                    }
+                    # Every name the app went by: the audit log names an acting app by its name at the time.
+                    $Names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    if ($Subject.DisplayName) { $null = $Names.Add([string]$Subject.DisplayName) }
+                    foreach ($AuditEvent in $Events.Values) {
+                        foreach ($Target in @($AuditEvent.targetResources | Where-Object { $_.id -in $TargetIds })) {
+                            if ($Target.displayName) { $null = $Names.Add([string]$Target.displayName) }
+                            foreach ($Prop in @($Target.modifiedProperties | Where-Object { $_.displayName -eq 'DisplayName' })) {
+                                foreach ($Value in @($Prop.oldValue, $Prop.newValue)) {
+                                    $OldName = try { @([string]$Value | ConvertFrom-Json)[0] } catch { [string]$Value }
+                                    if ($OldName) { $null = $Names.Add([string]$OldName) }
+                                }
+                            }
+                        }
                     }
                     $VendorTenants = Get-CIPPVendorTenantMap
                     $C = $Heuristics.changes
@@ -429,9 +444,11 @@ function Push-NHIRun {
                         $ActorApp = $AuditEvent.initiatedBy.app
                         $ByType = if ($ActorApp.appId -or $ActorApp.servicePrincipalId) { 'Application' } else { 'User' }
                         $BySelf = $ByType -eq 'Application' -and ($ActorApp.appId -eq $Subject.AppId -or $ActorApp.servicePrincipalId -eq $ServicePrincipalId)
-                        $OwnerOrg = $ActorOwners[[string]$ActorApp.servicePrincipalId]
+                        $Actor = $ActorApps[[string]$ActorApp.servicePrincipalId]
+                        $ActorAppId = [string]($ActorApp.appId ?? $Actor.appId)
+                        $OwnerOrg = [string]$Actor.appOwnerOrganizationId
                         $ByMicrosoft = $OwnerOrg -and $VendorTenants[$OwnerOrg].VendorType -eq 'Microsoft'
-                        $ByCipp = $CippAppId -and $ActorApp.appId -eq $CippAppId
+                        $ByCipp = $CippAppId -and $ActorAppId -eq $CippAppId
                         $When = ([datetime]$AuditEvent.activityDateTime).ToUniversalTime()
                         [pscustomobject]@{
                             ActivityDateTime = $When.ToString('yyyy-MM-ddTHH:mm:ssZ')
@@ -440,7 +457,7 @@ function Push-NHIRun {
                             Result           = [string]$AuditEvent.result
                             InitiatedBy      = if ($ByType -eq 'Application') { [string]($ActorApp.displayName ?? $ActorApp.appId) } else { [string]($AuditEvent.initiatedBy.user.userPrincipalName ?? $AuditEvent.initiatedBy.user.displayName) }
                             InitiatedByType  = $ByType
-                            InitiatedById    = if ($ByType -eq 'Application') { [string]$ActorApp.appId } else { [string]$AuditEvent.initiatedBy.user.id }
+                            InitiatedById    = if ($ByType -eq 'Application') { if ($ActorAppId) { $ActorAppId } else { [string]$ActorApp.servicePrincipalId } } else { [string]$AuditEvent.initiatedBy.user.id }
                             ClientIP         = ConvertTo-CIPPBecHostAddress -Address ([string]$AuditEvent.initiatedBy.user.ipAddress)
                             BySelf           = [bool]$BySelf
                             ByCipp           = [bool]$ByCipp
@@ -451,10 +468,12 @@ function Push-NHIRun {
                             Detail           = (@($Properties | Where-Object { $_.displayName -and $_.displayName -notmatch '(?i)^Included Updated Properties$' } | ForEach-Object { $_.displayName }) | Select-Object -Unique) -join ', '
                         }
                     }
-                    New-CIPPBecCollectorResult -Data @($Changes | Sort-Object -Property ActivityDateTime -Descending)
+                    $Result = New-CIPPBecCollectorResult -Data @($Changes | Sort-Object -Property ActivityDateTime -Descending)
+                    $Result | Add-Member -NotePropertyName 'Names' -NotePropertyValue @($Names) -Force
+                    $Result
                 }
                 & $Mark 'Changes' $Result
-                & $Save @{ Changes = @($Result.Data) }
+                & $Save @{ Changes = @($Result.Data); AppNames = @(@($Result.Names) + @($Subject.DisplayName) | Where-Object { $_ } | Select-Object -Unique) }
                 $StepMessage = "$(@($Result.Data | Where-Object { $_.Flagged -and $_.InWindow }).Count) flagged change(s) in the window"
             }
 
@@ -542,7 +561,28 @@ function Push-NHIRun {
                 $Catalog = Get-CIPPRiskyPermissionCatalog
                 $ImpactRank = @{ Low = 1; Medium = 2; High = 3; Critical = 4 }
                 $Result = & $Collect 'DirectoryActions' {
-                    $Events = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/auditLogs/directoryAudits?`$filter=activityDateTime ge $Since and initiatedBy/app/appId eq '$($Subject.AppId)'&`$top=999" -tenantid $TenantFilter -AsApp $true)
+                    # The audit log fills initiatedBy.app.appId only for some services (PIM), so the app's actions are also
+                    # found by every name it went by, and kept only when made by its own service principal.
+                    $Audits = 'https://graph.microsoft.com/v1.0/auditLogs/directoryAudits'
+                    # An app that manages the tenant (provisioning, backup, CIPP) acts thousands of times a month: the newest
+                    # caps.directoryActions of each query are kept, read as a stream so nothing past the cap is held.
+                    $Cap = [int]($Heuristics.caps.directoryActions ?? 5000)
+                    $ById = [ordered]@{}
+                    $Capped = $false
+                    $Kept = @(New-GraphGetRequest -uri "$Audits`?`$filter=activityDateTime ge $Since and initiatedBy/app/appId eq '$($Subject.AppId)'&`$top=999" -tenantid $TenantFilter -AsApp $true -Stream | Where-Object { $_.id } | Select-Object -First $Cap)
+                    if ($Kept.Count -ge $Cap) { $Capped = $true }
+                    foreach ($AuditEvent in $Kept) { $ById[[string]$AuditEvent.id] = $AuditEvent }
+                    $AppNames = @(@($State.AppNames) + @($Name) | Where-Object { $_ } | Select-Object -Unique)
+                    if ($AppNames.Count -gt 0) {
+                        # other apps go by the same name (every CIPP instance's app is CIPP-SAM): bound what is read past them too
+                        $Scanned = 0
+                        $NameFilter = @($AppNames | ForEach-Object { "initiatedBy/app/displayName eq '$([uri]::EscapeDataString((([string]$_) -replace "'", "''")))'" }) -join ' or '
+                        $Kept = @(New-GraphGetRequest -uri "$Audits`?`$filter=activityDateTime ge $Since and ($NameFilter)&`$top=999" -tenantid $TenantFilter -AsApp $true -Stream | Select-Object -First ($Cap * 4) | ForEach-Object { $Scanned++; $_ } | Where-Object { $_.id -and $_.initiatedBy.app.servicePrincipalId -eq $ServicePrincipalId } | Select-Object -First $Cap)
+                        if ($Kept.Count -ge $Cap -or $Scanned -ge $Cap * 4) { $Capped = $true }
+                        foreach ($AuditEvent in $Kept) { $ById[[string]$AuditEvent.id] = $AuditEvent }
+                    }
+                    $Kept = $null
+                    $Events = @($ById.Values)
                     $Actions = foreach ($AuditEvent in $Events) {
                         $Activity = [string]$AuditEvent.activityDisplayName
                         $Targets = @(foreach ($Target in @($AuditEvent.targetResources)) { [pscustomobject]@{ Type = [string]$Target.type; Id = [string]$Target.id; DisplayName = [string]$Target.displayName; UserPrincipalName = [string]$Target.userPrincipalName } })
@@ -663,7 +703,7 @@ function Push-NHIRun {
                                 TargetProtected          = [bool](($Owner -and $VendorTenants[$Owner].VendorType -eq 'Microsoft') -or ($CippAppId -and $TargetSp.appId -eq $CippAppId))
                             }) -Force
                     }
-                    New-CIPPBecCollectorResult -Data @($Actions | Sort-Object -Property ActivityDateTime -Descending)
+                    New-CIPPBecCollectorResult -Data @($Actions | Sort-Object -Property ActivityDateTime -Descending) -Complete (-not $Capped) -Cap $(if ($Capped) { "the newest $Cap actions of the app" })
                 }
                 & $Mark 'DirectoryActions' $Result
                 & $Save @{ DirectoryActions = @($Result.Data) }
@@ -759,6 +799,39 @@ function Push-NHIRun {
                 $StepMessage = "$([int]$Result.Data.Summary.MailboxCount) mailbox(es), $([int]$Result.Data.Summary.FileCount) file(s)$(if (-not $IsWindow) { ' before the window' })"
             }
 
+            'OtherTenants' {
+                # The same app in the other managed tenants, from the reporting database: a lookup, nothing is investigated there.
+                $NotApplicable = if (-not $Subject.AppId) { 'the app id is unknown' }
+                elseif ($Subject.IsManagedIdentity) { 'not applicable to a managed identity' }
+                elseif ($Subject.IsMicrosoftApp -or $Subject.IsCippApp) { "not applicable to Microsoft's or CIPP's own apps" }
+                elseif ($Subject.IsOwnApp -and $Subject.AppSignInAudience -eq 'AzureADMyOrg') { 'not applicable to an app only this tenant can use' }
+                $Result = if ($NotApplicable) {
+                    New-CIPPBecCollectorResult -Data @() -Skipped $true -Requirement $NotApplicable
+                } else {
+                    & $Collect 'OtherTenants' {
+                        $Fields = [string[]]@('id', 'appId', 'displayName', 'accountEnabled', 'createdDateTime')
+                        # Through MethodInfo.Invoke: PowerShell copies a large string passed straight to a method several times per call
+                        $ParseJson = [CIPP.CippJson].GetMethod('ConvertFromJson', [type[]]@([string], [string[]]))
+                        $Found = [System.Collections.Generic.List[object]]::new()
+                        # One tenant at a time: service principal rows are large
+                        foreach ($Tenant in @((Get-Tenants).defaultDomainName | Where-Object { $_ -and $_ -ne $TenantFilter })) {
+                            foreach ($Row in (Get-CIPPDbItem -Partition $Tenant -Type 'ServicePrincipals')) {
+                                # nearly every row is another app: skip it unparsed
+                                if (-not $Row.Data -or -not $Row.Data.Contains($Subject.AppId, [System.StringComparison]::OrdinalIgnoreCase)) { continue }
+                                foreach ($Sp in @($ParseJson.Invoke($null, [object[]]@([string]$Row.Data, $Fields)))) {
+                                    if ([string]$Sp.appId -ne $Subject.AppId) { continue }
+                                    $Found.Add([pscustomobject]@{ Tenant = $Tenant; ServicePrincipalId = [string]$Sp.id; DisplayName = [string]$Sp.displayName; AccountEnabled = $Sp.accountEnabled; CreatedDateTime = $Sp.createdDateTime })
+                                }
+                            }
+                        }
+                        New-CIPPBecCollectorResult -Data $Found.ToArray()
+                    }
+                }
+                & $Mark 'OtherTenants' $Result
+                & $Save @{ OtherTenants = @($Result.Data) }
+                $StepMessage = if ($Result.Skipped) { "Skipped: $($Result.Requirement)" } else { "Found in $(@($Result.Data).Count) other tenant(s)" }
+            }
+
             'Score' {
                 $Exposure = $State.Exposure
                 $Credentials = @($Exposure.CredentialDetails | Where-Object { $_ -and $_.Purpose -eq 'Sign-in' -and -not $_.Expired })
@@ -822,6 +895,7 @@ function Push-NHIRun {
                     Baseline            = $State.Baseline
                     Dormant             = $Dormant
                     DelegatedSignIns    = & $Rows 'DelegatedSignIns'
+                    OtherTenants        = & $Rows 'OtherTenants'
                     DirectoryActions    = & $Rows 'DirectoryActions'
                     WorkloadActivity    = $Workload
                     WorkloadSummary     = $State.WorkloadSummary

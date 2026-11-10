@@ -14,6 +14,7 @@ BeforeAll {
     function Get-CIPPAsyncDeployment { param($JobId) }
     function Add-CIPPRealtimeWatch { param($JobId) }
     function Write-LogMessage { param($message, $tenant, $API, $headers, $sev, $LogData) }
+    function Select-CippAllowedTenantData { param([Parameter(ValueFromPipeline = $true)]$InputObject, $TenantProperty) process { if ($InputObject.Tenant -eq 'allowed.com') { $InputObject } } }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = $Exception.Exception.Message } }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/NHI/Get-CIPPNhiRunSteps.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/NHI/New-CIPPNhiRunRequest.ps1')
@@ -120,6 +121,14 @@ Describe 'Invoke-ExecNHICheck' {
         $Done.Body.Score.Level | Should -BeExactly 'High'
         @($Done.Body.Run.Containment).Count | Should -Be 1
         Should -Invoke Get-CIPPBecReport -ParameterFilter { $Kind -eq 'NHI' -and $IncludeResults }
+    }
+
+    It 'shows only the other tenants this user may see' {
+        Mock Get-CIPPBecReport { [pscustomobject]@{ CaseId = 'NHI-1'; Status = 'Completed'; Results = [pscustomobject]@{ CaseId = 'NHI-1'; OtherTenants = @([pscustomobject]@{ Tenant = 'allowed.com' }, [pscustomobject]@{ Tenant = 'hidden.com' }) } } }
+
+        $Response = Invoke-ExecNHICheck -Request (New-Request @{ tenantFilter = 'contoso.com'; caseId = 'NHI-1' }) -TriggerMetadata $null
+
+        @($Response.Body.OtherTenants.Tenant) | Should -Be @('allowed.com')
     }
 
     It 'returns the app''s latest run without starting one' {

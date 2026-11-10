@@ -540,7 +540,7 @@ Describe 'Get-CIPPAppPermissionExposure' {
                 [pscustomobject](@{ clientId = 'sp-planted'; resourceId = 'res-graph'; consentType = 'Principal'; scope = 'User.Read Mail.Read'; activityDateTime = $Added } + $ByApp)
                 [pscustomobject]@{ clientId = 'sp-selfgrant'; resourceId = 'res-graph'; consentType = 'Principal'; scope = 'Mail.Read'; activityDateTime = $Added; initiatedByType = 'Application'; initiatedByName = 'sp-selfgrant'; initiatedByAppId = 'app-sp-selfgrant'; initiatedByServicePrincipalId = 'sp-selfgrant' }
                 [pscustomobject]@{ clientId = 'sp-consented-user'; resourceId = 'res-graph'; consentType = 'Principal'; scope = 'Mail.Read'; activityDateTime = $Added; initiatedByType = 'User'; initiatedByName = 'user@contoso.com' }
-                [pscustomobject]@{ clientId = 'sp-by-cipp'; resourceId = 'res-graph'; consentType = 'Principal'; scope = 'Mail.Read'; activityDateTime = $Added; initiatedByType = 'Application'; initiatedByName = 'CIPP-SAM'; initiatedByAppId = 'cipp-sam-app'; initiatedByServicePrincipalId = 'sp-cipp' }
+                [pscustomobject]@{ clientId = 'sp-by-cipp'; resourceId = 'res-graph'; consentType = 'Principal'; scope = 'Mail.Read'; activityDateTime = $Added; initiatedByType = 'Application'; initiatedByName = 'CIPP-SAM'; initiatedByAppId = ''; initiatedByServicePrincipalId = 'sp-cipp' }
                 [pscustomobject](@{ clientId = 'sp-admin-by-app'; resourceId = 'res-graph'; consentType = 'AllPrincipals'; scope = 'Mail.Read'; activityDateTime = $Added } + $ByApp)
                 [pscustomobject](@{ clientId = 'sp-ms-client'; resourceId = 'res-graph'; consentType = 'Principal'; scope = 'Mail.Read'; activityDateTime = $Added } + $ByApp)
             )

@@ -1031,7 +1031,7 @@ function Get-CIPPAppPermissionExposure {
                         $ActorVendor = $null
                         if ($ActorSp.appOwnerOrganizationId) { [void]$VendorTenants.TryGetValue([string]$ActorSp.appOwnerOrganizationId, [ref]$ActorVendor) }
                         $IsSelf = $Audit.initiatedByAppId -eq $AppId -or $Audit.initiatedByServicePrincipalId -eq $PrincipalId
-                        $IsTrustedActor = ($CippAppId -and $Audit.initiatedByAppId -eq $CippAppId) -or $ActorVendor.VendorType -eq 'Microsoft'
+                        $IsTrustedActor = ($CippAppId -and $CippAppId -in @($Audit.initiatedByAppId, $ActorSp.appId)) -or $ActorVendor.VendorType -eq 'Microsoft'
                         if (-not $IsSelf -and -not $IsTrustedActor) {
                             $Detail.Flags.Add('AddedByApp')
                             if (-not $AddedByApp) { $AddedByApp = "$Kind added to its $Location by the app $($Audit.initiatedByName)" }
@@ -1208,7 +1208,7 @@ function Get-CIPPAppPermissionExposure {
                     $ActorVendor = $null
                     if ($ActorSp.appOwnerOrganizationId) { [void]$VendorTenants.TryGetValue([string]$ActorSp.appOwnerOrganizationId, [ref]$ActorVendor) }
                     # An app assigning a role to itself is escalation, not housekeeping: only CIPP and Microsoft are trusted.
-                    if (-not (($CippAppId -and $RoleEvent.initiatedByAppId -eq $CippAppId) -or $ActorVendor.VendorType -eq 'Microsoft')) {
+                    if (-not (($CippAppId -and $CippAppId -in @($RoleEvent.initiatedByAppId, $ActorSp.appId)) -or $ActorVendor.VendorType -eq 'Microsoft')) {
                         $IsSelf = $RoleEvent.initiatedByAppId -eq $AppId -or $RoleEvent.initiatedByServicePrincipalId -eq $PrincipalId
                         $RoleAddedByApp = if ($IsSelf) { "$RoleLabel assigned by the app to itself" } else { "$RoleLabel assigned by the app $($RoleEvent.initiatedByName)" }
                     }
@@ -1245,7 +1245,7 @@ function Get-CIPPAppPermissionExposure {
             if ($GrantEvent.initiatedByServicePrincipalId) { [void]$SpById.TryGetValue([string]$GrantEvent.initiatedByServicePrincipalId, [ref]$ActorSp) }
             $ActorVendor = $null
             if ($ActorSp.appOwnerOrganizationId) { [void]$VendorTenants.TryGetValue([string]$ActorSp.appOwnerOrganizationId, [ref]$ActorVendor) }
-            if (($CippAppId -and $GrantEvent.initiatedByAppId -eq $CippAppId) -or $ActorVendor.VendorType -eq 'Microsoft') { continue }
+            if (($CippAppId -and $CippAppId -in @($GrantEvent.initiatedByAppId, $ActorSp.appId)) -or $ActorVendor.VendorType -eq 'Microsoft') { continue }
             $IsSelf = $GrantEvent.initiatedByAppId -eq $AppId -or $GrantEvent.initiatedByServicePrincipalId -eq $PrincipalId
             $GrantAddedByApp = 'Delegated {0} for a single user granted by {1}' -f (@($Matched.Name) -join ', '), $(if ($IsSelf) { 'the app to itself' } else { "the app $($GrantEvent.initiatedByName)" })
         }

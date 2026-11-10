@@ -64,6 +64,8 @@ function Invoke-ExecNHICheck {
                 $Summary
             } else {
                 $Results = $Run.Results
+                # the other tenants the app is in, limited to those this user may see
+                if ($Results.OtherTenants) { $Results.OtherTenants = @($Results.OtherTenants | Select-CippAllowedTenantData -TenantProperty 'Tenant') }
                 $Results | Add-Member -NotePropertyName 'Run' -NotePropertyValue ([pscustomobject]@{
                         CaseId      = $Run.CaseId
                         Status      = $Run.Status

@@ -109,6 +109,8 @@ function Get-CIPPNhiScore {
         # an app granting itself access is self elevation, counted once there
         AccessGrantedByApp           = @($Changes | Where-Object { $_.Kind -eq 'Grant' -and $_.ByApp -and -not $_.BySelf }).Count
         NameImpersonation            = [int][bool]$Exposure.ImpersonatedProduct
+        NewApp                       = [int][bool](& $InWindow $Results.Subject.CreatedDateTime)
+        NewAppByApp                  = @($Changes | Where-Object { $_.Kind -eq 'Created' -and $_.ByApp -and -not $_.BySelf }).Count
         DormantAwakened              = [int]([bool]$Results.Dormant -and [int]$Results.SignInSummary.Success -gt 0)
         AttackerIPs                  = @($AttackerIPs | Where-Object { $_.SuccessfulSignIns -gt 0 -or $_.Activities -gt 0 }).Count
         SuspiciousIPs                = @($Verdicts | Where-Object { $_.Verdict -eq 'Suspicious' -and $_.SuccessfulSignIns -gt 0 }).Count
@@ -160,6 +162,8 @@ function Get-CIPPNhiScore {
         AccessGranted                = 'A permission, consent or directory role was given to the app in the window'
         AccessGrantedByApp           = 'A permission, consent or directory role was given to the app by an app, or by itself'
         NameImpersonation            = 'An unverified app owned elsewhere is named like a Microsoft product'
+        NewApp                       = 'The app was added to the tenant in the window'
+        NewAppByApp                  = 'The app was created in the window by another app, not by a person, CIPP or Microsoft'
         DormantAwakened              = "The app had no sign-ins in the $([int]$Results.BaselineDays) days before the window, then signed in during it"
         AttackerIPs                  = 'Sign-ins or activity from addresses judged to be an attacker'
         SuspiciousIPs                = 'Successful sign-ins from addresses judged suspicious'

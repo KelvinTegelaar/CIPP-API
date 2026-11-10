@@ -54,6 +54,8 @@ function New-CIPPBecEvidencePackage {
     }
 
     $Files = [ordered]@{}
+    # the package is about this tenant and may go to its customer: never the names of other tenants
+    if ($Kind -eq 'NHI' -and $Results.PSObject.Properties['OtherTenants']) { $Results.PSObject.Properties.Remove('OtherTenants') }
     $Files['results.json'] = $Utf8.GetBytes((ConvertTo-Json -InputObject $Results -Depth 20))
     $CsvSections = if ($Kind -eq 'NHI') {
         @('Owners', 'AppRoleAssignments', 'DelegatedGrants', 'DirectoryRoles', 'RiskDetections', 'Changes', 'Consents', 'SignInsByIP', 'SignInsByCredential', 'RecentSignIns', 'DelegatedSignIns', 'DirectoryActions', 'IPVerdicts')
