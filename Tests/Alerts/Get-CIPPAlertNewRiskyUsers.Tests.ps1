@@ -39,4 +39,33 @@ Describe 'Get-CIPPAlertNewRiskyUsers' {
         Get-CIPPAlertNewRiskyUsers -TenantFilter 'contoso.onmicrosoft.com'
         Should -Invoke New-GraphGetRequest -Times 1 -Exactly
     }
+
+    It 'only seeds the baseline when no row is stored yet' {
+        Mock Test-CIPPStandardLicense { $true }
+        Mock New-GraphGetRequest { [PSCustomObject]@{ userPrincipalName = 'alice@contoso.com'; riskLevel = 'high'; riskState = 'atRisk' } }
+        Get-CIPPAlertNewRiskyUsers -TenantFilter 'contoso.onmicrosoft.com'
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly
+        Should -Invoke Write-AlertTrace -Times 1 -Exactly -ParameterFilter { -not $data }
+    }
+
+    It 'alerts on the first risky user when the stored baseline has none' {
+        Mock Test-CIPPStandardLicense { $true }
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ delta = 'null' } }
+        Mock New-GraphGetRequest { [PSCustomObject]@{ userPrincipalName = 'alice@contoso.com'; riskLevel = 'high'; riskState = 'atRisk' } }
+        Get-CIPPAlertNewRiskyUsers -TenantFilter 'contoso.onmicrosoft.com'
+        Should -Invoke Write-AlertTrace -Times 1 -Exactly -ParameterFilter { @($data).Count -eq 1 -and $data.Message -like '*alice@contoso.com*' }
+    }
+
+    It 'alerts again when a dismissed user becomes risky, but not for a user who is still risky' {
+        Mock Test-CIPPStandardLicense { $true }
+        Mock Get-CIPPAzDataTableEntity {
+            [PSCustomObject]@{ delta = '[{"userPrincipalName":"alice@contoso.com","riskState":"dismissed"},{"userPrincipalName":"bob@contoso.com","riskState":"atRisk"}]' }
+        }
+        Mock New-GraphGetRequest {
+            [PSCustomObject]@{ userPrincipalName = 'alice@contoso.com'; riskLevel = 'medium'; riskState = 'atRisk' }
+            [PSCustomObject]@{ userPrincipalName = 'bob@contoso.com'; riskLevel = 'medium'; riskState = 'atRisk' }
+        }
+        Get-CIPPAlertNewRiskyUsers -TenantFilter 'contoso.onmicrosoft.com'
+        Should -Invoke Write-AlertTrace -Times 1 -Exactly -ParameterFilter { @($data).Count -eq 1 -and $data.Message -like '*alice@contoso.com*' }
+    }
 }
