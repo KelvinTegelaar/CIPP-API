@@ -152,3 +152,53 @@ Describe 'Invoke-ListConditionalAccessPolicies AllTenants' {
         Should -Invoke Get-CIPPAzDataTableEntity -Times 1
     }
 }
+
+Describe 'Invoke-ListConditionalAccessPolicies single tenant' {
+    BeforeEach {
+        $Request = New-CaRequest -Query @{ tenantFilter = 'contoso.onmicrosoft.com' }
+    }
+
+    It 'returns 500 with the Graph message when the policies read fails' {
+        Mock -CommandName New-GraphBulkRequest -MockWith {
+            @(
+                @{ id = 'policies'; status = 403; body = @{ error = @{ message = 'Insufficient privileges' } } }
+                @{ id = 'users'; status = 200; body = @{ value = @() } }
+            )
+        }
+
+        $response = Invoke-ListConditionalAccessPolicies -Request $Request -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 500
+        $response.Body | Should -Be 'Insufficient privileges'
+    }
+
+    It 'returns 500 when the bulk request throws' {
+        Mock -CommandName New-GraphBulkRequest -MockWith { throw 'Graph batch failed' }
+
+        $response = Invoke-ListConditionalAccessPolicies -Request $Request -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 500
+        $response.Body | Should -Be 'Graph batch failed'
+    }
+
+    It 'returns 500 when the tenant is refused' {
+        $ErrorActionPreference = 'Continue'
+        function New-GraphBulkRequest { [CmdletBinding()] param($Requests, $tenantid, $asapp) Write-Error 'Graph bulk request denied' }
+
+        $response = Invoke-ListConditionalAccessPolicies -Request $Request -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 500
+        $response.Body | Should -Be 'Graph bulk request denied'
+    }
+
+    It 'returns 200 and no rows when the tenant has no policies' {
+        Mock -CommandName New-GraphBulkRequest -MockWith {
+            @(@{ id = 'policies'; status = 200; body = @{ value = @() } })
+        }
+
+        $response = Invoke-ListConditionalAccessPolicies -Request $Request -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 200
+        @($response.Body.Results) | Should -HaveCount 0
+    }
+}
