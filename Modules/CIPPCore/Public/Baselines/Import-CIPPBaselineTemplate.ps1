@@ -82,21 +82,23 @@ function Import-CIPPBaselineTemplate {
         }
     }
 
+    $KeepAssigned = $Existing.assignedTo -and @($Baseline.assignedTenants).Where({ $_.value -ne 'Exported Template' }).Count -eq 0
     $Payload = [PSCustomObject]@{
         GUID            = $(if ($Existing) { $Existing.RowKey } else { $null })
         templateName    = "$($Baseline.templateName)"
         description     = "$($Baseline.description)"
-        assignedTenants = @($Baseline.assignedTenants)
-        excludedTenants = @()
-        alertEmails     = ''
-        alertWebhookUrl = ''
-        disableAlerts   = $false
+        assignedTenants = @(if ($KeepAssigned) { $Existing.assignedTo | ConvertFrom-Json } else { $Baseline.assignedTenants })
+        excludedTenants = @(if ($Existing.excludedTo) { $Existing.excludedTo | ConvertFrom-Json })
+        alertEmails     = "$($Existing.alertEmails)"
+        alertWebhookUrl = "$($Existing.alertWebhookUrl)"
+        disableAlerts   = [bool]$Existing.disableAlerts
+        disableScheduledRuns = [bool]$Existing.disableScheduledRuns
         stages          = @($Baseline.stages)
     }
     # An import lands the repo copy exactly as-is, so there is nothing local yet to push back.
     $Saved = New-CIPPBaseline -Baseline $Payload -User ("$User" ? "$User" : 'GitHub Import') -Source "$FullName" -SHA "$SHA" -SourcePath "$Path" -LocalChanges:$false
 
-    $Message = "Imported baseline '$($Baseline.templateName)' ($($Saved.DeltaCount) delta rows) with $ImportedCount related template$(if ($ImportedCount -eq 1) { '' } else { 's' }). Assign it to real tenants in the editor - it arrives assigned to the 'Exported Template' placeholder."
+    $Message = "Imported baseline '$($Baseline.templateName)' ($($Saved.DeltaCount) delta rows) with $ImportedCount related template$(if ($ImportedCount -eq 1) { '' } else { 's' }).$(if (-not $KeepAssigned) { " Assign it to real tenants in the editor - it arrives assigned to the 'Exported Template' placeholder." })"
     if ($Failures.Count -gt 0) {
         $Message = "$Message Missing: $($Failures -join '; ')."
     }

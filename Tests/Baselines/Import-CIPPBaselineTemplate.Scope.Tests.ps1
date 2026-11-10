@@ -49,3 +49,42 @@ Describe 'Import-CIPPBaselineTemplate tenant scope' {
         Should -Invoke New-CIPPBaseline -Times 1 -ParameterFilter { $Baseline.assignedTenants.value -eq 'victim.com' }
     }
 }
+
+Describe 'Import-CIPPBaselineTemplate update' {
+    BeforeEach {
+        $script:CippAllowedTenantsStorage = $null
+        $script:Saved = $null
+        $script:Existing = [pscustomobject]@{
+            RowKey               = 'b1'
+            templateName         = 'Hardening'
+            SHA                  = 'old'
+            assignedTo           = '[{"label":"Mine","value":"mine.com","type":"Tenant"}]'
+            excludedTo           = '[{"label":"Other","value":"other.com","type":"Tenant"}]'
+            alertEmails          = 'ops@example.com'
+            alertWebhookUrl      = 'https://example.com/hook'
+            disableAlerts        = $true
+            disableScheduledRuns = $true
+        }
+        Mock New-CIPPBaseline { $script:Saved = $Baseline; [pscustomobject]@{ DeltaCount = 0 } }
+    }
+
+    It 'keeps the assignments when the file carries only the placeholder' {
+        $null = Import-Baseline @{ value = 'Exported Template' }
+        $script:Saved.GUID | Should -Be 'b1'
+        $script:Saved.assignedTenants.value | Should -Be 'mine.com'
+    }
+
+    It 'keeps the exclusions, alerts and schedule hold' {
+        $null = Import-Baseline @{ value = 'Exported Template' }
+        $script:Saved.excludedTenants.value | Should -Be 'other.com'
+        $script:Saved.alertEmails | Should -Be 'ops@example.com'
+        $script:Saved.alertWebhookUrl | Should -Be 'https://example.com/hook'
+        $script:Saved.disableAlerts | Should -BeTrue
+        $script:Saved.disableScheduledRuns | Should -BeTrue
+    }
+
+    It 'takes the file''s assignments when it names tenants' {
+        $null = Import-Baseline @{ value = 'victim.com' }
+        $script:Saved.assignedTenants.value | Should -Be 'victim.com'
+    }
+}
