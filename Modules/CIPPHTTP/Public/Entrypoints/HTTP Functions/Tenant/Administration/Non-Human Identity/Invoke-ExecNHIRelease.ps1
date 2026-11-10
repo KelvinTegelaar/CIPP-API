@@ -20,17 +20,17 @@ function Invoke-ExecNHIRelease {
     $Confirmation = ([string]$Request.Body.Confirmation).Trim()
 
     try {
-        if (-not $TenantFilter -or -not $CaseId) { throw 'tenantFilter and caseId are required' }
+        if (-not $TenantFilter -or -not $CaseId) { throw [System.ArgumentException]::new('tenantFilter and caseId are required') }
         $Run = Get-CIPPBecReport -Kind 'NHI' -TenantFilter $TenantFilter -CaseId $CaseId
-        if (-not $Run) { throw "NHI case $CaseId was not found for $TenantFilter" }
-        if (-not $Confirmation -or ($Confirmation -ne [string]$Run.DisplayName -and $Confirmation -ne [string]$Run.AppId)) { throw "Type the app's display name or application id to confirm the release" }
+        if (-not $Run) { throw [System.Management.Automation.ItemNotFoundException]::new("NHI case $CaseId was not found for $TenantFilter") }
+        if (-not $Confirmation -or ($Confirmation -ne [string]$Run.DisplayName -and $Confirmation -ne [string]$Run.AppId)) { throw [System.ArgumentException]::new("Type the app's display name or application id to confirm the release") }
 
         # Only containment after the most recent release is still in force
         $History = @($Run.Containment | Where-Object { $_ })
         $LastRelease = -1
         for ($i = 0; $i -lt $History.Count; $i++) { if ($History[$i].Kind -eq 'Release') { $LastRelease = $i } }
         $InForce = @($History | Select-Object -Skip ($LastRelease + 1) | ForEach-Object { $_.Results } | Where-Object { $_ -and $_.state -eq 'success' })
-        if ($InForce.Count -eq 0) { throw "Case $CaseId has no containment in force to release" }
+        if ($InForce.Count -eq 0) { throw [System.ArgumentException]::new("Case $CaseId has no containment in force to release") }
 
         $Catalog = Get-CIPPNhiContainmentActions
         $Rows = [System.Collections.Generic.List[object]]::new()
@@ -56,12 +56,12 @@ function Invoke-ExecNHIRelease {
         $null = Set-CIPPBecReport -Kind 'NHI' -TenantFilter $TenantFilter -CaseId $CaseId -Properties @{ Containment = $Updated }
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Released the containment of $($Run.DisplayName) [case $CaseId]" -Sev 'Info' -LogData @($Rows)
         $Body = @{ Results = $Rows.ToArray() }
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total $Rows.Count -Failed @($Rows | Where-Object state -EQ 'error').Count
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "NHI release failed for case $CaseId`: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = @{ Results = @([pscustomobject]@{ resultText = "Release failed: $($ErrorMessage.NormalizedError)"; state = 'error' }) }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

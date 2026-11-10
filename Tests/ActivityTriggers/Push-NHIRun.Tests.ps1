@@ -215,6 +215,8 @@ Describe 'Push-NHIRun' {
         $Marker.Skipped | Should -BeTrue
         $Marker.Requirement | Should -BeExactly 'requires Microsoft Entra Workload ID Premium'
         $script:Saved.Results.Completeness.SubjectOwners.Complete | Should -BeTrue
+        Should -Invoke New-GraphBulkRequest -ParameterFilter { @($Requests.id) -contains 'Risk' -and -not $asapp } -Because 'Identity Protection for workload identities has delegated permissions only'
+        Should -Invoke New-GraphBulkRequest -Times 0 -ParameterFilter { @($Requests.id) -contains 'Risk' -and $asapp }
     }
 
     It 'skips the sign-in phases without Entra ID P1 and still scores the case on what it could read' {

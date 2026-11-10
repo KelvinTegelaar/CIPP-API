@@ -5,7 +5,8 @@ function Invoke-CIPPBaselineGraduation {
     .DESCRIPTION
         Runs at the start of every scheduled baseline run. For each tenant not yet in a
         baseline's final stage, the NEXT stage's conditions are evaluated with the stage's
-        AND/OR logic:
+        AND/OR logic. A stage's conditionGroups are further alternatives, each with its own
+        AND/OR logic: the tenant advances when the main conditions or any one group is met.
         - time:     enteredStageAt + days/weeks has elapsed (unix seconds)
         - variable: a per-tenant custom variable (Get-CIPPTextReplacement's replacement map)
                     compared with eq/ne/startsWith/notStartsWith
@@ -42,7 +43,8 @@ function Invoke-CIPPBaselineGraduation {
             if ($TenantFilter -and $State.tenantFilter -ne $TenantFilter) { continue }
             if ($State.currentStage -ge $State.totalStages) { continue }
             $NextStage = $Baseline.stages[$State.currentStage]
-            $Conditions = @($NextStage.conditions)
+            $Sets = @(@([pscustomobject]@{ logic = $NextStage.logic; conditions = @($NextStage.conditions) }) + @($NextStage.conditionGroups)).Where({ $_ -and @($_.conditions).Where({ $_ }).Count -gt 0 })
+            $Conditions = @(foreach ($Set in $Sets) { @($Set.conditions) })
             if ($Conditions.Count -eq 0) { continue }
 
             $Results = foreach ($Condition in $Conditions) {
@@ -107,7 +109,14 @@ function Invoke-CIPPBaselineGraduation {
             }
 
             $Results = @($Results)
-            $Advance = if ($NextStage.logic -eq 'or') { $Results -contains $true } else { $Results -notcontains $false }
+            # Condition groups are alternatives: the stage is reached once any one group is met.
+            $Advance = $false
+            $Offset = 0
+            foreach ($Set in $Sets) {
+                $SetResults = @($Results[$Offset..($Offset + @($Set.conditions).Count - 1)])
+                $Offset = $Offset + $SetResults.Count
+                if ($(if ($Set.logic -eq 'or') { $SetResults -contains $true } else { $SetResults -notcontains $false })) { $Advance = $true }
+            }
             [pscustomobject]@{
                 TenantFilter = $State.tenantFilter
                 Advanced     = [bool]$Advance

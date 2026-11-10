@@ -270,13 +270,22 @@ function Push-NHIRun {
                     @{ id = 'AppRoles'; method = 'GET'; url = "servicePrincipals/$ServicePrincipalId/appRoleAssignments?`$top=999" }
                     @{ id = 'Grants'; method = 'GET'; url = "oauth2PermissionGrants?`$filter=clientId eq '$ServicePrincipalId'&`$top=999" }
                     @{ id = 'Roles'; method = 'GET'; url = "roleManagement/directory/roleAssignments?`$filter=principalId eq '$ServicePrincipalId'&`$expand=roleDefinition(`$select=displayName,templateId,isBuiltIn)" }
-                    @{ id = 'Risk'; method = 'GET'; url = "identityProtection/riskyServicePrincipals?`$filter=id eq '$ServicePrincipalId'" }
-                    @{ id = 'Detections'; method = 'GET'; url = "identityProtection/servicePrincipalRiskDetections?`$filter=servicePrincipalId eq '$ServicePrincipalId'&`$top=100" }
                     if ($IsOwnApp) { @{ id = 'App'; method = 'GET'; url = "applications(appId='$($Sp.appId)')?`$select=id,appId,displayName,createdDateTime,signInAudience,web,spa,publicClient,servicePrincipalLockConfiguration,disabledByMicrosoftStatus&`$expand=owners($OwnerSelect)" } }
                 )
-                $Responses = @(New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true)
+                # Identity Protection for workload identities has delegated permissions only
+                $RiskRequests = @(
+                    @{ id = 'Risk'; method = 'GET'; url = "identityProtection/riskyServicePrincipals?`$filter=id eq '$ServicePrincipalId'" }
+                    @{ id = 'Detections'; method = 'GET'; url = "identityProtection/servicePrincipalRiskDetections?`$filter=servicePrincipalId eq '$ServicePrincipalId'&`$top=100" }
+                )
+                $RiskResponses = try {
+                    @(New-GraphBulkRequest -Requests $RiskRequests -tenantid $TenantFilter)
+                } catch {
+                    $RiskError = $_.Exception.Message
+                    @(foreach ($Request in $RiskRequests) { [pscustomobject]@{ id = $Request.id; status = 500; body = [pscustomobject]@{ error = [pscustomobject]@{ message = $RiskError } } } })
+                }
+                $Responses = @(New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true) + @($RiskResponses)
                 $Body = @{}
-                foreach ($Request in $Requests) {
+                foreach ($Request in @($Requests) + @($RiskRequests)) {
                     $Response = $Responses | Where-Object { $_.id -eq $Request.id } | Select-Object -First 1
                     $Failed = (-not $Response) -or [int]$Response.status -ge 400
                     $Message = if ($Failed) { [string]($Response.body.error.message ?? "Graph request $($Request.id) failed") } else { $null }
@@ -488,10 +497,13 @@ function Push-NHIRun {
                         $Cap = [int]($Heuristics.caps.signInRows ?? 100000)
                         $Users = @{}
                         $Total = 0
+                        $Capped = $false
                         foreach ($Interactive in $true, $false) {
                             $Filter = if ($Interactive) { "appId eq '$($Subject.AppId)'" } else { "appId eq '$($Subject.AppId)' and signInEventTypes/any(t: t eq 'nonInteractiveUser')" }
+                            $StreamCount = 0
                             Search-CIPPBecSignIn -TenantFilter $TenantFilter -Filter $Filter -StartDate $startDate -EndDate $endDate -Select 'createdDateTime,userId,userPrincipalName,ipAddress,status,location' -AsApp $false -SliceHours $SliceHours -Stream | Select-Object -First $Cap | ForEach-Object {
                                 $Total++
+                                $StreamCount++
                                 $UserKey = [string]$_.userId
                                 if (-not $Users.ContainsKey($UserKey)) {
                                     $Users[$UserKey] = @{ UserId = $UserKey; UserPrincipalName = [string]$_.userPrincipalName; Count = 0; Success = 0; Interactive = $false; IPs = [System.Collections.Generic.HashSet[string]]::new(); Countries = [System.Collections.Generic.HashSet[string]]::new(); First = $null; Last = $null }
@@ -507,11 +519,12 @@ function Push-NHIRun {
                                 if (-not $Entry.First -or $When -lt $Entry.First) { $Entry.First = $When }
                                 if (-not $Entry.Last -or $When -gt $Entry.Last) { $Entry.Last = $When }
                             }
+                            if ($StreamCount -ge $Cap) { $Capped = $true }
                         }
                         $Data = @(foreach ($Entry in $Users.Values) {
                                 [pscustomobject]@{ UserId = $Entry.UserId; UserPrincipalName = $Entry.UserPrincipalName; SignIns = $Entry.Count; Successful = $Entry.Success; Interactive = $Entry.Interactive; IPs = @($Entry.IPs); Countries = @($Entry.Countries); First = $Entry.First; Last = $Entry.Last }
                             }) | Sort-Object -Property SignIns -Descending
-                        New-CIPPBecCollectorResult -Data @($Data) -Count $Total -Complete ($Total -lt $Cap * 2) -Cap $(if ($Total -ge $Cap * 2) { "the newest $Cap user sign-ins of each kind" })
+                        New-CIPPBecCollectorResult -Data @($Data) -Count $Total -Complete (-not $Capped) -Cap $(if ($Capped) { "the newest $Cap user sign-ins of each kind" })
                     }
                 }
                 & $Mark 'DelegatedUse' $Result
@@ -686,7 +699,7 @@ function Push-NHIRun {
                         $Kind = if ($Operation -in @($W.ruleOperations)) { 'Rule' } elseif ($Operation -in @($W.mailOperations)) { 'Mail' } else { 'File' }
                         if ($IP) {
                             if (-not $ByIP.ContainsKey($IP)) { $ByIP[$IP] = @{ IP = $IP; Count = 0; Kinds = [System.Collections.Generic.HashSet[string]]::new() } }
-                            $ByIP[$IP].Count += $Count
+                            $ByIP[$IP].Count = $ByIP[$IP].Count + $Count
                             $null = $ByIP[$IP].Kinds.Add($Kind)
                         }
                         $When = [string]$AD.CreationTime
@@ -695,7 +708,7 @@ function Push-NHIRun {
                             $Site = [string]($AD.SiteUrl ?? $AD.ObjectId)
                             if ($Site) {
                                 if (-not $Sites.ContainsKey($Site)) { $Sites[$Site] = @{ Site = $Site; Count = 0; Operations = [System.Collections.Generic.HashSet[string]]::new(); Files = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase) } }
-                                $Sites[$Site].Count += $Count
+                                $Sites[$Site].Count = $Sites[$Site].Count + $Count
                                 $null = $Sites[$Site].Operations.Add($Operation)
                                 if ($AD.ObjectId) { $null = $Sites[$Site].Files.Add([string]$AD.ObjectId) }
                             }
@@ -704,13 +717,13 @@ function Push-NHIRun {
                         if ($Kind -eq 'Rule') {
                             $Rules.Add([pscustomobject]@{ CreationTime = $When; Operation = $Operation; Mailbox = [string]($AD.MailboxOwnerUPN ?? $AD.ObjectId); ClientIP = $IP; Parameters = (@($AD.Parameters | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join '; ') })
                         }
-                        if ($Operation -eq 'MailItemsAccessed') { $MailItems += $Count }
-                        if ($Operation -in 'Send', 'SendAs', 'SendOnBehalf') { $Sent += $Count }
+                        if ($Operation -eq 'MailItemsAccessed') { $MailItems = $MailItems + $Count }
+                        if ($Operation -in 'Send', 'SendAs', 'SendOnBehalf') { $Sent = $Sent + $Count }
                         $Mailbox = [string]($AD.MailboxOwnerUPN ?? $AD.UserId)
                         if ($Mailbox) {
                             if (-not $Mailboxes.ContainsKey($Mailbox)) { $Mailboxes[$Mailbox] = @{ Mailbox = $Mailbox; Count = 0; Operations = [System.Collections.Generic.HashSet[string]]::new(); IPs = [System.Collections.Generic.HashSet[string]]::new(); First = $When; Last = $When } }
                             $Entry = $Mailboxes[$Mailbox]
-                            $Entry.Count += $Count
+                            $Entry.Count = $Entry.Count + $Count
                             $null = $Entry.Operations.Add($Operation)
                             if ($IP) { $null = $Entry.IPs.Add($IP) }
                             if ($When -and $When -lt $Entry.First) { $Entry.First = $When }

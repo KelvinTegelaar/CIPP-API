@@ -202,7 +202,7 @@ function Get-CIPPNhiScore {
             default { $Value -gt 0 }
         }
         $Weight = [int]($W.$Name ?? 0)
-        if ($Applied) { $Total += $Weight }
+        if ($Applied) { $Total = $Total + $Weight }
         $Breakdown.Add([pscustomobject]@{
                 Signal      = $Name
                 Description = if ($Name -eq 'AttackerWorkload' -and $Value -gt 0 -and -not $Corroborated) {

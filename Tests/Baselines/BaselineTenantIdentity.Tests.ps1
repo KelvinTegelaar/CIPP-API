@@ -155,6 +155,29 @@ Describe 'Baseline tenant identity (#941)' {
         $State.manualAdvance | Should -BeTrue
     }
 
+    It 'opens a group-gated stage to manual approval through a condition group' {
+        $Stages = '[{"name":"One"},{"name":"Two","conditions":[{"type":"group","group":{"value":"other"}},{"type":"success"}],"conditionGroups":[{"logic":"and","conditions":[{"type":"manual"}]}]}]'
+        $script:Rollouts = @((New-Rollout 'b-alt' -Stages $Stages))
+        $script:Deltas = @((New-Delta 'b-alt' 'group' 'g1' $false))
+
+        $State = @((Get-CIPPBaseline -ID 'b-alt').tenantStates)[0]
+
+        $State.groupBlocked | Should -BeFalse
+        $State.manualAdvance | Should -BeTrue
+        $State.nextStage.conditionGroups.Count | Should -Be 1
+    }
+
+    It 'keeps manual approval closed when the manual condition sits in a group the tenant is blocked from' {
+        $Stages = '[{"name":"One"},{"name":"Two","conditions":[{"type":"time","days":30}],"conditionGroups":[{"conditions":[{"type":"group","group":{"value":"other"}},{"type":"manual"}]}]}]'
+        $script:Rollouts = @((New-Rollout 'b-closed' -Stages $Stages))
+        $script:Deltas = @((New-Delta 'b-closed' 'group' 'g1' $false))
+
+        $State = @((Get-CIPPBaseline -ID 'b-closed').tenantStates)[0]
+
+        $State.groupBlocked | Should -BeFalse
+        $State.manualAdvance | Should -BeFalse
+    }
+
     It 'stores tenant assignments and exclusions by customerId' {
         $script:Rollouts = @()
         $Baseline = [pscustomobject]@{

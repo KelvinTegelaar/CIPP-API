@@ -45,9 +45,13 @@ function New-CIPPBaseline {
     # Baseline-level record: metadata + ordered stage definitions (standards live on the deltas).
     $StageDefinitions = @($Baseline.stages | ForEach-Object {
             [PSCustomObject]@{
-                name       = $_.name
-                logic      = $_.logic ?? 'and'
-                conditions = @($_.conditions | Where-Object { $_.type })
+                name            = $_.name
+                logic           = $_.logic ?? 'and'
+                conditions      = @($_.conditions | Where-Object { $_.type })
+                conditionGroups = @(foreach ($Group in @($_.conditionGroups)) {
+                        $GroupConditions = @($Group.conditions | Where-Object { $_.type })
+                        if ($GroupConditions.Count -gt 0) { [PSCustomObject]@{ logic = $Group.logic ?? 'and'; conditions = $GroupConditions } }
+                    })
             }
         })
     $RolloutTable = Get-CippTable -tablename 'BaselineRollouts'

@@ -22,18 +22,18 @@ function Invoke-ExecNHIContainment {
     $Confirmation = ([string]$Request.Body.Confirmation).Trim()
 
     try {
-        if (-not $TenantFilter -or -not $CaseId) { throw 'tenantFilter and caseId are required' }
+        if (-not $TenantFilter -or -not $CaseId) { throw [System.ArgumentException]::new('tenantFilter and caseId are required') }
         $Run = Get-CIPPBecReport -Kind 'NHI' -TenantFilter $TenantFilter -CaseId $CaseId
-        if (-not $Run) { throw "NHI case $CaseId was not found for $TenantFilter" }
+        if (-not $Run) { throw [System.Management.Automation.ItemNotFoundException]::new("NHI case $CaseId was not found for $TenantFilter") }
         $Confirmed = $Confirmation -and ($Confirmation -eq [string]$Run.DisplayName -or $Confirmation -eq [string]$Run.AppId)
-        $Rows = Invoke-CIPPNhiContainment -TenantFilter $TenantFilter -CaseId $CaseId -Actions $Actions -Parameters $Request.Body.Parameters -Confirmed:$Confirmed -Headers $Headers -APIName $APIName
-        $Body = @{ Results = @($Rows) }
-        $StatusCode = [HttpStatusCode]::OK
+        $Rows = @(Invoke-CIPPNhiContainment -TenantFilter $TenantFilter -CaseId $CaseId -Actions $Actions -Parameters $Request.Body.Parameters -Confirmed:$Confirmed -Headers $Headers -APIName $APIName)
+        $Body = @{ Results = $Rows }
+        $StatusCode = Get-CippBulkStatusCode -Total $Rows.Count -Failed @($Rows | Where-Object state -EQ 'error').Count
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "NHI containment failed for case $CaseId`: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = @{ Results = @([pscustomobject]@{ resultText = "Containment failed: $($ErrorMessage.NormalizedError)"; state = 'error' }) }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

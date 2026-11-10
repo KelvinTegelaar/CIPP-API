@@ -18,6 +18,8 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/NHI/Get-CIPPNhiRunSteps.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/NHI/New-CIPPNhiRunRequest.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/ConvertTo-CIPPBecHostAddress.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
     . (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-ExecNHICheck.ps1' | Select-Object -First 1).FullName
 
     function New-Request {
@@ -66,16 +68,45 @@ Describe 'Invoke-ExecNHICheck' {
 
         $Response = Invoke-ExecNHICheck -Request (New-Request -Body ([pscustomobject]@{ tenantFilter = 'contoso.com'; servicePrincipalIds = @(@{ value = $script:SpA }, $script:SpB) })) -TriggerMetadata $null
 
-        $Response.StatusCode | Should -Be 200
+        $Response.StatusCode | Should -Be 207
         @($Response.Body.Cases).Count | Should -Be 2
         ($Response.Body.Cases | Where-Object ServicePrincipalId -EQ $script:SpB).Status | Should -BeExactly 'Error'
         $script:Started.Count | Should -Be 1
     }
 
     It 'refuses an id that is not a GUID and every tenant at once' {
-        (Invoke-ExecNHICheck -Request (New-Request -Body ([pscustomobject]@{ tenantFilter = 'contoso.com'; servicePrincipalId = "x' or 1 eq 1" })) -TriggerMetadata $null).StatusCode | Should -Be 500
-        (Invoke-ExecNHICheck -Request (New-Request -Body ([pscustomobject]@{ tenantFilter = 'AllTenants'; servicePrincipalId = $script:SpA })) -TriggerMetadata $null).StatusCode | Should -Be 500
+        (Invoke-ExecNHICheck -Request (New-Request -Body ([pscustomobject]@{ tenantFilter = 'contoso.com'; servicePrincipalId = "x' or 1 eq 1" })) -TriggerMetadata $null).StatusCode | Should -Be 400
+        (Invoke-ExecNHICheck -Request (New-Request -Body ([pscustomobject]@{ tenantFilter = 'AllTenants'; servicePrincipalId = $script:SpA })) -TriggerMetadata $null).StatusCode | Should -Be 400
         $script:Started.Count | Should -Be 0
+    }
+
+    It 'answers 404 for a case that does not exist' {
+        Mock Get-CIPPBecReport { $null }
+        (Invoke-ExecNHICheck -Request (New-Request @{ tenantFilter = 'contoso.com'; caseId = 'NHI-missing' }) -TriggerMetadata $null).StatusCode | Should -Be 404
+    }
+
+    It 'reads a case named in the body, as MCP sends it, without starting a run' {
+        Mock Get-CIPPBecReport { [pscustomobject]@{ CaseId = 'NHI-1'; Status = 'Completed'; Results = [pscustomobject]@{ CaseId = 'NHI-1' } } }
+
+        $Response = Invoke-ExecNHICheck -Request (New-Request -Body ([pscustomobject]@{ tenantFilter = 'contoso.com'; caseId = 'NHI-1' })) -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be 200
+        $Response.Body.Run.CaseId | Should -BeExactly 'NHI-1'
+        $script:Started.Count | Should -Be 0
+    }
+
+    It 'fails a run that made no progress for hours, so the app can be investigated again' {
+        Mock Get-CIPPBecReport { [pscustomobject]@{ CaseId = 'NHI-1'; Status = 'Running'; RequestedAt = [datetime]::UtcNow.AddDays(-1).ToString('o') } }
+        Mock Get-CIPPAsyncDeployment { @([pscustomobject]@{ Status = 'running'; Steps = @(); LastUpdate = [System.DateTimeOffset]::UtcNow.AddHours(-7) }) }
+
+        $Response = Invoke-ExecNHICheck -Request (New-Request @{ tenantFilter = 'contoso.com'; caseId = 'NHI-1' }) -TriggerMetadata $null
+
+        $Response.Body.Waiting | Should -BeFalse
+        $Response.Body.Error | Should -BeLike '*stopped before it finished*'
+        $script:Rows[0].Properties.Status | Should -BeExactly 'Error'
+
+        Mock Get-CIPPAsyncDeployment { @([pscustomobject]@{ Status = 'running'; Steps = @(); LastUpdate = [System.DateTimeOffset]::UtcNow.AddMinutes(-5) }) }
+        (Invoke-ExecNHICheck -Request (New-Request @{ tenantFilter = 'contoso.com'; caseId = 'NHI-1' }) -TriggerMetadata $null).Body.Waiting | Should -BeTrue -Because 'recent progress means the run is alive'
     }
 
     It 'returns progress while a run is going and the payload with its run block when done' {

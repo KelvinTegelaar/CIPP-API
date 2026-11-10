@@ -32,8 +32,8 @@ BeforeAll {
                     [pscustomobject]@{ Id = 'ara-new'; ResourceDisplayName = 'Microsoft Graph'; Permission = 'Mail.Read'; InWindow = $true }
                     [pscustomobject]@{ Id = 'ara-old'; ResourceDisplayName = 'Microsoft Graph'; Permission = 'User.Read.All'; InWindow = $false }
                 )
-                DelegatedGrants    = @()
-                DirectoryRoles     = @()
+                DelegatedGrants    = @([pscustomobject]@{ Id = 'grant-1'; ConsentType = 'AllPrincipals'; Scope = 'Mail.Read' })
+                DirectoryRoles     = @([pscustomobject]@{ Id = 'ra-1'; RoleDefinitionId = 'rd-appadmin'; RoleName = 'Application Administrator'; DirectoryScopeId = '/' })
                 DirectoryActions   = @(
                     [pscustomobject]@{ Kind = 'AppPersistence'; CreatedApp = $true; InWindow = $true; TargetServicePrincipalId = 'sp-backdoor'; TargetDisplayName = 'Teams Sync'; TargetProtected = $false }
                     [pscustomobject]@{ Kind = 'AppPersistence'; Lateral = $true; InWindow = $true; TargetServicePrincipalId = 'sp-graph'; TargetDisplayName = 'Microsoft Graph'; TargetProtected = $true }
@@ -54,7 +54,7 @@ Describe 'Invoke-CIPPNhiContainment' {
         $script:History = $null
         Mock Set-CIPPBecReport { $script:History = $Properties.Containment }
         $script:Calls = [System.Collections.Generic.List[object]]::new()
-        Mock New-GraphPOSTRequest { $script:Calls.Add([pscustomobject]@{ Uri = $uri; Type = $type; Body = $body }) }
+        Mock New-GraphPOSTRequest { $script:Calls.Add([pscustomobject]@{ Uri = $uri; Type = $type; Body = $body; AsApp = $AsApp }) }
         Mock New-GraphGetRequest { [pscustomobject]@{ keyCredentials = @([pscustomobject]@{ keyId = 'key-old' }, [pscustomobject]@{ keyId = 'cert-new' }) } }
         Mock Write-LogMessage { }
     }
@@ -156,6 +156,32 @@ Describe 'Invoke-CIPPNhiContainment' {
         $Patch = $script:Calls | Where-Object Type -EQ 'PATCH'
         $Patch.Uri | Should -BeExactly 'https://graph.microsoft.com/v1.0/oauth2PermissionGrants/g1'
         ($Patch.Body | ConvertFrom-Json).scope | Should -BeExactly 'User.Read' -Because 'scopes others consented to stay'
+    }
+
+    It 'removes nothing when the operator cleared a target list, rather than falling back to what the case flagged' {
+        $Rows = Invoke-CIPPNhiContainment -TenantFilter 'contoso.com' -CaseId 'NHI-1' -Actions 'RemoveCredentials', 'RevokeAppRoleAssignments' -Parameters ([pscustomobject]@{ CredentialKeyIds = @(); AppRoleAssignmentIds = @() }) -Confirmed
+
+        $script:Calls.Count | Should -Be 0
+        @($Rows.state) | Should -Be @('info', 'info')
+    }
+
+    It 'acts only on targets the case found on the app, never an id from elsewhere' {
+        $Rows = Invoke-CIPPNhiContainment -TenantFilter 'contoso.com' -CaseId 'NHI-1' -Actions 'RemoveDirectoryRoles', 'RevokeDelegatedGrants', 'RemoveFederatedCredentials', 'RemoveOwners' -Parameters @{
+            RoleAssignmentIds      = @('ra-1', '../../users/u-ceo')
+            GrantIds               = @('grant-other-app')
+            FederatedCredentialIds = @('../../../users/u-ceo')
+            OwnerIds               = @('u-not-an-owner')
+        } -Confirmed
+
+        @($script:Calls.Uri) | Should -Be @('https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments/ra-1')
+        @($Rows | Where-Object state -EQ 'warning').Count | Should -Be 4
+    }
+
+    It 'confirms the app compromised with a delegated call, as Identity Protection has no application permission here' {
+        $null = Invoke-CIPPNhiContainment -TenantFilter 'contoso.com' -CaseId 'NHI-1' -Actions 'ConfirmCompromised'
+
+        $script:Calls[0].Uri | Should -BeLike '*/confirmCompromised'
+        $script:Calls[0].AsApp | Should -Not -BeTrue
     }
 
     It 'refuses a case that has not completed' {

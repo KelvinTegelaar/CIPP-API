@@ -51,10 +51,11 @@ function Invoke-ExecBaselineAddStandard {
         $Stages = [System.Collections.Generic.List[object]]::new()
         foreach ($Stage in @($Baseline.stages)) {
             $Stages.Add([PSCustomObject]@{
-                    name       = $Stage.name
-                    logic      = $Stage.logic
-                    conditions = @($Stage.conditions)
-                    standards  = [System.Collections.Generic.List[object]]@($Stage.standardsConfig | Where-Object { $_ })
+                    name            = $Stage.name
+                    logic           = $Stage.logic
+                    conditions      = @($Stage.conditions)
+                    conditionGroups = @($Stage.conditionGroups)
+                    standards       = [System.Collections.Generic.List[object]]@($Stage.standardsConfig | Where-Object { $_ })
                 })
         }
         if ($Stages.Count -eq 0) { throw [System.ArgumentException]::new('The baseline has no stages.') }

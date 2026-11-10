@@ -17,7 +17,7 @@ function Invoke-ExecNHICheck {
     $Payload = $Request.Body
     $TenantFilter = $Request.Query.tenantFilter ?? $Payload.tenantFilter
     # The run to read
-    $CaseId = [string]$Request.Query.caseId
+    $CaseId = [string]($Request.Query.caseId ?? $Payload.caseId)
     # Object id of the service principal to investigate
     $ServicePrincipalId = [string]($Request.Query.servicePrincipalId ?? $Payload.servicePrincipalId)
     # Object ids of several service principals to investigate, one run each
@@ -26,30 +26,41 @@ function Invoke-ExecNHICheck {
     $Start = $ServicePrincipalIds.Count -gt 0
 
     try {
-        if (-not $TenantFilter -or $TenantFilter -eq 'AllTenants') { throw 'tenantFilter must be a single tenant' }
+        $StatusCode = [HttpStatusCode]::OK
+        if (-not $TenantFilter -or $TenantFilter -eq 'AllTenants') { throw [System.ArgumentException]::new('tenantFilter must be a single tenant') }
         $ParsedId = [guid]::Empty
         foreach ($Id in @($ServicePrincipalIds) + @($ServicePrincipalId | Where-Object { $_ })) {
-            if (-not [guid]::TryParse($Id, [ref]$ParsedId)) { throw "servicePrincipalId must be a GUID: $Id" }
+            if (-not [guid]::TryParse($Id, [ref]$ParsedId)) { throw [System.ArgumentException]::new("servicePrincipalId must be a GUID: $Id") }
         }
         if ($CaseId) {
             $Run = Get-CIPPBecReport -Kind 'NHI' -TenantFilter $TenantFilter -CaseId $CaseId -IncludeResults -ErrorAction Stop
-            $Body = if (-not $Run) {
-                @{ Waiting = $false; Error = "NHI run $CaseId was not found for $TenantFilter" }
-            } elseif ($Run.Status -in @('Waiting', 'Running', 'Error')) {
+            if (-not $Run) { throw [System.Management.Automation.ItemNotFoundException]::new("NHI run $CaseId was not found for $TenantFilter") }
+            $Body = if ($Run.Status -in @('Waiting', 'Running', 'Error')) {
                 $Progress = try { @(Get-CIPPAsyncDeployment -JobId $Run.CaseId) | Select-Object -First 1 } catch { $null }
-                if ($Run.Status -in @('Waiting', 'Running')) { Add-CIPPRealtimeWatch -JobId $Run.CaseId }
+                $Status = [string]$Run.Status
+                $RunError = $Run.ErrorMessage
+                # a phase killed by a worker timeout or restart never reports back
+                $LastActivity = $Progress.LastUpdate ?? $Run.StartedAt ?? $Run.RequestedAt
+                $LastActivity = if ($LastActivity -is [System.DateTimeOffset]) { $LastActivity.UtcDateTime } elseif ($LastActivity) { ([datetime]$LastActivity).ToUniversalTime() } else { $null }
+                if ($Status -ne 'Error' -and $LastActivity -and $LastActivity -lt [datetime]::UtcNow.AddHours(-6)) {
+                    $Status = 'Error'
+                    $RunError = 'The run stopped before it finished (worker timeout or restart) and made no progress for 6 hours. Run it again.'
+                    $null = Set-CIPPBecReport -Kind 'NHI' -TenantFilter $TenantFilter -CaseId $CaseId -Properties @{ Status = 'Error'; ErrorMessage = $RunError }
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "NHI run $CaseId stopped without finishing; marked as failed" -Sev 'Warning'
+                }
+                if ($Status -ne 'Error') { Add-CIPPRealtimeWatch -JobId $Run.CaseId }
                 $Summary = @{
                     CaseId             = $Run.CaseId
-                    Status             = $Run.Status
+                    Status             = $Status
                     ServicePrincipalId = $Run.ServicePrincipalId
                     DisplayName        = $Run.DisplayName
                     RequestedAt        = $Run.RequestedAt
                     RequestedBy        = $Run.RequestedBy
                     StartedAt          = $Run.StartedAt
                     Progress           = $Progress
-                    Waiting            = $Run.Status -ne 'Error'
+                    Waiting            = $Status -ne 'Error'
                 }
-                if ($Run.Status -eq 'Error') { $Summary.Error = ($Run.ErrorMessage ?? 'The NHI run failed') }
+                if ($Status -eq 'Error') { $Summary.Error = ($RunError ?? 'The NHI run failed') }
                 $Summary
             } else {
                 $Results = $Run.Results
@@ -84,20 +95,20 @@ function Invoke-ExecNHICheck {
             $Body = if ($ServicePrincipalIds.Count -eq 1) {
                 @{ CaseId = $Cases[0].CaseId; Status = 'Waiting'; Results = "Started an NHI compromise investigation of $($Cases[0].DisplayName)" }
             } else {
+                $StatusCode = Get-CippBulkStatusCode -Total $Cases.Count -Failed @($Cases | Where-Object Status -EQ 'Error').Count
                 @{ Cases = $Cases; Results = "Started $(@($Cases | Where-Object CaseId).Count) of $($Cases.Count) NHI compromise investigations" }
             }
         } else {
-            if (-not $ServicePrincipalId) { throw 'caseId or servicePrincipalId is required' }
+            if (-not $ServicePrincipalId) { throw [System.ArgumentException]::new('caseId or servicePrincipalId is required') }
             # the latest run that is not a failure; never starts one
             $Latest = @(Get-CIPPBecReport -Kind 'NHI' -TenantFilter $TenantFilter -ServicePrincipalId $ServicePrincipalId | Where-Object { $_.Status -in @('Completed', 'Waiting', 'Running') }) | Select-Object -First 1
             $Body = if ($Latest) { @{ CaseId = $Latest.CaseId; Status = $Latest.Status } } else { @{ CaseId = $null; Status = $null; NoRuns = $true } }
         }
-        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "NHI check request failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = @{ Waiting = $false; Error = $ErrorMessage.NormalizedError; Results = $ErrorMessage.NormalizedError }
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

@@ -20,8 +20,8 @@ function Invoke-ExecNHIReport {
     $CaseId = [string]$Request.Body.caseId
 
     try {
-        if (-not $CaseId) { throw 'caseId is required' }
-        if ($Action -ne 'Delete') { throw "Unknown action '$Action'" }
+        if (-not $TenantFilter -or -not $CaseId) { throw [System.ArgumentException]::new('tenantFilter and caseId are required') }
+        if ($Action -ne 'Delete') { throw [System.ArgumentException]::new("Unknown action '$Action'") }
         $Result = Remove-CIPPBecReport -Kind 'NHI' -TenantFilter $TenantFilter -CaseId $CaseId
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Deleted NHI run $CaseId" -Sev 'Info'
         $Body = @{ Results = $Result }
@@ -30,7 +30,7 @@ function Invoke-ExecNHIReport {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "NHI run action '$Action' failed for $CaseId`: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = @{ Results = "Failed: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

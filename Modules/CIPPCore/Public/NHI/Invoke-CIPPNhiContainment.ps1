@@ -39,8 +39,8 @@ function Invoke-CIPPNhiContainment {
     )
 
     $Run = Get-CIPPBecReport -Kind 'NHI' -TenantFilter $TenantFilter -CaseId $CaseId -IncludeResults
-    if (-not $Run) { throw "NHI case $CaseId was not found for $TenantFilter" }
-    if ($Run.Status -ne 'Completed') { throw "NHI case $CaseId has not completed: contain the app from a finished investigation" }
+    if (-not $Run) { throw [System.Management.Automation.ItemNotFoundException]::new("NHI case $CaseId was not found for $TenantFilter") }
+    if ($Run.Status -ne 'Completed') { throw [System.ArgumentException]::new("NHI case $CaseId has not completed: contain the app from a finished investigation") }
     $Results = $Run.Results
     $SpId = [string]$Results.ServicePrincipalId
     $Subject = $Results.Subject
@@ -53,23 +53,27 @@ function Invoke-CIPPNhiContainment {
     } else {
         @(foreach ($Id in ($Actions | Where-Object { $_ } | Select-Object -Unique)) {
                 $Match = $Catalog | Where-Object { $_.Id -ieq [string]$Id } | Select-Object -First 1
-                if (-not $Match) { throw "Unknown containment action '$Id'" }
+                if (-not $Match) { throw [System.ArgumentException]::new("Unknown containment action '$Id'") }
                 $Match
             })
     }
     $Selected = @($Selected | Sort-Object -Property Order)
     $CriticalSelected = @($Selected | Where-Object { $_.Impact -eq 'Critical' })
     if ($CriticalSelected.Count -gt 0 -and -not $Confirmed) {
-        throw "Confirmation is required: the selected actions include Critical changes ($($CriticalSelected.Id -join ', '))"
+        throw [System.ArgumentException]::new("Confirmation is required: the selected actions include Critical changes ($($CriticalSelected.Id -join ', '))")
     }
 
     $Rows = [System.Collections.Generic.List[object]]::new()
     $Add = { param($Action, $Target, $State, $Text) $Rows.Add([pscustomobject]@{ Action = $Action; Target = [string]$Target; state = $State; resultText = $Text }) }
-    # The operator's selection, else the case's defaults; parameters may be a hashtable or a deserialised object.
+    # The operator's selection, even an empty one, else the case's defaults; parameters may be a hashtable or a deserialised object.
     $Targets = {
         param($ParameterName, $Defaults)
-        $Picked = @($Parameters.$ParameterName | Where-Object { $null -ne $_ -and "$_" -ne '' } | ForEach-Object { [string]($_.value ?? $_) })
-        if ($Picked.Count -gt 0) { $Picked } else { @($Defaults | Where-Object { $_ } | ForEach-Object { [string]$_ }) }
+        $Sent = if ($Parameters -is [System.Collections.IDictionary]) { $Parameters.Contains($ParameterName) } else { $null -ne $Parameters -and $null -ne $Parameters.PSObject.Properties[$ParameterName] }
+        if ($Sent) {
+            @($Parameters.$ParameterName | Where-Object { $null -ne $_ -and "$_" -ne '' } | ForEach-Object { [string]($_.value ?? $_) })
+        } else {
+            @($Defaults | Where-Object { $_ } | ForEach-Object { [string]$_ })
+        }
     }
     $Graph = 'https://graph.microsoft.com/v1.0'
     $Credentials = @($Results.Exposure.CredentialDetails | Where-Object { $_ })
@@ -124,6 +128,7 @@ function Invoke-CIPPNhiContainment {
                         if ($Ids.Count -eq 0) { & $Add $Id $Name 'info' 'No federated credential was selected or flagged: nothing removed.'; break }
                         if (-not $AppRegId) { & $Add $Id $Name 'warning' 'Federated credentials live on an app registration in this tenant, and this app has none here.'; break }
                         foreach ($CredentialId in $Ids) {
+                            if ($CredentialId -notin @($Credentials | Where-Object Type -EQ 'Federated' | ForEach-Object { [string]$_.KeyId })) { & $Add $Id $CredentialId 'warning' "Federated credential $CredentialId was not on the app when the case ran: nothing removed"; continue }
                             try {
                                 $null = New-GraphPOSTRequest -uri "$Graph/applications/$AppRegId/federatedIdentityCredentials/$CredentialId" -tenantid $TenantFilter -type DELETE -AsApp $true
                                 & $Add $Id $CredentialId 'success' "Removed federated credential $(($Credentials | Where-Object KeyId -EQ $CredentialId | Select-Object -First 1).DisplayName) ($CredentialId)"
@@ -133,6 +138,7 @@ function Invoke-CIPPNhiContainment {
                     'RemoveOwners' {
                         $Ids = @(& $Targets 'OwnerIds' @())
                         if ($Ids.Count -eq 0) { & $Add $Id $Name 'info' 'No owner was selected: nothing removed.'; break }
+                        foreach ($OwnerId in @($Ids | Where-Object { $_ -notin @($Results.Owners.Id) })) { & $Add $Id $OwnerId 'warning' "$OwnerId was not an owner of the app when the case ran: nothing removed" }
                         foreach ($Owner in @($Results.Owners | Where-Object { [string]$_.Id -in $Ids })) {
                             $ObjectPath = if ($Owner.OwnerOf -eq 'Enterprise app') { "servicePrincipals/$SpId" } else { "applications/$AppRegId" }
                             $Label = if ($Owner.UserPrincipalName) { $Owner.UserPrincipalName } else { $Owner.DisplayName }
@@ -151,8 +157,10 @@ function Invoke-CIPPNhiContainment {
                         $Ids = @(& $Targets $Spec.Parameter $Spec.Defaults)
                         if ($Ids.Count -eq 0) { & $Add $Id $Name 'info' "Nothing was selected$(if ($Id -eq 'RevokeAppRoleAssignments') { ' or granted in the window' }): nothing removed."; break }
                         foreach ($TargetId in $Ids) {
-                            $Label = @($Spec.Rows | Where-Object { [string]$_.Id -eq $TargetId } | ForEach-Object $Spec.Label) | Select-Object -First 1
-                            if (-not $Label) { $Label = $TargetId }
+                            # only what the case found on this app, never an id from elsewhere
+                            $Row = @($Spec.Rows | Where-Object { $_ -and [string]$_.Id -eq $TargetId }) | Select-Object -First 1
+                            if (-not $Row) { & $Add $Id $TargetId 'warning' "$TargetId was not on the app when the case ran: nothing removed"; continue }
+                            $Label = @($Row | ForEach-Object $Spec.Label)[0]
                             try {
                                 $null = New-GraphPOSTRequest -uri "$Graph/$($Spec.Path -f $TargetId)" -tenantid $TenantFilter -type DELETE -AsApp $true
                                 & $Add $Id $TargetId 'success' "Removed $Label"
@@ -224,7 +232,7 @@ function Invoke-CIPPNhiContainment {
                         }
                     }
                     'ConfirmCompromised' {
-                        $null = New-GraphPOSTRequest -uri "$Graph/identityProtection/riskyServicePrincipals/confirmCompromised" -tenantid $TenantFilter -type POST -body (ConvertTo-Json -InputObject @{ servicePrincipalIds = @($SpId) } -Compress) -AsApp $true
+                        $null = New-GraphPOSTRequest -uri "$Graph/identityProtection/riskyServicePrincipals/confirmCompromised" -tenantid $TenantFilter -type POST -body (ConvertTo-Json -InputObject @{ servicePrincipalIds = @($SpId) } -Compress)
                         & $Add $Id $SpId 'success' "Confirmed $Name compromised in Identity Protection"
                     }
                     'LockAppInstanceProperties' {

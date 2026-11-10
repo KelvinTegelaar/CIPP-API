@@ -118,10 +118,11 @@ function Export-CIPPBaselineTemplate {
                 })
         }
         [PSCustomObject]@{
-            name       = $Stage.name
-            logic      = $Stage.logic ?? 'and'
-            conditions = @($Stage.conditions)
-            standards  = @($ExportStandards)
+            name            = $Stage.name
+            logic           = $Stage.logic ?? 'and'
+            conditions      = @($Stage.conditions)
+            conditionGroups = @($Stage.conditionGroups)
+            standards       = @($ExportStandards)
         }
     }
 

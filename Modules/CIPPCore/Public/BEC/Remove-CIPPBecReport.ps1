@@ -28,7 +28,7 @@ function Remove-CIPPBecReport {
     $Table = Get-CIPPTable -TableName "$($TablePrefix)Reports"
     $Row = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Select-Object -First 1
     if (-not $Row) {
-        throw "$Kind run $CaseId was not found for $TenantFilter"
+        throw [System.Management.Automation.ItemNotFoundException]::new("$Kind run $CaseId was not found for $TenantFilter")
     }
 
     $ResultsTable = Get-CIPPTable -TableName "$($TablePrefix)Results"

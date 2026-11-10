@@ -19,8 +19,8 @@ function Invoke-ExecNHIEvidenceExport {
 
     Set-CippBecCaseContext -CaseId $CaseId
     try {
-        if (-not $TenantFilter) { throw 'tenantFilter is required' }
-        if (-not $CaseId) { throw 'caseId is required' }
+        if (-not $TenantFilter) { throw [System.ArgumentException]::new('tenantFilter is required') }
+        if (-not $CaseId) { throw [System.ArgumentException]::new('caseId is required') }
         $Package = New-CIPPBecEvidencePackage -Kind 'NHI' -TenantFilter $TenantFilter -CaseId $CaseId -Headers $Headers -APIName $APIName
         $Body = @{
             Results  = "Evidence package for case $CaseId created: $($Package.FileCount) files, $([math]::Round($Package.Bytes / 1KB)) KB"
@@ -36,7 +36,7 @@ function Invoke-ExecNHIEvidenceExport {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Evidence export for NHI case $CaseId failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = @{ Results = "Evidence export failed: $($ErrorMessage.NormalizedError)" }
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     } finally {
         Set-CippBecCaseContext -CaseId $null
     }

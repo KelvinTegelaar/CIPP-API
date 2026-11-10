@@ -766,6 +766,9 @@
                     "items": {
                       "type": "object",
                       "properties": {
+                        "conditionGroups": {
+                          "type": "string"
+                        },
                         "conditions": {
                           "type": "array",
                           "items": {
@@ -31936,6 +31939,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "caseId": {
+                    "type": "string",
+                    "description": "The run to read"
+                  },
                   "servicePrincipalId": {
                     "type": "string",
                     "description": "Object id of the service principal to investigate"
@@ -32009,6 +32016,9 @@
                 }
               }
             }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -32091,14 +32101,17 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -32169,9 +32182,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -32387,14 +32397,17 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -32455,9 +32468,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [

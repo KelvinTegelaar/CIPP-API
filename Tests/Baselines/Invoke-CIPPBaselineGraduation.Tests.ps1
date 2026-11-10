@@ -54,6 +54,25 @@ Describe 'Invoke-CIPPBaselineGraduation' {
         Should -Invoke Add-CIPPBaselineHistoryEvent -Times 1 -ParameterFilter { $TriggeredBy -eq 'admin@contoso.com' }
     }
 
+    It 'advances a tenant that misses the main conditions but meets a condition group' {
+        $script:Baseline.stages[1] | Add-Member -NotePropertyName conditionGroups -NotePropertyValue @(
+            [pscustomobject]@{ logic = 'and'; conditions = @([pscustomobject]@{ type = 'time'; days = 1; unit = 'days' }) }
+        ) -Force
+        $Results = @(Invoke-CIPPBaselineGraduation)
+        ($Results | Where-Object TenantFilter -EQ 'out.onmicrosoft.com').Advanced | Should -BeTrue
+        ($Results | Where-Object TenantFilter -EQ 'in.onmicrosoft.com').Advanced | Should -BeTrue
+    }
+
+    It 'holds a tenant that meets no condition group and reports every unmet condition' {
+        $script:Baseline.stages[1] | Add-Member -NotePropertyName conditionGroups -NotePropertyValue @(
+            [pscustomobject]@{ logic = 'and'; conditions = @([pscustomobject]@{ type = 'manual' }) }
+        ) -Force
+        $Out = @(Invoke-CIPPBaselineGraduation) | Where-Object TenantFilter -EQ 'out.onmicrosoft.com'
+        $Out.Advanced | Should -BeFalse
+        $Out.Unmet | Should -Be @('group', 'manual')
+        $script:Baseline.stages[1].PSObject.Properties.Remove('conditionGroups')
+    }
+
     Context 'variable condition' {
         BeforeEach {
             function Get-CIPPTextReplacement { param($TenantFilter, $Text) }
