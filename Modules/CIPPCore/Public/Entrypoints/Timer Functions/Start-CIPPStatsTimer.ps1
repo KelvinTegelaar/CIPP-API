@@ -133,12 +133,8 @@ function Start-CIPPStatsTimer {
             DirectAddTenants       = $DirectAddTenants
         } | ConvertTo-Json
 
-        try {
-            Invoke-CIPPRestMethod -Uri 'https://management.cipp.app/api/stats' -Method POST -Body $SendingObject -ContentType 'application/json'
-        } catch {
-            $rand = Get-Random -Minimum 0.5 -Maximum 5.5
-            Start-Sleep -Seconds $rand
-            Invoke-CIPPRestMethod -Uri 'https://management.cipp.app/api/stats' -Method POST -Body $SendingObject -ContentType 'application/json'
-        }
+        # Every instance fires this timer on the same cron, so the post is staggered by a random 1-5 minutes
+        # and retried (up to 3 attempts) to keep the whole fleet from hitting the stats host in the same moment.
+        $null = Send-CIPPStats -Body $SendingObject
     }
 }
