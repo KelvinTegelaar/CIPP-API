@@ -16,6 +16,10 @@ function Invoke-CIPPBaselineGlobalSecureAccessCompliantNetwork {
     $PreferIPv4 = $Remediate.preferIPv4 -ne $false
     $LockDown = [int]($Remediate.lockDownClient -ne $false)
     $Enforce = $Remediate.enforce -eq $true
+    # Same resolution as the prepare hook: operator-chosen name, default for baselines saved before the variable existed.
+    $PolicyName = "$($Remediate.policyName)"
+    if (-not $PolicyName) { $PolicyName = 'CIPP: Require compliant network (Global Secure Access)' }
+    $PolicyName = $(try { Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $PolicyName } catch { $PolicyName })
     $RoleIds = @($Remediate.excludeAdminRoles | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ } | Sort-Object -Unique)
     $UserRefs = @($Remediate.excludeUsers | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
     $GroupRefs = @($Remediate.excludeGroups | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
@@ -301,7 +305,7 @@ exit 0
             }
         }
         if ($Remediate.useDetectedBreakGlass -ne $false) {
-            $Others = @(New-GraphGetRequest -uri "$Graph/identity/conditionalAccess/policies?`$top=999" -tenantid $TenantFilter -AsApp $true | Where-Object { $_.displayName -ne 'CIPP: Require compliant network (Global Secure Access)' })
+            $Others = @(New-GraphGetRequest -uri "$Graph/identity/conditionalAccess/policies?`$top=999" -tenantid $TenantFilter -AsApp $true | Where-Object { $_.displayName -ne $PolicyName })
             $Candidate = Get-CIPPCABreakGlassCandidate -Policies $Others
             if ($Candidate.id) {
                 if ($Candidate.type -eq 'group') { if ($ExcludeGroups -notcontains $Candidate.id) { $ExcludeGroups.Add($Candidate.id) } }
@@ -315,7 +319,7 @@ exit 0
         foreach ($Efp in @(New-GraphGetRequest -uri "$Graph/servicePrincipals?`$filter=displayName eq 'GSA-ExplicitForwardProxy'&`$select=appId" -tenantid $TenantFilter -AsApp $true)) { $ExcludeApps.Add($Efp.appId) }
         $State = if ($Enforce) { 'enabled' } else { 'enabledForReportingButNotEnforced' }
         $Policy = @{
-            displayName   = 'CIPP: Require compliant network (Global Secure Access)'
+            displayName   = $PolicyName
             state         = $State
             conditions    = @{
                 users          = @{ includeUsers = @('All'); excludeUsers = @($ExcludeUsers); includeGroups = @(); excludeGroups = @($ExcludeGroups); includeRoles = @(); excludeRoles = @($RoleIds) }

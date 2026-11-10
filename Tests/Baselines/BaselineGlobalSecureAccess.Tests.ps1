@@ -8,6 +8,7 @@ BeforeAll {
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
     function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
+    function Get-CIPPTextReplacement { param($TenantFilter, $Text) $Text }
     function New-GraphPostRequest { param($uri, $tenantid, $type, $body, $AsApp) }
     function Add-CIPPW32ScriptApplication { param($TenantFilter, $Properties) }
     function Set-CIPPAssignedApplication { param($ApplicationId, $TenantFilter, $GroupName, $ExcludeGroup, $Intent, $AppType, $APIName) }
@@ -77,6 +78,24 @@ Describe 'Get-CIPPBaselineGlobalSecureAccessCompliantNetworkState' {
         $P = Get-CIPPBaselineGlobalSecureAccessCompliantNetworkState -Item ([PSCustomObject]@{ Variables = $Variables }) -TenantFilter $script:Tenant
         $P.Expected.policyState | Should -Be 'enabled'
         $P.Current.policyDrift | Should -BeTrue
+    }
+
+    It 'finds the policy under the operator-chosen name, and under the default name when none is set' {
+        $script:Renamed = $script:Policy.Clone(); $script:Renamed.displayName = 'CA999 - Compliant network'
+        Mock New-CIPPDbRequest {
+            switch ($Type) {
+                'NetworkAccess' { @($script:TenantRow | ConvertTo-Cached) }
+                'ConditionalAccessPolicies' { @($script:Renamed | ConvertTo-Cached) }
+                default { @() }
+            }
+        }
+        $Variables = [PSCustomObject]@{ deployWindows = $false; deployMacOS = $false; policyName = 'CA999 - Compliant network' }
+        $P = Get-CIPPBaselineGlobalSecureAccessCompliantNetworkState -Item ([PSCustomObject]@{ Variables = $Variables }) -TenantFilter $script:Tenant
+        $P.Current.policyPresent | Should -BeTrue
+
+        $Variables.policyName = ''
+        $P = Get-CIPPBaselineGlobalSecureAccessCompliantNetworkState -Item ([PSCustomObject]@{ Variables = $Variables }) -TenantFilter $script:Tenant
+        $P.Current.policyPresent | Should -BeFalse
     }
 
     It 'returns No Data when the NetworkAccess cache was never collected' {
@@ -215,6 +234,17 @@ Describe 'Invoke-CIPPBaselineGlobalSecureAccessCompliantNetwork' {
         Invoke-CIPPBaselineGlobalSecureAccessCompliantNetwork -Remediate ([PSCustomObject]@{ deployMacOS = $false }) -TenantFilter $script:Tenant -Current $script:Configured | Out-Null
         Should -Invoke Set-CIPPDBCacheIntuneMobileApps -Times 1 -Exactly
         Should -Invoke Set-CIPPDBCacheConditionalAccessPolicies -Times 1 -Exactly
+    }
+
+    It 'creates the policy under the operator-chosen name and skips that policy when detecting break-glass accounts' {
+        $script:LivePolicies = @(
+            [PSCustomObject]@{ displayName = 'CA999 - Compliant network'; state = 'enabled'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeUsers = @('All'); excludeUsers = @('u-self'); excludeGroups = @() } } }
+        )
+        $script:Json = $null
+        Mock New-CIPPCAPolicy { $script:Json = $RawJSON | ConvertFrom-Json }
+        Invoke-CIPPBaselineGlobalSecureAccessCompliantNetwork -Remediate ([PSCustomObject]@{ deployMacOS = $false; policyName = 'CA999 - Compliant network' }) -TenantFilter $script:Tenant -Current $null | Out-Null
+        $script:Json.displayName | Should -Be 'CA999 - Compliant network'
+        @($script:Json.conditions.users.excludeUsers) | Should -Not -Contain 'u-self'
     }
 
     It 'takes the break-glass account the tenant already excludes elsewhere' {

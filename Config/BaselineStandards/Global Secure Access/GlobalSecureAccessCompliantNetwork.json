@@ -6,7 +6,7 @@
     "HighImpact"
   ],
   "impact": "High Impact",
-  "helpText": "Makes stolen sign-in tokens useless off company devices using Entra ID P1: onboards the tenant to Global Secure Access, enables the Microsoft 365 traffic profile for all users, deploys the client through Intune (Windows and macOS) and creates a Conditional Access policy that blocks every sign-in not coming from the compliant network. The policy is created in report-only mode until 'Enforce the policy' is switched on. Admin roles, your break-glass accounts, Intune and Explicit Forward Proxy are excluded.",
+  "helpText": "Makes stolen sign-in tokens useless off company devices using Entra ID P1: onboards the tenant to Global Secure Access, enables the Microsoft 365 traffic profile for all users, deploys the client through Intune (Windows and macOS) and creates a Conditional Access policy that blocks every sign-in not coming from the compliant network. The policy is created in report-only mode until 'Enforce the policy' is switched on and its name can be changed to match your naming convention. Admin roles, your break-glass accounts, Intune and Explicit Forward Proxy are excluded.",
   "executiveText": "Routes staff sign-ins through Microsoft's secure edge, installs Microsoft's network client on company Windows and Mac computers, and blocks every sign-in that does not come from one of those computers, so a stolen password or sign-in token cannot be used from an attacker's machine. Starts in a monitoring mode.",
   "docsDescription": "Grades the tenant setup (onboarded, Microsoft 365 profile enabled and assigned to all users, signaling on, compliant network location present), the Intune objects for the selected platforms and the policy (present, state, excluded roles and accounts). The client objects carry a configuration fingerprint and are redeployed only when it changes, so the standard runs checkBeforeRun false. It never disables signaling and refuses to enable the policy when no break-glass exclusion resolves.",
   "impactColour": "error",
@@ -96,6 +96,11 @@
       "default": false,
       "recommended": true
     },
+    "policyName": {
+      "type": "textField",
+      "label": "Name of the Conditional Access policy (changing it after deployment creates a new policy; Detect Conditional Access Drift then lists the old one for removal)",
+      "default": "CIPP: Require compliant network (Global Secure Access)"
+    },
     "excludeAdminRoles": {
       "type": "AdminRolesMultiSelect",
       "multiple": true,
@@ -141,6 +146,7 @@
     "preferIPv4": "%preferIPv4%",
     "lockDownClient": "%lockDownClient%",
     "enforce": "%enforce%",
+    "policyName": "%policyName%",
     "excludeAdminRoles": "%excludeAdminRoles%",
     "excludeUsers": "%excludeUsers%",
     "excludeGroups": "%excludeGroups%",
@@ -148,6 +154,7 @@
   },
   "checkBeforeRun": false,
   "driftManagedNames": [
+    "%policyName%",
     "Global Secure Access - macOS System Extensions",
     "Global Secure Access - macOS Transparent Proxy",
     "Global Secure Access - macOS Client Settings"
