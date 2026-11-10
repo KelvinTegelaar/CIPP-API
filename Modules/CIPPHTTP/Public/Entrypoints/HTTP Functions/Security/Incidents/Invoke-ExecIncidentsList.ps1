@@ -72,7 +72,7 @@ function Invoke-ExecIncidentsList {
         }
         $StatusCode = [HttpStatusCode]::OK
         $Body = [PSCustomObject]@{
-            Results  = @($GraphRequest | Sort-Object id -Descending)
+            Results  = @($GraphRequest | Sort-Object Created -Descending)
             Metadata = $Metadata
         }
     } catch {

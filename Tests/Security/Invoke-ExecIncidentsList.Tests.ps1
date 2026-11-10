@@ -53,3 +53,31 @@ Describe 'Invoke-ExecIncidentsList tags' {
         @($response.Body.Results).ForEach({ $_.Tags }) | Should -Be @('VIP, Credential Phish', 'Credential Phish', '')
     }
 }
+
+Describe 'Invoke-ExecIncidentsList order' {
+    It 'lists the newest incident first' {
+        Mock New-GraphGetRequest {
+            [pscustomobject]@{ id = '999'; createdDateTime = [datetime]'2026-06-10T10:00:00Z' }
+            [pscustomobject]@{ id = '1508'; createdDateTime = [datetime]'2026-11-07T10:00:00Z' }
+            [pscustomobject]@{ id = '1000'; createdDateTime = [datetime]'2026-06-11T10:00:00Z' }
+        }
+        $request = [pscustomobject]@{ Query = [pscustomobject]@{ tenantFilter = 'a.com' } }
+
+        $response = Invoke-ExecIncidentsList -Request $request -TriggerMetadata $null
+
+        @($response.Body.Results).ForEach({ $_.Id }) | Should -Be @('1508', '1000', '999')
+    }
+
+    It 'lists the newest incident first across tenants' {
+        Mock Get-GraphRequestList {
+            [pscustomobject]@{ id = '120'; Tenant = 'a.com'; createdDateTime = [datetime]'2026-11-07T10:00:00Z' }
+            [pscustomobject]@{ id = '7'; Tenant = 'b.com'; createdDateTime = [datetime]'2026-11-08T10:00:00Z' }
+            [pscustomobject]@{ id = '1500'; Tenant = 'c.com'; createdDateTime = [datetime]'2026-11-06T10:00:00Z' }
+        }
+        $request = [pscustomobject]@{ Query = [pscustomobject]@{ tenantFilter = 'AllTenants' } }
+
+        $response = Invoke-ExecIncidentsList -Request $request -TriggerMetadata $null
+
+        @($response.Body.Results).ForEach({ $_.Tenant }) | Should -Be @('b.com', 'a.com', 'c.com')
+    }
+}
