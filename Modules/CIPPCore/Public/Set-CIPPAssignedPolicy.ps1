@@ -45,9 +45,9 @@ function Set-CIPPAssignedPolicy {
                 $ResolvedFilterId = $MatchingFilter.id
                 Write-Host "Found assignment filter: $($MatchingFilter.displayName) with ID: $ResolvedFilterId"
             } else {
-                $ErrorMessage = "No assignment filter found matching the name: $AssignmentFilterName. Policy assigned without filter."
+                $ErrorMessage = "No assignment filter found matching the name: $AssignmentFilterName. Policy not assigned."
                 Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -sev 'Warning' -tenant $TenantFilter
-                Write-Host $ErrorMessage
+                throw $ErrorMessage
             }
         }
 

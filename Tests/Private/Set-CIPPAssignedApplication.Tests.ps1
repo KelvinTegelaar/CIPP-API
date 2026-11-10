@@ -54,4 +54,29 @@ Describe 'Set-CIPPAssignedApplication include target' {
             }
         }
     }
+
+    Context 'an assignment filter named in the request' {
+        BeforeEach {
+            Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*/assignmentFilters' } -MockWith {
+                @([PSCustomObject]@{ id = 'filter-1'; displayName = 'CIPPTestWin' })
+            }
+        }
+
+        It 'throws and does not post when no filter matches the name' {
+            Mock -CommandName Get-CippException -MockWith { [PSCustomObject]@{ NormalizedError = $Exception.Exception.Message } }
+
+            { Set-CIPPAssignedApplication -GroupName 'Sales Users' -AssignmentFilterName 'CIPPTestMissing' -ApplicationId 'app-1' -Intent 'Required' -TenantFilter $script:Tenant } |
+                Should -Throw -ExpectedMessage '*CIPPTestMissing*'
+
+            Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
+        }
+
+        It 'sends the filter id when a filter matches the name' {
+            $null = Set-CIPPAssignedApplication -GroupName 'Sales Users' -AssignmentFilterName 'CIPPTestWin' -ApplicationId 'app-1' -Intent 'Required' -TenantFilter $script:Tenant
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                ($body | ConvertFrom-Json).mobileAppAssignments.target.deviceAndAppManagementAssignmentFilterId -eq 'filter-1'
+            }
+        }
+    }
 }
