@@ -81,10 +81,8 @@ function Push-DBCacheStorageCleanupScanBatch {
         while ($NextUri) {
             $Page = New-GraphGetRequest -uri $NextUri -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true -noPagination $true -SkipValueExtraction
             $Items = @()
-            $NextLink = $null
             if ($null -ne $Page.value) {
                 $Items = @($Page.value)
-                $NextLink = $Page.'@odata.nextLink'
             } elseif ($Page -is [System.Array]) {
                 $Items = @($Page)
             } elseif ($Page.PSObject.Properties.Name -contains 'Id') {
@@ -110,8 +108,8 @@ function Push-DBCacheStorageCleanupScanBatch {
                 }
             }
 
-            if ($Capped -or [string]::IsNullOrWhiteSpace($NextLink)) { break }
-            $NextUri = $NextLink
+            if ($Capped -or $Items.Count -lt 500) { break }
+            $NextUri = "$BaseUri/site/RecycleBin?`$select=Id,Size,ItemState&`$top=500&`$skip=$Seen&`$orderby=DeletedDate desc"
         }
 
         return [PSCustomObject]@{

@@ -218,4 +218,64 @@ Describe 'Invoke-ListSiteRecycleBinSummary' {
         ($Response.Body.Results.PSObject.Properties.Name -contains 'Title') | Should -BeFalse
         ($Response.Body.Results.PSObject.Properties.Name -contains 'LeafName') | Should -BeFalse
     }
+
+    Context 'bin larger than one page' {
+        BeforeEach {
+            function global:New-GraphGetRequest {
+                param(
+                    $uri, $tenantid, $scope, $AsApp, $extraHeaders,
+                    [switch]$UseCertificate,
+                    [bool]$noPagination,
+                    [switch]$SkipValueExtraction
+                )
+                $Skip = if ($uri -match '\$skip=(\d+)') { [int]$Matches[1] } else { 0 }
+                $Top = if ($uri -match '\$top=(\d+)') { [int]$Matches[1] } else { 100 }
+                [PSCustomObject]@{ value = @($script:Bin | Select-Object -Skip $Skip -First $Top) }
+            }
+        }
+
+        It 'counts every item' {
+            $script:Bin = @(1..520 | ForEach-Object { [PSCustomObject]@{ Id = "$_"; Size = 10; ItemState = 1 } })
+            $Response = Invoke-ListSiteRecycleBinSummary -Request ([pscustomobject]@{
+                    Params  = @{ CIPPEndpoint = 'ListSiteRecycleBinSummary' }
+                    Headers = @{}
+                    Query   = @{ tenantFilter = 'contoso.onmicrosoft.com'; SiteUrl = 'https://contoso.sharepoint.com/sites/a' }
+                    Body    = @{}
+                })
+
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+            $Response.Body.Results.itemCount | Should -Be 520
+            $Response.Body.Results.totalBytes | Should -Be 5200
+            $Response.Body.Results.scannedItems | Should -Be 520
+            $Response.Body.Results.capped | Should -BeFalse
+        }
+
+        It 'reports capped when MaxItems stops the scan on a later page' {
+            $script:Bin = @(1..520 | ForEach-Object { [PSCustomObject]@{ Id = "$_"; Size = 10; ItemState = 1 } })
+            $Response = Invoke-ListSiteRecycleBinSummary -Request ([pscustomobject]@{
+                    Params  = @{ CIPPEndpoint = 'ListSiteRecycleBinSummary' }
+                    Headers = @{}
+                    Query   = @{ tenantFilter = 'contoso.onmicrosoft.com'; SiteUrl = 'https://contoso.sharepoint.com/sites/a'; MaxItems = 510 }
+                    Body    = @{}
+                })
+
+            $Response.Body.Results.itemCount | Should -Be 510
+            $Response.Body.Results.scannedItems | Should -Be 510
+            $Response.Body.Results.capped | Should -BeTrue
+        }
+
+        It 'does not report capped for a bin of exactly one page' {
+            $script:Bin = @(1..500 | ForEach-Object { [PSCustomObject]@{ Id = "$_"; Size = 10; ItemState = 2 } })
+            $Response = Invoke-ListSiteRecycleBinSummary -Request ([pscustomobject]@{
+                    Params  = @{ CIPPEndpoint = 'ListSiteRecycleBinSummary' }
+                    Headers = @{}
+                    Query   = @{ tenantFilter = 'contoso.onmicrosoft.com'; SiteUrl = 'https://contoso.sharepoint.com/sites/a' }
+                    Body    = @{}
+                })
+
+            $Response.Body.Results.itemCount | Should -Be 500
+            $Response.Body.Results.secondStageCount | Should -Be 500
+            $Response.Body.Results.capped | Should -BeFalse
+        }
+    }
 }
