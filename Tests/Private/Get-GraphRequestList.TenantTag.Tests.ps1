@@ -48,6 +48,21 @@ Describe 'Get-GraphRequestList tenant tagging' {
     }
 }
 
+Describe 'Get-GraphRequestList bare Graph values' {
+    It 'keeps <Value> as the value of a tagged record' -ForEach @(
+        @{ Value = '12' }
+        @{ Value = 5 }
+    ) {
+        Mock -CommandName New-GraphGetRequest -MockWith { $Value }
+
+        $Result = @(Get-GraphRequestList -TenantFilter 'contoso.com' -Endpoint 'users/$count' -SkipCache)
+
+        $Result.Count | Should -Be 1
+        $Result[0].value | Should -BeExactly $Value
+        $Result[0].Tenant | Should -Be 'contoso.com'
+    }
+}
+
 Describe 'Get-GraphRequestList -JsonPages' {
     It 'emits each Graph page as its own tagged JSON array' {
         Mock -CommandName New-GraphGetRequest -MockWith {

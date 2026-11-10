@@ -519,6 +519,8 @@ function Get-GraphRequestList {
                                     if ($null -eq $ResultProperties['Tenant']) { $ResultProperties.Add([psnoteproperty]::new('Tenant', $TenantFilter)) }
                                     if ($null -eq $ResultProperties['CippStatus']) { $ResultProperties.Add([psnoteproperty]::new('CippStatus', 'Good')) }
                                     $Result
+                                } elseif ($Result -is [string] -or $Result -is [System.ValueType]) {
+                                    [PSCustomObject]@{ value = $Result.PSObject.BaseObject; Tenant = $TenantFilter; CippStatus = 'Good' }
                                 } else {
                                     $Result | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
                                 }
