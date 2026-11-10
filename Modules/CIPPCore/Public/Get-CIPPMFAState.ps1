@@ -256,24 +256,12 @@ function Get-CIPPMFAState {
             if ([string]$User.userPrincipalName -match $ExtDomainPattern) { [void]$ExternalDomains.Add($Matches.domain) }
         }
         if ($ExternalDomains.Count -gt 0) {
-            $DomainRequests = foreach ($Domain in $ExternalDomains) {
-                @{ id = $Domain; method = 'GET'; url = "tenantRelationships/findTenantInformationByDomainName(domainName='$Domain')" }
-            }
-            $UnresolvedDomains.UnionWith($ExternalDomains)
-            try {
-                foreach ($Result in @(New-GraphBulkRequest -Requests @($DomainRequests) -tenantid $TenantFilter -asapp $true)) {
-                    $Domain = [string]$Result.id
-                    if ($Result.status -eq 200 -and $Result.body.tenantId) {
-                        $DomainTenantLookup[$Domain] = [string]$Result.body.tenantId
-                        [void]$UnresolvedDomains.Remove($Domain)
-                    } elseif ($Result.status -in 400, 404) {
-                        # Not an Entra tenant: a definite "no home tenant", not a failure
-                        [void]$UnresolvedDomains.Remove($Domain)
-                    }
-                }
-            } catch {
-                Write-Host "External tenant lookup failed: $($_.Exception.Message)"
-                $Errors.Add(@{Step = 'ExternalTenants'; Message = $_.Exception.Message })
+            $TenantResolution = Get-CIPPExternalDomainTenant -Domains @($ExternalDomains) -TenantFilter $TenantFilter
+            $DomainTenantLookup = $TenantResolution.Lookup
+            $UnresolvedDomains = $TenantResolution.Unresolved
+            if ($TenantResolution.Error) {
+                Write-Host "External tenant lookup failed: $($TenantResolution.Error)"
+                $Errors.Add(@{Step = 'ExternalTenants'; Message = $TenantResolution.Error })
             }
             if ($UnresolvedDomains.Count -gt 0) {
                 $Errors.Add(@{Step = 'ExternalTenants'; Message = "Could not resolve the home tenant for $($UnresolvedDomains.Count) external domain(s): $($UnresolvedDomains -join ', ')" })

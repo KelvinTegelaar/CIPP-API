@@ -89,6 +89,14 @@ Describe 'ZTNA identity tests synced to ZTA 3.1.0' {
             $script:Result.Markdown | Should -Match 'No Conditional Access policies are targeting guests'
         }
 
+        It 'counts the legacy GuestsOrExternalUsers include token as targeting guests' {
+            $script:Data['ConditionalAccessPolicies'] = @(
+                [pscustomobject]@{ id = 'p4'; displayName = 'Legacy guest SIF'; state = 'enabled'; conditions = [pscustomobject]@{ users = [pscustomobject]@{ includeUsers = @('GuestsOrExternalUsers'); includeGuestsOrExternalUsers = $null } }; grantControls = $null; sessionControls = [pscustomobject]@{ signInFrequency = [pscustomobject]@{ isEnabled = $true; type = 'hours'; value = 12 } } }
+            )
+            Invoke-CippTestZTNA21824 -Tenant 'contoso.com'
+            $script:Result.Status | Should -Be 'Passed'
+        }
+
         It 'fails on a collected empty policy set and skips when nothing was collected' {
             $script:Data['ConditionalAccessPolicies'] = @()
             $script:CountRows = @('ConditionalAccessPolicies')

@@ -19,7 +19,8 @@ function Invoke-CippTestZTNA21824 {
         }
 
         $filteredCAPolicies = @($allCAPolicies).Where({
-            ($null -ne $_.conditions.users.includeGuestsOrExternalUsers) -and
+            # The legacy 'GuestsOrExternalUsers' token in includeUsers targets guests without the block
+            ($null -ne $_.conditions.users.includeGuestsOrExternalUsers -or $_.conditions.users.includeUsers -contains 'GuestsOrExternalUsers') -and
             ($_.state -in @('enabled', 'enabledForReportingButNotEnforced')) -and
             ($null -eq $_.grantControls.termsOfUse -or $_.grantControls.termsOfUse.Count -eq 0)
         })

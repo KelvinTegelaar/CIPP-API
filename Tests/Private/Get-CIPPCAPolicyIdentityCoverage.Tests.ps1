@@ -3,6 +3,7 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPCAPolicyIdentityCoverage.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPExternalDomainTenant.ps1')
 
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp, $ErrorAction, $noPagination, $ComplexFilter) }
     function New-GraphBulkRequest { param($Requests, $tenantid, $asapp, $Version) }
@@ -456,28 +457,29 @@ Describe 'Get-CIPPCAPolicyIdentityCoverage' {
                     displayName       = 'Matching B2B guest'
                     userPrincipalName = 'a_fabrikam.com#EXT#@contoso.com'
                     userType          = 'Guest'
-                    identities        = @(
-                        [pscustomobject]@{ signInType = 'federated'; issuer = $ExternalTenant }
-                    )
                 }
                 [pscustomobject]@{
                     id                = $script:UserB
                     displayName       = 'Wrong-tenant B2B guest'
                     userPrincipalName = 'b_other.com#EXT#@contoso.com'
                     userType          = 'Guest'
-                    identities        = @(
-                        [pscustomobject]@{ signInType = 'federated'; issuer = $OtherTenant }
-                    )
                 }
                 [pscustomobject]@{
                     id                = $script:UserC
                     displayName       = 'Internal guest'
                     userPrincipalName = 'carol@contoso.com'
                     userType          = 'Guest'
-                    identities        = @()
                 }
             )
         } -ParameterFilter { $uri -like "*/users?*userType eq 'Guest'*" -or $uri -like '*userType%20eq%20%27Guest%27*' -or ($uri -like '*/users?*' -and $uri -like '*Guest*') }
+
+        # Graph users carry no home tenant id: the #EXT# UPN domain is resolved to a tenant
+        Mock -CommandName New-GraphBulkRequest -MockWith {
+            foreach ($Request in $Requests) {
+                $TenantId = if ($Request.id -eq 'fabrikam.com') { $ExternalTenant } else { $OtherTenant }
+                [pscustomobject]@{ id = $Request.id; status = 200; body = [pscustomobject]@{ tenantId = $TenantId } }
+            }
+        }
 
         $Result = Get-CIPPCAPolicyIdentityCoverage -TenantFilter 'contoso.com' -PolicyId 'policy-10'
 
@@ -485,6 +487,62 @@ Describe 'Get-CIPPCAPolicyIdentityCoverage' {
         $Result.identities.id | Should -Not -Contain $script:UserB
         $Result.identities.id | Should -Not -Contain $script:UserC
         $Result.identities[0].includeReasons[0].type | Should -Be 'includeGuestsOrExternalUsers'
+        $Result.unresolved.Count | Should -Be 0
+    }
+
+    It 'reports the domain as unresolved instead of a verdict when the tenant lookup fails' {
+        Mock -CommandName New-GraphGetRequest -MockWith {
+            [pscustomobject]@{
+                id          = 'policy-12'
+                displayName = 'All users except one partner'
+                state       = 'enabled'
+                conditions  = [pscustomobject]@{
+                    users = [pscustomobject]@{
+                        includeUsers                 = @('All')
+                        excludeUsers                 = @()
+                        excludeGuestsOrExternalUsers = [pscustomobject]@{
+                            guestOrExternalUserTypes = 'b2bCollaborationGuest, internalGuest'
+                            externalTenants          = [pscustomobject]@{ membershipKind = 'enumerated'; members = @('dddddddd-dddd-dddd-dddd-dddddddddddd') }
+                        }
+                    }
+                }
+            }
+        } -ParameterFilter { $uri -like '*/conditionalAccess/policies/*' }
+        Mock -CommandName New-GraphGetRequest -MockWith {
+            @(
+                [pscustomobject]@{ id = $script:UserA; displayName = 'B2B guest'; userPrincipalName = 'a_fabrikam.com#EXT#@contoso.com'; userType = 'Guest' }
+                [pscustomobject]@{ id = $script:UserC; displayName = 'Internal guest'; userPrincipalName = 'carol@contoso.com'; userType = 'Guest' }
+            )
+        } -ParameterFilter { $uri -like '*/users?*' -and $uri -like '*Guest*' }
+        Mock -CommandName New-GraphBulkRequest -MockWith { throw 'Graph 429' }
+
+        $Result = Get-CIPPCAPolicyIdentityCoverage -TenantFilter 'contoso.com' -PolicyId 'policy-12'
+
+        $Result.identities.id | Should -Not -Contain $script:UserA
+        $Result.unresolved.id | Should -Contain 'fabrikam.com'
+        # The tenant list only narrows B2B types: an internal guest is excluded without a lookup
+        ($Result.identities | Where-Object { $_.id -eq $script:UserC }).status | Should -Be 'excluded'
+    }
+
+    It 'expands the GuestsOrExternalUsers token to #EXT# members too' {
+        Mock -CommandName New-GraphGetRequest -MockWith {
+            [pscustomobject]@{
+                id          = 'policy-13'
+                displayName = 'Guests'
+                state       = 'enabled'
+                conditions  = [pscustomobject]@{
+                    users = [pscustomobject]@{ includeUsers = @('GuestsOrExternalUsers'); excludeUsers = @() }
+                }
+            }
+        } -ParameterFilter { $uri -like '*/conditionalAccess/policies/*' }
+        Mock -CommandName New-GraphGetRequest -MockWith {
+            @([pscustomobject]@{ id = $script:UserB; displayName = 'Ext member'; userPrincipalName = 'b_fabrikam.com#EXT#@contoso.com'; userType = 'Member' })
+        } -ParameterFilter { $uri -like "*/users?*userType eq 'Member'*" }
+
+        $Result = Get-CIPPCAPolicyIdentityCoverage -TenantFilter 'contoso.com' -PolicyId 'policy-13'
+
+        $Result.identities.id | Should -Contain $script:UserB
+        $Result.identities[0].includeReasons.value | Should -Contain 'includeUsers:GuestsOrExternalUsers'
     }
 
     It 'records unresolved when group member expansion throws' {

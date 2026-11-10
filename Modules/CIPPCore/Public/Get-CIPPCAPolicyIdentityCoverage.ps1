@@ -79,8 +79,36 @@ function Get-CIPPCAPolicyIdentityCoverage {
         return $Value -match $GuidPattern
     }
 
+    # CA classes a user as guest/external by userType + #EXT# UPN
+    $B2BCategories = @('b2bCollaborationGuest', 'b2bCollaborationMember')
+    $ExtDomainPattern = '^.+_(?<domain>[^_#]+)#EXT#@'
+    function Get-CoverageGuestCategory {
+        param ($User)
+        $IsExt = [string]$User.userPrincipalName -like '*#EXT#*'
+        if ([string]$User.userType -eq 'Guest') { if ($IsExt) { return 'b2bCollaborationGuest' } else { return 'internalGuest' } }
+        if ($IsExt) { return 'b2bCollaborationMember' }
+        return $null
+    }
+
+    # The users CA can class as guest or external: userType Guest, plus #EXT# members on request.
+    # Each list is fetched once per call; a failed fetch throws to the caller.
+    $GuestCache = @{ Lookup = @{}; Unresolved = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase); Asked = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase) }
+    function Get-CoverageGuestCandidates {
+        param ([switch]$ExtMembers)
+        if (-not $GuestCache.ContainsKey('Guests')) {
+            $GuestCache.Guests = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users?`$filter=userType eq 'Guest'&`$select=id,userPrincipalName,userType&`$top=999" -tenantid $TenantFilter -AsApp $true | Where-Object { $_.id })
+        }
+        if (-not $ExtMembers) { return $GuestCache.Guests }
+        if (-not $GuestCache.ContainsKey('ExtMembers')) {
+            # ponytail: Graph cannot filter userPrincipalName on contains '#EXT#', so every member is
+            # read and matched here (what Get-CIPPMFAState does); a narrower server filter if it gets slow
+            $GuestCache.ExtMembers = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users?`$filter=userType eq 'Member'&`$select=id,userPrincipalName,userType&`$top=999" -tenantid $TenantFilter -AsApp $true | Where-Object { $_.id -and [string]$_.userPrincipalName -like '*#EXT#*' })
+        }
+        return $GuestCache.Guests + $GuestCache.ExtMembers
+    }
+
     # Load policy
-    $Policy = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$PolicyId" -tenantid $TenantFilter -AsApp $true
+    $Policy =New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$PolicyId" -tenantid $TenantFilter -AsApp $true
     if (-not $Policy) {
         throw "Conditional Access policy $PolicyId was not found."
     }
@@ -100,8 +128,7 @@ function Get-CIPPCAPolicyIdentityCoverage {
         if ($UserRef -eq 'None') { continue }
         if ($UserRef -eq 'GuestsOrExternalUsers') {
             try {
-                $GuestUsers = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users?`$filter=userType eq 'Guest'&`$select=id,displayName,userPrincipalName,userType&`$top=999" -tenantid $TenantFilter -AsApp $true)
-                foreach ($Guest in $GuestUsers) {
+                foreach ($Guest in @(Get-CoverageGuestCandidates -ExtMembers)) {
                     Add-CoverageReason -Map $IncludeMap -UserId $Guest.id -Reason (New-CoverageReason -Type 'includeUsers' -Token 'GuestsOrExternalUsers' -Label 'Guests or external users')
                 }
             } catch {
@@ -118,8 +145,7 @@ function Get-CIPPCAPolicyIdentityCoverage {
         if ([string]::IsNullOrWhiteSpace($UserRef)) { continue }
         if ($UserRef -eq 'GuestsOrExternalUsers') {
             try {
-                $GuestUsers = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users?`$filter=userType eq 'Guest'&`$select=id,displayName,userPrincipalName,userType&`$top=999" -tenantid $TenantFilter -AsApp $true)
-                foreach ($Guest in $GuestUsers) {
+                foreach ($Guest in @(Get-CoverageGuestCandidates -ExtMembers)) {
                     Add-CoverageReason -Map $ExcludeMap -UserId $Guest.id -Reason (New-CoverageReason -Type 'excludeUsers' -Token 'GuestsOrExternalUsers' -Label 'Guests or external users')
                 }
             } catch {
@@ -401,44 +427,6 @@ function Get-CIPPCAPolicyIdentityCoverage {
     }
 
     # --- Guests / external user blocks ---
-    function Get-CoverageGuestHomeTenantId {
-        param ($User)
-        foreach ($Identity in @($User.identities)) {
-            $Issuer = [string]$Identity.issuer
-            if ($Issuer -match $GuidPattern) { return $Issuer }
-        }
-        return $null
-    }
-
-    function Get-CoverageGuestCategory {
-        param ($User)
-        $Upn = [string]$User.userPrincipalName
-        $IsExt = $Upn -like '*#EXT#*'
-        $UserType = [string]$User.userType
-        if ($UserType -eq 'Guest' -and $IsExt) { return 'b2bCollaborationGuest' }
-        if ($UserType -eq 'Member' -and $IsExt) { return 'b2bCollaborationMember' }
-        if ($UserType -eq 'Guest' -and -not $IsExt) { return 'internalGuest' }
-        return $null
-    }
-
-    function Test-CoverageExternalTenantMatch {
-        param (
-            $User,
-            $ExternalTenants
-        )
-        if ($null -eq $ExternalTenants) { return $true }
-        $Kind = [string]$ExternalTenants.membershipKind
-        if ([string]::IsNullOrWhiteSpace($Kind) -or $Kind -eq 'all') { return $true }
-        if ($Kind -ne 'enumerated') { return $true }
-
-        $Allowed = @($ExternalTenants.members | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-        if ($Allowed.Count -eq 0) { return $false }
-
-        $HomeTenantId = Get-CoverageGuestHomeTenantId -User $User
-        if (-not $HomeTenantId) { return $false }
-        return ($Allowed -contains $HomeTenantId)
-    }
-
     function Expand-GuestBlock {
         param (
             $GuestConfig,
@@ -481,32 +469,42 @@ function Get-CIPPCAPolicyIdentityCoverage {
         )
         if ($EnumerableTypes.Count -eq 0) { return }
 
-        $Candidates = [System.Collections.Generic.List[object]]::new()
+        # An enumerated externalTenants list only narrows the B2B types; the home tenant is
+        # resolved from the #EXT# UPN domain, once per call and only when a block needs it.
+        $AllowedTenants = @($GuestConfig.externalTenants.members | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        $NeedsTenants = [string]$GuestConfig.externalTenants.membershipKind -eq 'enumerated' -and
+            @($EnumerableTypes | Where-Object { $_ -in $B2BCategories }).Count -gt 0
         try {
-            if ($EnumerableTypes -contains 'b2bCollaborationGuest' -or $EnumerableTypes -contains 'internalGuest') {
-                $GuestUsers = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users?`$filter=userType eq 'Guest'&`$select=id,displayName,userPrincipalName,userType,identities&`$top=999" -tenantid $TenantFilter -AsApp $true)
-                foreach ($Guest in $GuestUsers) { $Candidates.Add($Guest) | Out-Null }
-            }
-            if ($EnumerableTypes -contains 'b2bCollaborationMember') {
-                # B2B collaboration members keep the #EXT# UPN pattern with userType Member.
-                $MemberExtUsers = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users?`$count=true&`$filter=userType eq 'Member' and contains(userPrincipalName,'#EXT#')&`$select=id,displayName,userPrincipalName,userType,identities&`$top=999" -tenantid $TenantFilter -AsApp $true -ComplexFilter)
-                foreach ($Member in $MemberExtUsers) { $Candidates.Add($Member) | Out-Null }
+            $Candidates = @(Get-CoverageGuestCandidates -ExtMembers:($EnumerableTypes -contains 'b2bCollaborationMember'))
+            if ($NeedsTenants) {
+                $Domains = @(foreach ($Candidate in $Candidates) { if ([string]$Candidate.userPrincipalName -match $ExtDomainPattern -and $GuestCache.Asked.Add($Matches.domain)) { $Matches.domain } })
+                if ($Domains.Count -gt 0) {
+                    $Resolution = Get-CIPPExternalDomainTenant -Domains $Domains -TenantFilter $TenantFilter
+                    foreach ($Key in $Resolution.Lookup.Keys) { $GuestCache.Lookup[$Key] = $Resolution.Lookup[$Key] }
+                    $GuestCache.Unresolved.UnionWith($Resolution.Unresolved)
+                }
             }
         } catch {
             $Unresolved.Add([pscustomobject]@{ field = $Field; id = $TypesRaw; error = $_.Exception.Message }) | Out-Null
             return
         }
 
-        $Seen = [System.Collections.Generic.HashSet[string]]::new()
+        $ReportedDomains = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         $Label = "Guest types: $TypesRaw"
         foreach ($Candidate in $Candidates) {
-            if (-not $Candidate.id) { continue }
-            if (-not $Seen.Add([string]$Candidate.id)) { continue }
-
             $Category = Get-CoverageGuestCategory -User $Candidate
-            if (-not $Category -or ($EnumerableTypes -notcontains $Category)) { continue }
-            if (-not (Test-CoverageExternalTenantMatch -User $Candidate -ExternalTenants $GuestConfig.externalTenants)) {
-                continue
+            if ($EnumerableTypes -notcontains $Category) { continue }
+            if ($NeedsTenants -and $Category -in $B2BCategories) {
+                $Domain = if ([string]$Candidate.userPrincipalName -match $ExtDomainPattern) { $Matches.domain }
+                if ($Domain -and $GuestCache.Unresolved.Contains($Domain)) {
+                    # Lookup failed: the user may or may not match, so report it instead of guessing
+                    if ($ReportedDomains.Add($Domain)) {
+                        $Unresolved.Add([pscustomobject]@{ field = $Field; id = $Domain; error = 'Could not resolve the home tenant of this external domain; its users may match this block' }) | Out-Null
+                    }
+                    continue
+                }
+                $HomeTenantId = if ($Domain) { $GuestCache.Lookup[$Domain] }
+                if (-not $HomeTenantId -or $AllowedTenants -notcontains $HomeTenantId) { continue }
             }
 
             Add-CoverageReason -Map $Map -UserId $Candidate.id -Reason (New-CoverageReason -Type $Type -Token $TypesRaw -Label $Label)

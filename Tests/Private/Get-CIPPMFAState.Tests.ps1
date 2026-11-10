@@ -3,6 +3,7 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPMFAState.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPExternalDomainTenant.ps1')
 
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp, $ErrorAction) }
     function New-GraphBulkRequest { param($Requests, $tenantid, $asapp, $Version) }
