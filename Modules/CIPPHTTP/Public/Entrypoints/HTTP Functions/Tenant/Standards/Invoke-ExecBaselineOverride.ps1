@@ -115,7 +115,7 @@ function Invoke-ExecBaselineOverride {
 
                 # An ad-hoc-only resolved row (empty TemplateId) has nothing to fall back to -
                 # delete it so the standard disappears from the view with its override.
-                if ($ResolvedEntity -and -not $ResolvedEntity.TemplateId) {
+                if ($ResolvedEntity -and -not $ResolvedEntity.TemplateId -and -not ($ResolvedEntity.Inheritance -and @(($ResolvedEntity.Inheritance | ConvertFrom-Json) | Where-Object { $_ -and $_.templateName -ne 'Tenant Override' }).Count)) {
                     Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $ResolvedEntity
                     $ResolvedEntity = $null
                 }
