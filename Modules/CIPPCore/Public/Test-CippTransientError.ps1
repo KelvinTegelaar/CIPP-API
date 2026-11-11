@@ -4,7 +4,7 @@ function Test-CippTransientError {
         Returns true when an error message describes a transient upstream condition.
     .DESCRIPTION
         Recognises common transient failure signatures (HTTP 429/502/503/504, timeouts,
-        Exchange Hygiene DAL / domain controller churn, generic send failures) so callers
+        Exchange Hygiene DAL / domain controller churn, generic send failures, Graph reports UnknownError) so callers
         can log those at a lower severity than a genuine error and avoid alert noise.
     .FUNCTIONALITY
         Internal
@@ -32,7 +32,8 @@ function Test-CippTransientError {
         'ADServerSettingsChangedException',
         'temporarily unavailable',
         'too many requests',
-        'ServerBusy'
+        'ServerBusy',
+        'UnknownError'
     )
 
     foreach ($Pattern in $Patterns) {

@@ -178,6 +178,17 @@ Describe 'Baseline tenant identity (#941)' {
         $State.manualAdvance | Should -BeFalse
     }
 
+    It 'falls back to a manual move into a stage saved without conditions' {
+        $script:Rollouts = @((New-Rollout 'b-empty' -Stages '[{"name":"One"},{"name":"Two","conditions":[],"conditionGroups":[]}]'))
+        $script:Deltas = @((New-Delta 'b-empty' 'group' 'g1' $false))
+
+        $State = @((Get-CIPPBaseline -ID 'b-empty').tenantStates)[0]
+
+        $State.nextStageName | Should -Be 'Two'
+        $State.groupBlocked | Should -BeFalse
+        $State.manualAdvance | Should -BeTrue
+    }
+
     It 'stores tenant assignments and exclusions by customerId' {
         $script:Rollouts = @()
         $Baseline = [pscustomobject]@{

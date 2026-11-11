@@ -187,12 +187,11 @@ function Invoke-CIPPBaselineStandard {
             $Skipped
         }
 
-        # A flat requiredCapabilities list is any-of; a nested array is a group that must
-        # also match (AND of any-of groups).
+        # A flat capability list is any-of; a nested array is a group that must also match
+        # (AND of any-of groups). Used for the definition and for what a prepare hook returns.
         $Capabilities = $null
-        $Required = @($Definition.requiredCapabilities)
-        if ($Required.Count -gt 0 -and $Mode -ne 'oneoff') {
-            $Capabilities = $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
+        $IsLicensed = {
+            param($Required)
             # Built as a List: an if-expression's pipeline output unwraps one array level,
             # which silently turned every capability into its own AND-group.
             $Groups = [System.Collections.Generic.List[object]]::new()
@@ -201,14 +200,15 @@ function Invoke-CIPPBaselineStandard {
             } else {
                 $Groups.Add(@($Required))
             }
-            $Licensed = $true
             foreach ($Group in $Groups) {
-                if (@(@($Group) | Where-Object { $Capabilities.$_ -eq $true }).Count -eq 0) {
-                    $Licensed = $false
-                    break
-                }
+                if (@(@($Group) | Where-Object { $Capabilities.$_ -eq $true }).Count -eq 0) { return $false }
             }
-            if (-not $Licensed) { return (& $SkipUnlicensed) }
+            $true
+        }
+        $Required = @($Definition.requiredCapabilities)
+        if ($Required.Count -gt 0 -and $Mode -ne 'oneoff') {
+            $Capabilities = $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
+            if (-not (& $IsLicensed $Required)) { return (& $SkipUnlicensed) }
         }
 
         if (-not $GradeOnly) {
@@ -473,7 +473,7 @@ function Invoke-CIPPBaselineStandard {
             # Capabilities only the selected item needs (any-of), e.g. a CA template with risk conditions needs P2.
             if ($Prepared.RequiredCapabilities -and $Mode -ne 'oneoff') {
                 $Capabilities ??= $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
-                if (-not @($Prepared.RequiredCapabilities).Where({ $Capabilities.$_ -eq $true })) { return (& $SkipUnlicensed) }
+                if (-not (& $IsLicensed @($Prepared.RequiredCapabilities))) { return (& $SkipUnlicensed) }
             }
             # ConfigError: the hook cannot grade because of the baseline's own settings, so fresh data
             # would not help and re-collecting (a full per-object read for some caches) is skipped.

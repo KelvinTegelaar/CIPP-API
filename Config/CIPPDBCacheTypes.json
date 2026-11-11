@@ -805,6 +805,11 @@
     "description": "Global Secure Access onboarding status, traffic forwarding profiles with their policy groups and assignment, and Conditional Access signaling"
   },
   {
+    "type": "NetworkAccessFiltering",
+    "friendlyName": "Global Secure Access Filtering",
+    "description": "Global Secure Access web content filtering profiles with their policy links and Conditional Access policies, and filtering policies with their rules"
+  },
+  {
     "type": "RolesAndAssignments",
     "friendlyName": "Roles & Assignments Sources",
     "description": "Refreshes every cache type that feeds the Roles & Assignments page (directory roles, role definitions, role assignments, administrative units, PIM schedules and policies); writes no rows of its own"

@@ -136,6 +136,9 @@
       "name": "Tenant > GDAP"
     },
     {
+      "name": "Tenant > GlobalSecureAccess"
+    },
+    {
       "name": "Tenant > Reports"
     },
     {
@@ -897,6 +900,9 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
@@ -1157,6 +1163,19 @@
                   },
                   "name": {
                     "type": "string"
+                  },
+                  "sessionControls": {
+                    "type": "object",
+                    "properties": {
+                      "globalSecureAccessFilteringProfile": {
+                        "type": "object",
+                        "properties": {
+                          "profileId": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
                   },
                   "tenantFilter": {
                     "type": "string",
@@ -4365,6 +4384,154 @@
           }
         ],
         "x-cipp-role": "Identity.Group.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/AddGSAFilteringPolicyTemplate": {
+      "post": {
+        "summary": "Creates or updates a Global Secure Access filtering policy template",
+        "operationId": "AddGSAFilteringPolicyTemplate",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Saves a web content filtering policy (block or allow, with web category, FQDN and URL rules)\nas a template that security profile templates link to. Send GUID to update a template.\nPolicy names are unique in a tenant, so template names are unique too.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "allow",
+                      "block"
+                    ]
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "GUID": {
+                    "type": "string",
+                    "description": "The template to update; omit to create one"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "The policy name, also used as the template name"
+                  },
+                  "policyRules": {
+                    "type": "string",
+                    "description": "Each rule: a name, a ruleType (webCategory, fqdn or url) and its destinations, as names/values or Graph destination objects"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/AddGSASecurityProfileTemplate": {
+      "post": {
+        "summary": "Creates or updates a Global Secure Access security profile template",
+        "operationId": "AddGSASecurityProfileTemplate",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Saves a security profile (priority, state and the filtering policy templates it links, each\nwith its own priority) as a template. Conditional Access templates link security profile\ntemplates. Send GUID to update a template. Names and priorities are unique across templates,\nbecause two templates can land in the same tenant.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string"
+                  },
+                  "GUID": {
+                    "type": "string",
+                    "description": "The template to update; omit to create one"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "The profile name, also used as the template name"
+                  },
+                  "policies": {
+                    "type": "string",
+                    "description": "Each link: policy ({label, value} with the filtering policy template GUID, or the GUID), priority (100-65000), state and loggingState"
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "description": "Processing order in the tenant, 100-64999 (65000 is the baseline profile)"
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "disabled",
+                      "enabled"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.ReadWrite",
         "x-cipp-any-tenant": true
       }
     },
@@ -9825,6 +9992,168 @@
           }
         ],
         "x-cipp-role": "Identity.Group.ReadWrite"
+      }
+    },
+    "/api/EditGSAFilteringPolicy": {
+      "post": {
+        "summary": "Edits a Global Secure Access filtering policy in a tenant",
+        "operationId": "EditGSAFilteringPolicy",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Changes a tenant filtering policy's name, action, description and rules. Rules are matched on\ntype and destinations, so rules that did not change are left alone.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "allow",
+                      "block"
+                    ]
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "The id of the filtering policy to edit"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "policyRules": {
+                    "type": "string",
+                    "description": "Each rule: a name, a ruleType (webCategory, fqdn or url) and its destinations, as names/values or Graph destination objects"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.ReadWrite"
+      }
+    },
+    "/api/EditGSASecurityProfile": {
+      "post": {
+        "summary": "Edits a Global Secure Access security profile in a tenant",
+        "operationId": "EditGSASecurityProfile",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Changes a tenant security profile's name, description, priority, state and the filtering\npolicies it links. The built-in baseline profile keeps priority 65000; editing its links is how\na filter applies to all Internet Access traffic without a Conditional Access policy.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string"
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "The id of the security profile to edit"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "policies": {
+                    "type": "string",
+                    "description": "Each link: policy ({label, value} with the tenant filtering policy id, or the id), priority (100-65000), state and loggingState"
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "description": "Processing order, 100-64999; the baseline profile keeps 65000"
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "disabled",
+                      "enabled"
+                    ]
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.ReadWrite"
       }
     },
     "/api/EditIntunePolicy": {
@@ -21323,6 +21652,80 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecDeployGSASecurityProfileTemplate": {
+      "post": {
+        "summary": "Deploys a Global Secure Access security profile template to tenants",
+        "operationId": "ExecDeployGSASecurityProfileTemplate",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Creates or updates the security profile and the filtering policies it links in each selected\ntenant, so they match the template. A tenant without a Microsoft Entra Internet Access licence,\nor where the template conflicts with existing objects, is refused and left unchanged.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "TemplateList": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "The security profile template to deploy"
+                  },
+                  "tenantFilter": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "The tenants to deploy to"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.ReadWrite"
+      }
+    },
     "/api/ExecDeviceAction": {
       "post": {
         "summary": "ExecDeviceAction",
@@ -26399,6 +26802,81 @@
           "Teams-Sharepoint"
         ],
         "description": "Server-renders the SharePoint & OneDrive Sharing report as application/pdf bytes. Gathers the same\nshaped data the Sharing page uses (ListSharePointSharing, from the CIPP reporting cache), composes\nit through the shared CIPPSharp component kit (Build-CippSharingReportTree) and returns the finished\nPDF - the server-side replacement for the client react-pdf SharingReportButton.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brandingPresetId": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "brandingPresetId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.Read"
+      }
+    },
+    "/api/ExecGetStorageReportPdf": {
+      "post": {
+        "summary": "ExecGetStorageReportPdf",
+        "operationId": "ExecGetStorageReportPdf",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Server-renders the SharePoint & OneDrive Storage report as application/pdf bytes: site and OneDrive\nusage, per-library version history estimates and version policies, recycle bins and inactive sites.\nReads the CIPP reporting cache only (usage sync and cleanup scan); nothing is read live.",
         "requestBody": {
           "required": true,
           "content": {
@@ -33942,7 +34420,7 @@
                   },
                   "reportType": {
                     "type": "string",
-                    "description": "Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, sharing, permissions, mailFlow, licensing, baseline or domain."
+                    "description": "Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, sharing, permissions, mailFlow, storage, licensing, baseline or domain."
                   },
                   "tenantFilter": {
                     "type": "string",
@@ -37611,6 +38089,65 @@
         ],
         "x-cipp-role": "CIPP.AppSettings.ReadWrite",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ExecSaveGSASecurityProfileTemplate": {
+      "post": {
+        "summary": "Saves a tenant's Global Secure Access security profile as a template",
+        "operationId": "ExecSaveGSASecurityProfileTemplate",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Creates a security profile template from a tenant security profile. Each linked filtering\npolicy reuses the filtering policy template with the same name, or gets a new one. An existing\ntemplate that differs from the tenant policy is never overwritten: nothing is saved and the\ndifferences are reported. The built-in baseline profile cannot be saved.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "The id of the tenant security profile to save"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.ReadWrite"
       }
     },
     "/api/ExecScheduleAuditExclusionVacation": {
@@ -57417,6 +57954,351 @@
         "x-cipp-tenant-group": true
       }
     },
+    "/api/ListGSAFilteringPolicies": {
+      "get": {
+        "summary": "Lists a tenant's Global Secure Access web content filtering policies",
+        "operationId": "ListGSAFilteringPolicies",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Returns the tenant's filtering policies with their rules, read live, and the names of the\nsecurity profiles that link each one.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                    "properties": {
+                      "action": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "description": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "name": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "securityProfiles": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.Read"
+      }
+    },
+    "/api/ListGSAFilteringPolicyTemplates": {
+      "get": {
+        "summary": "Lists Global Secure Access filtering policy templates",
+        "operationId": "ListGSAFilteringPolicyTemplates",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Returns saved web content filtering policy templates (name, action and rules), or one\ntemplate when GUID is given.",
+        "parameters": [
+          {
+            "name": "GUID",
+            "in": "query",
+            "description": "Return only this template",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "properties": {
+                      "action": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "description": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "ETag": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "GUID": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "name": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Package": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Permissions": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "RowKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SHA": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "TemplateName": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "UpdatedBy": {
+                        "x-cipp-field-source": "storage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListGSASecurityProfiles": {
+      "get": {
+        "summary": "Lists a tenant's Global Secure Access security profiles",
+        "operationId": "ListGSASecurityProfiles",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Returns the tenant's security profiles, read live, with the filtering policies each one links\nand the Conditional Access policies that apply it.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                    "properties": {
+                      "conditionalAccessPolicyNames": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "description": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "filteringPolicies": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "name": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "priority": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "state": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.Read"
+      }
+    },
+    "/api/ListGSASecurityProfileTemplates": {
+      "get": {
+        "summary": "Lists Global Secure Access security profile templates",
+        "operationId": "ListGSASecurityProfileTemplates",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Returns saved security profile templates (priority, state and linked filtering policy\ntemplates), or one template when GUID is given.",
+        "parameters": [
+          {
+            "name": "GUID",
+            "in": "query",
+            "description": "Return only this template",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "properties": {
+                      "ContentHash": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "description": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "ETag": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "GUID": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "name": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Package": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Permissions": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "priority": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "RowKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SHA": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SourcePath": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "state": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "TemplateName": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "UpdatedBy": {
+                        "x-cipp-field-source": "storage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListGuestUsers": {
       "get": {
         "summary": "List guest users with lifecycle status",
@@ -76437,6 +77319,254 @@
           }
         ],
         "x-cipp-role": "Identity.Group.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/RemoveGSAFilteringPolicy": {
+      "post": {
+        "summary": "Deletes a Global Secure Access filtering policy from a tenant",
+        "operationId": "RemoveGSAFilteringPolicy",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Deletes the filtering policy. Refused while a security profile links it; unlink it from those\nprofiles first.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "The id of the filtering policy to delete"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.ReadWrite"
+      }
+    },
+    "/api/RemoveGSAFilteringPolicyTemplate": {
+      "post": {
+        "summary": "Removes a Global Secure Access filtering policy template",
+        "operationId": "RemoveGSAFilteringPolicyTemplate",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Deletes a filtering policy template. Refused while a security profile template links it.\nPolicies already deployed to tenants are left in place.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "The GUID of the template to remove"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "description": "The GUID of the template to remove",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/RemoveGSASecurityProfile": {
+      "post": {
+        "summary": "Deletes a Global Secure Access security profile from a tenant",
+        "operationId": "RemoveGSASecurityProfile",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Deletes the security profile. Its filtering policies stay in the tenant. Refused for the\nbuilt-in baseline profile and while a Conditional Access policy applies the profile.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "The id of the security profile to delete"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.ReadWrite"
+      }
+    },
+    "/api/RemoveGSASecurityProfileTemplate": {
+      "post": {
+        "summary": "Removes a Global Secure Access security profile template",
+        "operationId": "RemoveGSASecurityProfileTemplate",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Deletes a security profile template. Refused while a Conditional Access template links it.\nProfiles already deployed to tenants are left in place.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string",
+                    "description": "The GUID of the template to remove"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "description": "The GUID of the template to remove",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.ReadWrite",
         "x-cipp-any-tenant": true
       }
     },

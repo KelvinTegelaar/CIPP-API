@@ -17,6 +17,7 @@ BeforeAll {
     foreach ($File in @(
             'Teams-Sharepoint/Invoke-ExecGetSharingReportPdf.ps1'
             'Teams-Sharepoint/Invoke-ExecGetPermissionsReportPdf.ps1'
+            'Teams-Sharepoint/Invoke-ExecGetStorageReportPdf.ps1'
             'Email-Exchange/Reports/Invoke-ExecGetMailFlowReportPdf.ps1'
             'Tenant/AI/Invoke-ExecGetShadowAIReportPdf.ps1'
             'Identity/Administration/Users/Invoke-ExecGetBecReportPdf.ps1'
@@ -29,6 +30,10 @@ BeforeAll {
     function Get-CIPPSharePointSharingReport { param($TenantFilter) @{} }
     function Get-CIPPSharePointPermissionsReport { param($TenantFilter) @{} }
     function Get-CIPPShadowAIReport { param($TenantFilter) @{} }
+    # Throws as the real reader does before the first usage sync; the report still renders.
+    function Get-CIPPSharePointSiteUsageReport { [CmdletBinding()] param($TenantFilter) throw 'No SharePoint site listing data found' }
+    function Get-CIPPOneDriveUsageReport { [CmdletBinding()] param($TenantFilter) @() }
+    function New-CIPPDbRequest { param($TenantFilter, $Type, $TableName) @() }
     function New-ExoRequest { param($TenantId, $Cmdlet, $CmdParams) @() }
     function Get-CIPPBecReport {
         param($TenantFilter, $CaseId, $UserId, [switch]$IncludeResults)
@@ -37,6 +42,7 @@ BeforeAll {
     function Build-CippSharingReportTree { param($Data) @{ Blocks = @(); Variables = @{} } }
     function Build-CippPermissionsReportTree { param($Data) @{ Blocks = @(); Variables = @{} } }
     function Build-CippMailFlowReportTree { param($Data) @{ Blocks = @(); Variables = @{} } }
+    function Build-CippStorageReportTree { param($Data) @{ Blocks = @(); Variables = @{} } }
     function Build-CippShadowAIReportTree { param($Data, $SectionConfig) @{ Blocks = @(); Variables = @{} } }
     function Build-CippBecReportTree { param($UserData, $BecData, $TenantName, $Variant) @{ Blocks = @(); Variables = @{} } }
     function Get-CippException { param($Exception) @{ NormalizedError = [string]$Exception } }
@@ -53,6 +59,7 @@ Describe 'Report PDF branding preset' {
         @{ Endpoint = 'Invoke-ExecGetSharingReportPdf'; In = 'query'; Extra = @{} }
         @{ Endpoint = 'Invoke-ExecGetPermissionsReportPdf'; In = 'query'; Extra = @{} }
         @{ Endpoint = 'Invoke-ExecGetMailFlowReportPdf'; In = 'query'; Extra = @{} }
+        @{ Endpoint = 'Invoke-ExecGetStorageReportPdf'; In = 'query'; Extra = @{} }
         @{ Endpoint = 'Invoke-ExecGetShadowAIReportPdf'; In = 'body'; Extra = @{ sectionConfig = @{} } }
         @{ Endpoint = 'Invoke-ExecGetBecReportPdf'; In = 'query'; Extra = @{ caseId = 'BEC-1'; variant = 'summary' } }
     ) {

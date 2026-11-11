@@ -107,3 +107,74 @@ Describe 'Invoke-ListCommunityRepos ghost rows' {
         $Response.Body.Results[0].Id | Should -Be '42'
     }
 }
+
+Describe 'Invoke-ExecCommunityRepo ImportTemplate' {
+    BeforeAll {
+        function Get-GitHubFileContents { param($FullName, $Path, $Branch) }
+        function Get-GitHubFileTree { param($FullName, $Branch) }
+        function Import-CommunityTemplate { param($Template, $SHA, $MigrationTable, $LocationData, $Source, $Path, [switch]$Force) }
+        function Invoke-Import([string]$Path) {
+            Invoke-ExecCommunityRepo -Request ([pscustomobject]@{
+                    Params  = @{ CIPPEndpoint = 'ExecCommunityRepo' }
+                    Headers = @{}
+                    Body    = [pscustomobject]@{ Action = 'ImportTemplate'; FullName = 'Org/repo'; Branch = 'main'; Path = $Path }
+                })
+        }
+    }
+    BeforeEach {
+        Mock Get-CIPPTable { @{ Context = 'ctx' } }
+        Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ FullName = 'Org/repo'; DefaultBranch = 'main' } }
+        Mock Import-CommunityTemplate { "Created template '$($Template.RowKey)'" }
+        Mock Get-GitHubFileContents {
+            [pscustomobject]@{ sha = 'sha-ca'; content = (@{ RowKey = 'ca-1'; PartitionKey = 'CATemplate'; JSON = '{"displayName":"Staff web filtering"}' } | ConvertTo-Json) }
+        } -ParameterFilter { $Path -eq 'CATemplate/Staff_web_filtering.json' }
+    }
+
+    It 'imports the one template file it was given' {
+        $Response = Invoke-Import 'CATemplate/Staff_web_filtering.json'
+        $Response.StatusCode | Should -Be 200
+        Should -Invoke Import-CommunityTemplate -Times 1 -Exactly -ParameterFilter { $Template.RowKey -eq 'ca-1' -and $Path -eq 'CATemplate/Staff_web_filtering.json' }
+    }
+}
+
+Describe 'Invoke-ExecCommunityRepo ImportTemplate with linked templates' {
+    BeforeAll {
+        function Get-GitHubFileContents { param($FullName, $Path, $Branch) }
+        function Get-GitHubFileTree { param($FullName, $Branch) }
+        function Import-CommunityTemplate { param($Template, $SHA, $MigrationTable, $LocationData, $Source, $Path, [switch]$Force) }
+        function New-File([string]$Sha, [hashtable]$Entity) { [pscustomobject]@{ sha = $Sha; content = ($Entity | ConvertTo-Json -Depth 5) } }
+        function Invoke-Import([string]$Path) {
+            Invoke-ExecCommunityRepo -Request ([pscustomobject]@{
+                    Params  = @{ CIPPEndpoint = 'ExecCommunityRepo' }
+                    Headers = @{}
+                    Body    = [pscustomobject]@{ Action = 'ImportTemplate'; FullName = 'Org/repo'; Branch = 'main'; Path = $Path }
+                })
+        }
+    }
+    BeforeEach {
+        $script:Imported = [System.Collections.Generic.List[string]]::new()
+        Mock Get-CIPPTable { @{ Context = 'ctx' } }
+        Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ FullName = 'Org/repo'; DefaultBranch = 'main' } }
+        Mock Import-CommunityTemplate { $script:Imported.Add("$($Template.PartitionKey)/$($Template.RowKey)"); "Created template '$($Template.RowKey)'" }
+        $Manifest = ConvertTo-Json -Compress -InputObject @(@{ partition = 'GSASecurityProfileTemplate'; guid = 'prof-1'; path = 'GSASecurityProfileTemplate/Staff.json' }, @{ partition = 'GSAFilteringPolicyTemplate'; guid = 'pol-1'; path = 'GSAFilteringPolicyTemplate/Block_risky.json' })
+        Mock Get-GitHubFileContents { New-File 'sha-ca' @{ RowKey = 'ca-1'; PartitionKey = 'CATemplate'; JSON = '{"displayName":"Staff web filtering"}'; LinkedTemplates = $Manifest } } -ParameterFilter { $Path -eq 'CATemplate/Staff_web_filtering.json' }
+        Mock Get-GitHubFileContents { New-File 'sha-prof' @{ RowKey = 'prof-1'; PartitionKey = 'GSASecurityProfileTemplate'; JSON = '{"name":"Staff"}' } } -ParameterFilter { $Path -eq 'GSASecurityProfileTemplate/Staff.json' }
+        Mock Get-GitHubFileContents { New-File 'sha-pol' @{ RowKey = 'pol-1'; PartitionKey = 'GSAFilteringPolicyTemplate'; JSON = '{"name":"Block risky"}' } } -ParameterFilter { $Path -eq 'GSAFilteringPolicyTemplate/Block_risky.json' }
+    }
+
+    It 'imports the templates in the manifest first, keeping their files, then the template' {
+        $Response = Invoke-Import 'CATemplate/Staff_web_filtering.json'
+        @($script:Imported) | Should -Be @('GSASecurityProfileTemplate/prof-1', 'GSAFilteringPolicyTemplate/pol-1', 'CATemplate/ca-1')
+        Should -Invoke Import-CommunityTemplate -Times 1 -ParameterFilter { $Template.RowKey -eq 'prof-1' -and $SHA -eq 'sha-prof' -and $Path -eq 'GSASecurityProfileTemplate/Staff.json' -and $Source -eq 'Org/repo' }
+        $Response.Body.Results.state | Should -Be 'success'
+        $Response.Body.Results.resultText | Should -BeLike '*Imported 2 linked template(s).'
+    }
+
+    It 'still imports the template, with a warning, when a linked file is missing' {
+        Mock Get-GitHubFileContents { throw 'Not Found' } -ParameterFilter { $Path -eq 'GSAFilteringPolicyTemplate/Block_risky.json' }
+        $Response = Invoke-Import 'CATemplate/Staff_web_filtering.json'
+        @($script:Imported) | Should -Be @('GSASecurityProfileTemplate/prof-1', 'CATemplate/ca-1')
+        $Response.Body.Results.state | Should -Be 'warning'
+        $Response.Body.Results.resultText | Should -BeLike '*could not be imported: GSAFilteringPolicyTemplate/Block_risky.json: Not Found'
+    }
+}

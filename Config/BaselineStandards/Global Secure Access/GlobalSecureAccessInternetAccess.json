@@ -1,0 +1,143 @@
+{
+  "name": "GlobalSecureAccessInternetAccess",
+  "label": "Manage Microsoft Entra Internet Access",
+  "cat": "Global Secure Access",
+  "impact": "Medium Impact",
+  "helpText": "Enables or disables the Global Secure Access Internet traffic forwarding profile, keeps its traffic policies enabled, sets who it is assigned to and optionally manages the custom block page. Uses Microsoft Entra Internet Access. The tenant must be onboarded, which the Set up Global Secure Access standard does.",
+  "executiveText": "Routes internet traffic from managed devices through Microsoft's Security Service Edge so web content filtering and threat protection apply, and sets the message users see when a site is blocked.",
+  "docsDescription": "Grades the Internet traffic forwarding profile the same way the Microsoft 365 profile standard grades its profile: state, enabled traffic policies and assignment, where assigning to groups adds them to what is already assigned and Do not assign leaves the assignment alone. The custom block page is graded only for what is configured: its state when chosen and its message when not blank. The message is markdown and may contain links.",
+  "impactColour": "warning",
+  "addedDate": "2026-11-11",
+  "powershellEquivalent": "Update-MgBetaNetworkAccessForwardingProfile; Update-MgBetaNetworkAccessSettingCustomBlockPage",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    [
+      "Entra_Premium_Internet_Access"
+    ]
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "profileState": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Profile state",
+      "options": [
+        {
+          "value": "enabled",
+          "label": "Enabled"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled"
+        }
+      ],
+      "default": "enabled",
+      "recommended": "enabled"
+    },
+    "assignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Who should the profile be assigned to?",
+      "options": [
+        {
+          "value": "DoNotAssign",
+          "label": "Do not assign"
+        },
+        {
+          "value": "AllDevicesAndUsers",
+          "label": "Assign to all users and devices"
+        },
+        {
+          "value": "customGroup",
+          "label": "Assign to Custom Group"
+        }
+      ],
+      "default": "AllDevicesAndUsers"
+    },
+    "customGroup": {
+      "type": "textField",
+      "label": "Custom group names, comma separated (when assigning to a custom group; wildcards allowed)",
+      "omitWhenBlank": true
+    },
+    "blockPageState": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Custom block page (leave empty to not manage it)",
+      "options": [
+        {
+          "value": "enabled",
+          "label": "Enabled"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled"
+        }
+      ],
+      "omitWhenBlank": true
+    },
+    "blockMessage": {
+      "type": "textField",
+      "label": "Block page message (markdown, links like [Help](https://example.com) allowed; leave empty to keep the current message)",
+      "omitWhenBlank": true
+    }
+  },
+  "read": {
+    "cacheType": "NetworkAccess"
+  },
+  "prepare": "Get-CIPPBaselineGlobalSecureAccessInternetAccessState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "writes": [
+      {
+        "from": "stateWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/forwardingProfiles/%id%",
+        "body": {
+          "state": "%state%"
+        }
+      },
+      {
+        "from": "linkWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/forwardingProfiles/%profileId%/policies/%id%",
+        "body": {
+          "state": "enabled"
+        }
+      },
+      {
+        "from": "assignmentWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/forwardingProfiles/%id%",
+        "body": {
+          "assignmentRules": "%assignmentRules%"
+        }
+      },
+      {
+        "from": "blockPageWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/settings/customBlockPage",
+        "body": {
+          "state": "%state%",
+          "configuration": {
+            "@odata.type": "#microsoft.graph.networkaccess.markdownBlockMessageConfiguration",
+            "body": "%message%"
+          }
+        }
+      },
+      {
+        "from": "blockPageStateWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/settings/customBlockPage",
+        "body": {
+          "state": "%state%"
+        }
+      }
+    ],
+    "refreshCache": [
+      "NetworkAccess"
+    ]
+  }
+}

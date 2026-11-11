@@ -195,3 +195,14 @@ Describe 'Import-CommunityTemplate direct-write path' {
         }
     }
 }
+
+Describe 'Import-CommunityTemplate with a linked templates manifest' {
+    It 'does not store the repo file''s LinkedTemplates manifest on the templates row' {
+        Mock Get-CIPPAzDataTableEntity { $null }
+        Mock Add-CIPPAzDataTableEntity {}
+        $Template = Get-RepoTemplate
+        $Template | Add-Member -NotePropertyName LinkedTemplates -NotePropertyValue '[{"partition":"GSAFilteringPolicyTemplate","guid":"pol-1","path":"GSAFilteringPolicyTemplate/Block_risky.json"}]'
+        $null = Import-CommunityTemplate -Template $Template -SHA 'sha-1' -Source 'Org/repo'
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -ParameterFilter { $Entity.PSObject.Properties.Name -notcontains 'LinkedTemplates' -and $Entity.RowKey -eq '7f3a91c2-4d1e-4b8a-9c3f-2e5d6a8b1f04' }
+    }
+}

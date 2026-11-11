@@ -16,6 +16,14 @@ function Invoke-AddBaseline {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Stages = @($Request.Body.stages)
+    $StagesWithoutConditions = @(for ($i = 1; $i -lt $Stages.Count; $i++) {
+            $Conditions = @(@($Stages[$i].conditions) + @($Stages[$i].conditionGroups.conditions)).Where({ $_.type })
+            if ($Conditions.Count -eq 0) { "Stage $($i + 1) ($($Stages[$i].name))" }
+        })
+    if ($StagesWithoutConditions.Count -gt 0) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = "Every stage after the first needs at least one graduation condition. Add one to $($StagesWithoutConditions -join ', ')." } })
+    }
     try {
         # Optional. Pushes the saved baseline to a GitHub template repository after the save: FullName is
         # the repository (owner/repo), Message is the commit message. Not stored on the baseline.

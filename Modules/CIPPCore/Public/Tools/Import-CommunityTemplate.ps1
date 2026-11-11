@@ -20,7 +20,8 @@ function Import-CommunityTemplate {
     try {
         if ($Template.RowKey) {
             Write-Host "This is going to be a direct write to table, it's a CIPP template. We're writing $($Template.RowKey)"
-            $Template = $Template | Select-Object * -ExcludeProperty Timestamp
+            # LinkedTemplates is the repo file's manifest of the templates it links, not a table column
+            $Template = $Template | Select-Object * -ExcludeProperty Timestamp, LinkedTemplates
 
             # Support both objects and json string in repo (support pretty printed json in repo)
             if (Test-Json $Template.JSON -ErrorAction SilentlyContinue) {

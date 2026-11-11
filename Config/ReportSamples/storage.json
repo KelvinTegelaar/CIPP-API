@@ -1,0 +1,126 @@
+{
+  "sites": [
+    {
+      "displayName": "Sample Finance",
+      "webUrl": "https://contoso.sharepoint.com/sites/finance",
+      "storageUsedInBytes": 442381631488,
+      "storageAllocatedInBytes": 1099511627776,
+      "lastActivityDate": "2026-10-30",
+      "rootWebTemplate": "Team site"
+    },
+    {
+      "displayName": "Sample Projects",
+      "webUrl": "https://contoso.sharepoint.com/sites/projects",
+      "storageUsedInBytes": 287762808832,
+      "storageAllocatedInBytes": 1099511627776,
+      "lastActivityDate": "2026-11-02",
+      "rootWebTemplate": "Group"
+    },
+    {
+      "displayName": "Sample Marketing",
+      "webUrl": "https://contoso.sharepoint.com/sites/marketing",
+      "storageUsedInBytes": 103079215104,
+      "storageAllocatedInBytes": 1099511627776,
+      "lastActivityDate": "2026-06-15",
+      "rootWebTemplate": "Team site"
+    },
+    {
+      "displayName": "Sample Archive",
+      "webUrl": "https://contoso.sharepoint.com/sites/archive",
+      "storageUsedInBytes": 57982058496,
+      "storageAllocatedInBytes": 1099511627776,
+      "lastActivityDate": "2025-12-01",
+      "rootWebTemplate": "Team site"
+    },
+    {
+      "displayName": "Sample Intranet",
+      "webUrl": "https://contoso.sharepoint.com/sites/intranet",
+      "storageUsedInBytes": 12884901888,
+      "storageAllocatedInBytes": 1099511627776,
+      "lastActivityDate": "2026-11-05",
+      "rootWebTemplate": "Team site"
+    }
+  ],
+  "oneDrive": [
+    {
+      "displayName": "Sample User",
+      "ownerPrincipalName": "alex.wilber@contoso.com",
+      "storageUsedInBytes": 40802189312,
+      "storageAllocatedInBytes": 1099511627776,
+      "lastActivityDate": "2026-11-04"
+    },
+    {
+      "displayName": "Sample User",
+      "ownerPrincipalName": "megan.bowen@contoso.com",
+      "storageUsedInBytes": 22548578304,
+      "storageAllocatedInBytes": 1099511627776,
+      "lastActivityDate": "2026-11-01"
+    },
+    {
+      "displayName": "Sample User",
+      "ownerPrincipalName": "lee.gu@contoso.com",
+      "storageUsedInBytes": 9663676416,
+      "storageAllocatedInBytes": 1099511627776,
+      "lastActivityDate": "2026-07-20"
+    }
+  ],
+  "scan": [
+    {
+      "rowType": "Site",
+      "displayName": "Sample Finance",
+      "siteUrl": "https://contoso.sharepoint.com/sites/finance",
+      "recycleTotalBytes": 19327352832,
+      "recycleItemCount": 1240
+    },
+    {
+      "rowType": "Site",
+      "displayName": "Sample Projects",
+      "siteUrl": "https://contoso.sharepoint.com/sites/projects",
+      "recycleTotalBytes": 6442450944,
+      "recycleItemCount": 310
+    },
+    {
+      "rowType": "Site",
+      "displayName": "Sample Marketing",
+      "siteUrl": "https://contoso.sharepoint.com/sites/marketing",
+      "recycleTotalBytes": 0,
+      "recycleItemCount": 0
+    },
+    {
+      "rowType": "Library",
+      "siteUrl": "https://contoso.sharepoint.com/sites/finance",
+      "libraryDisplayName": "Documents",
+      "storageUsedInBytes": 408021893120,
+      "fileStreamSizeInBytes": 161061273600,
+      "versionEstimateBytes": 246960619520,
+      "versionPolicy": "500 versions, never expire",
+      "versionTrimMode": 0,
+      "majorVersionLimit": 500,
+      "fileCount": 42000
+    },
+    {
+      "rowType": "Library",
+      "siteUrl": "https://contoso.sharepoint.com/sites/projects",
+      "libraryDisplayName": "Documents",
+      "storageUsedInBytes": 268435456000,
+      "fileStreamSizeInBytes": 204010946560,
+      "versionEstimateBytes": 64424509440,
+      "versionPolicy": "Automatic",
+      "versionTrimMode": 2,
+      "majorVersionLimit": 500,
+      "fileCount": 61000
+    },
+    {
+      "rowType": "Library",
+      "siteUrl": "https://contoso.sharepoint.com/sites/marketing",
+      "libraryDisplayName": "Brand Assets",
+      "storageUsedInBytes": 96636764160,
+      "fileStreamSizeInBytes": 75161927680,
+      "versionEstimateBytes": 21474836480,
+      "versionPolicy": "100 versions, expire after 365 days",
+      "versionTrimMode": 1,
+      "majorVersionLimit": 100,
+      "fileCount": 8000
+    }
+  ]
+}

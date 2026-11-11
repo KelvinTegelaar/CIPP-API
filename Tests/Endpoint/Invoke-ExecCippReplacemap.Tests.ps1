@@ -43,6 +43,7 @@ BeforeAll {
     . $FunctionPath
     . (Join-Path (Split-Path -Parent $FunctionPath) 'Invoke-ExecCippGlobalReplacemap.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Select-CippAllowedTenantData.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
 
     function New-SaveRequest {
         param(
@@ -525,7 +526,10 @@ Describe 'Invoke-ExecCippReplacemap - a failed read' {
         }
         $Request = if ($Action -eq 'Usage') { New-UsageRequest } else { New-ListRequest }
 
-        { Invoke-ExecCippReplacemap -Request $Request } | Should -Throw '*server is busy*'
+        $Response = Invoke-ExecCippReplacemap -Request $Request
+
+        $Response.StatusCode | Should -Be 500
+        $Response.Body.Results | Should -BeLike '*server is busy*'
     }
 
     It 'fails when the Delete read fails' {
@@ -533,6 +537,9 @@ Describe 'Invoke-ExecCippReplacemap - a failed read' {
         $Request = New-SaveRequest -TenantId 'contoso.onmicrosoft.com'
         $Request.Body.Action = 'Delete'
 
-        { Invoke-ExecCippReplacemap -Request $Request } | Should -Throw '*server is busy*'
+        $Response = Invoke-ExecCippReplacemap -Request $Request
+
+        $Response.StatusCode | Should -Be 500
+        $Response.Body.Results | Should -BeLike '*server is busy*'
     }
 }

@@ -53,3 +53,12 @@ Describe 'Push-ExecCIPPDBCache single type' {
         Should -Invoke Test-CIPPStandardLicense -Times 0
     }
 }
+
+Describe 'Get-CIPPDBCacheSchedule Global Secure Access' {
+    It 'collects both Global Secure Access caches nightly with the Entra ID P1 group' {
+        $Schedule = Get-CIPPDBCacheSchedule
+        $Schedule.ConditionalAccess.License | Should -Be 'Entra'
+        $Schedule.ConditionalAccess.Types | Should -Contain 'NetworkAccess'
+        $Schedule.ConditionalAccess.Types | Should -Contain 'NetworkAccessFiltering'
+    }
+}

@@ -133,6 +133,8 @@ function Get-CIPPDBCacheSchedule {
                 'AppCredentialChanges'
                 'ServicePrincipalRoleChanges'
                 'DelegatedGrantChanges'
+                'NetworkAccess'
+                'NetworkAccessFiltering'
             )
         }
         ServicePrincipalSignInActivities = @{ License = 'Entra' }

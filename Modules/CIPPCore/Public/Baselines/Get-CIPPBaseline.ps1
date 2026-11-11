@@ -276,7 +276,8 @@ function Get-CIPPBaseline {
                 # stage until it joins - unless another set (say a lone manual approval) is open to it.
                 $Sets = @(@([PSCustomObject]@{ logic = $NextStageDef.logic; conditions = @($NextStageDef.conditions) }) + @($NextStageDef.conditionGroups)).Where({ $_ -and @($_.conditions).Where({ $_ }).Count -gt 0 })
                 $GroupBlocked = $Sets.Count -gt 0
-                $ManualAdvance = $false
+                # A stage saved before conditions were required can only be reached by a manual move.
+                $ManualAdvance = $null -ne $NextStageDef -and $Sets.Count -eq 0
                 foreach ($Set in $Sets) {
                     $SetBlocked = $false
                     if ($Set.logic -ne 'or') {

@@ -16,6 +16,7 @@ BeforeAll {
     function Write-LogMessage { param($message, $API, $tenant, $sev, $LogData) }
 
     . $AlertPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Test-CippTransientError.ps1')
 }
 
 Describe 'Get-CIPPAlertQuotaUsed' {
@@ -85,5 +86,18 @@ Describe 'Get-CIPPAlertQuotaUsed' {
         Get-CIPPAlertQuotaUsed -InputValue @{ QuotaUsedQuota = 90 } -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke Write-AlertTrace -Times 0 -Exactly
+    }
+
+    It 'logs a <Severity> when the report read fails with <NormalizedError>' -TestCases @(
+        @{ NormalizedError = 'UnknownError'; Severity = 'Warning' }
+        @{ NormalizedError = 'Forbidden'; Severity = 'Error' }
+    ) {
+        param($NormalizedError, $Severity)
+        Mock New-GraphGetRequest { throw 'Graph failed' }
+        Mock Get-CippException { @{ NormalizedError = $NormalizedError } }
+
+        Get-CIPPAlertQuotaUsed -InputValue @{ QuotaUsedQuota = 90 } -TenantFilter 'contoso.onmicrosoft.com'
+
+        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -eq $Severity }
     }
 }

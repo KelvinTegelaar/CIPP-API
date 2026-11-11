@@ -7,6 +7,8 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPTextReplacement.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPBaselines/Public/PrepareHooks/Get-CIPPBaselineCATemplateState.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPBaselines/Public/Helpers/Get-CIPPBaselineCacheRows.ps1')
+    function Get-CIPPBaselineCommand { param($Name) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Format-CIPPNamedLocationRange.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
@@ -20,6 +22,7 @@ BeforeAll {
     function Get-CIPPTable { param($tablename) @{ TableName = $tablename } }
     function Get-CIPPAzDataTableEntity {
         param($TableName, $Filter)
+        if ($TableName -eq 'templates' -and $Filter -match 'GSASecurityProfileTemplate') { return $script:ProfileTemplateRows }
         if ($TableName -eq 'templates') { return [pscustomobject]@{ RowKey = 'tpl-1'; GUID = 'tpl-1'; JSON = $script:TemplateJSON } }
         if ($Filter -match "PartitionKey eq 'AllTenants'") { return $script:VariableRows }
         @()
@@ -32,6 +35,7 @@ BeforeAll {
             'Users' { [pscustomobject]@{ id = $script:UserId; displayName = 'Break Glass' } }
             'Groups' { $script:CachedGroups }
             'ConditionalAccessPolicies' { $script:LivePolicy | ConvertTo-Json -Depth 20 | ConvertFrom-Json }
+            'NetworkAccessFiltering' { $script:FilteringRows }
         }
     }
 
@@ -301,10 +305,85 @@ Describe 'Get-CIPPBaselineCATemplateState license' {
     It 'requires Entra ID P2 when the template uses risk conditions' {
         $script:TemplateJSON = '{"displayName":"Variable test policy","state":"disabled","conditions":{"userRiskLevels":["high"],"users":{"includeUsers":["All"]}}}'
         $State = Get-CIPPBaselineCATemplateState -Item @{ Variables = @{ caTemplate = 'tpl-1'; state = 'donotchange' } } -TenantFilter 'customer.example.com'
-        @($State.RequiredCapabilities) | Should -Be @('AAD_PREMIUM_P2')
+        @($State.RequiredCapabilities).Count | Should -Be 1
+        @($State.RequiredCapabilities)[0] | Should -Be @('AAD_PREMIUM_P2')
     }
 
     It 'requires nothing extra without risk conditions' {
         (Get-State '"Break Glass"' '"Site A"').RequiredCapabilities | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Get-CIPPBaselineCATemplateState Global Secure Access security profile' {
+    BeforeAll {
+        $script:SavedPolicy = $script:LivePolicy
+        $script:ProfileId = '50000000-0000-0000-0000-000000000005'
+        $script:FilteringRows = @([pscustomobject]@{ kind = 'profile'; id = $script:ProfileId; name = 'Staff' })
+        $script:ProfileTemplateRows = @([pscustomobject]@{ RowKey = 'gsa-tpl'; JSON = '{"name":"Staff","priority":1000}' })
+        function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
+        function Get-GsaState([string]$TemplateProfile, [string]$Conditions = '"users":{"includeUsers":["None"]}', [string]$Enabled = 'true') {
+            $script:LivePolicy = [pscustomobject]@{
+                id              = 'live-id'
+                displayName     = 'Variable test policy'
+                state           = 'disabled'
+                conditions      = [pscustomobject]@{ users = [pscustomobject]@{ includeUsers = @('None') } }
+                sessionControls = [pscustomobject]@{
+                    globalSecureAccessFilteringProfile = [pscustomobject]@{ profileId = $script:ProfileId; isEnabled = $true }
+                    networkAccessSecurity              = [pscustomobject]@{ policyId = $script:ProfileId; isEnabled = $true }
+                }
+            }
+            $script:TemplateJSON = '{{"displayName":"Variable test policy","state":"disabled","conditions":{{{1}}},"sessionControls":{{"globalSecureAccessFilteringProfile":{{"profileId":{0},"isEnabled":{2}}}}}}}' -f $TemplateProfile, $Conditions, $Enabled
+            Get-CIPPBaselineCATemplateState -Item @{ Variables = @{ caTemplate = 'tpl-1'; state = 'donotchange' } } -TenantFilter 'customer.example.com'
+        }
+    }
+    AfterAll { $script:LivePolicy = $script:SavedPolicy }
+
+    BeforeEach {
+        $script:FilteringRows = @([pscustomobject]@{ kind = 'profile'; id = $script:ProfileId; name = 'Staff' }, [pscustomobject]@{ kind = 'policy'; id = 'pol'; name = 'Block' })
+        Mock New-GraphGetRequest {}
+    }
+
+    It 'grades by name: the live profile id becomes the name the filtering cache holds for it' {
+        $State = Get-GsaState '"Staff"'
+        $State.Expected.sessionControls.globalSecureAccessFilteringProfile.profileId | Should -Be 'Staff'
+        $State.Current.sessionControls.globalSecureAccessFilteringProfile.profileId | Should -Be 'Staff'
+        Compare-CIPPIntuneObject -ReferenceObject $State.Expected -DifferenceObject $State.Current -CompareType 'ca' | Should -BeNullOrEmpty
+    }
+
+    It 'drops the networkAccessSecurity mirror on both sides' {
+        $State = Get-GsaState '"Staff"'
+        $State.Current.sessionControls.PSObject.Properties.Name | Should -Not -Contain 'networkAccessSecurity'
+        $State.Expected.sessionControls.PSObject.Properties.Name | Should -Not -Contain 'networkAccessSecurity'
+    }
+
+    It 'grades a security profile template link by the linked template''s current name' {
+        $State = Get-GsaState '{"label":"Old name","value":"gsa-tpl"}'
+        $State.Expected.sessionControls.globalSecureAccessFilteringProfile.profileId | Should -Be 'Staff'
+    }
+
+    It 'collects the filtering cache once when it was never collected, without a live read of its own' {
+        $script:FilteringRows = @()
+        function Set-CIPPDBCacheNetworkAccessFiltering { param($TenantFilter) $script:FilteringRows = @([pscustomobject]@{ kind = 'profile'; id = $script:ProfileId; name = 'Staff' }) }
+        Mock Get-CIPPBaselineCommand { 'Set-CIPPDBCacheNetworkAccessFiltering' } -ParameterFilter { $Name -eq 'Set-CIPPDBCacheNetworkAccessFiltering' }
+        $State = Get-GsaState '"Staff"'
+        $State.Current.sessionControls.globalSecureAccessFilteringProfile.profileId | Should -Be 'Staff'
+        Should -Invoke New-GraphGetRequest -Times 0
+    }
+
+    It 'keeps the id, and so drifts, when the filtering cache does not hold the live profile' {
+        $script:FilteringRows = @([pscustomobject]@{ kind = 'profile'; id = 'someone-else'; name = 'Guests' })
+        (Get-GsaState '"Staff"').Current.sessionControls.globalSecureAccessFilteringProfile.profileId | Should -Be $script:ProfileId
+    }
+
+    It 'requires Internet Access when the template enables a security profile, and P2 as well with risk conditions' {
+        @((Get-GsaState '"Staff"').RequiredCapabilities)[0] | Should -Be @('Entra_Premium_Internet_Access')
+        $Both = @((Get-GsaState '"Staff"' '"users":{"includeUsers":["None"]},"userRiskLevels":["high"]').RequiredCapabilities)
+        $Both.Count | Should -Be 2
+        $Both[0] | Should -Be @('AAD_PREMIUM_P2')
+        $Both[1] | Should -Be @('Entra_Premium_Internet_Access')
+    }
+
+    It 'requires nothing for a disabled security profile control' {
+        (Get-GsaState '"Staff"' -Enabled 'false').RequiredCapabilities | Should -BeNullOrEmpty
     }
 }

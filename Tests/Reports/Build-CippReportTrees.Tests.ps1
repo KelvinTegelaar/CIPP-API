@@ -34,6 +34,38 @@ Describe 'Report tree builders' {
         Test-Report $r 'Data Sharing Review'
     }
 
+    It 'Storage: sums version history, flags libraries with no time limit and renders' {
+        $G = 1GB
+        $r = Build-CippStorageReportTree -Data @{
+            TenantName = 'Contoso'
+            sites      = @(
+                [pscustomobject]@{ displayName = 'Finance'; webUrl = 'https://c.sharepoint.com/sites/fin'; storageUsedInBytes = 100 * $G; rootWebTemplate = 'Team site'; lastActivityDate = '2020-01-01' }
+                [pscustomobject]@{ displayName = 'Projects'; webUrl = 'https://c.sharepoint.com/sites/proj'; storageUsedInBytes = 30 * $G; rootWebTemplate = 'Group'; lastActivityDate = '2020-01-01' }
+            )
+            oneDrive   = @([pscustomobject]@{ ownerPrincipalName = 'a@c.com'; storageUsedInBytes = 10 * $G; lastActivityDate = $null })
+            scan       = @(
+                [pscustomobject]@{ rowType = 'Site'; siteUrl = 'https://c.sharepoint.com/sites/fin'; recycleTotalBytes = 2 * $G; recycleItemCount = 5 }
+                [pscustomobject]@{ rowType = 'Library'; siteUrl = 'https://c.sharepoint.com/sites/fin'; libraryDisplayName = 'Docs'; storageUsedInBytes = 80 * $G; versionEstimateBytes = 60 * $G; fileCount = 10; versionPolicy = '500 versions, never expire'; versionTrimMode = 0 }
+                [pscustomobject]@{ rowType = 'Library'; siteUrl = 'https://c.sharepoint.com/sites/fin'; libraryDisplayName = 'Auto'; storageUsedInBytes = 20 * $G; versionEstimateBytes = 0; fileCount = 10; versionPolicy = 'Automatic'; versionTrimMode = 2 }
+            )
+        }
+        $r.Variables.covermeta | Should -Be ("100.00 GB SharePoint {0} 30.00 GB Teams {0} 10.00 GB OneDrive" -f [char]0x00B7)
+        $Stats = $r.Blocks.Where({ $_.type -eq 'scorecard' })[0].stats
+        @($Stats.label) | Should -Be @('SharePoint', 'Teams', 'OneDrive', 'Version History (est.)', 'Recycle Bins')
+        @($Stats.Where({ $_.colour })).Count | Should -Be 0
+        $r.Variables.covermetanote | Should -Be 'Version history: ~60.00 GB (60% of library storage)'
+        @($r.Blocks.Where({ $_.type -eq 'alertbox' -and $_.title -like '1 library with no time limit*' })).Count | Should -Be 1
+        Test-Report $r 'Storage Review'
+    }
+
+    It 'Storage: renders without a cleanup scan or any usage data' {
+        $r = Build-CippStorageReportTree -Data @{ TenantName = 'Contoso' }
+        $r.Variables.covermetanote | Should -Be '0 OneDrive accounts'
+        @($r.Blocks.Where({ $_.type -eq 'page' -and $_.title -eq 'Version History' })).Count | Should -Be 0
+        @($r.Blocks.Where({ $_.title -like '*recycle*' })).Count | Should -Be 0
+        Test-Report $r 'Storage Review'
+    }
+
     It 'Permissions: a lone detached library is Low exposure and renders' {
         $r = Build-CippPermissionsReportTree -Data @{
             TenantName  = 'Contoso'

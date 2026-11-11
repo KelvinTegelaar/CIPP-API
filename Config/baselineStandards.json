@@ -7088,6 +7088,239 @@
     ]
   },
   {
+    "name": "standards.GlobalSecureAccessInternetAccess",
+    "cat": "Global Secure Access",
+    "helpText": "Enables or disables the Global Secure Access Internet traffic forwarding profile, keeps its traffic policies enabled, sets who it is assigned to and optionally manages the custom block page. Uses Microsoft Entra Internet Access. The tenant must be onboarded, which the Set up Global Secure Access standard does.",
+    "docsDescription": "Grades the Internet traffic forwarding profile the same way the Microsoft 365 profile standard grades its profile: state, enabled traffic policies and assignment, where assigning to groups adds them to what is already assigned and Do not assign leaves the assignment alone. The custom block page is graded only for what is configured: its state when chosen and its message when not blank. The message is markdown and may contain links.",
+    "executiveText": "Routes internet traffic from managed devices through Microsoft's Security Service Edge so web content filtering and threat protection apply, and sets the message users see when a site is blocked.",
+    "label": "Manage Microsoft Entra Internet Access",
+    "impact": "Medium Impact",
+    "impactColour": "warning",
+    "addedDate": "2026-11-11",
+    "powershellEquivalent": "Update-MgBetaNetworkAccessForwardingProfile; Update-MgBetaNetworkAccessSettingCustomBlockPage",
+    "recommendedBy": [
+      "CIPP"
+    ],
+    "requiredCapabilities": [
+      [
+        "Entra_Premium_Internet_Access"
+      ]
+    ],
+    "addedComponent": [
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.profileState",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Profile state",
+        "options": [
+          {
+            "value": "enabled",
+            "label": "Enabled"
+          },
+          {
+            "value": "disabled",
+            "label": "Disabled"
+          }
+        ],
+        "default": "enabled",
+        "recommended": "enabled"
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.assignTo",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Who should the profile be assigned to?",
+        "options": [
+          {
+            "value": "DoNotAssign",
+            "label": "Do not assign"
+          },
+          {
+            "value": "AllDevicesAndUsers",
+            "label": "Assign to all users and devices"
+          },
+          {
+            "value": "customGroup",
+            "label": "Assign to Custom Group"
+          }
+        ],
+        "default": "AllDevicesAndUsers"
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.customGroup",
+        "type": "textField",
+        "label": "Custom group names, comma separated (when assigning to a custom group; wildcards allowed)",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.blockPageState",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Custom block page (leave empty to not manage it)",
+        "options": [
+          {
+            "value": "enabled",
+            "label": "Enabled"
+          },
+          {
+            "value": "disabled",
+            "label": "Disabled"
+          }
+        ],
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.blockMessage",
+        "type": "textField",
+        "label": "Block page message (markdown, links like [Help](https://example.com) allowed; leave empty to keep the current message)",
+        "omitWhenBlank": true
+      }
+    ]
+  },
+  {
+    "name": "standards.GlobalSecureAccessM365Profile",
+    "cat": "Global Secure Access",
+    "helpText": "Enables or disables the Global Secure Access Microsoft 365 traffic forwarding profile, keeps its traffic policies enabled and sets who it is assigned to. Uses Entra ID P1. The tenant must be onboarded, which the Set up Global Secure Access standard does.",
+    "docsDescription": "Grades the Microsoft 365 traffic forwarding profile's state and, when it should be enabled, that every traffic policy in it is enabled and who it is assigned to. Assigning to groups adds them to whatever is already assigned; assignments made by hand are kept, and choosing Do not assign never removes them, which is done in the portal. Group names may use wildcards and resolve from the Groups cache. Assignment is managed only on tenants with a Global Secure Access licence (Microsoft Entra Internet Access or Private Access), because Graph does not return a profile's assignment without one; elsewhere only the state and traffic policies are graded.",
+    "executiveText": "Routes Microsoft 365 traffic from managed devices through Microsoft's Security Service Edge, the base for compliant network checks and for seeing users' real source IP addresses in sign-in logs.",
+    "label": "Manage the Microsoft 365 traffic forwarding profile",
+    "impact": "Medium Impact",
+    "impactColour": "warning",
+    "addedDate": "2026-11-11",
+    "powershellEquivalent": "Update-MgBetaNetworkAccessForwardingProfile",
+    "recommendedBy": [
+      "CIPP"
+    ],
+    "requiredCapabilities": [
+      [
+        "AAD_PREMIUM",
+        "AAD_PREMIUM_P2"
+      ]
+    ],
+    "addedComponent": [
+      {
+        "name": "standards.GlobalSecureAccessM365Profile.profileState",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Profile state",
+        "options": [
+          {
+            "value": "enabled",
+            "label": "Enabled"
+          },
+          {
+            "value": "disabled",
+            "label": "Disabled"
+          }
+        ],
+        "default": "enabled",
+        "recommended": "enabled"
+      },
+      {
+        "name": "standards.GlobalSecureAccessM365Profile.assignTo",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Who should the profile be assigned to?",
+        "options": [
+          {
+            "value": "DoNotAssign",
+            "label": "Do not assign"
+          },
+          {
+            "value": "AllDevicesAndUsers",
+            "label": "Assign to all users and devices"
+          },
+          {
+            "value": "customGroup",
+            "label": "Assign to Custom Group"
+          }
+        ],
+        "default": "AllDevicesAndUsers"
+      },
+      {
+        "name": "standards.GlobalSecureAccessM365Profile.customGroup",
+        "type": "textField",
+        "label": "Custom group names, comma separated (when assigning to a custom group; wildcards allowed)",
+        "omitWhenBlank": true
+      }
+    ]
+  },
+  {
+    "name": "standards.GlobalSecureAccessProfileTemplate",
+    "cat": "Global Secure Access",
+    "helpText": "Deploys a Global Secure Access security profile template, with the web content filtering policy templates it links, and keeps the tenant matching it. Uses Microsoft Entra Internet Access. Apply the profile to users with a Conditional Access template that links it.",
+    "docsDescription": "Compares the tenant's security profile, filtering policies and links with the selected security profile template and deploys any difference: missing policies and the profile are created, drifted rules and links are corrected, and links the template does not have are removed. A conflict, such as another profile holding the template's priority, is reported and never overwritten. The tenant must be onboarded to Global Secure Access.",
+    "executiveText": "Applies the same web content filtering rules, such as blocking risky site categories, to every tenant from one centrally managed template.",
+    "label": "Global Secure Access Security Profile Template",
+    "impact": "Medium Impact",
+    "impactColour": "warning",
+    "addedDate": "2026-11-11",
+    "powershellEquivalent": "New-MgBetaNetworkAccessFilteringPolicy; New-MgBetaNetworkAccessFilteringProfile",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      [
+        "Entra_Premium_Internet_Access"
+      ]
+    ],
+    "multiple": true,
+    "addedComponent": [
+      {
+        "name": "standards.GlobalSecureAccessProfileTemplate.profileTemplate",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Select Security Profile Template",
+        "required": true,
+        "api": {
+          "url": "/api/ListGSASecurityProfileTemplates",
+          "labelField": "name",
+          "valueField": "GUID",
+          "queryKey": "ListGSASecurityProfileTemplates"
+        }
+      }
+    ]
+  },
+  {
+    "name": "standards.GlobalSecureAccessSetup",
+    "cat": "Global Secure Access",
+    "helpText": "Onboards the tenant to Global Secure Access and sets the Conditional Access signalling that restores users' source IP addresses and enables compliant network checks. Uses Entra ID P1. Onboarding cannot be undone.",
+    "docsDescription": "Starts Global Secure Access onboarding when the tenant is not onboarded (a running onboarding counts as compliant, so it is never started twice) and sets the signalingStatus of the Global Secure Access Conditional Access settings. Signalling is needed for compliant network conditions and for Conditional Access and sign-in logs to show users' original source IP addresses. Onboarding is one way: there is no offboarding through this standard.",
+    "executiveText": "Turns on Microsoft's Security Service Edge for the tenant so its network security features can be used, and lets Conditional Access see where sign-ins really come from when traffic flows through Global Secure Access.",
+    "label": "Set up Global Secure Access",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-11-11",
+    "powershellEquivalent": "Invoke-MgBetaOnboardNetworkAccess; Update-MgBetaNetworkAccessSettingConditionalAccess",
+    "recommendedBy": [
+      "CIPP"
+    ],
+    "requiredCapabilities": [
+      [
+        "AAD_PREMIUM",
+        "AAD_PREMIUM_P2"
+      ]
+    ],
+    "addedComponent": [
+      {
+        "name": "standards.GlobalSecureAccessSetup.signalingStatus",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Conditional Access signalling",
+        "options": [
+          {
+            "value": "enabled",
+            "label": "Enabled"
+          },
+          {
+            "value": "disabled",
+            "label": "Disabled"
+          }
+        ],
+        "default": "enabled",
+        "recommended": "enabled"
+      }
+    ]
+  },
+  {
     "name": "standards.GroupTemplate",
     "cat": "Templates",
     "tag": [],

@@ -1,0 +1,103 @@
+{
+  "name": "GlobalSecureAccessM365Profile",
+  "label": "Manage the Microsoft 365 traffic forwarding profile",
+  "cat": "Global Secure Access",
+  "impact": "Medium Impact",
+  "helpText": "Enables or disables the Global Secure Access Microsoft 365 traffic forwarding profile, keeps its traffic policies enabled and sets who it is assigned to. Uses Entra ID P1. The tenant must be onboarded, which the Set up Global Secure Access standard does.",
+  "executiveText": "Routes Microsoft 365 traffic from managed devices through Microsoft's Security Service Edge, the base for compliant network checks and for seeing users' real source IP addresses in sign-in logs.",
+  "docsDescription": "Grades the Microsoft 365 traffic forwarding profile's state and, when it should be enabled, that every traffic policy in it is enabled and who it is assigned to. Assigning to groups adds them to whatever is already assigned; assignments made by hand are kept, and choosing Do not assign never removes them, which is done in the portal. Group names may use wildcards and resolve from the Groups cache. Assignment is managed only on tenants with a Global Secure Access licence (Microsoft Entra Internet Access or Private Access), because Graph does not return a profile's assignment without one; elsewhere only the state and traffic policies are graded.",
+  "impactColour": "warning",
+  "addedDate": "2026-11-11",
+  "powershellEquivalent": "Update-MgBetaNetworkAccessForwardingProfile",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    [
+      "AAD_PREMIUM",
+      "AAD_PREMIUM_P2"
+    ]
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "profileState": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Profile state",
+      "options": [
+        {
+          "value": "enabled",
+          "label": "Enabled"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled"
+        }
+      ],
+      "default": "enabled",
+      "recommended": "enabled"
+    },
+    "assignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Who should the profile be assigned to?",
+      "options": [
+        {
+          "value": "DoNotAssign",
+          "label": "Do not assign"
+        },
+        {
+          "value": "AllDevicesAndUsers",
+          "label": "Assign to all users and devices"
+        },
+        {
+          "value": "customGroup",
+          "label": "Assign to Custom Group"
+        }
+      ],
+      "default": "AllDevicesAndUsers"
+    },
+    "customGroup": {
+      "type": "textField",
+      "label": "Custom group names, comma separated (when assigning to a custom group; wildcards allowed)",
+      "omitWhenBlank": true
+    }
+  },
+  "read": {
+    "cacheType": "NetworkAccess"
+  },
+  "prepare": "Get-CIPPBaselineGlobalSecureAccessTrafficProfileState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "writes": [
+      {
+        "from": "stateWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/forwardingProfiles/%id%",
+        "body": {
+          "state": "%state%"
+        }
+      },
+      {
+        "from": "linkWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/forwardingProfiles/%profileId%/policies/%id%",
+        "body": {
+          "state": "enabled"
+        }
+      },
+      {
+        "from": "assignmentWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/forwardingProfiles/%id%",
+        "body": {
+          "assignmentRules": "%assignmentRules%"
+        }
+      }
+    ],
+    "refreshCache": [
+      "NetworkAccess"
+    ]
+  }
+}

@@ -29,6 +29,7 @@ function Set-CIPPDBCacheNetworkAccess {
         $Onboarded = $Status.onboardingStatus -eq 'onboarded'
         $Profiles = [System.Collections.Generic.List[object]]::new()
         $SignalingStatus = $null
+        $CustomBlockPage = $null
 
         # Every networkAccess path except tenantStatus answers 403 until the tenant is onboarded.
         if ($Onboarded) {
@@ -50,10 +51,18 @@ function Set-CIPPDBCacheNetworkAccess {
                         isCustomProfile           = [bool]$RawProfile.isCustomProfile
                         servicePrincipalId        = $RawProfile.servicePrincipal.id
                         appRoleAssignmentRequired = $AssignmentRequired
+                        # Who the profile applies to (AllMembership or EnumeratedMembership); null until assigned
+                        assignmentRules           = $RawProfile.assignmentRules
                         policies                  = @($RawProfile.policies | ForEach-Object { [PSCustomObject]@{ id = $_.id; state = $_.state; policyName = $_.policy.name } })
                     })
             }
             $SignalingStatus = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/networkAccess/settings/conditionalAccess' -tenantid $TenantFilter -AsApp $true).signalingStatus
+            try {
+                $BlockPage = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/networkAccess/settings/customBlockPage' -tenantid $TenantFilter -AsApp $true
+                $CustomBlockPage = [PSCustomObject]@{ state = $BlockPage.state; message = $BlockPage.configuration.body }
+            } catch {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Could not read the Global Secure Access custom block page: $($_.Exception.Message)" -sev Warning
+            }
         }
 
         $Row = [PSCustomObject]@{
@@ -61,6 +70,7 @@ function Set-CIPPDBCacheNetworkAccess {
             onboardingStatus = $Status.onboardingStatus
             onboarded        = $Onboarded
             signalingStatus  = $SignalingStatus
+            customBlockPage  = $CustomBlockPage
             profiles         = @($Profiles)
         }
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'NetworkAccess' -Data @($Row) -AddCount -ClearOnEmpty
