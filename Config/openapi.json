@@ -1886,6 +1886,9 @@
                   "Compliance": {
                     "type": "object",
                     "properties": {
+                      "AllowMEMEnforceCompliance": {
+                        "type": "boolean"
+                      },
                       "allowPartnerToCollectIosCertificateMetadata": {
                         "type": "boolean"
                       },
