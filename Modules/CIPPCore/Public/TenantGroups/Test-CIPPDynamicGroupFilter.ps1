@@ -78,6 +78,19 @@ function Test-CIPPDynamicGroupFilter {
         return "@($($sanitized -join ', '))"
     }
 
+    # Helper: condition for an array property (skuId, servicePlans). With an array on the left,
+    # eq/ne/notlike filter the array instead of returning a boolean, so 'ne X' matched every
+    # tenant holding anything besides X and missed tenants holding nothing.
+    function Get-ArrayCondition {
+        param([string]$Property, [string]$QuotedValue)
+        switch ($OperatorLower) {
+            'eq' { return "`$_.$Property -contains $QuotedValue" }
+            'ne' { return "`$_.$Property -notcontains $QuotedValue" }
+            'notlike' { return "(-not (`$_.$Property -like $QuotedValue))" }
+            default { return "`$_.$Property -$OperatorLower $QuotedValue" }
+        }
+    }
+
     switch ($Property) {
         'delegatedAccessStatus' {
             $safeValue = Protect-StringValue -InputValue ([string]$Value.value)
@@ -106,7 +119,7 @@ function Test-CIPPDynamicGroupFilter {
                     Write-Warning "Blocked invalid GUID in availableLicense rule: '$guid'"
                     return $null
                 }
-                return "`$_.skuId -$OperatorLower '$guid'"
+                return Get-ArrayCondition -Property 'skuId' -QuotedValue "'$guid'"
             }
         }
         'availableServicePlan' {
@@ -127,7 +140,7 @@ function Test-CIPPDynamicGroupFilter {
             } else {
                 $safeValue = Protect-StringValue -InputValue ([string]$Value.value)
                 if ($null -eq $safeValue) { return $null }
-                return "`$_.servicePlans -$OperatorLower '$safeValue'"
+                return Get-ArrayCondition -Property 'servicePlans' -QuotedValue "'$safeValue'"
             }
         }
         'tenantGroupMember' {
@@ -164,7 +177,9 @@ function Test-CIPPDynamicGroupFilter {
                     Write-Warning "Blocked invalid group ID: '$ReferencedGroupId'"
                     return $null
                 }
-                return "`$_.customerId -$OperatorLower `$script:TenantGroupMembersCache['$ReferencedGroupId']"
+                # The right side is the member list: eq/ne would compare the id to the whole list as one string
+                $MemberOperator = switch ($OperatorLower) { 'eq' { 'in' } 'ne' { 'notin' } default { $OperatorLower } }
+                return "`$_.customerId -$MemberOperator `$script:TenantGroupMembersCache['$ReferencedGroupId']"
             }
         }
         'customVariable' {
