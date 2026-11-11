@@ -27,7 +27,7 @@ Describe 'Push-DomainAnalyserTenant' {
         Mock Get-CIPPAzDataTableEntity {
             if ($Filter -like '*TenantGUID*') {
                 @(
-                    [pscustomobject]@{ PartitionKey = 'TenantDomains'; RowKey = 'Contoso.com' }
+                    [pscustomobject]@{ PartitionKey = 'TenantDomains'; RowKey = 'contoso.com' }
                     [pscustomobject]@{ PartitionKey = 'TenantDomains'; RowKey = 'contoso.onmicrosoft.com' }
                     [pscustomobject]@{ PartitionKey = 'TenantDomains'; RowKey = 'old-contoso.com' }
                 )
@@ -54,6 +54,40 @@ Describe 'Push-DomainAnalyserTenant' {
                 [pscustomobject]@{ id = 'old-contoso.com'; isVerified = $true }
             )
         }
+
+        Push-DomainAnalyserTenant -Item @{ customerId = 'g1' }
+
+        Should -Invoke Remove-CIPPAzDataTableEntity -Times 0 -Exactly
+    }
+
+    It 'removes every row when the tenant has no analysable domains left' {
+        Mock New-CIPPDbRequest {
+            @([pscustomobject]@{ id = 'contoso.com'; isVerified = $false })
+        }
+
+        Push-DomainAnalyserTenant -Item @{ customerId = 'g1' }
+
+        @($script:Removed.RowKey) | Should -Be @('contoso.com', 'contoso.onmicrosoft.com', 'old-contoso.com')
+        Should -Invoke Start-CIPPOrchestrator -Times 0 -Exactly
+    }
+
+    It 'removes a row whose key differs from the domain only in case' {
+        Mock Get-CIPPAzDataTableEntity {
+            if ($Filter -like '*TenantGUID*') {
+                @(
+                    [pscustomobject]@{ PartitionKey = 'TenantDomains'; RowKey = 'Contoso.com' }
+                    [pscustomobject]@{ PartitionKey = 'TenantDomains'; RowKey = 'contoso.onmicrosoft.com' }
+                )
+            }
+        }
+
+        Push-DomainAnalyserTenant -Item @{ customerId = 'g1' }
+
+        @($script:Removed.RowKey) | Should -Be @('Contoso.com')
+    }
+
+    It 'keeps every row when the cached domain data is empty' {
+        Mock New-CIPPDbRequest { }
 
         Push-DomainAnalyserTenant -Item @{ customerId = 'g1' }
 

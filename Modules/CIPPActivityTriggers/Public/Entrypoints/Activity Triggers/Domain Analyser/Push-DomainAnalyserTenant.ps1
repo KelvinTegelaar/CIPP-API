@@ -54,6 +54,21 @@ function Push-DomainAnalyserTenant {
             }
 
             $DomainCount = ($TenantDomains | Measure-Object).Count
+
+            # Before the count check, so a tenant left with no analysable domains is cleaned up too
+            try {
+                # Ordinal, like table keys: a row whose key differs only in case is replaced by the save below
+                $CurrentDomains = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+                foreach ($TenantDomain in $TenantDomains) { [void]$CurrentDomains.Add($TenantDomain.Domain) }
+                $StaleRows = @(Get-CIPPAzDataTableEntity @DomainTable -Filter ("PartitionKey eq 'TenantDomains' and TenantGUID eq '{0}'" -f $Tenant.customerId) -Property PartitionKey, RowKey).Where({ -not $CurrentDomains.Contains($_.RowKey) })
+                if ($StaleRows.Count -gt 0) {
+                    Remove-CIPPAzDataTableEntity -Force @DomainTable -Entity $StaleRows
+                    Write-LogMessage -Tenant $Tenant.defaultDomainName -TenantId $Tenant.customerId -API 'DomainAnalyser' -message "Removed $($StaleRows.Count) domain(s) no longer in the tenant: $($StaleRows.RowKey -join ', ')" -sev Info
+                }
+            } catch {
+                Write-LogMessage -Tenant $Tenant.defaultDomainName -TenantId $Tenant.customerId -API 'DomainAnalyser' -message 'Domain Analyser stale domain cleanup error' -sev 'Error' -LogData (Get-CippException -Exception $_)
+            }
+
             if ($DomainCount -gt 0) {
                 Write-Host "############# $DomainCount tenant Domains"
                 $TenantDomainObjects = [System.Collections.Generic.List[object]]::new()
@@ -105,12 +120,6 @@ function Push-DomainAnalyserTenant {
                     # Batch insert tenant domains
                     try {
                         Add-CIPPAzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
-                        $CurrentDomains = [System.Collections.Generic.HashSet[string]]::new([string[]]@($TenantDomains.Domain), [System.StringComparer]::OrdinalIgnoreCase)
-                        $StaleRows = @(Get-CIPPAzDataTableEntity @DomainTable -Filter ("PartitionKey eq 'TenantDomains' and TenantGUID eq '{0}'" -f $Tenant.customerId) -Property PartitionKey, RowKey).Where({ -not $CurrentDomains.Contains($_.RowKey) })
-                        if ($StaleRows.Count -gt 0) {
-                            Remove-CIPPAzDataTableEntity -Force @DomainTable -Entity $StaleRows
-                            Write-LogMessage -Tenant $Tenant.defaultDomainName -TenantId $Tenant.customerId -API 'DomainAnalyser' -message "Removed $($StaleRows.Count) domain(s) no longer in the tenant: $($StaleRows.RowKey -join ', ')" -sev Info
-                        }
                         $InputObject = [PSCustomObject]@{
                             QueueFunction    = @{
                                 FunctionName = 'GetTenantDomains'
