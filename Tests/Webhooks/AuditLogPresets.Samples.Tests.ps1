@@ -51,6 +51,7 @@ BeforeAll {
             'Authentication/Test-IpInRange.ps1'
             'Authentication/ConvertTo-CIPPIPRange.ps1'
             'BEC/ConvertTo-CIPPBecHostAddress.ps1'
+            'Tools/ConvertTo-CIPPScriptBlockValue.ps1'
             'Tools/Test-CIPPConditionFilter.ps1'
             'Webhooks/Get-CIPPAuditLogRuleSet.ps1'
             'Webhooks/Test-CIPPAuditLogRules.ps1'

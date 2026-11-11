@@ -57,8 +57,7 @@ function Test-CIPPDynamicGroupFilter {
     # Helper: sanitize a single string value for safe embedding in a quoted string
     function Protect-StringValue {
         param([string]$InputValue)
-        # Escape single quotes by doubling them (PowerShell string escaping)
-        $escaped = $InputValue -replace "'", "''"
+        $escaped = ConvertTo-CIPPScriptBlockValue -Value $InputValue
         # Block any remaining injection characters
         if (-not $SafeValueRegex.IsMatch($escaped)) {
             Write-Warning "Blocked unsafe value: '$InputValue'"
@@ -163,7 +162,7 @@ function Test-CIPPDynamicGroupFilter {
                     }
                 }
 
-                $MemberArray = $AllMembers | ForEach-Object { "'$_'" }
+                $MemberArray = $AllMembers | ForEach-Object { "'$(ConvertTo-CIPPScriptBlockValue -Value $_)'" }
                 $MemberArrayString = $MemberArray -join ', '
 
                 if ($OperatorLower -eq 'in') {

@@ -837,7 +837,7 @@ function Test-CIPPAuditLogRules {
                                         $validClause = $false
                                         break
                                     }
-                                    "'{0}'" -f ($keyStr -replace "'", "''")
+                                    "'{0}'" -f (ConvertTo-CIPPScriptBlockValue -Value $keyStr)
                                 }
                                 if (-not $validClause) { break }
                                 $conditionStrings.Add("`$_.CIPPUserKey -notin @($($sanitizedKeys -join ', '))")

@@ -4,6 +4,7 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/ConvertTo-CIPPScriptBlockValue.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/Test-CIPPConditionFilter.ps1')
     $TemplatePath = Join-Path (Split-Path -Parent $RepoRoot) 'frontend/src/data/AuditLogTemplates.json'
     $script:Templates = Get-Content -Path $TemplatePath -Raw | ConvertFrom-Json

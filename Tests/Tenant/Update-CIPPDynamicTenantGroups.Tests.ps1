@@ -2,6 +2,7 @@ BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/TenantGroups/Update-CIPPDynamicTenantGroups.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/TenantGroups/Test-CIPPDynamicGroupFilter.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/ConvertTo-CIPPScriptBlockValue.ps1')
 
     function Get-CippTable { param($tablename) @{ TableName = $tablename } }
     function Get-CIPPAzDataTableEntity {

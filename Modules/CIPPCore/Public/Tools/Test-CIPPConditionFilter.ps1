@@ -3,11 +3,9 @@ function Test-CIPPConditionFilter {
     .SYNOPSIS
         Returns a sanitized PowerShell condition string for an audit log / delta query condition.
     .DESCRIPTION
-        Validates operator and property name against allowlists, sanitizes input values,
-        then returns a safe condition string suitable for [ScriptBlock]::Create().
-
-        This replaces the old Invoke-Expression pattern which was vulnerable to code injection
-        through unsanitized user-controlled fields.
+        Validates operator and property name against allowlists, embeds the value as an escaped
+        single-quoted literal and parses the result to confirm it is a single comparison over that
+        literal before returning a string suitable for [ScriptBlock]::Create().
     .PARAMETER Condition
         A single condition object with Property.label, Operator.value, and Input.value.
     .OUTPUTS
@@ -22,57 +20,98 @@ function Test-CIPPConditionFilter {
         $Condition
     )
 
-    # Operator allowlist - only these PowerShell comparison operators are permitted
     $AllowedOperators = @(
         'eq', 'ne', 'like', 'notlike', 'match', 'notmatch',
         'gt', 'lt', 'ge', 'le', 'in', 'notin',
         'contains', 'notcontains'
     )
-
-    # Property name validation - only alphanumeric, underscores, and dots allowed
     $SafePropertyRegex = [regex]'^[a-zA-Z0-9_.]+$'
-
-    # Value sanitization - block characters that enable code injection
     $UnsafeValueRegex = [regex]'[;|`\$\{\}]'
 
-    $propertyName = $Condition.Property.label
-    $operatorValue = $Condition.Operator.value.ToLower()
+    $propertyName = [string]$Condition.Property.label
+    $operatorValue = ([string]$Condition.Operator.value).ToLower()
     $inputValue = $Condition.Input.value
 
-    # Validate operator against allowlist
     if ($operatorValue -notin $AllowedOperators) {
         Write-Warning "Blocked invalid operator '$($Condition.Operator.value)' in condition for property '$propertyName'"
         return $null
     }
 
-    # Validate property name to prevent injection via property paths
     if (-not $SafePropertyRegex.IsMatch($propertyName)) {
         Write-Warning "Blocked invalid property name '$propertyName' in condition"
         return $null
     }
 
-    # Build sanitized condition string
     if ($inputValue -is [array]) {
-        # Sanitize each array element
+        $expectedValues = [System.Collections.Generic.List[string]]::new()
         $sanitizedItems = foreach ($item in $inputValue) {
             $itemStr = [string]$item
             if ($UnsafeValueRegex.IsMatch($itemStr)) {
                 Write-Warning "Blocked unsafe value in array for property '$propertyName': '$itemStr'"
                 return $null
             }
-            $itemStr -replace "'", "''"
+            $expectedValues.Add($itemStr)
+            "'$(ConvertTo-CIPPScriptBlockValue -Value $itemStr)'"
         }
         if ($null -eq $sanitizedItems) { return $null }
-        $arrayAsString = $sanitizedItems | ForEach-Object { "'$_'" }
-        $value = "@($($arrayAsString -join ', '))"
+        $value = "@($($sanitizedItems -join ', '))"
     } else {
         $valueStr = [string]$inputValue
         if ($UnsafeValueRegex.IsMatch($valueStr)) {
             Write-Warning "Blocked unsafe value for property '$propertyName': '$valueStr'"
             return $null
         }
-        $value = "'$($valueStr -replace "'", "''")'"
+        $expectedValues = @($valueStr)
+        $value = "'$(ConvertTo-CIPPScriptBlockValue -Value $valueStr)'"
     }
 
-    return "`$(`$_.$propertyName) -$operatorValue $value"
+    $leftSide = "`$(`$_.$propertyName)"
+    $conditionString = "$leftSide -$operatorValue $value"
+
+    # Parse check: one binary comparison, our left side, and a right side made only of the string constant(s) we embedded.
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseInput($conditionString, [ref]$tokens, [ref]$parseErrors)
+    $expression = $null
+    if ($parseErrors.Count -eq 0 -and $ast.EndBlock.Statements.Count -eq 1) {
+        $pipeline = $ast.EndBlock.Statements[0]
+        if ($pipeline -is [System.Management.Automation.Language.PipelineAst] -and $pipeline.PipelineElements.Count -eq 1 -and
+            $pipeline.PipelineElements[0] -is [System.Management.Automation.Language.CommandExpressionAst]) {
+            $expression = $pipeline.PipelineElements[0].Expression
+        }
+    }
+    if ($expression -isnot [System.Management.Automation.Language.BinaryExpressionAst] -or $expression.Left.Extent.Text -ne $leftSide) {
+        Write-Warning "Blocked condition for property '$propertyName': it did not parse as a single comparison"
+        return $null
+    }
+
+    $allowedRightNodes = @(
+        [System.Management.Automation.Language.StringConstantExpressionAst]
+        [System.Management.Automation.Language.ArrayExpressionAst]
+        [System.Management.Automation.Language.ArrayLiteralAst]
+        [System.Management.Automation.Language.StatementBlockAst]
+        [System.Management.Automation.Language.PipelineAst]
+        [System.Management.Automation.Language.CommandExpressionAst]
+    )
+    $rightNodes = $expression.Right.FindAll({ $true }, $true)
+    foreach ($node in $rightNodes) {
+        if ($node.GetType() -notin $allowedRightNodes) {
+            Write-Warning "Blocked condition for property '$propertyName': value contained code ($($node.GetType().Name))"
+            return $null
+        }
+    }
+    $parsedValues = @($rightNodes | Where-Object { $_ -is [System.Management.Automation.Language.StringConstantExpressionAst] } | ForEach-Object { $_.Value })
+    $expectedList = @($expectedValues)
+    if ($parsedValues.Count -ne $expectedList.Count) {
+        Write-Warning "Blocked condition for property '$propertyName': value count changed after escaping"
+        return $null
+    }
+    for ($i = 0; $i -lt $expectedList.Count; $i++) {
+        if (-not [string]::Equals($parsedValues[$i], $expectedList[$i], [System.StringComparison]::Ordinal)) {
+            Write-Warning "Blocked condition for property '$propertyName': value changed after escaping"
+            return $null
+        }
+    }
+
+    return $conditionString
 }

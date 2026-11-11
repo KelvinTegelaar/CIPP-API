@@ -29,6 +29,17 @@ function Invoke-AddAlert {
                         Body       = @{ error = "Invalid property name: $($condition.Property.label)" }
                     })
             }
+            # Reject now what the condition builder would refuse when the rule fires
+            $HasValue = if ($condition.Input.value -is [array]) { @($condition.Input.value).Count -gt 0 } else { -not [string]::IsNullOrEmpty([string]$condition.Input.value) }
+            if ($HasValue) {
+                $Sanitized = try { Test-CIPPConditionFilter -Condition $condition -WarningAction SilentlyContinue } catch { $null }
+                if ($null -eq $Sanitized) {
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::BadRequest
+                            Body       = @{ error = "Invalid value for condition on property: $($condition.Property.label)" }
+                        })
+                }
+            }
         }
 
         $Tenants = $Request.Body.tenantFilter
