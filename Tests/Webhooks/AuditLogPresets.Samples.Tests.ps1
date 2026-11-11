@@ -20,6 +20,15 @@ BeforeDiscovery {
         @{ Preset = $Template.value; Triggers = @($Case.trigger).Where({ $_ }).Count; Quiet = @($Case.noTrigger).Where({ $_ }).Count; Pending = [string]$Case.pending }
     }
     $FixtureCases = foreach ($Case in $Cases) { @{ Preset = $Case.preset; Known = $Templates.value -contains $Case.preset } }
+    # Real app-initiated records; in each the acting app is aa368e81 and the changed app 50a3bc2a.
+    $MicrosoftCases = @(
+        @{ Preset = 'AppAddedSecretToServicePrincipal'; Sample = 'app-sp-secret' }
+        @{ Preset = 'AppAddedCertificateToServicePrincipal'; Sample = 'app-sp-certificate' }
+        @{ Preset = 'AppGrantedApplicationPermission'; Sample = 'app-grant-application-permission' }
+        @{ Preset = 'AppGrantedDelegatedPermission'; Sample = 'app-grant-delegated-permission' }
+        @{ Preset = 'AppAddedOwnerToApp'; Sample = 'app-add-owner-to-service-principal' }
+        @{ Preset = 'AppAddedDirectoryRoleMember'; Sample = 'app-add-member-to-role' }
+    )
 }
 
 BeforeAll {
@@ -44,6 +53,24 @@ BeforeAll {
     function New-GraphBulkRequest { param($Requests, $AsApp, $TenantId) }
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp, [switch]$Stream, $ComplexFilter, $NoPagination) }
     function Get-CIPPPartnerUserLookup { @{} }
+    function Get-CIPPVendorTenantMap {
+        @{
+            'f8cdef31-a31e-4b4a-93e4-5f571e91255a' = [pscustomobject]@{ Name = 'Microsoft'; VendorType = 'Microsoft' }
+            'dddddddd-dddd-4ddd-8ddd-dddddddddddd' = [pscustomobject]@{ Name = 'Vendor'; VendorType = 'Business' }
+        }
+    }
+
+    # Service principal lookup for the real app-initiated samples: the acting app, the changed app and Microsoft Graph.
+    function Set-SampleOwners {
+        param([string]$Actor, [string]$Subject)
+        $Owners = @{ Microsoft = 'f8cdef31-a31e-4b4a-93e4-5f571e91255a'; Vendor = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd' }
+        $Sps = @{
+            'aa368e81-b66d-4161-97a1-002efc518857' = @{ id = 'aa368e81-b66d-4161-97a1-002efc518857'; displayName = 'Actor'; appOwnerOrganizationId = $Owners[$Actor] }
+            '50a3bc2a-b2f3-4967-8947-9c0e0b6870a4' = @{ id = '50a3bc2a-b2f3-4967-8947-9c0e0b6870a4'; displayName = 'Subject'; appOwnerOrganizationId = $Owners[$Subject] }
+            '810d0872-257c-4f24-bb99-572b02b2cd40' = @{ id = '810d0872-257c-4f24-bb99-572b02b2cd40'; displayName = 'Microsoft Graph'; appOwnerOrganizationId = $Owners.Microsoft }
+        }
+        $script:ServicePrincipalJson = $Sps | ConvertTo-Json -Compress -Depth 5
+    }
 
     foreach ($Helper in @(
             'Authentication/Get-CIPPIPAllowBlockList.ps1'
@@ -112,15 +139,17 @@ BeforeAll {
 
 Describe 'Audit log presets on real audit records' {
     BeforeEach {
+        $script:ServicePrincipalJson = '{}'
         Mock -CommandName Get-CIPPTable -MockWith { param($TableName) @{ TableName = $TableName } }
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
             param($TableName, $Context, $Filter, $Property, $First)
             switch ($TableName) {
                 'WebhookRules' { $script:RuleRow }
                 'cacheauditloglookups' {
-                    foreach ($Key in 'users', 'groups', 'devices', 'servicePrincipals') {
+                    foreach ($Key in 'users', 'groups', 'devices') {
                         [pscustomobject]@{ PartitionKey = $script:Tenant; RowKey = $Key; Format = 'hashtable'; Data = '{}' }
                     }
+                    [pscustomobject]@{ PartitionKey = $script:Tenant; RowKey = 'servicePrincipals'; Format = 'hashtable'; Data = $script:ServicePrincipalJson }
                 }
                 'Config' { [pscustomobject]@{ Value = 'cipp.contoso.com' } }
                 default { @() }
@@ -162,5 +191,23 @@ Describe 'Audit log presets on real audit records' {
 
     It 'fixture case <Preset> names a preset that exists' -ForEach $FixtureCases {
         $Known | Should -BeTrue
+    }
+
+    It '<Preset> stays quiet on <Sample> when a Microsoft app acts on a Microsoft app' -ForEach $MicrosoftCases {
+        Set-SampleOwners -Actor Microsoft -Subject Microsoft
+        $Dispatched = Invoke-PresetSample -Preset $Preset -Sample $Sample
+        @($Dispatched).Count | Should -Be 0
+    }
+
+    It '<Preset> still alerts on <Sample> when <Actor> acts on <Subject>' -ForEach @(
+        foreach ($Case in $MicrosoftCases) {
+            @{ Preset = $Case.Preset; Sample = $Case.Sample; Actor = 'Vendor'; Subject = 'Microsoft' }
+            @{ Preset = $Case.Preset; Sample = $Case.Sample; Actor = 'Microsoft'; Subject = 'Vendor' }
+        }
+    ) {
+        Set-SampleOwners -Actor $Actor -Subject $Subject
+        $Dispatched = Invoke-PresetSample -Preset $Preset -Sample $Sample
+        @($Dispatched).Count | Should -Be 1
+        @($Dispatched)[0].CIPPMicrosoftAppToMicrosoftApp | Should -BeNullOrEmpty
     }
 }

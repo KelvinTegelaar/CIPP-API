@@ -202,6 +202,12 @@ function Test-CIPPAuditLogRules {
 
         $Configuration = @(Get-CIPPAuditLogRuleSet -TenantFilter $TenantFilter)
 
+        $VendorTenants = Get-CIPPVendorTenantMap
+        $MicrosoftTenantIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($VendorTenantId in $VendorTenants.Keys) {
+            if ($VendorTenants[$VendorTenantId].VendorType -eq 'Microsoft') { [void]$MicrosoftTenantIds.Add([string]$VendorTenantId) }
+        }
+
         # Only the referenced entries of a cached blob, as the same hashtable a full ConvertFrom-Json -AsHashtable gives.
         # Entries are flat objects, so a cut at a '}' inside a string is invalid JSON and takes the full parse instead.
         function Get-CIPPLookupSubset {
@@ -277,7 +283,7 @@ function Test-CIPPAuditLogRules {
                 $Users = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type 'Users' -Fields 'id', 'displayName', 'userPrincipalName', 'accountEnabled')
                 $Groups = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type 'Groups' -Fields 'id', 'displayName', 'mailEnabled', 'securityEnabled')
                 $Devices = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type 'Devices' -Fields 'id', 'displayName', 'deviceId')
-                $ServicePrincipals = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type 'ServicePrincipals' -Fields 'id', 'appId', 'displayName', 'appDisplayName', 'accountEnabled', 'servicePrincipalType', 'tags')
+                $ServicePrincipals = @(Get-CIPPTestData -TenantFilter $TenantFilter -Type 'ServicePrincipals' -Fields 'id', 'appId', 'displayName', 'appDisplayName', 'accountEnabled', 'servicePrincipalType', 'appOwnerOrganizationId', 'tags')
                 Write-Information "Loaded from CippReportingDB: $($Users.Count) users, $($Groups.Count) groups, $($Devices.Count) devices, $($ServicePrincipals.Count) service principals"
             } catch {
                 Write-Information "CippReportingDB query failed for ${TenantFilter}: $($_.Exception.Message)"
@@ -308,7 +314,7 @@ function Test-CIPPAuditLogRules {
                     }
                     @{
                         id     = 'servicePrincipals'
-                        url    = '/servicePrincipals?$select=id,displayName&$top=999'
+                        url    = '/servicePrincipals?$select=id,displayName,appOwnerOrganizationId&$top=999'
                         method = 'GET'
                     }
                 )
@@ -323,7 +329,7 @@ function Test-CIPPAuditLogRules {
                 $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value ?? @()
                 $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
                 $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
-                $ServicePrincipals = @(($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value) | Select-Object id, displayName
+                $ServicePrincipals = @(($Response | Where-Object { $_.id -eq 'servicePrincipals' }).body.value) | Select-Object id, displayName, appOwnerOrganizationId
                 $Response = $null
             }
 
@@ -420,6 +426,16 @@ function Test-CIPPAuditLogRules {
                                 }
                             }
                         }
+                        # The actor and the changed app, for CIPPMicrosoftAppToMicrosoftApp.
+                        foreach ($Entry in @($Row.auditData.Actor) + @($Row.auditData.Target)) {
+                            $Value = [string]$Entry.ID
+                            if ($Value.StartsWith('ServicePrincipal_')) { $Value = $Value.Substring(17) }
+                            if ($Value.Length -eq 36 -and $script:StandardGuidRegex.IsMatch($Value)) { [void]$IdSet.Add($Value) }
+                        }
+                        foreach ($Prop in @($Row.auditData.ModifiedProperties)) {
+                            $Value = [string]$Prop.NewValue
+                            if ($Prop.Name -eq 'ServicePrincipal.ObjectID' -and $Value.Length -eq 36 -and $script:StandardGuidRegex.IsMatch($Value)) { [void]$IdSet.Add($Value) }
+                        }
                     }
                     $ReferencedIds = [string[]]@($IdSet)
                     $UserLookup = Get-CIPPLookupSubset -Json $UsersLookup.Data -Ids $ReferencedIds
@@ -437,13 +453,14 @@ function Test-CIPPAuditLogRules {
                 foreach ($key in $RawSPLookup.Keys) {
                     $sp = $RawSPLookup[$key]
                     $ServicePrincipalLookup[$key] = [ordered]@{
-                        id                   = $sp.id
-                        appId                = $sp.appId
-                        displayName          = $sp.displayName
-                        appDisplayName       = $sp.appDisplayName
-                        accountEnabled       = $sp.accountEnabled
-                        servicePrincipalType = $sp.servicePrincipalType
-                        tags                 = $sp.tags
+                        id                     = $sp.id
+                        appId                  = $sp.appId
+                        displayName            = $sp.displayName
+                        appDisplayName         = $sp.appDisplayName
+                        accountEnabled         = $sp.accountEnabled
+                        servicePrincipalType   = $sp.servicePrincipalType
+                        appOwnerOrganizationId = $sp.appOwnerOrganizationId
+                        tags                   = $sp.tags
                     }
                 }
                 Write-Information "Loaded hashtables: $($UserLookup.Count) users, $($GroupLookup.Count) groups, $($DeviceLookup.Count) devices, $($ServicePrincipalLookup.Count) service principals"
@@ -459,7 +476,7 @@ function Test-CIPPAuditLogRules {
                 $Users = @(($UsersLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, displayName, userPrincipalName, accountEnabled
                 $Groups = @(($GroupsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, displayName, mailEnabled, securityEnabled
                 $Devices = @(($DevicesLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, displayName, deviceId
-                $ServicePrincipals = @(($ServicePrincipalsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, appId, displayName, appDisplayName, accountEnabled, servicePrincipalType, tags
+                $ServicePrincipals = @(($ServicePrincipalsLookup.Data | ConvertFrom-Json -ErrorAction SilentlyContinue)) | Select-Object id, appId, displayName, appDisplayName, accountEnabled, servicePrincipalType, appOwnerOrganizationId, tags
 
                 # Build hashtables
                 $UserLookup = @{}
@@ -683,6 +700,28 @@ function Test-CIPPAuditLogRules {
                     if ($Data.Actor) {
                         # One string so a rule can test who acted (e.g. MS-PIM); -notlike against the Actor array itself is always true.
                         $Flattened['CIPPActor'] = @(foreach ($ActorEntry in $Data.Actor) { [string]$ActorEntry.ID }) -join ', '
+
+                        # Grants and owner changes name the changed app here, with the resource or new owner in Target.
+                        $SubjectSp = $null
+                        $SubjectId = [string]$Flattened['ServicePrincipal.ObjectID']
+                        if ($SubjectId) {
+                            if ($ServicePrincipalLookup.ContainsKey($SubjectId)) { $SubjectSp = $ServicePrincipalLookup[$SubjectId] }
+                        } else {
+                            foreach ($TargetEntry in @($Data.Target)) {
+                                $TargetId = [string]$TargetEntry.ID
+                                if ($TargetId.StartsWith('ServicePrincipal_')) { $TargetId = $TargetId.Substring(17) }
+                                if ($TargetId.Length -eq 36 -and $ServicePrincipalLookup.ContainsKey($TargetId)) { $SubjectSp = $ServicePrincipalLookup[$TargetId]; break }
+                            }
+                        }
+                        if ($SubjectSp -and $MicrosoftTenantIds.Contains([string]$SubjectSp.appOwnerOrganizationId)) {
+                            foreach ($ActorEntry in $Data.Actor) {
+                                $ActorId = [string]$ActorEntry.ID
+                                if ($ActorId.StartsWith('ServicePrincipal_')) { $ActorId = $ActorId.Substring(17) }
+                                if ($ActorId.Length -ne 36 -or -not $ServicePrincipalLookup.ContainsKey($ActorId)) { continue }
+                                if ($MicrosoftTenantIds.Contains([string]$ServicePrincipalLookup[$ActorId].appOwnerOrganizationId)) { $Flattened['CIPPMicrosoftAppToMicrosoftApp'] = 'true' }
+                                break
+                            }
+                        }
                     }
                     if ($Flattened.Count -gt 0) {
                         $Data | Add-Member -NotePropertyMembers $Flattened -Force -ErrorAction SilentlyContinue
