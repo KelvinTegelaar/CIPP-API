@@ -10353,6 +10353,10 @@
                     "type": "string",
                     "description": "Parse the script data to determine type"
                   },
+                  "ReplaceVariables": {
+                    "type": "boolean",
+                    "description": "Script bodies are base64, so replacement runs on the decoded text rather than the JSON"
+                  },
                   "ScriptId": {
                     "type": "string"
                   },
@@ -14677,7 +14681,7 @@
                   },
                   "Payload": {
                     "type": "string",
-                    "description": "Depth 10 so nested payloads (e.g. web/spa/publicClient redirectUris and implicitGrantSettings) aren't truncated."
+                    "description": "Credentials are only removed here (RemoveKey, RemovePassword, signing certificate actions), never added."
                   },
                   "RemoveAssignmentIds": {
                     "type": "string"
@@ -16028,6 +16032,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -21467,6 +21474,9 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
@@ -25144,6 +25154,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -39357,6 +39370,7 @@
           {
             "name": "AppId",
             "in": "query",
+            "description": "These values are placed in the Graph URL, so only a GUID or a plain field list is accepted.",
             "required": false,
             "schema": {
               "type": "string"
@@ -39367,6 +39381,7 @@
             "in": "query",
             "required": false,
             "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -56502,6 +56517,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
