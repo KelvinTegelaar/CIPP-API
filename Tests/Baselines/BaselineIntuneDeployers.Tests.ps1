@@ -206,11 +206,10 @@ Describe 'Get-CIPPBaselineDefenderCompliancePolicyState' {
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ConnectWindows = $true; windowsDeviceBlockedOnMissingPartnerData = $false } }
         $Prepared = Get-CIPPBaselineDefenderCompliancePolicyState -Item $Item -TenantFilter $script:Tenant
         $Prepared.Expected.windowsDeviceBlockedOnMissingPartnerData | Should -BeTrue
-        $Prepared.Expected.microsoftDefenderForEndpointAttachEnabled | Should -BeTrue
     }
 
     It 'connecting macOS FORCES the macOS partner-data block on - Microsoft enforces it (issue 785)' {
-        Mock New-GraphGetRequest { [PSCustomObject]@{ macEnabled = $true; macDeviceBlockedOnMissingPartnerData = $true; microsoftDefenderForEndpointAttachEnabled = $true } }
+        Mock New-GraphGetRequest { [PSCustomObject]@{ macEnabled = $true; macDeviceBlockedOnMissingPartnerData = $true } }
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ConnectMac = $true; macDeviceBlockedOnMissingPartnerData = $false } }
         $Prepared = Get-CIPPBaselineDefenderCompliancePolicyState -Item $Item -TenantFilter $script:Tenant
         $Prepared.Expected.macDeviceBlockedOnMissingPartnerData | Should -BeTrue
@@ -231,6 +230,35 @@ Describe 'Get-CIPPBaselineDefenderCompliancePolicyState' {
         $Prepared.Current.windowsEnabled | Should -BeFalse
         $Prepared.Current.connectorExists | Should -BeFalse
         (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'a missing connector is non-compliant even when every switch is off, so it still gets created' {
+        Mock New-GraphGetRequest { throw 'not found' }
+        $Prepared = Get-CIPPBaselineDefenderCompliancePolicyState -Item ([PSCustomObject]@{ Variables = [PSCustomObject]@{} }) -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'the MDE attach flag follows the AllowMEMEnforceCompliance switch instead of always grading true (issue 1219)' {
+        Mock New-GraphGetRequest { [PSCustomObject]@{ microsoftDefenderForEndpointAttachEnabled = $true } }
+        $Off = Get-CIPPBaselineDefenderCompliancePolicyState -Item ([PSCustomObject]@{ Variables = [PSCustomObject]@{ AllowMEMEnforceCompliance = $false } }) -TenantFilter $script:Tenant
+        $Off.Expected.microsoftDefenderForEndpointAttachEnabled | Should -BeFalse
+        (Get-Verdict -Expected $Off.Expected -Current $Off.Current).Count | Should -BeGreaterThan 0
+
+        $On = Get-CIPPBaselineDefenderCompliancePolicyState -Item ([PSCustomObject]@{ Variables = [PSCustomObject]@{ AllowMEMEnforceCompliance = $true } }) -TenantFilter $script:Tenant
+        $On.Expected.microsoftDefenderForEndpointAttachEnabled | Should -BeTrue
+        (Get-Verdict -Expected $On.Expected -Current $On.Current).Count | Should -Be 0
+    }
+
+    It 'the executor writes the MDE attach flag from the switch (issue 1219)' -ForEach @(
+        @{ Switch = $false }
+        @{ Switch = $true }
+    ) {
+        Mock Enable-CIPPMDEConnector { [PSCustomObject]@{ Success = $true } }
+        Mock New-GraphPostRequest { }
+        Invoke-CIPPBaselineDefenderCompliancePolicy -Remediate ([PSCustomObject]@{ allowMEMEnforceCompliance = $Switch }) -TenantFilter $script:Tenant -Current ([PSCustomObject]@{ connectorExists = $true })
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+            $type -eq 'PATCH' -and ($body | ConvertFrom-Json).microsoftDefenderForEndpointAttachEnabled -eq $Switch
+        }
     }
 
     It 'refuses to write when the MDE connector cannot be enabled' {

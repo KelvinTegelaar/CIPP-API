@@ -6,7 +6,7 @@
   "impact": "High Impact",
   "helpText": "Configures the Microsoft Defender for Endpoint connector with Intune, enabling compliance evaluation for mobile and desktop platforms and controlling partner-data blocking per platform.",
   "executiveText": "Establishes the link between Microsoft Defender for Endpoint and Intune so device risk data feeds compliance policies - a foundational Zero Trust control.",
-  "docsDescription": "Reads the MDE mobile threat defense connector live (one small singleton, no cache) and grades every platform toggle. Three rules hold: connecting Windows forces the Windows partner-data block on, connecting macOS forces the macOS partner-data block on (Microsoft enforces both), and the MDE attach flag always grades true. Remediation enables the connector first, then writes the FULL settings object.",
+  "docsDescription": "Reads the MDE mobile threat defense connector live (one small singleton, no cache) and grades every platform toggle. Two rules hold: connecting Windows forces the Windows partner-data block on and connecting macOS forces the macOS partner-data block on (Microsoft enforces both). Remediation enables the connector first, then writes the FULL settings object.",
   "impactColour": "error",
   "addedDate": "2026-08-16",
   "powershellEquivalent": "Graph API - deviceManagement/mobileThreatDefenseConnectors",
@@ -124,7 +124,7 @@
     },
     "AllowMEMEnforceCompliance": {
       "type": "switch",
-      "label": "Allow MEM enforcement of compliance",
+      "label": "Allow Microsoft Defender for Endpoint to enforce Endpoint Security Configurations",
       "omitWhenBlank": true,
       "default": false
     }

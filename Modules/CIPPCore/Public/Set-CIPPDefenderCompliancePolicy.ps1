@@ -39,7 +39,7 @@ function Set-CIPPDefenderCompliancePolicy {
         allowPartnerToCollectIosCertificateMetadata         = [bool]$Compliance.allowPartnerToCollectIosCertificateMetadata
         allowPartnerToCollectIosPersonalCertificateMetadata = [bool]$Compliance.allowPartnerToCollectIosPersonalCertificateMetadata
         grantMobileThreatDefensePartnerRole                 = [bool]$Compliance.grantMobileThreatDefensePartnerRole
-        microsoftDefenderForEndpointAttachEnabled           = [bool]$true
+        microsoftDefenderForEndpointAttachEnabled           = [bool]$Compliance.AllowMEMEnforceCompliance
     }
     $SettingsObj = $SettingsObject | ConvertTo-Json -Compress
     $ConnectorUri = 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/fc780465-2017-40d4-a0c5-307022471b92'

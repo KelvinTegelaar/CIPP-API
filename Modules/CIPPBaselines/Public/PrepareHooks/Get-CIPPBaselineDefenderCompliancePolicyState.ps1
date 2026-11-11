@@ -5,10 +5,10 @@ function Get-CIPPBaselineDefenderCompliancePolicyState {
     .DESCRIPTION
         Reads the MDE connector singleton (fc780465-2017-40d4-a0c5-307022471b92) LIVE - it is
         one small object with no cache, exactly what the classic read. A missing connector
-        grades every surface false. Three rules are load-bearing: connecting Windows forces the
+        grades every surface false. Two rules are load-bearing: connecting Windows forces the
         Windows partner-data block on, connecting macOS forces the macOS partner-data block on
-        (Microsoft enforces both server-side), and microsoftDefenderForEndpointAttachEnabled
-        always grades true.
+        (Microsoft enforces both server-side). microsoftDefenderForEndpointAttachEnabled follows
+        the AllowMEMEnforceCompliance switch like any other surface.
     .FUNCTIONALITY
         Internal
     #>
@@ -54,13 +54,14 @@ function Get-CIPPBaselineDefenderCompliancePolicyState {
         allowPartnerToCollectIosCertificateMetadata         = [bool]$V.allowPartnerToCollectIosCertificateMetadata
         allowPartnerToCollectIosPersonalCertificateMetadata = [bool]$V.allowPartnerToCollectIosPersonalCertificateMetadata
         grantMobileThreatDefensePartnerRole                 = [bool]$V.grantMobileThreatDefensePartnerRole
-        microsoftDefenderForEndpointAttachEnabled           = $true
+        microsoftDefenderForEndpointAttachEnabled           = [bool]$V.AllowMEMEnforceCompliance
     }
     $Current = [PSCustomObject]@{}
     foreach ($Key in $Keys) {
         $Current | Add-Member -NotePropertyName $Key -NotePropertyValue ([bool]$ConnectorState.$Key)
     }
-    # Carried for the executor.
+    # Graded so a missing connector is created even when every switch is off, and carried for the executor.
+    $Expected | Add-Member -NotePropertyName 'connectorExists' -NotePropertyValue $true
     $Current | Add-Member -NotePropertyName 'connectorExists' -NotePropertyValue ($null -ne $ConnectorState)
 
     @{ Expected = $Expected; Current = $Current }

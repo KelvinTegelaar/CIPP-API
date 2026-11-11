@@ -44,7 +44,7 @@ function Invoke-CIPPBaselineDefenderCompliancePolicy {
         allowPartnerToCollectIosCertificateMetadata         = [bool]$Remediate.allowPartnerToCollectIosCertificateMetadata
         allowPartnerToCollectIosPersonalCertificateMetadata = [bool]$Remediate.allowPartnerToCollectIosPersonalCertificateMetadata
         grantMobileThreatDefensePartnerRole                 = [bool]$Remediate.grantMobileThreatDefensePartnerRole
-        microsoftDefenderForEndpointAttachEnabled           = $true
+        microsoftDefenderForEndpointAttachEnabled           = [bool]$Remediate.allowMEMEnforceCompliance
     }
     $Body = $SettingsObj | ConvertTo-Json -Compress
 
