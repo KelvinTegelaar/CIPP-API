@@ -50,6 +50,11 @@ function Invoke-CIPPStandardDelegateSentItems {
         $Settings.IncludeUserMailboxes = $true
     }
     $Mailboxes = New-CippDbRequest -TenantFilter $Tenant -Type 'Mailboxes'
+    if (-not $Mailboxes) {
+        # An empty mailbox cache would otherwise read as every mailbox being configured correctly
+        Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DelegateSentItems state for $Tenant, the cached mailbox list is empty. Run a mailbox data collection for this tenant first." -Sev Warning
+        return
+    }
     if ($Settings.IncludeUserMailboxes -eq $true) {
         $Mailboxes = $Mailboxes | Where-Object { $_.recipientTypeDetails -in @('UserMailbox', 'SharedMailbox') -and ($_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false) }
     } else {

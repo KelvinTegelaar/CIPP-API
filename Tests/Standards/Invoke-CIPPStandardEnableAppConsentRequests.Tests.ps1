@@ -76,3 +76,32 @@ Describe 'Invoke-CIPPStandardEnableAppConsentRequests report' {
         Should -Invoke Write-LogMessage -Times 0 -Exactly -ParameterFilter { $message -like '*not added as reviewer*' }
     }
 }
+
+Describe 'Invoke-CIPPStandardEnableAppConsentRequests failed remediation' {
+    BeforeEach {
+        $script:Policy = [PSCustomObject]@{ isEnabled = $false; notifyReviewers = $false; remindersEnabled = $false; requestDurationInDays = 0; reviewers = @() }
+        Mock New-GraphGetRequest { $script:Policy }
+        Mock Write-LogMessage { }
+        Mock Write-StandardsAlert { }
+        Mock Set-CIPPStandardsCompareField { }
+        Mock Add-CIPPBPAField { }
+    }
+
+    It 'still reports and alerts the tenant as disabled when the PUT fails' {
+        Mock New-GraphPostRequest { throw 'Forbidden' }
+
+        Invoke-CIPPStandardEnableAppConsentRequests -Tenant $script:Tenant -Settings @{ remediate = $true; alert = $true; report = $true }
+
+        Should -Invoke Write-StandardsAlert -Times 1 -Exactly
+        Should -Invoke Set-CIPPStandardsCompareField -Times 1 -Exactly -ParameterFilter { $CurrentValue.EnableAppConsentRequests -eq $false }
+    }
+
+    It 'reports the tenant as enabled once the PUT succeeds' {
+        Mock New-GraphPostRequest { }
+
+        Invoke-CIPPStandardEnableAppConsentRequests -Tenant $script:Tenant -Settings @{ remediate = $true; alert = $true; report = $true }
+
+        Should -Invoke Write-StandardsAlert -Times 0 -Exactly
+        Should -Invoke Set-CIPPStandardsCompareField -Times 1 -Exactly -ParameterFilter { $CurrentValue.EnableAppConsentRequests -eq $true -and @($CurrentValue.MissingReviewerRoles).Count -eq 0 }
+    }
+}

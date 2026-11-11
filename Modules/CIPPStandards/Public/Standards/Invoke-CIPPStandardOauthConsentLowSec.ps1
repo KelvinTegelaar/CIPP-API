@@ -48,8 +48,13 @@ function Invoke-CIPPStandardOauthConsentLowSec {
     $Standards = Get-CIPPStandards -Tenant $tenant
     $ConflictingStandard = $Standards | Where-Object -Property Standard -EQ 'OauthConsent'
 
+    # The list also carries ManagePermissionGrantsForOwnedResource.* (Teams/chat RSC) entries, so only
+    # the user consent (ManagePermissionGrantsForSelf.*) entries are compared and replaced.
+    $SelfPolicies = @(@($State.permissionGrantPolicyIdsAssignedToDefaultUserRole) -like 'ManagePermissionGrantsForSelf.*')
+    $StateIsCorrect = ($SelfPolicies -join ',') -eq 'ManagePermissionGrantsForSelf.microsoft-user-default-low'
+
     if ($Settings.remediate -eq $true) {
-        if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -in @('ManagePermissionGrantsForSelf.microsoft-user-default-low')) {
+        if ($StateIsCorrect) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is already enabled.' -sev Info
         } elseif ($ConflictingStandard -and $State.permissionGrantPolicyIdsAssignedToDefaultUserRole -contains 'ManagePermissionGrantsForSelf.cipp-consent-policy') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'There is a conflicting OAuth Consent policy standard enabled for this tenant. Remove the Require admin consent for applications (Prevent OAuth phishing) standard from this tenant to apply the low security standard.' -sev Error
@@ -60,7 +65,7 @@ function Invoke-CIPPStandardOauthConsentLowSec {
                     Uri         = 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy'
                     Type        = 'PATCH'
                     Body        = @{
-                        permissionGrantPolicyIdsAssignedToDefaultUserRole = @('ManagePermissionGrantsForSelf.microsoft-user-default-low')
+                        permissionGrantPolicyIdsAssignedToDefaultUserRole = @(@($State.permissionGrantPolicyIdsAssignedToDefaultUserRole | Where-Object { $_ -and $_ -notlike 'ManagePermissionGrantsForSelf.*' }) + 'ManagePermissionGrantsForSelf.microsoft-user-default-low')
                     } | ConvertTo-Json
                     ContentType = 'application/json'
                 }
@@ -98,7 +103,7 @@ function Invoke-CIPPStandardOauthConsentLowSec {
     }
 
     if ($Settings.alert -eq $true) {
-        if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('ManagePermissionGrantsForSelf.microsoft-user-default-low')) {
+        if (-not $StateIsCorrect) {
             Write-StandardsAlert -message 'Application Consent Mode(microsoft-user-default-low) is not enabled' -object $State -tenant $tenant -standardName 'OauthConsentLowSec' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is not enabled.' -sev Info
         } else {
@@ -108,7 +113,7 @@ function Invoke-CIPPStandardOauthConsentLowSec {
 
     if ($Settings.report -eq $true) {
         $CurrentValue = @{
-            permissionGrantPolicyIdsAssignedToDefaultUserRole = $State.permissionGrantPolicyIdsAssignedToDefaultUserRole
+            permissionGrantPolicyIdsAssignedToDefaultUserRole = $SelfPolicies
         }
         # Add conflicting standard info if applicable
         if ($ConflictingStandard) {

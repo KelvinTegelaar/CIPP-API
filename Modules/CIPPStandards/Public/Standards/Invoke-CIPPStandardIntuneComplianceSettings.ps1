@@ -54,7 +54,8 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
     }
 
     if ($null -eq $Settings.deviceComplianceCheckinThresholdDays) { $Settings.deviceComplianceCheckinThresholdDays = $CurrentState.deviceComplianceCheckinThresholdDays }
-    $SecureByDefault = [bool]($Settings.secureByDefault.value ? $Settings.secureByDefault.value : $Settings.secureByDefault)
+    # The option values are the strings 'true' / 'false'; a [bool] cast reads both as $true
+    $SecureByDefault = "$($Settings.secureByDefault.value ?? $Settings.secureByDefault)" -eq 'true'
     $DeviceComplianceCheckinThresholdDays = [int]$Settings.deviceComplianceCheckinThresholdDays
 
     $StateIsCorrect = ($CurrentState.secureByDefault -eq $SecureByDefault) -and

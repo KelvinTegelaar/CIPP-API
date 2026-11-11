@@ -43,15 +43,26 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
     } #we're done.
     # Fetch current Phishing Simulations Spoof Intelligence domains and ensure it is correctly configured
     try {
-        $DomainState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-TenantAllowBlockListSpoofItems' |
-            Select-Object -Property Identity, SendingInfrastructure
+        # Only Allow entries count: a Block entry for a domain is the opposite of having it allowed,
+        # and is an admin decision this standard must not remove.
+        $DomainState = @(New-ExoRequest -TenantId $Tenant -cmdlet 'Get-TenantAllowBlockListSpoofItems' |
+                Where-Object { $_.Action -eq 'Allow' } |
+                Select-Object -Property Identity, SendingInfrastructure, SpoofType)
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PhishSimSpoofIntelligence state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
 
-    [String[]]$AddDomain = $Settings.AllowedDomains.value | Where-Object { $_ -notin $DomainState.SendingInfrastructure }
+    # A domain is allowed when it has an Allow entry for both spoof types; add only the missing pairs
+    $AddEntries = @(foreach ($Domain in @($Settings.AllowedDomains.value | Where-Object { $_ })) {
+            foreach ($SpoofType in 'Internal', 'External') {
+                if (-not ($DomainState | Where-Object { $_.SendingInfrastructure -eq $Domain -and $_.SpoofType -eq $SpoofType })) {
+                    [PSCustomObject]@{ Domain = $Domain; SpoofType = $SpoofType }
+                }
+            }
+        })
+    [String[]]$AddDomain = $AddEntries.Domain | Select-Object -Unique
 
     if ($Settings.RemoveExtraDomains -eq $true) {
         $RemoveDomain = $DomainState | Where-Object { $_.SendingInfrastructure -notin $Settings.AllowedDomains.value } |
@@ -86,17 +97,11 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
             }
 
             # Prepare addition requests
-            foreach ($Domain in $AddDomain) {
+            foreach ($Entry in $AddEntries) {
                 $BulkRequests.Add(@{
                         CmdletInput = @{
                             CmdletName = 'New-TenantAllowBlockListSpoofItems'
-                            Parameters = @{ Identity = 'default'; Action = 'Allow'; SendingInfrastructure = $Domain; SpoofedUser = '*'; SpoofType = 'Internal' }
-                        }
-                    })
-                $BulkRequests.Add(@{
-                        CmdletInput = @{
-                            CmdletName = 'New-TenantAllowBlockListSpoofItems'
-                            Parameters = @{ Identity = 'default'; Action = 'Allow'; SendingInfrastructure = $Domain; SpoofedUser = '*'; SpoofType = 'External' }
+                            Parameters = @{ Identity = 'default'; Action = 'Allow'; SendingInfrastructure = $Entry.Domain; SpoofedUser = '*'; SpoofType = $Entry.SpoofType }
                         }
                     })
             }
@@ -124,7 +129,7 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
 
     if ($Settings.report -eq $true) {
         $CurrentValue = @{
-            AllowedDomains = @($DomainState.SendingInfrastructure)
+            AllowedDomains = @($DomainState.SendingInfrastructure | Select-Object -Unique)
             IsCompliant    = [bool]$StateIsCorrect
         }
         $ExpectedValue = @{
