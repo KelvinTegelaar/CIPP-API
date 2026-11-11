@@ -136,5 +136,23 @@ function Get-CIPPSchedulerBlockedCommands {
         'Set-CippQueueTask'
         'Update-CippQueueEntry'
         'Add-CIPPScheduledTask'
+
+        # Dispatchers - run a second command or a script taken from their own parameters
+        'Push-TableCleanupTask'
+        'Push-CIPPOffboardingTask'
+        'Push-ExecScheduledCommand'
+        'Start-CIPPOrchestrator'
+
+        # SAM credentials & notification routing
+        'Get-CIPPSAMCredentials'
+        'Set-CIPPNotificationConfig'
+
+        # Graph helpers with no tenant check or a caller-supplied URL.
+        # New-CIPPGraphRetry stays schedulable: the request helper schedules it itself.
+        'New-GraphMultiTenantBulkRequest'
+        'New-GraphDeltaQuery'
+        'New-CIPPMFAConnectorToken'
+        'Get-CIPPIntuneReportRows'
+        'Get-CIPPAuditLogContent'
     )
 }
