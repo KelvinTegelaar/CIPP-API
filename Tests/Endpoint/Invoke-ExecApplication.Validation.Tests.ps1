@@ -12,6 +12,7 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = "$($Exception.Exception.Message)" } }
     function Get-CippProtectedAppId { }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Test-IsGuid.ps1')
     function New-GraphGetRequest { param($Uri, $tenantid, $AsApp) }
     function New-GraphPOSTRequest { param($Uri, $Type, $Body, $tenantid, $AsApp, $AddedHeaders) }
 
@@ -70,7 +71,6 @@ Describe 'ExecApplication request validation' {
     It 'rejects <Name>' -ForEach @(
         @{ Name = 'an unknown Type'; Body = @{ Type = 'users' } }
         @{ Name = 'an Id that is not a GUID'; Body = @{ Id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa#/customers/x' } }
-        @{ Name = 'an Id with a trailing newline'; Body = @{ Id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`n" } }
         @{ Name = 'an Id with a path';Body = @{ Id = '../users/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' } }
         @{ Name = 'an AppId that is not a GUID'; Body = @{ Id = $null; AppId = "x')/../../organization?a=('" } }
     ) {
@@ -92,6 +92,24 @@ Describe 'ExecApplication request validation' {
 
         $Response.StatusCode | Should -Be 403
         Should -Invoke New-GraphPOSTRequest -Times 0
+    }
+
+    It 'refuses a protected app whose appId is written as <_>' -ForEach @(
+        '{bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb}'
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+        ' bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb '
+        'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB'
+    ) {
+        $Response = Invoke-ExecApplication -Request (New-Request -Body @{ Action = 'Delete'; AppId = $_ } -Without 'Id')
+
+        $Response.StatusCode | Should -Be 403
+        Should -Invoke New-GraphPOSTRequest -Times 0
+    }
+
+    It 'sends an id written with braces to Graph in its plain form' {
+        Invoke-ExecApplication -Request (New-Request -Body @{ Action = 'Delete'; Id = "{$($script:AppObjectId)}" }) | Out-Null
+
+        Should -Invoke New-GraphPOSTRequest -Times 1 -ParameterFilter { $Uri -eq "https://graph.microsoft.com/beta/applications/$($script:AppObjectId)" }
     }
 
     It 'refuses a protected app by object id' {

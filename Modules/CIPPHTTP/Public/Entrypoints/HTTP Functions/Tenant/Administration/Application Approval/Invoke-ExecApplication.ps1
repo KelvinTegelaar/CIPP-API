@@ -24,16 +24,20 @@ function Invoke-ExecApplication {
                 })
             return
         }
-        $IdPath = "(appId='$AppId')"
-    } else {
-        $IdPath = "/$Id"
     }
-    # Both ids are spliced into the Graph URL, so only a bare GUID is accepted.
-    if ("$(if ($Id) { $Id } else { $AppId })" -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\z') {
+    # Both ids go into the Graph URL and the protected-app check, so each must be a GUID and is used in its plain form.
+    if (-not (Test-IsGuid -String "$(if ($Id) { $Id } else { $AppId })")) {
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = "Parameter 'Id' or 'AppId' must be a GUID"
             })
+    }
+    if ($Id) {
+        $Id = ([guid]$Id).ToString()
+        $IdPath = "/$Id"
+    } else {
+        $AppId = ([guid]$AppId).ToString()
+        $IdPath = "(appId='$AppId')"
     }
     if ($ValidTypes -notcontains $Type) {
         return ([HttpResponseContext]@{
