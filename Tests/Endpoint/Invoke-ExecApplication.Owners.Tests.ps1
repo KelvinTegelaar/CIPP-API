@@ -13,6 +13,8 @@ BeforeAll {
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = "$($Exception.Exception.Message)" } }
     function Get-NormalizedError { param($message) $message }
     function New-GraphBulkRequest { param($Requests, $tenantid, $AsApp) }
+    function New-GraphGetRequest { param($Uri, $tenantid, $AsApp) }
+    function Get-CippProtectedAppId { }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Tenant/Administration/Application Approval/Invoke-ExecApplication.ps1'
@@ -23,7 +25,7 @@ BeforeAll {
 
     function New-Request {
         param([hashtable]$Body)
-        $Merged = @{ Id = 'app-1'; Type = 'applications'; tenantFilter = 'contoso.onmicrosoft.com'; DisplayName = 'My App' }
+        $Merged = @{ Id = '00000000-0000-0000-0000-0000000000a1'; Type = 'applications'; tenantFilter = 'contoso.onmicrosoft.com'; DisplayName = 'My App' }
         foreach ($Key in $Body.Keys) { $Merged[$Key] = $Body[$Key] }
         [pscustomobject]@{
             Params  = @{ CIPPEndpoint = 'ExecApplication' }
@@ -53,10 +55,10 @@ Describe 'UpdateOwners' {
         Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter {
             $Requests.Count -eq 2 -and
             $Requests[0].method -eq 'POST' -and
-            $Requests[0].url -eq 'applications/app-1/owners/$ref' -and
+            $Requests[0].url -eq 'applications/00000000-0000-0000-0000-0000000000a1/owners/$ref' -and
             $Requests[0].body.'@odata.id' -eq "https://graph.microsoft.com/v1.0/directoryObjects/$($script:UserA)" -and
             $Requests[1].method -eq 'DELETE' -and
-            $Requests[1].url -eq "applications/app-1/owners/$($script:UserB)/`$ref"
+            $Requests[1].url -eq "applications/00000000-0000-0000-0000-0000000000a1/owners/$($script:UserB)/`$ref"
         }
     }
 
@@ -65,11 +67,11 @@ Describe 'UpdateOwners' {
             foreach ($Request in $Requests) { [pscustomobject]@{ id = $Request.id; status = 204 } }
         }
 
-        $Response = Invoke-ExecApplication -Request (New-Request @{ Action = 'UpdateOwners'; Type = 'servicePrincipals'; Id = 'sp-1'; RemoveOwnerIds = @($script:UserA) })
+        $Response = Invoke-ExecApplication -Request (New-Request @{ Action = 'UpdateOwners'; Type = 'servicePrincipals'; Id = '00000000-0000-0000-0000-0000000000b1'; RemoveOwnerIds = @($script:UserA) })
 
         $Response.StatusCode | Should -Be 200
         Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter {
-            $Requests.Count -eq 1 -and $Requests[0].url -eq "servicePrincipals/sp-1/owners/$($script:UserA)/`$ref"
+            $Requests.Count -eq 1 -and $Requests[0].url -eq "servicePrincipals/00000000-0000-0000-0000-0000000000b1/owners/$($script:UserA)/`$ref"
         }
     }
 

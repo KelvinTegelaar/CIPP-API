@@ -14,6 +14,7 @@ BeforeAll {
     function New-GraphGetRequest { param($Uri, $tenantid, $AsApp) }
     function New-GraphPOSTRequest { param($Uri, $Type, $Body, $tenantid, $AsApp, $AddedHeaders) }
     function New-GraphBulkRequest { param($Requests, $tenantid, $AsApp) }
+    function Get-CippProtectedAppId { }
 
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Tenant/Administration/Application Approval/Invoke-ExecApplication.ps1'
     . ([ScriptBlock]::Create("using namespace System.Net`n" + (Get-Content -LiteralPath $EndpointPath -Raw)))
@@ -48,7 +49,7 @@ BeforeAll {
             Params  = @{ CIPPEndpoint = 'ExecApplication' }
             Headers = @{}
             Query   = [pscustomobject]@{}
-            Body    = [pscustomobject]((@{ Id = 'sp-1'; Type = 'servicePrincipals'; tenantFilter = 'contoso.onmicrosoft.com' }, $Body) | ForEach-Object -Begin { $m = @{} } -Process { foreach ($k in $_.Keys) { $m[$k] = $_[$k] } } -End { $m })
+            Body    = [pscustomobject]((@{ Id = '00000000-0000-0000-0000-0000000000b1'; Type = 'servicePrincipals'; tenantFilter = 'contoso.onmicrosoft.com' }, $Body) | ForEach-Object -Begin { $m = @{} } -Process { foreach ($k in $_.Keys) { $m[$k] = $_[$k] } } -End { $m })
         }
     }
 }
@@ -85,7 +86,7 @@ Describe 'AddSigningCertificate' {
 
         $Response.StatusCode | Should -Be 200
         $script:Posts.Count | Should -Be 1
-        $script:Posts[0].Uri | Should -Be 'https://graph.microsoft.com/beta/servicePrincipals/sp-1/addTokenSigningCertificate'
+        $script:Posts[0].Uri | Should -Be 'https://graph.microsoft.com/beta/servicePrincipals/00000000-0000-0000-0000-0000000000b1/addTokenSigningCertificate'
         $script:Posts[0].Body | Should -Match '"displayName":"CN=Microsoft Azure Federated SSO Certificate"'
         $End = [DateTimeOffset]($script:Posts[0].Body | ConvertFrom-Json -AsHashtable).endDateTime
         ($End - [DateTimeOffset]::UtcNow).TotalDays | Should -BeGreaterThan (3 * 365 - 2)
@@ -136,7 +137,7 @@ Describe 'SetPreferredSigningKey' {
         $Response.StatusCode | Should -Be 200
         $script:Posts.Count | Should -Be 1
         $script:Posts[0].Type | Should -Be 'PATCH'
-        $script:Posts[0].Uri | Should -Be 'https://graph.microsoft.com/beta/servicePrincipals/sp-1'
+        $script:Posts[0].Uri | Should -Be 'https://graph.microsoft.com/beta/servicePrincipals/00000000-0000-0000-0000-0000000000b1'
         ($script:Posts[0].Body | ConvertFrom-Json).preferredTokenSigningKeyThumbprint | Should -Be $script:Thumb
     }
 
