@@ -13,7 +13,8 @@ function Test-CippApiClientRoleGrant {
         client, and escalate.
 
         A caller may only manage a client whose effective permissions are a subset of
-        the caller's own effective permissions. Superadmins may grant any role. Roles
+        the caller's own effective permissions, and a caller limited to some tenants may
+        only assign a custom role it holds itself. Superadmins may grant any role. Roles
         are compared by computed permission set (built-in and custom), matching exactly
         how Test-CIPPAccess evaluates an API client (single role, no base-role ceiling).
 
@@ -79,6 +80,14 @@ function Test-CippApiClientRoleGrant {
     $DefaultRoles = @('superadmin', 'admin', 'editor', 'readonly')
     $CallerPermissions = @(Get-CippAllowedPermissions -UserRoles $CallerRoles)
 
+    # A client's tenant reach comes from its one role. A caller limited to some tenants may therefore
+    # only hand out a custom role it holds itself, never a built-in role, which has no tenant limit.
+    try {
+        $TenantRestricted = @(Test-CIPPAccess -Request $Request -TenantList) -notcontains 'AllTenants'
+    } catch {
+        return (New-Denial "Unable to resolve your tenant access for authorization: $($_.Exception.Message)")
+    }
+
     # Normalize: a roleless client resolves to the 'cipp-api' fallback at request time,
     # so validate against that to mirror real client evaluation and stay future-proof.
     $TargetRoles = @($Role | ForEach-Object {
@@ -89,6 +98,10 @@ function Test-CippApiClientRoleGrant {
         # anonymous/authenticated are SWA placeholder roles, never valid client roles.
         if (@('anonymous', 'authenticated') -contains $TargetRole) {
             return (New-Denial "The role '$TargetRole' cannot be assigned to an API client.")
+        }
+
+        if ($TenantRestricted -and ($DefaultRoles -contains $TargetRole -or $CallerRoles -notcontains $TargetRole)) {
+            return (New-Denial "Your access is limited to specific tenants, so an API client you manage can only hold one of your own custom roles. '$TargetRole' is not one of them.")
         }
 
         # Confirm the role exists. 'cipp-api' is an implicit runtime fallback and may
