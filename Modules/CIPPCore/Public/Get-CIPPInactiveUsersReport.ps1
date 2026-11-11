@@ -52,6 +52,14 @@ function Get-CIPPInactiveUsersReport {
         return @()
     }
 
+    # signInActivity is only cached for tenants licensed for sign-in logs (Set-CIPPDBCacheUsers).
+    # Without it every user would read as never signed in, so the tenant has no answer, not a
+    # list of everyone.
+    if (-not ($Users | Where-Object { $_.signInActivity } | Select-Object -First 1)) {
+        Write-Information "No sign-in activity cached for tenant $TenantFilter (requires Entra ID P1), skipping inactive users"
+        return @()
+    }
+
     # Get tenant info for display name
     $TenantInfo = Get-Tenants -TenantFilter $TenantFilter | Select-Object -First 1
     $TenantDisplayName = $TenantInfo.displayName ?? $TenantFilter
