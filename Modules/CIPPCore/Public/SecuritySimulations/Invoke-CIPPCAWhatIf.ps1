@@ -3,7 +3,7 @@ function Invoke-CIPPCAWhatIf {
     .SYNOPSIS
         Runs one or many Conditional Access What If evaluations, app-only, without signing in.
     .DESCRIPTION
-        One body is a single POST to v1.0 identity/conditionalAccess/evaluate.
+        One body is a single POST to beta identity/conditionalAccess/evaluate. Beta is used because v1.0 leaves out policies that reference beta-only conditions, such as the Global Secure Access compliant network location.
     .FUNCTIONALITY
         Internal
     #>
@@ -19,7 +19,7 @@ function Invoke-CIPPCAWhatIf {
     if ($Bodies.Count -eq 1) {
         try {
             $Json = ConvertTo-Json -Depth 20 -InputObject $Bodies[0]
-            $Response = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/evaluate' -tenantid $TenantFilter -type POST -body $Json -AsApp $true
+            $Response = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/evaluate' -tenantid $TenantFilter -type POST -body $Json -AsApp $true
             $Policies = if ($null -ne $Response.value) { @($Response.value) } else { @($Response | Where-Object { $_.PSObject.Properties['policyApplies'] }) }
             $Results.Add([PSCustomObject]@{ Index = 0; Policies = @($Policies); Error = $null })
         } catch {
@@ -42,7 +42,7 @@ function Invoke-CIPPCAWhatIf {
     $Responses = @()
     $BatchError = $null
     try {
-        $Responses = @(New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter -asapp $true -Version 'v1.0')
+        $Responses = @(New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter -asapp $true -Version 'beta')
     } catch {
         $BatchError = $_.Exception.Message
     }
