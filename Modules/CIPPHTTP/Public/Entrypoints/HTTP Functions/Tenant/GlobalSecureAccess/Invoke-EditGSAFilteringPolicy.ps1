@@ -1,10 +1,10 @@
 function Invoke-EditGSAFilteringPolicy {
     <#
     .SYNOPSIS
-        Edits a Global Secure Access filtering policy in a tenant
+        Creates or edits a Global Secure Access filtering policy in a tenant
     .DESCRIPTION
-        Changes a tenant filtering policy's name, action, description and rules. Rules are matched on
-        type and destinations, so rules that did not change are left alone.
+        Creates a filtering policy when no ID is sent, or changes an existing one's name, action, description
+        and rules. Rules are matched on type and destinations, so rules that did not change are left alone.
     .FUNCTIONALITY
         Entrypoint
     .ROLE
@@ -16,12 +16,12 @@ function Invoke-EditGSAFilteringPolicy {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
     $TenantFilter = $Request.Body.tenantFilter
-    # The id of the filtering policy to edit
+    # The id of the filtering policy to edit; leave it out to create a new policy
     $ID = [string]$Request.Body.ID
     $Name = ([string]$Request.Body.name).Trim()
 
     $Errors = [System.Collections.Generic.List[string]]::new()
-    if ($ID -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') { $Errors.Add('ID must be the id (a GUID) of the filtering policy') }
+    if ($ID -and $ID -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') { $Errors.Add('ID must be the id (a GUID) of the filtering policy') }
     if (-not $Name) { $Errors.Add('name is required') }
     switch ($Request.Body.action) {
         'block' {}
@@ -36,14 +36,19 @@ function Invoke-EditGSAFilteringPolicy {
     }
 
     try {
-        $Current = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/networkAccess/filteringPolicies/$($ID)?`$expand=policyRules" -tenantid $TenantFilter -AsApp $true
+        $Current = $null
+        if ($ID) {
+            $Current = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/networkAccess/filteringPolicies/$($ID)?`$expand=policyRules" -tenantid $TenantFilter -AsApp $true
+        } elseif (@(New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/networkAccess/filteringPolicies' -tenantid $TenantFilter -AsApp $true).Where({ $_.name -eq $Name }).Count) {
+            throw [System.ArgumentException]::new("A filtering policy named '$Name' already exists in this tenant")
+        }
         $Policy = [pscustomobject]@{ name = $Name; description = [string]$Request.Body.description; action = [string]$Request.Body.action; policyRules = $Converted.Rules }
         $null = Set-CIPPGSAFilteringPolicy -TenantFilter $TenantFilter -Policy $Policy -Current $Current
-        $Result = "Updated filtering policy '$Name'"
+        $Result = "$($ID ? 'Updated' : 'Created') filtering policy '$Name'"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Result = "Failed to update filtering policy '$Name': $(Get-NormalizedError -Message $_.Exception.Message)"
+        $Result = "Failed to $($ID ? 'update' : 'create') filtering policy '$Name': $(Get-NormalizedError -Message $_.Exception.Message)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData (Get-CippException -Exception $_)
         $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }

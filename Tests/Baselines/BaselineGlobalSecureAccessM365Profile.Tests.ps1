@@ -41,27 +41,22 @@ BeforeAll {
     )
 
     function New-EngineItem([hashtable]$Variables = @{}) {
-        $Vars = @{ profileState = [pscustomobject]@{ label = 'Enabled'; value = 'enabled' }; assignTo = [pscustomobject]@{ label = 'Assign to all users and devices'; value = 'AllDevicesAndUsers' } }
+        $Vars = @{ profileState = [pscustomobject]@{ label = 'Enabled'; value = 'enabled' }; assignTo = [pscustomobject]@{ label = 'Assign to all users'; value = 'AllDevicesAndUsers' } }
         foreach ($Key in $Variables.Keys) { $Vars[$Key] = $Variables[$Key] }
         @{ TenantFilter = 'contoso.onmicrosoft.com'; Standard = 'GlobalSecureAccessM365Profile'; BaseName = 'GlobalSecureAccessM365Profile'; Variables = [pscustomobject]$Vars; Tiers = @(); AlertEnabled = $false; RemediateEnabled = $true }
     }
-    function New-Rules([string]$Kind, [string[]]$Groups = @(), [string[]]$Users = @()) {
-        if ($Kind -eq 'all') { return [pscustomobject]@{ devicePropertyFilters = [pscustomobject]@{ platforms = 'windows,macOS' }; assignments = [pscustomobject]@{ '@odata.type' = '#microsoft.graph.networkaccess.forwardingProfileAssignmentsAllMembership' } } }
-        [pscustomobject]@{
-            devicePropertyFilters = [pscustomobject]@{ platforms = 'windows,macOS' }
-            assignments           = [pscustomobject]@{ '@odata.type' = '#microsoft.graph.networkaccess.forwardingProfileAssignmentsEnumeratedMembership'; users = @($Users.ForEach({ [pscustomobject]@{ id = $_ } })); devices = @(); groups = @($Groups.ForEach({ [pscustomobject]@{ id = $_ } })) }
-        }
-    }
-    function Set-Cache([string]$State = 'enabled', [string]$LinkState = 'enabled', $Rules = (New-Rules 'all'), [string]$Onboarding = 'onboarded') {
+    function New-Assignee([string]$Type, [string]$Id) { [pscustomobject]@{ principalId = $Id; principalType = $Type; principalDisplayName = $Id } }
+    function Set-Cache([string]$State = 'enabled', [string]$LinkState = 'enabled', $Required = $false, [object[]]$Assigned = @(), [string]$Onboarding = 'onboarded', [object[]]$RemoteNetworks = @(), [bool]$RemoteNetworksRead = $true) {
         $script:Row = [pscustomobject]@{
-            id = 'networkAccess'; onboardingStatus = $Onboarding; onboarded = $Onboarding -eq 'onboarded'; signalingStatus = 'enabled'
+            id = 'networkAccess'; onboardingStatus = $Onboarding; onboarded = $Onboarding -eq 'onboarded'; signalingStatus = 'enabled'; remoteNetworksRead = $RemoteNetworksRead; remoteNetworks = @($RemoteNetworks)
             profiles = @(
-                [pscustomobject]@{ id = 'm365-id'; state = $State; trafficForwardingType = 'm365'; isCustomProfile = $false; assignmentRules = $Rules; policies = @([pscustomobject]@{ id = 'link-1'; state = 'enabled'; policyName = 'Exchange Online' }, [pscustomobject]@{ id = 'link-2'; state = $LinkState; policyName = 'SharePoint Online and OneDrive for Business' }) }
-                [pscustomobject]@{ id = 'internet-id'; state = 'disabled'; trafficForwardingType = 'internet'; isCustomProfile = $false; assignmentRules = $null; policies = @() }
+                [pscustomobject]@{ id = 'm365-id'; state = $State; trafficForwardingType = 'm365'; isCustomProfile = $false; servicePrincipalId = 'sp-m365'; appRoleAssignmentRequired = $Required; appRoleAssignedTo = @($Assigned); policies = @([pscustomobject]@{ id = 'link-1'; state = 'enabled'; policyName = 'Exchange Online' }, [pscustomobject]@{ id = 'link-2'; state = $LinkState; policyName = 'SharePoint Online and OneDrive for Business' }) }
+                [pscustomobject]@{ id = 'internet-id'; state = 'disabled'; trafficForwardingType = 'internet'; isCustomProfile = $false; servicePrincipalId = 'sp-internet'; appRoleAssignmentRequired = $true; appRoleAssignedTo = @(); policies = @() }
             )
         } | ConvertTo-Json -Depth 20 | ConvertFrom-Json
     }
     function Get-Body($Request) { ConvertTo-Json -Compress -Depth 20 -InputObject $Request.body }
+    function Get-Calls { @($script:Requests | ForEach-Object { "$($_.method) $($_.url)" }) }
 }
 
 Describe 'GlobalSecureAccessM365Profile' {
@@ -75,7 +70,7 @@ Describe 'GlobalSecureAccessM365Profile' {
         Mock Send-CIPPBaselineAlert {}
         Mock Write-LogMessage {}
         Mock Set-CIPPDBCacheNetworkAccess {}
-        Mock Get-CIPPTenantCapabilities { [pscustomobject]@{ AAD_PREMIUM = $true; Entra_Premium_Internet_Access = $true } }
+        Mock Get-CIPPTenantCapabilities { [pscustomobject]@{ AAD_PREMIUM = $true } }
         Mock New-CIPPDbRequest { $script:Row } -ParameterFilter { $Type -eq 'NetworkAccess' }
         Mock New-CIPPDbRequest { $script:Groups } -ParameterFilter { $Type -eq 'Groups' }
         Mock New-GraphBulkRequest { foreach ($Request in $Requests) { $script:Requests.Add($Request); [pscustomobject]@{ id = $Request.id; status = 204 } } }
@@ -87,46 +82,68 @@ Describe 'GlobalSecureAccessM365Profile' {
         $script:Requests.Count | Should -Be 0
     }
 
-    It 'enables the profile and its disabled link, and assigns it to all users and devices in the portal''s body shape' {
-        Set-Cache -State 'disabled' -LinkState 'disabled' -Rules $null
+    It 'enables the profile and its disabled link, and assigns it to all users through its app' {
+        Set-Cache -State 'disabled' -LinkState 'disabled' -Required $true
         $null = Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'run' -Force
-        @($script:Requests | ForEach-Object { "$($_.method) $($_.url)" }) | Should -Be @(
+        Get-Calls | Should -Be @(
             'PATCH /networkAccess/forwardingProfiles/m365-id'
             'PATCH /networkAccess/forwardingProfiles/m365-id/policies/link-2'
-            'PATCH /networkAccess/forwardingProfiles/m365-id'
+            'PATCH /servicePrincipals/sp-m365'
         )
         Get-Body $script:Requests[0] | Should -Be '{"state":"enabled"}'
         Get-Body $script:Requests[1] | Should -Be '{"state":"enabled"}'
-        Get-Body $script:Requests[2] | Should -Be '{"assignmentRules":{"devicePropertyFilters":{"platforms":"windows,macOS,android,iOS"},"assignments":{"@odata.type":"#microsoft.graph.networkaccess.forwardingProfileAssignmentsAllMembership"}}}'
+        Get-Body $script:Requests[2] | Should -Be '{"appRoleAssignmentRequired":false}'
     }
 
-    It 'adds the configured groups to what is assigned by hand, keeping users and the platform filter' {
-        Set-Cache -Rules (New-Rules 'enumerated' -Groups 'g-hand' -Users 'u-1')
+    It 'adds the configured groups as app assignments, keeping what is assigned by hand' {
+        Set-Cache -Required $true -Assigned (New-Assignee 'Group' 'g-hand'), (New-Assignee 'User' 'u-1')
         $Item = New-EngineItem @{ assignTo = [pscustomobject]@{ label = 'Assign to Custom Group'; value = 'customGroup' }; customGroup = 'GSA Pilot*' }
-        $Result = Invoke-CIPPBaselineStandard -Item $Item -Mode 'run' -Force
-        @($script:Requests).Count | Should -Be 1
-        Get-Body $script:Requests[0] | Should -Be '{"assignmentRules":{"devicePropertyFilters":{"platforms":"windows,macOS"},"assignments":{"@odata.type":"#microsoft.graph.networkaccess.forwardingProfileAssignmentsEnumeratedMembership","users":[{"id":"u-1"}],"devices":[],"groups":[{"id":"g-hand"},{"id":"g-pilot1"},{"id":"g-pilot2"}]}}}'
-        $Result.Status | Should -Not -BeNullOrEmpty
+        $null = Invoke-CIPPBaselineStandard -Item $Item -Mode 'run' -Force
+        Get-Calls | Should -Be @(
+            'POST /servicePrincipals/sp-m365/appRoleAssignedTo'
+            'POST /servicePrincipals/sp-m365/appRoleAssignedTo'
+        )
+        Get-Body $script:Requests[0] | Should -Be '{"principalId":"g-pilot1","resourceId":"sp-m365","appRoleId":"00000000-0000-0000-0000-000000000000"}'
+        Get-Body $script:Requests[1] | Should -Be '{"principalId":"g-pilot2","resourceId":"sp-m365","appRoleId":"00000000-0000-0000-0000-000000000000"}'
     }
 
     It 'is compliant when every configured group is assigned, alongside hand-assigned ones' {
-        Set-Cache -Rules (New-Rules 'enumerated' -Groups 'g-pilot2', 'g-hand', 'g-pilot1')
+        Set-Cache -Required $true -Assigned (New-Assignee 'Group' 'g-pilot2'), (New-Assignee 'Group' 'g-hand'), (New-Assignee 'Group' 'g-pilot1')
         $Item = New-EngineItem @{ assignTo = [pscustomobject]@{ label = 'Assign to Custom Group'; value = 'customGroup' }; customGroup = 'GSA Pilot - Sales, GSA Pilot - IT' }
         (Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare').Status | Should -Be 'Compliant'
     }
 
     It 'reports a group name that matches no group, and assigns only the ones that resolve' {
-        Set-Cache -Rules (New-Rules 'enumerated' -Groups 'g-hand')
+        Set-Cache -Required $true -Assigned (New-Assignee 'Group' 'g-hand')
         $Item = New-EngineItem @{ assignTo = 'customGroup'; customGroup = 'Nobody, GSA Pilot - IT' }
         $Graded = Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare'
         @($Graded.CurrentValue.missingGroups) | Should -Be @('GSA Pilot - IT', 'Nobody')
         $null = Invoke-CIPPBaselineStandard -Item $Item -Mode 'run' -Force
-        (Get-Body $script:Requests[0]) | Should -Match ([regex]::Escape('"groups":[{"id":"g-hand"},{"id":"g-pilot2"}]'))
+        Get-Calls | Should -Be @('POST /servicePrincipals/sp-m365/appRoleAssignedTo')
+        Get-Body $script:Requests[0] | Should -Match ([regex]::Escape('"principalId":"g-pilot2"'))
+    }
+
+    It 'limits a profile assigned to all users to the configured groups, assigning them first' {
+        $Item = New-EngineItem @{ assignTo = 'customGroup'; customGroup = 'GSA Pilot - IT' }
+        (Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare').CurrentValue.assignment | Should -Be 'All users'
+        $null = Invoke-CIPPBaselineStandard -Item $Item -Mode 'run' -Force
+        Get-Calls | Should -Be @(
+            'POST /servicePrincipals/sp-m365/appRoleAssignedTo'
+            'PATCH /servicePrincipals/sp-m365'
+        )
+        Get-Body $script:Requests[1] | Should -Be '{"appRoleAssignmentRequired":true}'
+    }
+
+    It 'never takes a profile off all users when no configured group resolves' {
+        $Item = New-EngineItem @{ assignTo = 'customGroup'; customGroup = 'Nobody' }
+        (Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare').Status | Should -Not -Be 'Compliant'
+        $null = Invoke-CIPPBaselineStandard -Item $Item -Mode 'run' -Force
+        $script:Requests.Count | Should -Be 0
     }
 
     It 'leaves the assignment alone with Do not assign, as Intune templates do' {
-        foreach ($Rules in (New-Rules 'all'), (New-Rules 'enumerated' -Groups 'g-hand'), $null) {
-            Set-Cache -Rules $Rules
+        foreach ($Case in @(@{ Required = $false; Assigned = @() }, @{ Required = $true; Assigned = @(New-Assignee 'Group' 'g-hand') }, @{ Required = $true; Assigned = @() }, @{ Required = $null; Assigned = @() })) {
+            Set-Cache -Required $Case.Required -Assigned $Case.Assigned
             (Invoke-CIPPBaselineStandard -Item (New-EngineItem @{ assignTo = 'DoNotAssign' }) -Mode 'compare').Status | Should -Be 'Compliant'
         }
         $null = Invoke-CIPPBaselineStandard -Item (New-EngineItem @{ assignTo = 'DoNotAssign' }) -Mode 'run' -Force
@@ -134,9 +151,9 @@ Describe 'GlobalSecureAccessM365Profile' {
     }
 
     It 'grades and writes only the state when the profile should be disabled' {
-        Set-Cache -LinkState 'disabled' -Rules $null
+        Set-Cache -LinkState 'disabled' -Required $true
         $null = Invoke-CIPPBaselineStandard -Item (New-EngineItem @{ profileState = 'disabled' }) -Mode 'run' -Force
-        @($script:Requests).Count | Should -Be 1
+        Get-Calls | Should -Be @('PATCH /networkAccess/forwardingProfiles/m365-id')
         Get-Body $script:Requests[0] | Should -Be '{"state":"disabled"}'
     }
 
@@ -148,6 +165,14 @@ Describe 'GlobalSecureAccessM365Profile' {
         $script:Requests.Count | Should -Be 0
     }
 
+    It 'reports an error and writes nothing when the profile''s app could not be read' {
+        Set-Cache -Required $null
+        $Result = Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'run' -Force
+        $Result.Status | Should -Be 'Error'
+        Should -Invoke Set-CIPPBaselineResult -ParameterFilter { $Detail -like '*assigned to*' }
+        $script:Requests.Count | Should -Be 0
+    }
+
     It 'refuses a custom group assignment with no group name, without re-collecting' {
         $Result = Invoke-CIPPBaselineStandard -Item (New-EngineItem @{ assignTo = 'customGroup'; customGroup = '' }) -Mode 'run' -Force
         $Result.Status | Should -Be 'Error'
@@ -155,22 +180,42 @@ Describe 'GlobalSecureAccessM365Profile' {
         $script:Requests.Count | Should -Be 0
     }
 
-    It 'neither grades nor writes the assignment on a tenant without a Global Secure Access licence' {
-        Mock Get-CIPPTenantCapabilities { [pscustomobject]@{ AAD_PREMIUM = $true } }
-        Set-Cache -Rules $null
-        $Graded = Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare'
-        $Graded.ExpectedValue.PSObject.Properties.Name | Should -Not -Contain 'assignment'
-        $Graded.Status | Should -Be 'Compliant'
-        $Custom = New-EngineItem @{ assignTo = 'customGroup'; customGroup = '' }
-        (Invoke-CIPPBaselineStandard -Item $Custom -Mode 'compare').Status | Should -Be 'Compliant'
+    It 'manages the assignment with Entra ID P1 alone' {
+        Set-Cache -Required $true
+        (Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare').CurrentValue.assignment | Should -Be 'Not assigned'
         $null = Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'run' -Force
+        Get-Calls | Should -Be @('PATCH /servicePrincipals/sp-m365')
+    }
+
+    It 'adds the profile to matching remote networks, keeping the profiles they already use' {
+        Set-Cache -RemoteNetworks @(
+            [pscustomobject]@{ id = 'rn-syd'; name = 'Branch Sydney'; forwardingProfileIds = @('internet-id') }
+            [pscustomobject]@{ id = 'rn-mel'; name = 'Branch Melbourne'; forwardingProfileIds = @('m365-id') }
+            [pscustomobject]@{ id = 'rn-hq'; name = 'Head office'; forwardingProfileIds = @('internet-id') }
+        )
+        $Item = New-EngineItem @{ remoteNetworks = @([pscustomobject]@{ label = 'Branch*'; value = 'Branch*' }, 'Warehouse') }
+        $Graded = Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare'
+        @($Graded.CurrentValue.missingRemoteNetworks) | Should -Be @('Branch Sydney', 'Warehouse')
+        $null = Invoke-CIPPBaselineStandard -Item $Item -Mode 'run' -Force
+        @(Get-Calls) | Should -Be @('PATCH /networkAccess/connectivity/remoteNetworks/rn-syd/forwardingProfiles')
+        Get-Body $script:Requests[0] | Should -Be '{"@context":"#$delta","value":[{"@odata.type":"#microsoft.graph.networkaccess.forwardingProfile","id":"internet-id"},{"@odata.type":"#microsoft.graph.networkaccess.forwardingProfile","id":"m365-id"}]}'
+    }
+
+    It 'is compliant when every matching remote network already uses the profile' {
+        Set-Cache -RemoteNetworks @([pscustomobject]@{ id = 'rn-mel'; name = 'Branch Melbourne'; forwardingProfileIds = @('m365-id', 'internet-id') })
+        (Invoke-CIPPBaselineStandard -Item (New-EngineItem @{ remoteNetworks = 'Branch*' }) -Mode 'compare').Status | Should -Be 'Compliant'
+    }
+
+    It 'assigns no remote networks to a profile it keeps disabled, which Graph refuses' {
+        Set-Cache -State 'disabled' -RemoteNetworks @([pscustomobject]@{ id = 'rn-syd'; name = 'Branch Sydney'; forwardingProfileIds = @('internet-id') })
+        $null = Invoke-CIPPBaselineStandard -Item (New-EngineItem @{ profileState = 'disabled'; remoteNetworks = 'Branch*' }) -Mode 'run' -Force
         $script:Requests.Count | Should -Be 0
     }
 
-    It 'manages the assignment with Private Access as well as Internet Access' {
-        Mock Get-CIPPTenantCapabilities { [pscustomobject]@{ AAD_PREMIUM = $true; Entra_Premium_Private_Access = $true } }
-        Set-Cache -Rules $null
-        (Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare').CurrentValue.assignment | Should -Be 'Not set'
+    It 'reports an error when the remote networks could not be read' {
+        Set-Cache -RemoteNetworksRead $false
+        (Invoke-CIPPBaselineStandard -Item (New-EngineItem @{ remoteNetworks = 'Branch*' }) -Mode 'run' -Force).Status | Should -Be 'Error'
+        $script:Requests.Count | Should -Be 0
     }
 
     It 'needs Entra ID P1 or P2' {

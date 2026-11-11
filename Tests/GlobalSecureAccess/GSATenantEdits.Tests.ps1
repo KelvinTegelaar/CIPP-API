@@ -44,6 +44,21 @@ Describe 'Invoke-EditGSAFilteringPolicy' {
             $Current.name -eq 'Old' -and $Policy.name -eq 'Block risky' -and ($Policy.policyRules[0].destinations.name -join ',') -eq 'Gambling,Weapons'
         }
     }
+
+    It 'creates a policy when no id is sent' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = 'other'; name = 'Allow news' } }
+        $Response = Invoke-Edit 'EditGSAFilteringPolicy' @{ name = 'Block risky'; action = 'block'; policyRules = @(@{ name = 'c'; ruleType = 'webCategory'; destinations = @('Gambling') }) }
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        $Response.Body.Results | Should -Be "Created filtering policy 'Block risky'"
+        Should -Invoke Set-CIPPGSAFilteringPolicy -Times 1 -ParameterFilter { $null -eq $Current -and $Policy.name -eq 'Block risky' }
+    }
+
+    It 'refuses to create a policy whose name the tenant already uses' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = 'other'; name = 'Block risky' } }
+        $Response = Invoke-Edit 'EditGSAFilteringPolicy' @{ name = 'Block risky'; action = 'block'; policyRules = @(@{ name = 'c'; ruleType = 'webCategory'; destinations = @('Gambling') }) }
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+        Should -Invoke Set-CIPPGSAFilteringPolicy -Times 0
+    }
 }
 
 Describe 'Invoke-EditGSASecurityProfile' {
@@ -79,6 +94,28 @@ Describe 'Invoke-EditGSASecurityProfile' {
         (Invoke-Edit 'EditGSASecurityProfile' (Get-ProfileBody)).Body.Results[0].resultText | Should -BeLike '*The baseline profile keeps priority 65000'
         $Body.name = 'Baseline profile'
         (Invoke-Edit 'EditGSASecurityProfile' $Body).StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+    }
+
+    It 'creates a profile when no id is sent, then links its policies to the new id' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = 'existing'; name = 'Other'; priority = 2000 } } -ParameterFilter { $uri -like '*/filteringProfiles' }
+        Mock New-GraphPOSTRequest { [pscustomobject]@{ id = 'new-profile' } }
+        $Body = Get-ProfileBody
+        $Body.Remove('ID')
+        $Response = Invoke-Edit 'EditGSASecurityProfile' $Body
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        $Response.Body.Results[0].resultText | Should -Be "Created security profile 'Staff'"
+        Should -Invoke New-GraphPOSTRequest -Times 1 -ParameterFilter { $type -eq 'POST' -and $uri -like '*/filteringProfiles' -and ($body | ConvertFrom-Json).priority -eq 1000 }
+        Should -Invoke Set-CIPPGSAProfileLinks -Times 1 -ParameterFilter { $ProfileId -eq 'new-profile' -and @($Current).Count -eq 0 -and $Links[0].policyName -eq 'Block risky' }
+    }
+
+    It 'refuses to create a profile on a priority another profile holds' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = 'existing'; name = 'Other'; priority = 1000 } } -ParameterFilter { $uri -like '*/filteringProfiles' }
+        $Body = Get-ProfileBody
+        $Body.Remove('ID')
+        $Response = Invoke-Edit 'EditGSASecurityProfile' $Body
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+        $Response.Body.Results[0].resultText | Should -Be "Failed to create security profile 'Staff': Priority 1000 is already used by security profile 'Other'"
+        Should -Invoke New-GraphPOSTRequest -Times 0
     }
 
     It 'reports 207 when a link write fails after the profile updated' {

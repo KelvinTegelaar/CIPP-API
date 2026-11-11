@@ -9996,12 +9996,12 @@
     },
     "/api/EditGSAFilteringPolicy": {
       "post": {
-        "summary": "Edits a Global Secure Access filtering policy in a tenant",
+        "summary": "Creates or edits a Global Secure Access filtering policy in a tenant",
         "operationId": "EditGSAFilteringPolicy",
         "tags": [
           "Tenant > GlobalSecureAccess"
         ],
-        "description": "Changes a tenant filtering policy's name, action, description and rules. Rules are matched on\ntype and destinations, so rules that did not change are left alone.",
+        "description": "Creates a filtering policy when no ID is sent, or changes an existing one's name, action, description\nand rules. Rules are matched on type and destinations, so rules that did not change are left alone.",
         "requestBody": {
           "required": true,
           "content": {
@@ -10021,7 +10021,7 @@
                   },
                   "ID": {
                     "type": "string",
-                    "description": "The id of the filtering policy to edit"
+                    "description": "The id of the filtering policy to edit; leave it out to create a new policy"
                   },
                   "name": {
                     "type": "string"
@@ -10072,12 +10072,12 @@
     },
     "/api/EditGSASecurityProfile": {
       "post": {
-        "summary": "Edits a Global Secure Access security profile in a tenant",
+        "summary": "Creates or edits a Global Secure Access security profile in a tenant",
         "operationId": "EditGSASecurityProfile",
         "tags": [
           "Tenant > GlobalSecureAccess"
         ],
-        "description": "Changes a tenant security profile's name, description, priority, state and the filtering\npolicies it links. The built-in baseline profile keeps priority 65000; editing its links is how\na filter applies to all Internet Access traffic without a Conditional Access policy.",
+        "description": "Creates a security profile when no ID is sent, or changes an existing one's name, description,\npriority, state and the filtering policies it links. The built-in baseline profile keeps priority\n65000; editing its links is how a filter applies to all Internet Access traffic without a\nConditional Access policy.",
         "requestBody": {
           "required": true,
           "content": {
@@ -10090,7 +10090,7 @@
                   },
                   "ID": {
                     "type": "string",
-                    "description": "The id of the security profile to edit"
+                    "description": "The id of the security profile to edit; leave it out to create a new profile"
                   },
                   "name": {
                     "type": "string"
@@ -10109,6 +10109,99 @@
                       "disabled",
                       "enabled"
                     ]
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.ReadWrite"
+      }
+    },
+    "/api/EditGSATrafficForwardingProfile": {
+      "post": {
+        "summary": "Edits a Global Secure Access traffic forwarding profile in a tenant",
+        "operationId": "EditGSATrafficForwardingProfile",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Changes only the parts that are sent: the profile state, whether it applies to all users, the exact\nset of users and groups it is assigned to, the exact set of remote networks that use it and, for the\nInternet profile, the exact custom bypass and acquire destinations. Everything is read and checked\nbefore the first write, and a part that already matches is left alone.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "assignedToAllUsers": {
+                    "type": "string",
+                    "description": "true to apply the profile to all users, false to apply it only to its assigned users and groups"
+                  },
+                  "assignees": {
+                    "type": "string",
+                    "description": "The exact users and groups to assign, each { value: principal id, label, type: User or Group }"
+                  },
+                  "customAcquire": {
+                    "type": "string"
+                  },
+                  "customAcquirePorts": {
+                    "type": "string"
+                  },
+                  "customBypass": {
+                    "type": "string"
+                  },
+                  "customBypassPorts": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string",
+                    "description": "The id of the traffic forwarding profile"
+                  },
+                  "remoteNetworks": {
+                    "type": "string",
+                    "description": "The exact remote network ids that should use this profile"
+                  },
+                  "state": {
+                    "type": "string",
+                    "description": "enabled or disabled"
                   },
                   "tenantFilter": {
                     "type": "string"
@@ -21650,6 +21743,80 @@
         ],
         "x-cipp-role": "Endpoint.Application.ReadWrite",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ExecDeployGSAFilteringPolicyTemplate": {
+      "post": {
+        "summary": "Deploys a Global Secure Access filtering policy template to tenants",
+        "operationId": "ExecDeployGSAFilteringPolicyTemplate",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Creates the filtering policy in each selected tenant, or brings the policy with the same name in\nline with the template. A filtering policy blocks or allows nothing until a security profile links\nit. A tenant without a Microsoft Entra Internet Access licence is refused and left unchanged.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "TemplateList": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "The filtering policy template to deploy"
+                  },
+                  "tenantFilter": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "The tenants to deploy to"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.ReadWrite"
       }
     },
     "/api/ExecDeployGSASecurityProfileTemplate": {
@@ -58122,6 +58289,82 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListGSARemoteNetworks": {
+      "get": {
+        "summary": "Lists a tenant's Global Secure Access remote networks",
+        "operationId": "ListGSARemoteNetworks",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Returns the tenant's remote networks (branch sites), read live, with the traffic forwarding\nprofiles each one uses and its device links. Device links are returned without their tunnel\nconfiguration, which holds the VPN pre-shared key.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The fields taken from Graph are the ones this endpoint selects, so they are what the response actually carries.",
+                    "properties": {
+                      "asn": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "bandwidthCapacityInMbps": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "deviceLinks": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "deviceVendor": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "ipAddress": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "name": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "profiles": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "region": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "trafficForwardingType": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.Read"
+      }
+    },
     "/api/ListGSASecurityProfiles": {
       "get": {
         "summary": "Lists a tenant's Global Secure Access security profiles",
@@ -58297,6 +58540,93 @@
         ],
         "x-cipp-role": "Tenant.GlobalSecureAccess.Read",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListGSATrafficForwarding": {
+      "get": {
+        "summary": "Lists a tenant's Global Secure Access traffic forwarding profiles",
+        "operationId": "ListGSATrafficForwarding",
+        "tags": [
+          "Tenant > GlobalSecureAccess"
+        ],
+        "description": "Returns the Microsoft 365, Internet Access and Private Access traffic forwarding profiles, read\nlive, with who each profile is assigned to, its policy groups, the remote networks that use it and,\nfor the Internet profile, the custom bypass and acquire destinations. Like the portal, each profile\nalso carries the Conditional Access policies that target it and a warning when the tenant lacks the\nlicense the profile needs. A part that could not be read is null and named in readErrors.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "assignment": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "displayName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "id": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "licenseWarning": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "linkedConditionalAccessPolicies": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "name": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "policies": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "policyId": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "policyName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "principalDisplayName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "principalId": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "principalType": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "remoteNetworks": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "state": {
+                        "x-cipp-field-source": "backend,frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.GlobalSecureAccess.Read"
       }
     },
     "/api/ListGuestUsers": {

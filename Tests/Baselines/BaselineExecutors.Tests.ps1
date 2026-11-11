@@ -297,6 +297,16 @@ Describe 'Invoke-CIPPBaselineGraphBulkSweep' {
         }
     }
 
+    It 'sends a sequential group one request per batch, in order' {
+        # Global Secure Access loses concurrent rule writes to one forwarding policy.
+        $Current = @{ targets = @(@{ id = 'a-1' }, @{ id = 'b-2' }, @{ id = 'c-3' }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ method = 'DELETE'; uri = 'rules/%id%'; sequential = $true }) } | ConvertTo-Spec
+        $script:Batches = [System.Collections.Generic.List[string]]::new()
+        Mock New-GraphBulkRequest { $script:Batches.Add((@($Requests).ForEach({ $_.url }) -join ',')); New-BulkSuccess -Requests $Requests }
+        Invoke-CIPPBaselineGraphBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        @($script:Batches) | Should -Be @('/rules/a-1', '/rules/b-2', '/rules/c-3')
+    }
+
     It 'keeps a per-object token its JSON type' {
         # PasswordExpireDisabled carries a per-domain notification window. Sent as the string
         # "14" Graph rejects the body, so the exact-token rule has to survive per-object

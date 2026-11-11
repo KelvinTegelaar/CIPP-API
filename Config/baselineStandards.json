@@ -7090,14 +7090,14 @@
   {
     "name": "standards.GlobalSecureAccessInternetAccess",
     "cat": "Global Secure Access",
-    "helpText": "Enables or disables the Global Secure Access Internet traffic forwarding profile, keeps its traffic policies enabled, sets who it is assigned to and optionally manages the custom block page. Uses Microsoft Entra Internet Access. The tenant must be onboarded, which the Set up Global Secure Access standard does.",
-    "docsDescription": "Grades the Internet traffic forwarding profile the same way the Microsoft 365 profile standard grades its profile: state, enabled traffic policies and assignment, where assigning to groups adds them to what is already assigned and Do not assign leaves the assignment alone. The custom block page is graded only for what is configured: its state when chosen and its message when not blank. The message is markdown and may contain links.",
+    "helpText": "Enables or disables the Global Secure Access Internet traffic forwarding profile, keeps its traffic policies enabled, sets who and which remote networks it is assigned to, and optionally manages its custom bypass and acquire rules and the custom block page. Uses Microsoft Entra Internet Access. The tenant must be onboarded, which the Set up Global Secure Access standard does.",
+    "docsDescription": "Grades the Internet traffic forwarding profile the same way the Microsoft 365 profile standard grades its profile: state, enabled traffic policies and assignment, where assigning to groups adds them to what is already assigned and Do not assign leaves the assignment alone. Remote networks matched by name get the profile added to the profiles they already use, while the profile is set to enabled; none is removed. With Manage the custom bypass and acquire rules on, the Custom bypass and Custom Acquire policies hold exactly the listed destinations on TCP and UDP: missing ones are added and any other custom rule is removed. The custom block page is graded only for what is configured: its state when chosen and its message when not blank. The message is markdown and may contain links.",
     "executiveText": "Routes internet traffic from managed devices through Microsoft's Security Service Edge so web content filtering and threat protection apply, and sets the message users see when a site is blocked.",
     "label": "Manage Microsoft Entra Internet Access",
     "impact": "Medium Impact",
     "impactColour": "warning",
     "addedDate": "2026-11-11",
-    "powershellEquivalent": "Update-MgBetaNetworkAccessForwardingProfile; Update-MgBetaNetworkAccessSettingCustomBlockPage",
+    "powershellEquivalent": "Update-MgBetaNetworkAccessForwardingProfile; New-MgServicePrincipalAppRoleAssignedTo; Update-MgBetaNetworkAccessSettingCustomBlockPage",
     "recommendedBy": [
       "CIPP"
     ],
@@ -7137,7 +7137,7 @@
           },
           {
             "value": "AllDevicesAndUsers",
-            "label": "Assign to all users and devices"
+            "label": "Assign to all users"
           },
           {
             "value": "customGroup",
@@ -7150,6 +7150,51 @@
         "name": "standards.GlobalSecureAccessInternetAccess.customGroup",
         "type": "textField",
         "label": "Custom group names, comma separated (when assigning to a custom group; wildcards allowed)",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.remoteNetworks",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "label": "Remote networks to assign the profile to (names, wildcards allowed)",
+        "omitWhenBlank": true,
+        "default": ""
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.manageCustomRules",
+        "type": "switch",
+        "label": "Manage the custom bypass and acquire rules (rules not listed here are removed)",
+        "default": false
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.customBypass",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "label": "Custom bypass destinations (FQDN with optional *. wildcard, IPv4 address, subnet or range begin-end)",
+        "omitWhenBlank": true,
+        "default": ""
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.customBypassPorts",
+        "type": "textField",
+        "label": "Custom bypass ports (comma separated, ranges allowed; blank for all ports)",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.customAcquire",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "label": "Custom acquire destinations (FQDN with optional *. wildcard, IPv4 address, subnet or range begin-end)",
+        "omitWhenBlank": true,
+        "default": ""
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.customAcquirePorts",
+        "type": "textField",
+        "label": "Custom acquire ports (comma separated, ranges allowed; blank for all ports)",
         "omitWhenBlank": true
       },
       {
@@ -7180,14 +7225,14 @@
   {
     "name": "standards.GlobalSecureAccessM365Profile",
     "cat": "Global Secure Access",
-    "helpText": "Enables or disables the Global Secure Access Microsoft 365 traffic forwarding profile, keeps its traffic policies enabled and sets who it is assigned to. Uses Entra ID P1. The tenant must be onboarded, which the Set up Global Secure Access standard does.",
-    "docsDescription": "Grades the Microsoft 365 traffic forwarding profile's state and, when it should be enabled, that every traffic policy in it is enabled and who it is assigned to. Assigning to groups adds them to whatever is already assigned; assignments made by hand are kept, and choosing Do not assign never removes them, which is done in the portal. Group names may use wildcards and resolve from the Groups cache. Assignment is managed only on tenants with a Global Secure Access licence (Microsoft Entra Internet Access or Private Access), because Graph does not return a profile's assignment without one; elsewhere only the state and traffic policies are graded.",
+    "helpText": "Enables or disables the Global Secure Access Microsoft 365 traffic forwarding profile, keeps its traffic policies enabled and sets who and which remote networks it is assigned to. Uses Entra ID P1. The tenant must be onboarded, which the Set up Global Secure Access standard does.",
+    "docsDescription": "Grades the Microsoft 365 traffic forwarding profile's state and, when it should be enabled, that every traffic policy in it is enabled and who it is assigned to. Assigning to groups adds them to whatever is already assigned; assignments made by hand are kept, and choosing Do not assign never removes them, which is done in the portal. Group names may use wildcards and resolve from the Groups cache. A profile is assigned through its enterprise app, as the portal does: all users turns off the app's assignment requirement, and groups become app assignments. Assigning to groups on a profile assigned to all users limits it to those groups. Remote networks matched by name get the profile added to the profiles they already use, while the profile is set to enabled; none is removed.",
     "executiveText": "Routes Microsoft 365 traffic from managed devices through Microsoft's Security Service Edge, the base for compliant network checks and for seeing users' real source IP addresses in sign-in logs.",
     "label": "Manage the Microsoft 365 traffic forwarding profile",
     "impact": "Medium Impact",
     "impactColour": "warning",
     "addedDate": "2026-11-11",
-    "powershellEquivalent": "Update-MgBetaNetworkAccessForwardingProfile",
+    "powershellEquivalent": "Update-MgBetaNetworkAccessForwardingProfile; New-MgServicePrincipalAppRoleAssignedTo",
     "recommendedBy": [
       "CIPP"
     ],
@@ -7228,7 +7273,7 @@
           },
           {
             "value": "AllDevicesAndUsers",
-            "label": "Assign to all users and devices"
+            "label": "Assign to all users"
           },
           {
             "value": "customGroup",
@@ -7242,6 +7287,15 @@
         "type": "textField",
         "label": "Custom group names, comma separated (when assigning to a custom group; wildcards allowed)",
         "omitWhenBlank": true
+      },
+      {
+        "name": "standards.GlobalSecureAccessM365Profile.remoteNetworks",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "label": "Remote networks to assign the profile to (names, wildcards allowed)",
+        "omitWhenBlank": true,
+        "default": ""
       }
     ]
   },

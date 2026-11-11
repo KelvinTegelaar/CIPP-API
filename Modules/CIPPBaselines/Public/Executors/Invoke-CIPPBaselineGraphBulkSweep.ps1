@@ -19,7 +19,9 @@ function Invoke-CIPPBaselineGraphBulkSweep {
                       down to the expected keys, so it never reaches the compare.
 
         Spec (fully rendered):
-          writes[]      - ordered write groups, each { from, method, uri, body, asApp }.
+          writes[]      - ordered write groups, each { from, method, uri, body, asApp, sequential }.
+                          sequential sends the group's requests one at a time, in order, for
+                          services that lose concurrent writes to one parent object.
                           'from' names the property on -Current holding the objects (default
                           'targets'); a group whose property does not exist is an authoring
                           error and throws, while one that exists and is empty is simply
@@ -93,7 +95,12 @@ function Invoke-CIPPBaselineGraphBulkSweep {
         }
 
         $Attempted += $Objects.Count
-        $Responses = @(New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp ([bool]($Write.asApp ?? $true)) -Version $Version)
+        $AsApp = [bool]($Write.asApp ?? $true)
+        $Responses = if ($Write.sequential -eq $true) {
+            @(foreach ($Request in @($Requests)) { New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Request) -asapp $AsApp -Version $Version })
+        } else {
+            @(New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $AsApp -Version $Version)
+        }
         foreach ($Response in $Responses) {
             if ([int]$Response.status -lt 200 -or [int]$Response.status -gt 299) {
                 $Failed++
