@@ -51,9 +51,16 @@ function Invoke-ExecExtensionsConfig {
         }
 
         $Table = Get-CIPPTable -TableName Extensionsconfig
+        # The property name becomes the stored secret's name, so only the extensions the settings form posts may store one.
+        $KnownExtensions = @('AutotaskPSA', 'CFZTNA', 'cippapi', 'ConnectWisePSA', 'GitHub', 'Gradient', 'HaloPSA', 'HIBP', 'Hudu', 'KaseyaBMS', 'NinjaOne', 'Pax8', 'PWPush', 'Sherweb', 'Syncro')
         foreach ($APIKey in $Body.PSObject.Properties.Name) {
             Write-Information "Working on $APIKey"
-            if ($Body.$APIKey.APIKey -eq 'SentToKeyVault' -or $Body.$APIKey.APIKey -eq '') {
+            if ($APIKey -notin $KnownExtensions) {
+                if ($Body.$APIKey.APIKey -and $Body.$APIKey.APIKey -ne 'SentToKeyVault') {
+                    Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Ignored an API key sent for unknown extension '$APIKey'." -Sev 'Warning'
+                    $Body.$APIKey.APIKey = ''
+                }
+            } elseif ($Body.$APIKey.APIKey -eq 'SentToKeyVault' -or $Body.$APIKey.APIKey -eq '') {
                 Write-Information 'Not sending to keyvault. Key previously set or left blank.'
             } else {
                 Write-Information 'writing API Key to keyvault, and clearing.'

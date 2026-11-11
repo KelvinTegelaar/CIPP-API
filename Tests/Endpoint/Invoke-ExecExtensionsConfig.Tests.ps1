@@ -16,6 +16,7 @@ BeforeAll {
         if ($null -eq $script:SavedConfig) { throw 'Configuration must be saved before scheduling.' }
         $script:ScheduleCalls += @{ Reschedule = $Reschedule.IsPresent; NextSync = $NextSync; Extensions = $Extensions }
     }
+    function Set-ExtensionAPIKey { param($Extension, $APIKey) $script:KeyWrites.Add($Extension) }
     function Initialize-NinjaOneCredentialField { param($Configuration) $script:InitCalls.Add($Configuration) }
     . "$PSScriptRoot/../../Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/CIPP/Extensions/Invoke-ExecExtensionsConfig.ps1"
 }
@@ -81,5 +82,43 @@ Describe 'Extension configuration save ordering' {
         $response.Body.Results | Should -BeLike 'Successfully saved*'
         $script:ScheduleCalls.Count | Should -Be 1
         $script:ScheduleCalls[0].Reschedule | Should -BeFalse
+    }
+}
+
+Describe 'Extension key storage only accepts known extension names' {
+    BeforeEach {
+        $script:SavedConfig = $null
+        $script:ScheduleCalls = @()
+        $script:InitCalls = [System.Collections.Generic.List[object]]::new()
+        $script:KeyWrites = [System.Collections.Generic.List[string]]::new()
+        $script:NewRequest = {
+            param($Body)
+            @{ Params = @{ CIPPEndpoint = 'ExecExtensionsConfig' }; Headers = @{ 'x-ms-original-url' = 'http://localhost:4280/api/ExecExtensionsConfig' }; Body = [PSCustomObject]$Body }
+        }
+    }
+
+    It 'does not write a secret named <_>' -ForEach @('ApplicationSecret', 'ApplicationID', 'RefreshToken', 'TenantID', 'SAMCertificate', 'SSOAppId', '11111111-2222-3333-4444-555555555555', 'hudu ') {
+        $response = Invoke-ExecExtensionsConfig -Request (& $script:NewRequest @{ $_ = [PSCustomObject]@{ APIKey = 'attacker-value' } })
+        $script:KeyWrites.Count | Should -Be 0
+        ($script:SavedConfig | ConvertTo-Json -Depth 5) | Should -Not -Match 'attacker-value'
+    }
+
+    It 'still stores the key for a known extension alongside an unknown name' {
+        Invoke-ExecExtensionsConfig -Request (& $script:NewRequest @{ Hudu = [PSCustomObject]@{ APIKey = 'real-key'; BaseUrl = 'https://hudu.example' }; ApplicationSecret = [PSCustomObject]@{ APIKey = 'attacker-value' } }) | Out-Null
+        $script:KeyWrites | Should -Be @('Hudu')
+        $script:SavedConfig.Hudu.APIKey | Should -Be 'SentToKeyVault'
+    }
+
+    It 'accepts every extension the settings form can post' {
+        $Extensions = Get-Content -LiteralPath "$PSScriptRoot/../../../frontend/src/data/Extensions.json" -Raw | ConvertFrom-Json
+        $Names = [System.Collections.Generic.HashSet[string]]::new()
+        foreach ($Extension in $Extensions) { $null = $Names.Add($Extension.id) }
+        foreach ($Match in [regex]::Matches(($Extensions | ConvertTo-Json -Depth 20), '"name":\s*"([A-Za-z0-9]+)\.')) { $null = $Names.Add($Match.Groups[1].Value) }
+        $Names.Count | Should -BeGreaterThan 10
+        foreach ($Name in $Names) {
+            $script:KeyWrites.Clear()
+            Invoke-ExecExtensionsConfig -Request (& $script:NewRequest @{ $Name = [PSCustomObject]@{ APIKey = 'k' } }) | Out-Null
+            $script:KeyWrites | Should -Be @($Name) -Because "$Name is in Extensions.json"
+        }
     }
 }

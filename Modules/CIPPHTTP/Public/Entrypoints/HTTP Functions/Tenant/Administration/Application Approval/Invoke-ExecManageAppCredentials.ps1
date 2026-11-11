@@ -28,6 +28,17 @@ function Invoke-ExecManageAppCredentials {
     $EndDateTime = $Request.Body.EndDateTime
     $ExpiryMonths = $Request.Body.ExpiryMonths.value ?? $Request.Body.ExpiryMonths
     $ExpiryDate = $Request.Body.ExpiryDate
+    # AppType and the id go into the Graph URL, so only the two app collections and a GUID are accepted.
+    $Problem = if ([string]::IsNullOrWhiteSpace($TenantFilter)) { 'tenantFilter is required.' }
+    elseif ($AppType -notin 'applications', 'servicePrincipals') { 'AppType must be applications or servicePrincipals.' }
+    elseif (-not (Test-IsGuid -String "$(if ($Id) { $Id } else { $AppId })")) { 'Id or AppId must be a GUID.' }
+    if ($Problem) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = @{ resultText = $Problem; state = 'error' } }
+            })
+    }
+    if ($Id) { $Id = ([guid]$Id).ToString() } else { $AppId = ([guid]$AppId).ToString() }
     $AppRef = $Id ?? $AppId
 
     $IdPath = if ($Id) { "/$Id" } else { "(appId='$AppId')" }
@@ -111,6 +122,14 @@ function Invoke-ExecManageAppCredentials {
     }
 
     try {
+        # CIPP's own apps (SAM, SSO) never have credentials changed through here.
+        $TargetAppId = if ($AppId) { $AppId } else { (New-GraphGetRequest -uri "$Uri`?`$select=appId" -tenantid $TenantFilter -AsApp $true).appId }
+        if ($TargetAppId -and ($TargetAppId -as [guid]) -in @(Get-CippProtectedAppId | ForEach-Object { $_ -as [guid] })) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ Results = @{ resultText = "Credentials can't be changed on an application CIPP itself signs in with."; state = 'error' } }
+                })
+        }
         if ($CredentialType -eq 'federated' -and $AppType -ne 'applications') {
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::BadRequest

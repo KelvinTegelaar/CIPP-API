@@ -16,6 +16,8 @@ BeforeAll {
     function New-GraphPOSTRequest { param($uri, $tenantid, $type, $body) }
     function New-GraphBulkRequest { param($tenantid, $Requests) }
     function Get-Tenants { param($TenantFilter) }
+    function Get-CippProtectedAppId { }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Test-IsGuid.ps1')
     function Add-CIPPDbItem { param($TenantFilter, $Type, $Data, [switch]$AddCount, [switch]$ClearOnEmpty) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/AppPermissions/Get-CIPPAppFederatedCredential.ps1')
