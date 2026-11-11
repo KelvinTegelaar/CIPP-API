@@ -284,6 +284,14 @@
                     "items": {
                       "type": "object",
                       "properties": {
+                        "Input": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/LabelValue"
+                            }
+                          ],
+                          "description": "Reject now what the condition builder would refuse when the rule fires"
+                        },
                         "Operator": {
                           "$ref": "#/components/schemas/LabelValue"
                         },
@@ -58155,7 +58163,13 @@
                         "type": "string",
                         "x-cipp-field-source": "graph-entity"
                       },
+                      "lastModifiedDateTime": {
+                        "x-cipp-field-source": "frontend"
+                      },
                       "name": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "policyRules": {
                         "x-cipp-field-source": "frontend"
                       },
                       "securityProfiles": {
@@ -58401,6 +58415,9 @@
                       "id": {
                         "type": "string",
                         "x-cipp-field-source": "graph-entity"
+                      },
+                      "lastModifiedDateTime": {
+                        "x-cipp-field-source": "frontend"
                       },
                       "name": {
                         "x-cipp-field-source": "frontend"
