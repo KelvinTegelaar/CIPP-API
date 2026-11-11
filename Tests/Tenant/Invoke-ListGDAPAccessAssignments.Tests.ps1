@@ -3,6 +3,8 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Test-IsGuid.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Test-CIPPGDAPRelationshipId.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Tenant/GDAP/Invoke-ListGDAPAccessAssignments.ps1')
 
     ([PSObject].Assembly.GetType('System.Management.Automation.TypeAccelerators')).GetMethod('Add').Invoke(
@@ -30,7 +32,7 @@ Describe 'Invoke-ListGDAPAccessAssignments' {
             [pscustomobject]@{ id = 'a2'; status = 'active'; accessContainer = @{ accessContainerId = 'g-reader' }; accessDetails = @{ unifiedRoles = @() } }
             [pscustomobject]@{ id = 'a3'; status = 'active'; accessContainer = @{ accessContainerId = 'g-exo' }; accessDetails = @{ unifiedRoles = @() } }
         )
-        $Response = Invoke-ListGDAPAccessAssignments -Request ([pscustomobject]@{ Query = @{ Id = 'rel-1' } }) -TriggerMetadata $null
+        $Response = Invoke-ListGDAPAccessAssignments -Request ([pscustomobject]@{ Query = @{ Id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' } }) -TriggerMetadata $null
 
         $Response.StatusCode | Should -Be 200
         $Response.Body.Results | Should -HaveCount 3

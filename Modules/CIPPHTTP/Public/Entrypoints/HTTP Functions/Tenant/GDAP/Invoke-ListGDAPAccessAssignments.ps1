@@ -13,6 +13,10 @@ function Invoke-ListGDAPAccessAssignments {
     if (-not $Id) {
         return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Id is required' } })
     }
+    # The id is placed in a Graph URL, so it must be a relationship id and nothing else.
+    if (-not (Test-CIPPGDAPRelationshipId -Id "$Id")) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Invalid relationship id' } })
+    }
     # Multi-partner: act as the relationship's source partner (defaults to the primary)
     $PartnerTenantId = $Request.Query.partnerTenantId ?? $Request.Body.partnerTenantId
     if (!$PartnerTenantId -or -not (Get-CIPPPartnerTenantList | Where-Object { $_.partnerTenantId -eq $PartnerTenantId })) {

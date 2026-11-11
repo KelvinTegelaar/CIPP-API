@@ -10,6 +10,10 @@ Function Invoke-ExecGDAPRemoveGArole {
 
     $APIName = $Request.Params.CIPPEndpoint
     $GDAPID = $Request.Query.GDAPId ?? $Request.Body.GDAPId
+    # The id is placed in a Graph URL, so it must be a relationship id and nothing else.
+    if (-not (Test-CIPPGDAPRelationshipId -Id "$GDAPID")) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Invalid relationship id' } })
+    }
 
     # Multi-partner: act as the relationship's source partner (defaults to the primary)
     $PartnerTenantId = $Request.Query.partnerTenantId ?? $Request.Body.partnerTenantId

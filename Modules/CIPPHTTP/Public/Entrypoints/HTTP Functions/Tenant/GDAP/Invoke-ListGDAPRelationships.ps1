@@ -12,6 +12,10 @@ function Invoke-ListGDAPRelationships {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Id = $Request.Query.id
+    # The id is placed in a Graph URL, so it must be a relationship id and nothing else.
+    if ($Id -and -not (Test-CIPPGDAPRelationshipId -Id "$Id")) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Invalid relationship id' } })
+    }
     $Top = [int]($Request.Query.'$top' ?? 300)
     $Filter = $Request.Query.'$filter'
 

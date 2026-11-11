@@ -3,6 +3,8 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Test-IsGuid.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Test-CIPPGDAPRelationshipId.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Tenant/GDAP/Invoke-ExecGDAPAccessAssignment.ps1')
 
     ([PSObject].Assembly.GetType('System.Management.Automation.TypeAccelerators')).GetMethod('Add').Invoke(
@@ -39,7 +41,7 @@ BeforeAll {
         [pscustomobject]@{ id = $Id; status = $Status; '@odata.etag' = 'e'; accessContainer = @{ accessContainerId = $Group }; accessDetails = @{ unifiedRoles = @(@{ roleDefinitionId = $Role }) } }
     }
     function Invoke-Reset {
-        Invoke-ExecGDAPAccessAssignment -Request ([pscustomobject]@{ Params = @{ CIPPEndpoint = 'ExecGDAPAccessAssignment' }; Headers = @{}; Query = @{}; Body = [pscustomobject]@{ Action = 'ResetMappings'; Id = 'rel-1'; RoleTemplateId = 'T' } }) -TriggerMetadata $null
+        Invoke-ExecGDAPAccessAssignment -Request ([pscustomobject]@{ Params = @{ CIPPEndpoint = 'ExecGDAPAccessAssignment' }; Headers = @{}; Query = @{}; Body = [pscustomobject]@{ Action = 'ResetMappings'; Id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'; RoleTemplateId = 'T' } }) -TriggerMetadata $null
     }
 }
 

@@ -12,6 +12,10 @@ function Invoke-ExecGDAPAccessAssignment {
 
     $Action = $Request.Body.Action ?? $Request.Query.Action
     $Id = $Request.Body.Id ?? $Request.Query.Id
+    # The id is placed in a Graph URL, so it must be a relationship id and nothing else.
+    if (-not (Test-CIPPGDAPRelationshipId -Id "$Id")) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Invalid relationship id' } })
+    }
 
     # Multi-partner: act as the relationship's source partner (defaults to the primary)
     $PartnerTenantId = $Request.Body.partnerTenantId.value ?? $Request.Body.partnerTenantId ?? $Request.Query.partnerTenantId
