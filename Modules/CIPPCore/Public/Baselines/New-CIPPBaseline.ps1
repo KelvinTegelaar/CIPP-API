@@ -112,7 +112,8 @@ function New-CIPPBaseline {
     }
 
     $Groups = @()
-    try { $Groups = @(Get-TenantGroups) } catch { Write-Information "New-CIPPBaseline: tenant group lookup failed: $($_.Exception.Message)" }
+    $GroupsLoaded = $true
+    try { $Groups = @(Get-TenantGroups) } catch { $GroupsLoaded = $false; Write-Information "New-CIPPBaseline: tenant group lookup failed: $($_.Exception.Message)" }
     $Scopes = foreach ($Assignment in @($Baseline.assignedTenants)) {
         if ($null -eq $Assignment) { continue }
         # Selector option objects carry the key in .value; raw strings are the key itself.
@@ -179,12 +180,38 @@ function New-CIPPBaseline {
     # Package members resolve as '<Member>#p<package suffix>-<template>' (Expand-CIPPBaselineTemplatePackage).
     $PackagePrefixes = @($Instances | ForEach-Object { if ($_ -match '#(.+)$') { "#p$($Matches[1])-" } else { '#ppkg-' } })
     $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
-    $Orphans = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "TemplateId eq '$SafeGuid'" | Where-Object {
-            $Name = "$($_.StandardName)"
-            $Instances -notcontains $Name -and -not ($PackagePrefixes | Where-Object { $Name.Contains($_) })
-        })
-    if ($Orphans) {
-        Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $Orphans
+    $ResolvedRows = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "TemplateId eq '$SafeGuid'")
+    $Orphans = [System.Collections.Generic.List[object]]::new()
+    foreach ($Row in $ResolvedRows) {
+        $Name = "$($Row.StandardName)"
+        if ($Instances -notcontains $Name -and -not ($PackagePrefixes | Where-Object { $Name.Contains($_) })) { $Orphans.Add($Row) }
+    }
+
+    # The same goes for tenants taken off this baseline (unassigned, excluded, or their group
+    # removed): their rows go, unless another baseline or an override still resolves the standard.
+    if ($GroupsLoaded) {
+        $ExpandDomains = {
+            param($Values)
+            foreach ($Value in $Values) {
+                $Group = $Groups | Where-Object { $_.Id -eq $Value } | Select-Object -First 1
+                if ($Group) { $Group.Members.defaultDomainName } else { $TenantLookup["$Value"].defaultDomainName ?? $Value }
+            }
+        }
+        $AllTenantsAssigned = @($Scopes | Where-Object { $_.scope -eq 'allTenants' }).Count -gt 0
+        $AssignedDomains = @(& $ExpandDomains @($Scopes | Where-Object { $_.scope -ne 'allTenants' } | ForEach-Object { $_.scopeId }))
+        $ExcludedDomains = @(& $ExpandDomains $ExcludedValues)
+        $Unassigned = @($ResolvedRows | Where-Object {
+                $Orphans -notcontains $_ -and ($ExcludedDomains -contains $_.PartitionKey -or -not ($AllTenantsAssigned -or $AssignedDomains -contains $_.PartitionKey))
+            })
+        if ($Unassigned.Count -gt 0) {
+            $StillResolved = @(Get-CIPPBaselineWorkItems -TenantFilter @($Unassigned.PartitionKey | Select-Object -Unique) | ForEach-Object { '{0}|{1}' -f $_.TenantFilter, $_.Standard })
+            foreach ($Row in $Unassigned) {
+                if ($StillResolved -notcontains ('{0}|{1}' -f $Row.PartitionKey, $Row.StandardName)) { $Orphans.Add($Row) }
+            }
+        }
+    }
+    if ($Orphans.Count -gt 0) {
+        Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity @($Orphans)
     }
 
     # Tenant progress is stored as a stage number. When stages were removed, reordered or inserted, keep each

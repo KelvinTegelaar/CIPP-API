@@ -128,6 +128,16 @@ Describe 'Baseline tenant identity (#941)' {
         $States[0].customerId | Should -Be $script:CustomerId
     }
 
+    # Issue #1243: a tenant that had reached a later stage kept running the baseline after it was removed from it.
+    It 'ignores the stage row of a tenant that is no longer assigned' {
+        $script:Rollouts = @((New-Rollout 'b-left' -Stages '[{"name":"One"},{"name":"Two"}]'))
+        $script:Deltas = @((New-Delta 'b-left' 'tenant' 'fabrikam.com' $false))
+        $script:States = @([pscustomobject]@{ PartitionKey = 'b-left'; RowKey = $script:CustomerId; currentStage = 2 })
+
+        @((Get-CIPPBaseline -ID 'b-left').tenantStates).tenantFilter | Should -Be @('fabrikam.com')
+        @(Get-CIPPBaselineWorkItems).TenantFilter | Should -Be @('fabrikam.com')
+    }
+
     It 'keeps a stage gated on group <Group> visible but only lets members be moved into it (member: <Member>)' -ForEach @(
         @{ Group = 'g1'; Member = $true }
         @{ Group = 'other'; Member = $false }
