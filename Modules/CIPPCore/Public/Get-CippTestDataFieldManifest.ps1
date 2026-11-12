@@ -116,7 +116,7 @@ function Get-CippTestDataFieldManifest {
             'ExoRemoteDomain'                    = @('Name', 'DomainName', 'AutoForwardEnabled')
             'ExoSafeAttachmentPolicies'          = @('Name', 'Identity', 'Enable', 'Action', 'RecipientDomainIs', 'QuarantineTag', 'Redirect', 'RedirectAddress', 'IsBuiltInProtection', 'IsDefault')
             'ExoSafeLinksPolicies'               = @('Name', 'Identity', 'EnableSafeLinksForEmail', 'EnableSafeLinksForTeams', 'EnableSafeLinksForOffice', 'TrackClicks', 'TrackUserClicks', 'AllowClickThrough', 'ScanUrls', 'EnableForInternalSenders', 'DeliverMessageAfterScan', 'DisableUrlRewrite', 'RecipientDomainIs', 'IsBuiltInProtection')
-            'ExoSharingPolicy'                   = @('Name', 'Enabled', 'Domains')
+            'ExoSharingPolicy'                   = @('Name', 'Enabled', 'Domains', 'Default')
             'ExoTenantAllowBlockList'            = @('Action', 'ListType', 'Value', 'ListSubType', 'ExpirationDate', 'LastModifiedDateTime', 'Notes')
             'ExoTransportConfig'                 = @('SmtpClientAuthenticationDisabled')
             'ExoTransportRules'                  = @('Name', 'State', 'Priority', 'SetSCL', 'SetSpamConfidenceLevel', 'SetHeaderName', 'SetHeaderValue', 'SenderDomainIs', 'ApplyOME', 'ApplyRightsProtectionTemplate', 'ApplyClassification', 'SentToScope', 'WhenChanged')
