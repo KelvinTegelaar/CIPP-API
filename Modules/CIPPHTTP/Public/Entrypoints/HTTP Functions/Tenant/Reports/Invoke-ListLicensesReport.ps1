@@ -66,8 +66,18 @@ function Invoke-ListLicensesReport {
         }
     }
 
+    # Tenant display name (the alias when one is set), resolved on read so a renamed tenant shows up straight away
+    $TenantNames = @{}
+    if ($GraphRequest) {
+        foreach ($KnownTenant in (Get-Tenants -IncludeErrors)) {
+            if ($KnownTenant.defaultDomainName) { $TenantNames[[string]$KnownTenant.defaultDomainName] = $KnownTenant.displayName }
+            if ($KnownTenant.customerId) { $TenantNames[[string]$KnownTenant.customerId] = $KnownTenant.displayName }
+        }
+    }
+
     # Strip the Term property from each TermInfo entry before returning
     foreach ($Result in $GraphRequest) {
+        $Result | Add-Member -NotePropertyName 'TenantName' -NotePropertyValue ($TenantNames[[string]$Result.Tenant] ?? $Result.Tenant) -Force
         if ($Result.TermInfo) {
             $Result.TermInfo = @($Result.TermInfo | Select-Object -Property * -ExcludeProperty Term)
         }

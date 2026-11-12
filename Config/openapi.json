@@ -61367,6 +61367,9 @@
                       "Tenant": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "TenantName": {
+                        "x-cipp-field-source": "frontend"
+                      },
                       "TermInfo": {
                         "x-cipp-field-source": "frontend"
                       },

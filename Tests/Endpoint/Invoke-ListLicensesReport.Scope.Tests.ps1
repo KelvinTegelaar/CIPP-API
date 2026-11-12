@@ -44,4 +44,15 @@ Describe 'Invoke-ListLicensesReport for a tenant-restricted caller' {
         $Body = (Invoke-ListLicensesReport -Request ([pscustomobject]@{ Query = [pscustomobject]$Query }) -TriggerMetadata $null).Body
         @($Body.Results.Tenant) | Should -Be @('alpha.onmicrosoft.com')
     }
+
+    It 'adds the tenant display name, falling back to the domain' {
+        $Query = [pscustomobject]@{ tenantFilter = 'AllTenants' }
+        Mock Get-Tenants { [pscustomobject]@{ defaultDomainName = 'alpha.onmicrosoft.com'; customerId = 'aaaa-1111'; displayName = 'Alpha Billing Name' } }
+        $Body = (Invoke-ListLicensesReport -Request ([pscustomobject]@{ Query = $Query }) -TriggerMetadata $null).Body
+        $Body.Results[0].TenantName | Should -Be 'Alpha Billing Name'
+
+        Mock Get-Tenants { $script:Alpha }
+        $Body = (Invoke-ListLicensesReport -Request ([pscustomobject]@{ Query = $Query }) -TriggerMetadata $null).Body
+        $Body.Results[0].TenantName | Should -Be 'alpha.onmicrosoft.com'
+    }
 }
