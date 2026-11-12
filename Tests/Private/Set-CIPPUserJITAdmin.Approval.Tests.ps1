@@ -4,6 +4,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($TableName, $Filter) }
     function Get-CIPPJITAdminApprovalRequirement { param($Roles, $TenantFilter) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Test-IsGuid.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Set-CIPPUserJITAdmin.ps1')
 
     $RequestId = '11111111-1111-1111-1111-111111111111'
@@ -25,7 +26,7 @@ Describe 'Set-CIPPUserJITAdmin approval guard' {
     }
 
     It 'blocks an elevation that adds roles beyond the approved request' {
-        $Wider = $Grant.Clone(); $Wider.Roles = @($Role, 'other-role')
+        $Wider = $Grant.Clone(); $Wider.Roles = @($Role, '29232cdf-9323-42fd-ade2-1d097af3e4de')
         { Set-CIPPUserJITAdmin @Wider -ApprovalRequestId $RequestId -WhatIf } | Should -Throw '*no approved JIT Admin request*'
     }
 
@@ -44,5 +45,11 @@ Describe 'Set-CIPPUserJITAdmin approval guard' {
         Mock Get-CIPPJITAdminApprovalRequirement { [pscustomobject]@{ ApproverRoles = @('admin'); RequiredApprovals = 1 } }
         $Removal = $Grant.Clone(); $Removal.Action = 'RemoveRoles'
         { Set-CIPPUserJITAdmin @Removal -WhatIf } | Should -Not -Throw
+    }
+
+    It 'refuses a group id that is not a GUID, even when no approval is required' {
+        Mock Get-CIPPJITAdminApprovalRequirement { }
+        $Groups = $Grant.Clone(); $Groups.Action = 'AddGroups'; $Groups.Roles = @(); $Groups.Groups = @("x/../../directoryRoles(roleTemplateId='$Role')")
+        { Set-CIPPUserJITAdmin @Groups -WhatIf } | Should -Throw '*not a valid id*'
     }
 }

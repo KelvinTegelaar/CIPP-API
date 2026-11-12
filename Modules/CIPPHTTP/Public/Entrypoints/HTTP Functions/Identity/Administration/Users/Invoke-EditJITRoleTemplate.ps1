@@ -13,6 +13,16 @@ function Invoke-EditJITRoleTemplate {
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
 
+    # A caller restricted by a JIT Role Template must not be able to change the allow-lists.
+    if ((Get-CIPPJITAdminAllowedRoles -Headers $Headers).Restricted) {
+        $Result = 'Your role is restricted by a JIT Role Template, so you cannot edit JIT Role Templates.'
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error'
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{'Results' = $Result }
+            })
+    }
+
     try {
         $GUID = $Request.Body.GUID
         $TemplateName = $Request.Body.templateName

@@ -88,20 +88,47 @@ function Invoke-ExecJITAdmin {
     # Get-CIPPJITAdminAllowedRoles is authoritative and fails closed for restricted callers, so we
     # trust its result rather than swallowing errors here.
     $RequestedRoles = @($Request.Body.AdminRoles.value | Where-Object { $_ })
-    if ($RequestedRoles.Count -gt 0) {
-        $AllowedRoles = Get-CIPPJITAdminAllowedRoles -Headers $Headers
-        if ($AllowedRoles.Restricted) {
-            $ForbiddenRoles = @($RequestedRoles | Where-Object { $AllowedRoles.AllowedRoleIds -notcontains $_ })
-            if ($ForbiddenRoles.Count -gt 0) {
-                $ForbiddenLabels = @($Request.Body.AdminRoles | Where-Object { $ForbiddenRoles -contains $_.value } | ForEach-Object { $_.label ?? $_.value })
-                if ($ForbiddenLabels.Count -eq 0) { $ForbiddenLabels = $ForbiddenRoles }
-                $ErrorMessage = "You are not permitted to assign the following role(s): $($ForbiddenLabels -join ', ')"
-                Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -Sev 'Error'
-                return ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::Forbidden
-                        Body       = @{'Results' = @($ErrorMessage) }
-                    })
-            }
+    $RequestedGroups = @($Request.Body.GroupMemberships.value | Where-Object { $_ })
+
+    # Role and group ids are placed in Graph URL paths, so only GUIDs are accepted.
+    $InvalidIds = @($RequestedRoles; $RequestedGroups).Where({ -not (Test-IsGuid -String $_) })
+    if ($InvalidIds.Count -gt 0) {
+        $ErrorMessage = "Invalid role or group id: $($InvalidIds -join ', ')"
+        Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -Sev 'Error'
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{'Results' = @($ErrorMessage) }
+            })
+    }
+
+    $AllowedRoles = Get-CIPPJITAdminAllowedRoles -Headers $Headers
+    if ($AllowedRoles.Restricted) {
+        $Refusals = [System.Collections.Generic.List[string]]::new()
+        $ForbiddenRoles = @($RequestedRoles | Where-Object { $AllowedRoles.AllowedRoleIds -notcontains $_ })
+        if ($ForbiddenRoles.Count -gt 0) {
+            $ForbiddenLabels = @($Request.Body.AdminRoles | Where-Object { $ForbiddenRoles -contains $_.value } | ForEach-Object { $_.label ?? $_.value })
+            if ($ForbiddenLabels.Count -eq 0) { $ForbiddenLabels = $ForbiddenRoles }
+            $Refusals.Add("You are not permitted to assign the following role(s): $($ForbiddenLabels -join ', ')")
+        }
+        # Members of a role-assignable group hold its directory roles; a group that cannot be read is refused.
+        $ForbiddenGroups = @(foreach ($GroupId in $RequestedGroups) {
+                $Group = try { New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/groups/$($GroupId)?`$select=id,displayName,isAssignableToRole" -tenantid $TenantFilter } catch { $null }
+                if ($null -eq $Group -or $Group.isAssignableToRole -eq $true) { $Group.displayName ?? $GroupId }
+            })
+        if ($ForbiddenGroups.Count -gt 0) {
+            $Refusals.Add("You are not permitted to add users to role-assignable group(s): $($ForbiddenGroups -join ', ')")
+        }
+        # A TAP signs in as the existing user with every role they already hold.
+        if ($Request.Body.UseTAP -and $Request.Body.userAction -ne 'create') {
+            $Refusals.Add('You are not permitted to create a Temporary Access Pass for an existing user.')
+        }
+        if ($Refusals.Count -gt 0) {
+            $ErrorMessage = $Refusals -join ' '
+            Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -Sev 'Error'
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{'Results' = @($ErrorMessage) }
+                })
         }
     }
 
@@ -109,7 +136,6 @@ function Invoke-ExecJITAdmin {
         $ApprovalRequirement = Get-CIPPJITAdminApprovalRequirement -Roles $RequestedRoles -TenantFilter $TenantFilter
         if ($ApprovalRequirement) {
             $CallingUser = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
-            $RequestedGroups = @($Request.Body.GroupMemberships.value | Where-Object { $_ })
             $ApprovalRow = @{
                 PartitionKey      = 'JITAdminRequest'
                 RowKey            = [string][guid]::NewGuid()
