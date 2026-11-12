@@ -17,9 +17,15 @@ function Invoke-ExecEditTemplate {
                 Body       = [pscustomobject]@{ Results = 'Type must be IntuneTemplate or CATemplate.' }
             })
     }
+    # Canonical casing: the type is also the table partition, which is case-sensitive.
+    $Type = if ($Type -eq 'IntuneTemplate') { 'IntuneTemplate' } else { 'CATemplate' }
+    $guid = $request.Body.id ? $request.Body.id : $request.Body.GUID
+    $TypePermission = @{ CATemplate = 'Tenant.ConditionalAccess.ReadWrite'; IntuneTemplate = 'Endpoint.MEM.ReadWrite' }[$Type]
+    if (-not (Test-CippTemplateWriteAccess -Permission $TypePermission -PartitionKey $Type -RowKey $guid)) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Forbidden; Body = @{ Results = "Changing this template needs $TypePermission and a role that is not limited to specific tenants." } })
+    }
     try {
         $Table = Get-CippTable -tablename 'templates'
-        $guid = $request.Body.id ? $request.Body.id : $request.Body.GUID
         $JSON = ConvertTo-Json -Compress -Depth 100 -InputObject ($request.Body | Select-Object * -ExcludeProperty GUID, source, isSynced, package)
 
         if ($Type -eq 'IntuneTemplate') {

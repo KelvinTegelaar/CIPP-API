@@ -25,6 +25,7 @@ BeforeAll {
 
     function Get-CIPPPIMRolePolicies { param($TenantFilter) }
     function Get-CippTable { param($tablename) @{} }
+    function Test-CippTemplateWriteAccess { param($Permission, $PartitionKey, $RowKey) $true }
     function Get-CIPPAzDataTableEntity { param($Filter) }
     function Add-CIPPAzDataTableEntity { param($Entity, $Force) }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) $Value }

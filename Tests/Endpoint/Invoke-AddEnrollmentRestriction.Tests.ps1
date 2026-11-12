@@ -30,6 +30,7 @@ BeforeAll {
     function Test-CippAccess { param($Request, [switch]$TenantList) 'AllTenants' }
     function Get-Tenants { param([switch]$IncludeErrors) }
     function Get-CippTable { param($tablename) @{ Context = $tablename } }
+    function Test-CippTemplateWriteAccess { param($Permission, $PartitionKey, $RowKey) $true }
     function Get-CIPPAzDataTableEntity { param($Context, $Filter, $Property) }
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" }

@@ -18,6 +18,7 @@ BeforeAll {
     }
 
     function Get-CippTable { param($tablename) @{} }
+    function Test-CippTemplateWriteAccess { param($Permission, $PartitionKey, $RowKey) $true }
     function Add-CIPPAzDataTableEntity { param([switch]$Force, $Entity) $script:lastEntity = $Entity; $script:lastForce = $Force }
     function Write-LogMessage { param($headers, $API, $message, $sev, $LogData) $script:logs += $message }
     function Get-CippException {

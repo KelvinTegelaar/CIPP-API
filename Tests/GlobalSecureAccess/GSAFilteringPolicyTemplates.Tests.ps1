@@ -7,6 +7,7 @@ BeforeAll {
     if (-not ([System.Management.Automation.PSTypeName]'HttpStatusCode').Type) { $TypeAccelerators::Add('HttpStatusCode', [System.Net.HttpStatusCode]) }
 
     function Get-CippTable { param($tablename) @{ Context = 'templates' } }
+    function Test-CippTemplateWriteAccess { param($Permission, $PartitionKey, $RowKey) $true }
     function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Remove-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }

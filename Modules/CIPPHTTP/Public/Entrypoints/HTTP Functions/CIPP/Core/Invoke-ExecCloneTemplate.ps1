@@ -17,7 +17,10 @@ function Invoke-ExecCloneTemplate {
     $Type = $Request.Query.Type ?? $Request.Body.Type
     $StatusCode = [HttpStatusCode]::OK
 
-    if ($GUID -and $Type) {
+    if ($Type -and $Type -notin 'CATemplate', 'IntuneTemplate') {
+        $StatusCode = [HttpStatusCode]::BadRequest
+        $body = @{ Results = @{ state = 'error'; resultText = 'Only Conditional Access and Intune templates can be cloned' } }
+    } elseif ($GUID -and $Type) {
         $Table = Get-CIPPTable -tablename templates
         $SafeType = ConvertTo-CIPPODataFilterValue -Value $Type -Type String
         $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type String

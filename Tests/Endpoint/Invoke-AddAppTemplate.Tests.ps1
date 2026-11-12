@@ -21,6 +21,7 @@ BeforeAll {
     # Only the helpers these tests actually reach are stubbed. Get-CIPPAzDataTableEntity is not,
     # because the endpoint only calls it on the GUID upsert path, which no test here exercises.
     function Get-CippTable { param($tablename) @{} }
+    function Test-CippTemplateWriteAccess { param($Permission, $PartitionKey, $RowKey) $true }
     function Add-CIPPAzDataTableEntity { param([switch]$Force, $Entity) $script:LastEntity = $Entity }
     function Write-LogMessage { param($headers, $API, $message, $Sev, $LogData) }
     function Get-CippException {
