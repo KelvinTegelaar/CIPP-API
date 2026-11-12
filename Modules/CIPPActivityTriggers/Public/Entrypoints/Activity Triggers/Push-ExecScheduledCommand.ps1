@@ -305,6 +305,40 @@ function Push-ExecScheduledCommand {
         }
     }
 
+    # The same rule applies below the top level: activity functions take the tenant inside an object parameter
+    # (-Item), so a tenant carried anywhere in the stored parameters is forced to the task tenant as well. An
+    # all-tenants task is left alone - its creator already had every tenant.
+    if ($Tenant -and $Tenant -ne 'AllTenants') {
+        $OwnTenantValues = @($Tenant, $TenantInfo.customerId, $TenantInfo.defaultDomainName) | Where-Object { $_ }
+        $ForeignTenants = [System.Collections.Generic.List[string]]::new()
+        $Pending = [System.Collections.Generic.Stack[object]]::new()
+        foreach ($Value in @($commandParameters.Values)) { $Pending.Push($Value) }
+        while ($Pending.Count -gt 0) {
+            $Node = $Pending.Pop()
+            if ($Node -is [System.Collections.IDictionary]) {
+                foreach ($Key in @($Node.Keys)) {
+                    $Child = $Node[$Key]
+                    if ($Key -notin 'TenantFilter', 'Tenant', 'TenantId', 'customerId') {
+                        if ($null -ne $Child -and $Child -isnot [string]) { $Pending.Push($Child) }
+                        continue
+                    }
+                    # A tenant picked in the UI is stored as a selector object; its value is what a command reads.
+                    $Holder, $Name = if ($Child -is [System.Collections.IDictionary] -and $Child.Contains('value')) { $Child, 'value' } else { $Node, $Key }
+                    $Stored = [string]$Holder[$Name]
+                    if ([string]::IsNullOrWhiteSpace($Stored) -or $Stored -in $OwnTenantValues) { continue }
+                    if ($Holder[$Name] -isnot [string]) { $Pending.Push($Child); continue }
+                    $ForeignTenants.Add($Stored)
+                    $Holder[$Name] = if ($Key -in 'TenantId', 'customerId' -and $TenantInfo.customerId) { $TenantInfo.customerId } else { $Tenant }
+                }
+            } elseif ($Node -is [System.Collections.IEnumerable] -and $Node -isnot [string]) {
+                foreach ($Entry in $Node) { if ($null -ne $Entry -and $Entry -isnot [string]) { $Pending.Push($Entry) } }
+            }
+        }
+        if ($ForeignTenants.Count -gt 0) {
+            Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Task $($task.Name): stored parameters named other tenants ($(($ForeignTenants | Sort-Object -Unique) -join ', ')), which do not match the authorized tenant '$Tenant'; the authorized tenant was used." -sev Error
+        }
+    }
+
     if ($IsTriggerTask -eq $true -and $Trigger.ExecutePerResource -ne $true) {
         # iterate through paramters looking for %variables% and replace them with matched data from the delta query
         # examples would be %id% to be the id of the result
