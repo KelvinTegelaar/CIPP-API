@@ -60,7 +60,7 @@ function Invoke-ExecGitHubAction {
                 $ResultText = if ($Results -is [string]) { $Results } elseif ($Results.resultText) { $Results.resultText } else { 'Template imported' }
                 Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message $ResultText -Sev 'Info'
             } catch {
-                $StatusCode = [HttpStatusCode]::InternalServerError
+                $StatusCode = $_.Exception -is [System.UnauthorizedAccessException] ? [HttpStatusCode]::Forbidden : [HttpStatusCode]::InternalServerError
                 $ErrorMessage = Get-CippException -Exception $_
                 $Results = @{
                     resultText = "Error importing template: $($ErrorMessage.NormalizedError)"

@@ -7,6 +7,9 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($TableName, $Filter) $script:Existing }
     function New-CIPPBaseline { param($Baseline, $User, $Source, $SHA, $SourcePath, [switch]$LocalChanges) [pscustomobject]@{ DeltaCount = 0 } }
     function Get-TenantGroups { @() }
+    # $null means no signed-in caller, as on the scheduled sync.
+    $script:CallerPermissions = $null
+    function Get-CippRequestAllowedPermissions { , $script:CallerPermissions }
     function Get-CIPPTenantLookup { @{ 'mine.com' = @{ customerId = 'tenant-1' }; 'victim.com' = @{ customerId = 'tenant-2' } } }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaselineOutOfScopeAssignment.ps1')
@@ -99,5 +102,41 @@ Describe 'Import-CIPPBaselineTemplate update' {
         Import-Baseline @{ value = 'Exported Template' } | Should -Not -Match 'Assign it to real tenants'
         $script:Existing.assignedTo = '[{"label":"Exported Template","value":"Exported Template","type":"Tenant"}]'
         Import-Baseline @{ value = 'Exported Template' } | Should -Match 'Assign it to real tenants'
+    }
+}
+
+Describe 'Import-CIPPBaselineTemplate without the baselines permission' {
+    BeforeEach {
+        $script:CippAllowedTenantsStorage = $null
+        $script:Existing = $null
+        $script:Saved = $null
+        $script:CallerPermissions = @('CIPP.TemplateLibrary.ReadWrite', 'Tenant.Baselines.Read')
+        Mock New-CIPPBaseline { $script:Saved = $Baseline; [pscustomobject]@{ DeltaCount = 0 } }
+    }
+    AfterAll { $script:CallerPermissions = $null }
+
+    It 'imports a new baseline unassigned even when the file names tenants' {
+        $null = Import-Baseline @{ value = 'victim.com'; label = 'Victim' }
+        @($script:Saved.assignedTenants).Count | Should -Be 1
+        $script:Saved.assignedTenants.value | Should -Be 'Exported Template'
+    }
+
+    It 'refuses to update a baseline that is assigned to tenants' {
+        $script:Existing = [pscustomobject]@{ RowKey = 'b1'; templateName = 'Hardening'; SHA = 'old'; assignedTo = '[{"value":"mine.com","label":"Mine"}]' }
+        { Import-Baseline @{ value = 'Exported Template' } } | Should -Throw -ExceptionType ([System.UnauthorizedAccessException])
+        Should -Invoke New-CIPPBaseline -Times 0
+    }
+
+    It 'updates a baseline that is still unassigned and leaves it unassigned' {
+        $script:Existing = [pscustomobject]@{ RowKey = 'b1'; templateName = 'Hardening'; SHA = 'old'; assignedTo = '[{"value":"Exported Template","label":"Exported Template"}]' }
+        $null = Import-Baseline @{ value = 'victim.com' }
+        $script:Saved.GUID | Should -Be 'b1'
+        $script:Saved.assignedTenants.value | Should -Be 'Exported Template'
+    }
+
+    It 'keeps the file''s tenants for a caller with the permission' {
+        $script:CallerPermissions = @('CIPP.TemplateLibrary.ReadWrite', 'Tenant.Baselines.ReadWrite')
+        $null = Import-Baseline @{ value = 'victim.com' }
+        $script:Saved.assignedTenants.value | Should -Be 'victim.com'
     }
 }

@@ -51,6 +51,14 @@ function Import-CIPPBaselineTemplate {
         throw [System.UnauthorizedAccessException]::new("Your role can't import this baseline, because it is assigned to tenants outside your access: $($OutOfScope -join ', ').")
     }
 
+    # An assigned baseline runs on a schedule, so assigning tenants needs the baselines permission ($null = scheduled sync)
+    $IsTenant = { "$(if ($_ -is [string]) { $_ } else { $_.value })" -notin @('', 'Exported Template') }
+    $CallerPermissions = Get-CippRequestAllowedPermissions
+    $CanAssign = $null -eq $CallerPermissions -or $CallerPermissions -contains 'Tenant.Baselines.ReadWrite'
+    if (-not $CanAssign -and $ExistingAssigned.Where($IsTenant).Count -gt 0) {
+        throw [System.UnauthorizedAccessException]::new("Your role can't update baseline '$($Baseline.templateName)', because it is assigned to tenants and you don't have Tenant.Baselines.ReadWrite.")
+    }
+
     # Related templates first, so the baseline's references resolve the moment it lands.
     $Tree = $null
     $ImportedCount = 0
@@ -86,8 +94,9 @@ function Import-CIPPBaselineTemplate {
         }
     }
 
-    $IsTenant = { "$(if ($_ -is [string]) { $_ } else { $_.value })" -notin @('', 'Exported Template') }
-    $Assigned = @(if ($ExistingAssigned.Count -gt 0 -and @($Baseline.assignedTenants).Where($IsTenant).Count -eq 0) { $ExistingAssigned } else { $Baseline.assignedTenants })
+    $Assigned = @(if (-not $CanAssign) {
+            @{ label = 'Exported Template'; value = 'Exported Template'; type = 'Tenant' }
+        } elseif ($ExistingAssigned.Count -gt 0 -and @($Baseline.assignedTenants).Where($IsTenant).Count -eq 0) { $ExistingAssigned } else { $Baseline.assignedTenants })
     $Payload = [PSCustomObject]@{
         GUID                 = $(if ($Existing) { $Existing.RowKey } else { $null })
         templateName         = "$($Baseline.templateName)"

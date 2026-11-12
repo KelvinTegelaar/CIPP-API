@@ -11,9 +11,12 @@ BeforeAll {
     # falls through to $args.
     function Get-CippTable { @{ Context = 'stub' } }
     function Get-CIPPTable { @{ Context = 'stub' } }
-    function Get-CIPPAzDataTableEntity {}
+    function Get-CIPPAzDataTableEntity { param($Filter) $null = $Filter }
     function Add-CIPPAzDataTableEntity { param($Entity) $null = $Entity }
+    # $null = no request context (the scheduled sync), which the importer trusts
+    function Get-CippRequestAllowedPermissions { $null }
 
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GitHub/Get-CIPPTemplateContentHash.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/Import-CommunityTemplate.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaselineOutOfScopeAssignment.ps1')
@@ -173,6 +176,110 @@ Describe 'Import-CommunityTemplate direct-write path' {
         It 'imports them unchanged for an unrestricted caller' {
             $null = Import-CommunityTemplate -Template $script:Template -SHA 'abc123' -Source 'owner/repo'
             ($script:Written.JSON | ConvertFrom-Json).tenantFilter.value | Should -Be 'victim.onmicrosoft.com'
+        }
+    }
+
+    Context 'an existing standards template keeps its tenants, so updating it changes what they run' {
+        BeforeEach {
+            Mock Get-CippRequestAllowedPermissions { , @('Tenant.Standards.ReadWrite') }
+            $script:Written = $null
+            Mock Add-CIPPAzDataTableEntity { $script:Written = $Entity }
+            $script:CippAllowedTenantsStorage = [System.Threading.AsyncLocal[object]]::new()
+            $script:CippAllowedTenantsStorage.Value = @('tenant-1')
+        }
+        AfterEach { $script:CippAllowedTenantsStorage = $null }
+
+        It 'refuses a restricted caller when the existing row targets tenants outside their access' {
+            Mock Get-CIPPAzDataTableEntity {
+                [PSCustomObject]@{
+                    RowKey = '9a1b2c3d-4e5f-6071-8293-a4b5c6d7e8f9'; PartitionKey = 'StandardsTemplateV2'; SHA = 'old'
+                    JSON = (@{ templateName = 'Baseline'; tenantFilter = @(@{ value = 'AllTenants'; label = 'All Tenants' }) } | ConvertTo-Json -Compress)
+                }
+            }
+            { Import-CommunityTemplate -Template (Get-RepoStandardsTemplate) -SHA 'new' -Source 'owner/repo' -Force } | Should -Throw -ExceptionType ([System.UnauthorizedAccessException])
+            $script:Written | Should -BeNullOrEmpty
+        }
+
+        It 'updates it for a restricted caller when every existing tenant is in their access' {
+            Mock Get-CIPPAzDataTableEntity {
+                [PSCustomObject]@{
+                    RowKey = '9a1b2c3d-4e5f-6071-8293-a4b5c6d7e8f9'; PartitionKey = 'StandardsTemplateV2'; SHA = 'old'
+                    JSON = (@{ templateName = 'Baseline'; tenantFilter = @(@{ value = 'mine.onmicrosoft.com'; label = 'Mine' }) } | ConvertTo-Json -Compress)
+                }
+            }
+            $null = Import-CommunityTemplate -Template (Get-RepoStandardsTemplate) -SHA 'new' -Source 'owner/repo'
+            ($script:Written.JSON | ConvertFrom-Json).tenantFilter.value | Should -Be 'mine.onmicrosoft.com'
+        }
+    }
+
+    Context 'a caller without Tenant.Standards.ReadWrite' {
+        BeforeEach {
+            Mock Get-CippRequestAllowedPermissions { , @('CIPP.TemplateLibrary.ReadWrite') }
+            $script:Written = $null
+            Mock Add-CIPPAzDataTableEntity { $script:Written = $Entity }
+            $script:Template = Get-RepoStandardsTemplate
+            $script:Template.JSON = (@{ templateName = 'Baseline'; tenantFilter = @(@{ value = 'AllTenants'; label = 'All Tenants' }); excludedTenants = @(@{ value = 'mine.onmicrosoft.com' }) } | ConvertTo-Json -Compress)
+        }
+
+        It 'imports a new standards template unassigned, so it cannot run until someone assigns it' {
+            Mock Get-CIPPAzDataTableEntity { $null }
+            $null = Import-CommunityTemplate -Template $script:Template -SHA 'abc123' -Source 'owner/repo'
+            $JSON = $script:Written.JSON | ConvertFrom-Json
+            $JSON.tenantFilter.value | Should -Be 'Template Tenant'
+            @($JSON.excludedTenants).Count | Should -Be 0
+        }
+
+        It 'cannot replace an existing standards template that is assigned to tenants' {
+            Mock Get-CIPPAzDataTableEntity {
+                [PSCustomObject]@{
+                    RowKey = '9a1b2c3d-4e5f-6071-8293-a4b5c6d7e8f9'; PartitionKey = 'StandardsTemplateV2'; SHA = 'old'
+                    JSON = (@{ templateName = 'Baseline'; tenantFilter = @(@{ value = 'mine.onmicrosoft.com'; label = 'Mine' }) } | ConvertTo-Json -Compress)
+                }
+            }
+            { Import-CommunityTemplate -Template $script:Template -SHA 'new' -Source 'owner/repo' -Force } | Should -Throw -ExceptionType ([System.UnauthorizedAccessException])
+            $script:Written | Should -BeNullOrEmpty
+        }
+
+        It 'can update an existing standards template that is still unassigned' {
+            Mock Get-CIPPAzDataTableEntity {
+                [PSCustomObject]@{
+                    RowKey = '9a1b2c3d-4e5f-6071-8293-a4b5c6d7e8f9'; PartitionKey = 'StandardsTemplateV2'; SHA = 'old'
+                    JSON = (@{ templateName = 'Baseline'; tenantFilter = @(@{ value = 'Template Tenant'; label = 'Template Tenant' }) } | ConvertTo-Json -Compress)
+                }
+            }
+            $null = Import-CommunityTemplate -Template $script:Template -SHA 'new' -Source 'owner/repo'
+            ($script:Written.JSON | ConvertFrom-Json).tenantFilter.value | Should -Be 'Template Tenant'
+        }
+
+        It 'still imports other template types' {
+            Mock Get-CIPPAzDataTableEntity { $null }
+            $null = Import-CommunityTemplate -Template (Get-RepoTemplate) -SHA 'abc123' -Source 'owner/repo'
+            $script:Written.PartitionKey | Should -Be 'IntuneTemplate'
+        }
+    }
+
+    Context 'a caller with Tenant.Standards.ReadWrite' {
+        It 'keeps the file''s tenants on a new standards template' {
+            Mock Get-CippRequestAllowedPermissions { , @('Tenant.Standards.ReadWrite') }
+            Mock Get-CIPPAzDataTableEntity { $null }
+            $script:Written = $null
+            Mock Add-CIPPAzDataTableEntity { $script:Written = $Entity }
+            $Template = Get-RepoStandardsTemplate
+            $Template.JSON = (@{ templateName = 'Baseline'; tenantFilter = @(@{ value = 'AllTenants'; label = 'All Tenants' }) } | ConvertTo-Json -Compress)
+            $null = Import-CommunityTemplate -Template $Template -SHA 'abc123' -Source 'owner/repo'
+            ($script:Written.JSON | ConvertFrom-Json).tenantFilter.value | Should -Be 'AllTenants'
+        }
+    }
+
+    Context 'existing row lookup' {
+        It 'escapes the file''s keys in the table filter' {
+            $script:Filter = $null
+            Mock Get-CIPPAzDataTableEntity { $script:Filter = $Filter }
+            Mock Add-CIPPAzDataTableEntity {}
+            $Template = Get-RepoTemplate
+            $Template.RowKey = "x' or RowKey ne 'y"
+            $null = Import-CommunityTemplate -Template $Template -SHA 'abc123' -Source 'owner/repo'
+            $script:Filter | Should -Be "RowKey eq 'x'' or RowKey ne ''y' and PartitionKey eq 'IntuneTemplate'"
         }
     }
 
