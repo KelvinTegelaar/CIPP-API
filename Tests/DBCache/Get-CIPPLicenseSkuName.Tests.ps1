@@ -81,14 +81,11 @@ Describe 'Get-CIPPLicenseSkuName' {
         $script:Written | Should -BeNullOrEmpty
     }
 
-    It 'keeps each name table query within 15 comparisons' {
-        $Many = @(1..30 | ForEach-Object { '{0:x8}-0000-0000-0000-000000000000' -f $_ })
+    It 'reads the name table with one point query per SKU' {
+        $Many = @(1..3 | ForEach-Object { '{0:x8}-0000-0000-0000-000000000000' -f $_ })
         $null = Get-CIPPLicenseSkuName -SkuIds $Many
 
-        $Queries = @($script:Reads | Where-Object Table -EQ 'LicenseSkuNames')
-        $Queries.Count | Should -Be 3
-        foreach ($Query in $Queries) { ([regex]::Matches($Query.Filter, ' eq ')).Count | Should -BeLessOrEqual 15 }
-        (@($Queries.Filter | ForEach-Object { [regex]::Matches($_, "RowKey eq '([^']+)'") | ForEach-Object { $_.Groups[1].Value } }) | Sort-Object) -join ',' | Should -Be (($Many | Sort-Object) -join ',')
+        @($script:Reads | Where-Object Table -EQ 'LicenseSkuNames').Filter | Should -Be @(foreach ($SkuId in $Many) { "PartitionKey eq 'Sku' and RowKey eq '$SkuId'" })
     }
 
     It 'drops values that are not SKU ids before building the filter' {

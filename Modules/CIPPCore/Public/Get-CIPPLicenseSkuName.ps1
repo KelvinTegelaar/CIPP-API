@@ -31,11 +31,9 @@ function Get-CIPPLicenseSkuName {
 
     if ($Missing.Count -gt 0) {
         $Table = Get-CIPPTable -TableName 'LicenseSkuNames'
-        # Table queries allow 15 comparisons: the PartitionKey plus 14 RowKeys
-        for ($i = 0; $i -lt $Missing.Count; $i += 14) {
-            $Chunk = $Missing.GetRange($i, [Math]::Min(14, $Missing.Count - $i))
-            $Filter = "PartitionKey eq 'Sku' and ({0})" -f (@(foreach ($SkuId in $Chunk) { "RowKey eq '$SkuId'" }) -join ' or ')
-            foreach ($Row in Get-CIPPAzDataTableEntity @Table -Filter $Filter) {
+        # Point query per SKU: OR-ed RowKey conditions make the table scan the whole partition
+        foreach ($SkuId in $Missing) {
+            foreach ($Row in Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Sku' and RowKey eq '$SkuId'") {
                 if ($Row.DisplayName) { $Names[$Row.RowKey] = $Row.DisplayName }
             }
         }
