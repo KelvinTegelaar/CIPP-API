@@ -7077,63 +7077,6 @@
         "x-cipp-role": "Exchange.Spamfilter.ReadWrite"
       }
     },
-    "/api/AddStandardsDeploy": {
-      "post": {
-        "summary": "AddStandardsDeploy",
-        "operationId": "AddStandardsDeploy",
-        "tags": [
-          "Tenant > Standards"
-        ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "tenant": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
-                  "properties": {
-                    "Results": {
-                      "x-cipp-field-source": "backend"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite"
-      }
-    },
     "/api/AddStandardsTemplate": {
       "post": {
         "summary": "AddStandardsTemplate",
@@ -79541,70 +79484,6 @@
           }
         ],
         "x-cipp-role": "Exchange.Spamfilter.ReadWrite"
-      }
-    },
-    "/api/RemoveStandard": {
-      "post": {
-        "summary": "RemoveStandard",
-        "operationId": "RemoveStandard",
-        "tags": [
-          "Tenant > Standards"
-        ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {}
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "ID",
-            "in": "query",
-            "description": "Interact with query parameters or the body of the request.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
-                  "properties": {
-                    "Results": {
-                      "x-cipp-field-source": "backend"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite"
       }
     },
     "/api/RemoveStandardTemplate": {

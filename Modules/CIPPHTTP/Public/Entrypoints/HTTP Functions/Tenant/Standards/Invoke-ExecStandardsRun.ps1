@@ -14,6 +14,13 @@ function Invoke-ExecStandardsRun {
 
     $TenantFilter = $Request.Query.tenantFilter ?? 'allTenants'
     $TemplateId = $Request.Query.templateId ?? $Request.Query.TemplateId ?? '*'
+    # A request with no tenant runs against every tenant, which the dispatcher does not check.
+    try {
+        Assert-CippTenantAccess -Request $Request -TenantFilter ($TenantFilter -eq 'allTenants' ? 'AllTenants' : $TenantFilter)
+    } catch {
+        Write-LogMessage -headers $Headers -API $APIName -message "Blocked standards run: $($_.Exception.Message)" -Sev 'Warning'
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Forbidden; Body = [pscustomobject]@{ Results = $_.Exception.Message } })
+    }
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON | ForEach-Object {

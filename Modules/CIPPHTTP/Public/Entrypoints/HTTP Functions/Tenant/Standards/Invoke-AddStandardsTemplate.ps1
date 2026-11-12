@@ -14,39 +14,22 @@ function Invoke-AddStandardsTemplate {
         throw 'Invalid Tenant Selection. A standard must be assigned to at least 1 tenant.'
     }
 
-    # tenantFilter is a *list* (and may include AllTenants or tenant groups), so this endpoint is
-    # AnyTenant and validates the whole list here: standards runs execute app-level without
-    # re-checking custom-role access, so this is the boundary that stops a scoped caller assigning
-    # standards to tenants outside their scope.
-    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
-    if ($AllowedTenants -notcontains 'AllTenants') {
-        $OutOfScope = foreach ($Item in @($Request.Body.tenantFilter)) {
-            if ($Item.value -eq 'AllTenants') {
-                # Assigning to every tenant requires an unrestricted (AllTenants) scope.
-                'All Tenants'
-                continue
-            }
-            if ($Item.type -eq 'Group') {
-                foreach ($TargetId in @(Expand-CIPPTenantGroups -TenantFilter @($Item)).addedFields.customerId) {
-                    if ($AllowedTenants -notcontains $TargetId) { $Item.label ?? $Item.value }
-                }
-                continue
-            }
-            # Single tenant: resolve to a customerId. An unresolved value is $null, which is never
-            # in the allowed list, so -notcontains fails closed on its own.
-            $TargetId = $Item.addedFields.customerId ?? (Get-Tenants -TenantFilter $Item.value).customerId
-            if ($AllowedTenants -notcontains $TargetId) {
-                $Item.label ?? $Item.value
-            }
-        }
-        if (($OutOfScope | Measure-Object).Count -gt 0) {
-            $Denied = $OutOfScope -join ', '
-            Write-LogMessage -headers $Headers -API $APIName -message "Blocked standards template save; caller is not permitted for: $Denied" -Sev 'Warning'
-            return ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::Forbidden
-                    Body       = "Access to one or more of the selected tenants is not allowed: $Denied"
-                })
-        }
+    # tenantFilter is a selector list the dispatcher does not check, and standards runs never re-check
+    # access, so check every target here by its value; an edit must also cover the row it replaces.
+    # 'Template Tenant' is the repo-import placeholder and targets nothing.
+    $GUID = $Request.body.GUID ? $request.body.GUID : (New-Guid).GUID
+    $Table = Get-CippTable -tablename 'templates'
+    $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type String
+    $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$SafeGUID'"
+    try {
+        $Targets = @($Request.Body.tenantFilter; if ($Existing.JSON) { ($Existing.JSON | ConvertFrom-Json).tenantFilter })
+        Assert-CippTenantAccess -Request $Request -TenantFilter @($Targets | Where-Object { "$($_.value ?? $_)" -ne 'Template Tenant' })
+    } catch {
+        Write-LogMessage -headers $Headers -API $APIName -message "Blocked standards template save: $($_.Exception.Message)" -Sev 'Warning'
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = $_.Exception.Message
+            })
     }
 
     # Optional. Pushes the saved template to a GitHub template repository after the save: FullName is
@@ -56,7 +39,6 @@ function Invoke-AddStandardsTemplate {
         $Request.body.PSObject.Properties.Remove('GitHub')
     }
 
-    $GUID = $Request.body.GUID ? $request.body.GUID : (New-Guid).GUID
     #updatedBy    = $request.headers.'x-ms-client-principal'
     #updatedAt    = (Get-Date).ToUniversalTime()
     $request.body | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID -Force
@@ -76,7 +58,6 @@ function Invoke-AddStandardsTemplate {
     }
 
     $JSON = (ConvertTo-Json -Compress -Depth 100 -InputObject ($Request.body))
-    $Table = Get-CippTable -tablename 'templates'
     $Entity = @{
         JSON         = "$JSON"
         RowKey       = "$GUID"
@@ -86,7 +67,6 @@ function Invoke-AddStandardsTemplate {
     # This write replaces the row. A template imported from a template repo carries SHA and Source,
     # which the repo sync uses to skip files that have not changed; dropping them makes the next sync
     # treat the row as new and overwrite the edits made here with the repo copy.
-    $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$GUID'"
     if ($Existing.SHA) { $Entity.SHA = $Existing.SHA }
     if ($Existing.Source) { $Entity.Source = $Existing.Source }
     if ($Existing.SourcePath) { $Entity.SourcePath = $Existing.SourcePath }

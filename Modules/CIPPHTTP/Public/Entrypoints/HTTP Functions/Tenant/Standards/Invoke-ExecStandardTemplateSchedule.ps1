@@ -22,6 +22,9 @@ function Invoke-ExecStandardTemplateSchedule {
     }
 
     $Data = $Entity.JSON | ConvertFrom-Json -Depth 100
+    # The request names no tenant, so check the tenants the template targets; the import placeholder targets nothing.
+    $Targets = @($Data.tenantFilter | Where-Object { $_ -and "$($_.value ?? $_)" -ne 'Template Tenant' })
+    if ($Targets) { Assert-CippTenantAccess -Request $Request -TenantFilter $Targets }
     if ($Data.type -eq 'drift') {
       throw [System.ArgumentException]::new("Template '$($Data.templateName)' is a drift template and does not run on a schedule.")
     }

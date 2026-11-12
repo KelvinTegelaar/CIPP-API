@@ -15,6 +15,8 @@ BeforeAll {
     }
 
     function Test-CIPPAccess { param($Request, [switch]$TenantList) }
+    function Assert-CippTenantAccess { param($Request, $TenantFilter) }
+    function ConvertTo-CIPPODataFilterValue { param($Value, $Type) $Value }
     function Get-CippTable { param($tablename) }
     function Get-CIPPTable { param($tablename) }
     function Get-CIPPAzDataTableEntity { param($Context, $Filter, $Property, [switch]$Force) }

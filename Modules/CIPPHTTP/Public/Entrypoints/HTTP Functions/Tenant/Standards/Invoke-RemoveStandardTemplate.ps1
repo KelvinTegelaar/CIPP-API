@@ -27,6 +27,9 @@ function Invoke-RemoveStandardTemplate {
         } else {
             $TemplateName = ''
         }
+        # The request names no tenant, so check the tenants the template targets; the import placeholder targets nothing.
+        $Targets = @(foreach ($Row in $ClearRow) { if ($Row.JSON) { (ConvertFrom-Json -InputObject $Row.JSON -ErrorAction SilentlyContinue).tenantFilter } }) | Where-Object { "$($_.value ?? $_)" -ne 'Template Tenant' }
+        if ($Targets) { Assert-CippTenantAccess -Request $Request -TenantFilter @($Targets) }
         $Entities = Get-AzDataTableEntity @Table -Filter $Filter
         if (-not $Entities) { throw [System.Management.Automation.ItemNotFoundException]::new("No standards template with id $ID was found.") }
         Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entities

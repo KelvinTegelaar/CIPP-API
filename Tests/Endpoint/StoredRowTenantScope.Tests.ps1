@@ -28,10 +28,34 @@ BeforeAll {
     function Get-CippException { param($Exception) @{ NormalizedError = "$Exception" } }
     function Get-NormalizedError { param($message) $message }
     function Test-CIPPAccess { param($Request, [switch]$TenantList) $script:CippAllowedTenantsStorage.Value ?? @('AllTenants') }
+    function Add-AzDataTableEntity { param($TableName, $Entity, [switch]$Force) }
+    function Get-AzDataTableEntity { param($TableName, $Filter) $script:Rows }
+    function New-CIPPStandardsRun { param($TenantFilter, $TemplateID, $runManually, [switch]$Force) 'instance' }
+    # Request-scoped like the real one: a group outside the caller's groups is invisible.
+    function Get-TenantGroups {
+        param($GroupId)
+        if ($script:CippAllowedGroupsStorage.Value -and $script:CippAllowedGroupsStorage.Value -notcontains $GroupId) { return }
+        [pscustomobject]@{ Id = $GroupId; members = @([pscustomobject]@{ customerId = 'tenant-2' }) }
+    }
+    # Stands in for the dispatcher decision: resolves each target by its value, never by addedFields.
+    function Assert-CippTenantAccess {
+        param($Request, $TenantFilter)
+        if ($null -eq $script:RoleTenants) { return }
+        foreach ($Item in @($TenantFilter)) {
+            if ($null -eq $Item) { continue }
+            $Value = $Item.value ?? $Item
+            $Ok = if ($Item.type -eq 'Group') { $script:RoleGroups -contains $Value } else {
+                $script:RoleTenants -contains $script:AllTenants.Where({ $Value -in @($_.customerId, $_.defaultDomainName) }, 'First')[0].customerId
+            }
+            if (-not $Ok) { throw [System.UnauthorizedAccessException]::new("Your roles don't include $Value.") }
+        }
+    }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Select-CippAllowedTenantData.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Test-CippTenantInScope.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/TenantGroups/Expand-CIPPTenantGroups.ps1')
     $Http = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions'
     foreach ($Path in @(
             'Endpoint/Applications/Invoke-RemoveQueuedApp.ps1'
@@ -45,6 +69,11 @@ BeforeAll {
             'Tenant/Administration/Tenant/Invoke-EditTenantOffboardingDefaults.ps1'
             'CIPP/Settings/Invoke-ExecUserBookmarks.ps1'
             'CIPP/Settings/Invoke-ExecUserSettings.ps1'
+            'Tenant/Standards/Invoke-AddStandardsTemplate.ps1'
+            'Tenant/Standards/Invoke-ExecStandardConvert.ps1'
+            'Tenant/Standards/Invoke-RemoveStandardTemplate.ps1'
+            'Tenant/Standards/Invoke-ExecStandardTemplateSchedule.ps1'
+            'Tenant/Standards/Invoke-ExecStandardsRun.ps1'
         )) {
         . ([ScriptBlock]::Create("using namespace System.Net`n" + (Get-Content -LiteralPath (Join-Path $Http $Path) -Raw)))
     }
@@ -60,12 +89,16 @@ Describe 'stored row tenant scope' {
     BeforeEach {
         $script:CippAllowedTenantsStorage = [System.Threading.AsyncLocal[object]]::new()
         $script:CippAllowedTenantsStorage.Value = @('tenant-1')
+        $script:CippAllowedGroupsStorage = [System.Threading.AsyncLocal[object]]::new()
+        $script:CippAllowedGroupsStorage.Value = @('group-1')
+        $script:RoleTenants = @('tenant-1')
+        $script:RoleGroups = @('group-1')
         Mock Remove-CIPPAzDataTableEntity { }
         Mock Add-CIPPAzDataTableEntity { }
         Mock Update-AzDataTableEntity { }
         Mock Add-CIPPScheduledTask { 'queued' }
     }
-    AfterAll { $script:CippAllowedTenantsStorage = $null }
+    AfterAll { $script:CippAllowedTenantsStorage = $null; $script:CippAllowedGroupsStorage = $null }
 
     Context 'Test-CippTenantInScope' {
         It 'is <Expected> for <Name>' -ForEach @(
@@ -195,6 +228,104 @@ Describe 'stored row tenant scope' {
         ) {
             $null = Send Invoke-ExecUserSettings @{ user = $User; currentSettings = @{ theme = 'dark' } }
             Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -ParameterFilter { $Entity.RowKey -eq $Saved }
+        }
+    }
+
+    Context 'AddStandardsTemplate' {
+        BeforeEach { $script:Rows = $null }
+        It 'refuses <Name>' -ForEach @(
+            @{ Name = 'a tenant whose customerId is spoofed to an allowed one'; Filter = @(@{ value = 'fabrikam.com'; type = 'Tenant'; addedFields = @{ customerId = 'tenant-1' } }) }
+            @{ Name = 'a tenant group outside the caller''s groups'; Filter = @(@{ value = 'group-2'; type = 'Group'; label = 'Other' }) }
+            @{ Name = 'All Tenants'; Filter = @(@{ value = 'AllTenants'; type = 'Tenant' }) }
+        ) {
+            (Send Invoke-AddStandardsTemplate @{ templateName = 'T'; tenantFilter = $Filter }).StatusCode | Should -Be 403
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0
+        }
+        It 'refuses to overwrite a template that targets tenants outside the caller''s access' {
+            $script:Rows = [pscustomobject]@{ RowKey = $Id; JSON = '{"tenantFilter":[{"value":"AllTenants"}]}' }
+            (Send Invoke-AddStandardsTemplate @{ GUID = $Id; templateName = 'T'; tenantFilter = @(@{ value = 'contoso.com'; type = 'Tenant' }) }).StatusCode | Should -Be 403
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0
+        }
+        It 'saves the caller''s own tenant and group' {
+            $script:Rows = [pscustomobject]@{ RowKey = $Id; JSON = '{"tenantFilter":[{"value":"contoso.com"}]}' }
+            (Send Invoke-AddStandardsTemplate @{ GUID = $Id; templateName = 'T'; tenantFilter = @(@{ value = 'contoso.com'; type = 'Tenant'; addedFields = @{ customerId = 'tenant-1' } }, @{ value = 'group-1'; type = 'Group' }) }).StatusCode | Should -Be 200
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 1
+        }
+        It 'lets a restricted caller assign their tenant to a template imported with the placeholder' {
+            $script:Rows = [pscustomobject]@{ RowKey = $Id; JSON = '{"tenantFilter":[{"label":"Template Tenant","value":"Template Tenant"}]}' }
+            (Send Invoke-AddStandardsTemplate @{ GUID = $Id; templateName = 'T'; tenantFilter = @(@{ value = 'contoso.com'; type = 'Tenant' }) }).StatusCode | Should -Be 200
+        }
+        It 'lets an unrestricted caller assign All Tenants, any group and any tenant' {
+            $script:CippAllowedTenantsStorage.Value = $null
+            $script:CippAllowedGroupsStorage.Value = $null
+            $script:RoleTenants = $null
+            (Send Invoke-AddStandardsTemplate @{ templateName = 'T'; tenantFilter = @(@{ value = 'AllTenants' }, @{ value = 'group-2'; type = 'Group' }, @{ value = 'fabrikam.com' }) }).StatusCode | Should -Be 200
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 1
+        }
+    }
+
+    Context 'ExecStandardConvert' {
+        BeforeEach { $script:Rows = [pscustomobject]@{ PartitionKey = 'standards'; RowKey = 'AllTenants'; JSON = '{"Tenant":"AllTenants","Standards":{"AuditLog":{"remediate":true}}}' } }
+        It 'refuses a tenant-restricted caller' {
+            (Send Invoke-ExecStandardConvert @{}).StatusCode | Should -Be 403
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0
+            Should -Invoke Remove-CIPPAzDataTableEntity -Times 0
+        }
+        It 'converts for an unrestricted caller' {
+            $script:CippAllowedTenantsStorage.Value = $null
+            (Send Invoke-ExecStandardConvert @{}).StatusCode | Should -Be 200
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 1
+        }
+    }
+
+    Context '<Endpoint>' -ForEach @(
+        @{ Endpoint = 'Invoke-RemoveStandardTemplate'; Body = @{ ID = '11111111-1111-1111-1111-111111111111' } }
+        @{ Endpoint = 'Invoke-ExecStandardTemplateSchedule'; Body = @{ TemplateId = '11111111-1111-1111-1111-111111111111'; runManually = $false } }
+    ) {
+        It 'refuses a template that targets <Name>' -ForEach @(
+            @{ Name = 'another tenant'; Filter = '[{"value":"fabrikam.com"}]' }
+            @{ Name = 'All Tenants'; Filter = '[{"value":"AllTenants"}]' }
+            @{ Name = 'a group outside the caller''s groups'; Filter = '[{"value":"contoso.com"},{"value":"group-2","type":"Group"}]' }
+        ) {
+            $script:Rows = [pscustomobject]@{ RowKey = $Id; JSON = "{`"templateName`":`"T`",`"tenantFilter`":$Filter}" }
+            (Send $Endpoint $Body).StatusCode | Should -Be 403
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0
+            Should -Invoke Remove-CIPPAzDataTableEntity -Times 0
+        }
+        It 'acts on <Name>' -ForEach @(
+            @{ Name = 'the caller''s own template'; Filter = '[{"value":"contoso.com"}]' }
+            @{ Name = 'a template that only holds the import placeholder'; Filter = '[{"value":"Template Tenant"}]' }
+        ) {
+            $script:Rows = [pscustomobject]@{ RowKey = $Id; JSON = "{`"templateName`":`"T`",`"tenantFilter`":$Filter}" }
+            (Send $Endpoint $Body).StatusCode | Should -Be 200
+        }
+        It 'acts on any template for an unrestricted caller' {
+            $script:RoleTenants = $null
+            $script:Rows = [pscustomobject]@{ RowKey = $Id; JSON = '{"templateName":"T","tenantFilter":[{"value":"AllTenants"}]}' }
+            (Send $Endpoint $Body).StatusCode | Should -Be 200
+        }
+    }
+
+    Context 'ExecStandardsRun' {
+        BeforeEach {
+            $script:Rows = [pscustomobject]@{ RowKey = $Id; JSON = "{`"guid`":`"$Id`",`"templateName`":`"T`",`"tenantFilter`":[{`"value`":`"AllTenants`"}]}" }
+            Mock New-CIPPStandardsRun { 'instance' }
+        }
+        It 'refuses a run with <Name>' -ForEach @(
+            @{ Name = 'a template id and no tenant'; Query = @{ templateId = '11111111-1111-1111-1111-111111111111' } }
+            @{ Name = 'no parameters'; Query = @{} }
+        ) {
+            (Send Invoke-ExecStandardsRun @{} $Query).StatusCode | Should -Be 403
+            Should -Invoke New-CIPPStandardsRun -Times 0
+        }
+        It 'runs for the caller''s own tenant' {
+            (Send Invoke-ExecStandardsRun @{} @{ templateId = $Id; tenantFilter = 'contoso.com' }).StatusCode | Should -Be 200
+            Should -Invoke New-CIPPStandardsRun -Times 1 -ParameterFilter { $TenantFilter -eq 'contoso.com' }
+        }
+        It 'runs across all tenants for an unrestricted caller' {
+            $script:RoleTenants = $null
+            (Send Invoke-ExecStandardsRun @{} @{ templateId = $Id }).StatusCode | Should -Be 200
+            Should -Invoke New-CIPPStandardsRun -Times 1 -ParameterFilter { $TenantFilter -eq 'allTenants' }
         }
     }
 }

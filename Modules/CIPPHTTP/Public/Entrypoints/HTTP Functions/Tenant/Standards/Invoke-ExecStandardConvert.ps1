@@ -10,6 +10,10 @@ function Invoke-ExecStandardConvert {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
+    # Converted rows can target All Tenants, so only a caller with unrestricted tenant access may convert.
+    if ((Test-CIPPAccess -Request $Request -TenantList) -notcontains 'AllTenants') {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Forbidden; Body = "Your roles don't allow this on all tenants at once. Ask an admin to convert the legacy standards." })
+    }
 
     function Convert-SingleStandardItem {
         param(
