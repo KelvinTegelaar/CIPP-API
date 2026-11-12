@@ -21,6 +21,16 @@ Describe 'Get-SyncroSubdomain' {
     ) {
         Get-SyncroSubdomain -Subdomain $Value | Should -Be $Expected
     }
+
+    It 'refuses <Value>, which would move the request off syncromsp.com' -ForEach @(
+        @{ Value = 'attacker.invalid#' }
+        @{ Value = 'attacker.invalid?' }
+        @{ Value = 'user@attacker.invalid#' }
+        @{ Value = 'attacker.invalid:443#' }
+        @{ Value = 'https://attacker.invalid#.syncromsp.com' }
+    ) {
+        { Get-SyncroSubdomain -Subdomain $Value } | Should -Throw '*not a valid Syncro subdomain*'
+    }
 }
 
 Describe 'Get-SyncroPriority' {

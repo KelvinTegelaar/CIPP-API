@@ -21,5 +21,8 @@ function Get-SyncroSubdomain {
     # Everything from the first slash on is a path, never part of the subdomain.
     $Value = ($Value -split '/')[0]
     $Value = $Value -replace '(?i)\.syncromsp\.com$', ''
-    return $Value.Trim().ToLowerInvariant()
+    $Value = $Value.Trim().ToLowerInvariant()
+    # The value becomes the host prefix, so anything beyond a DNS label could redirect the request.
+    if ($Value -notmatch '^[a-z0-9-]+$') { throw "'$Subdomain' is not a valid Syncro subdomain." }
+    return $Value
 }
