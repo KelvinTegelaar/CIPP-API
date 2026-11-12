@@ -22,7 +22,7 @@ BeforeAll {
     # --- dependency stubs -------------------------------------------------------------------
     function Write-LogMessage { param($headers, $API, $tenant, $message, $sev, $Sev2, $LogData) }
     function Get-CippException { param($Exception) }
-    function New-GraphGetRequest { param($uri, $tenantid, $scope, $AsApp, [bool]$noPagination, $Caller, [switch]$ComplexFilter, [switch]$Stream, $Headers) }
+    function New-GraphGetRequest { [CmdletBinding()] param($uri, $tenantid, $scope, $AsApp, [bool]$noPagination, $Caller, [switch]$ComplexFilter, [switch]$Stream, $Headers) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-CIPPCopilotReport.ps1')
     # PowerShell parameter names are case-insensitive, so a single $AsApp binds both the -asapp
     # and -AsApp spellings the collectors use.
@@ -236,16 +236,26 @@ Describe 'DBCache collectors reworked for bounded memory' {
             $script:DbWrites[0].EndRan | Should -BeTrue
         }
 
-        It 'writes nothing when the stream is empty, preserving the previous cache' {
+        It 'records a tenant with no groups as collected without writing rows' {
+            # Issue 1252: without the count row a tenant with no groups read as never collected forever.
             Mock -CommandName New-GraphGetRequest -MockWith { @() }
             Mock -CommandName New-GraphBulkRequest -MockWith { throw 'should not be called' }
 
             Set-CIPPDBCacheGroups -TenantFilter 'contoso.com'
 
-            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $Stream.IsPresent }
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $Stream.IsPresent -and $ErrorAction -eq 'Stop' }
             Should -Invoke New-GraphBulkRequest -Times 0 -Exactly
             $script:DbWrites.Count | Should -Be 1
             $script:DbWrites[0].Rows.Count | Should -Be 0
+            $script:DbWrites[0].AddCount | Should -BeTrue
+            $script:DbWrites[0].EndRan | Should -BeTrue
+        }
+
+        It 'does not record the tenant as collected when the group read fails' {
+            Mock -CommandName New-GraphGetRequest -MockWith { throw 'Insufficient privileges' }
+
+            Set-CIPPDBCacheGroups -TenantFilter 'contoso.com'
+
             $script:DbWrites[0].EndRan | Should -BeFalse
         }
 
