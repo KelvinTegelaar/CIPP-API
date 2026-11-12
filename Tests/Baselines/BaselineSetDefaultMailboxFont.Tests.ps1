@@ -10,6 +10,7 @@ BeforeAll {
     function Get-CIPPBaselineCommand { param($Name) }
 
     . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineSetDefaultMailboxFontState.ps1')
+    . (Join-Path $Baselines 'Helpers/Expand-CIPPBaselineToken.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineExoBulkSweep.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPDB/Public/DBCache/Set-CIPPDBCacheMailboxMessageConfiguration.ps1')
 

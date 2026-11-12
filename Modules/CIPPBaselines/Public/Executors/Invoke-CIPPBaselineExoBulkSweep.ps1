@@ -43,17 +43,6 @@ function Invoke-CIPPBaselineExoBulkSweep {
         $Current
     )
 
-    $Expand = {
-        param($Template, $Object)
-        $Json = ConvertTo-Json -Compress -Depth 100 -InputObject $Template
-        foreach ($Property in $Object.PSObject.Properties) {
-            $Token = '%{0}%' -f $Property.Name
-            $Json = $Json.Replace(('"{0}"' -f $Token), (ConvertTo-Json -Compress -Depth 100 -InputObject $Property.Value))
-            $Json = $Json.Replace($Token, "$($Property.Value)")
-        }
-        $Json | ConvertFrom-Json
-    }
-
     $Attempted = 0
     $Failed = 0
     $FailureDetail = [System.Collections.Generic.List[string]]::new()
@@ -71,7 +60,7 @@ function Invoke-CIPPBaselineExoBulkSweep {
 
         $Requests = foreach ($Object in $Objects) {
             $Parameters = @{}
-            foreach ($Property in (& $Expand ($Write.params ?? [PSCustomObject]@{}) $Object).PSObject.Properties) {
+            foreach ($Property in (Expand-CIPPBaselineToken -Template ($Write.params ?? [PSCustomObject]@{}) -Values $Object).PSObject.Properties) {
                 $Parameters[$Property.Name] = $Property.Value
             }
             @{

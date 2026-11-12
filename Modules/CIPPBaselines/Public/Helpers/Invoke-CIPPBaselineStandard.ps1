@@ -60,24 +60,26 @@ function Invoke-CIPPBaselineStandard {
     $TenantFilter = $Item.TenantFilter
     $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
 
-    # Splices variable values into the serialized template. A key whose value is exactly the
-    # "%var%" token keeps its JSON type; omitWhenBlank drops such a key entirely so expected
+    # Substitutes variable values into the template's string values. A key whose value is exactly
+    # the "%var%" token keeps its JSON type; omitWhenBlank drops such a key entirely so expected
     # and remediate specs stay consistent. Tenant tokens resolve last.
     $Render = {
         param($Template, $Variables)
         if ($null -eq $Template) { return $null }
         if ($Variables -is [System.Collections.IDictionary]) { $Variables = [PSCustomObject]$Variables }
-        $Json = ConvertTo-Json -Compress -Depth 100 -InputObject $Template
-        foreach ($Declared in (($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties)) {
+        $DeclaredVariables = $Definition.variables ?? [PSCustomObject]@{}
+        $Omit = [System.Collections.Generic.List[string]]::new()
+        foreach ($Declared in $DeclaredVariables.PSObject.Properties) {
             if ($Declared.Value.omitWhenBlank -ne $true) { continue }
             if (-not [string]::IsNullOrEmpty("$(($Variables ?? [PSCustomObject]@{}).($Declared.Name))")) { continue }
-            $Escaped = [regex]::Escape(('%{0}%' -f $Declared.Name))
-            $Json = [regex]::Replace($Json, ('"[^"]*":"{0}",' -f $Escaped), '')
-            $Json = [regex]::Replace($Json, (',"[^"]*":"{0}"' -f $Escaped), '')
-            $Json = [regex]::Replace($Json, ('"[^"]*":"{0}"' -f $Escaped), '')
+            $Omit.Add(('%{0}%' -f $Declared.Name))
         }
+        $Values = [PSCustomObject]@{}
+        # An undeclared name may only fill an exact "%name%" value: embedded tokens such as
+        # users/%id% belong to the executor's read record.
+        $WholeOnly = [System.Collections.Generic.List[string]]::new()
         foreach ($Variable in (($Variables ?? [PSCustomObject]@{}).PSObject.Properties)) {
-            $Token = '%{0}%' -f $Variable.Name
+            if (-not $DeclaredVariables.PSObject.Properties[$Variable.Name]) { $WholeOnly.Add($Variable.Name) }
             $Value = $Variable.Value
             # The UI's pickers save option WRAPPERS ({label, value}), single or as array
             # elements. Splicing a wrapper into a write sends the object (or its
@@ -96,10 +98,10 @@ function Invoke-CIPPBaselineStandard {
                 $Value -is [string] -and "$Value" -match '^-?\d+(\.\d+)?$') {
                 $Value = if ("$Value" -match '^-?\d+$') { [int64]"$Value" } else { [double]"$Value" }
             }
-            $EncodedValue = ConvertTo-Json -Compress -Depth 100 -InputObject $Value
-            $Json = $Json.Replace(('"{0}"' -f $Token), $EncodedValue)
-            $Json = $Json.Replace($Token, "$Value")
+            $Values.PSObject.Properties.Add([psnoteproperty]::new($Variable.Name, $Value))
         }
+        $Expanded = Expand-CIPPBaselineToken -Template $Template -Values $Values -WholeOnly $WholeOnly -Omit $Omit
+        $Json = ConvertTo-Json -Compress -Depth 100 -InputObject $Expanded
         $Json = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Json -EscapeForJson
         $Json | ConvertFrom-Json
     }

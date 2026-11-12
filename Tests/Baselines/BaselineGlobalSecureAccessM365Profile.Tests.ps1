@@ -28,7 +28,7 @@ BeforeAll {
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
-    foreach ($File in 'Helpers/Get-CIPPBaselineCommand', 'Helpers/Invoke-CIPPBaselineStandard', 'Helpers/Get-CIPPBaselineCacheRows', 'PrepareHooks/Get-CIPPBaselineGlobalSecureAccessTrafficProfileState', 'Executors/Invoke-CIPPBaselineGraphBulkSweep') {
+    foreach ($File in 'Helpers/Get-CIPPBaselineCommand', 'Helpers/Expand-CIPPBaselineToken', 'Helpers/Invoke-CIPPBaselineStandard', 'Helpers/Get-CIPPBaselineCacheRows', 'PrepareHooks/Get-CIPPBaselineGlobalSecureAccessTrafficProfileState', 'Executors/Invoke-CIPPBaselineGraphBulkSweep') {
         . (Join-Path $script:RepoRoot "Modules/CIPPBaselines/Public/$File.ps1")
     }
 

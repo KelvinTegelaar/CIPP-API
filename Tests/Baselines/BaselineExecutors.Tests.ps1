@@ -25,6 +25,7 @@ BeforeAll {
 
     . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCommand.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineGraphRequest.ps1')
+    . (Join-Path $Baselines 'Helpers/Expand-CIPPBaselineToken.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineExoRequest.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineDeviceRegistrationPolicy.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineGraphBulkSweep.ps1')

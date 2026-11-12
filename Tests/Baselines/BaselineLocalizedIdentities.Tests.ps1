@@ -10,6 +10,7 @@ BeforeAll {
     function Set-CIPPAuthenticationPolicy { param($Tenant, $APIName, $AuthenticationMethodId, $Enabled, $MicrosoftAuthenticatorCompanionApp, $MicrosoftAuthenticatorDisplayAppInfo) }
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
 
+    . (Join-Path $Baselines 'Helpers/Expand-CIPPBaselineToken.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineExoRequest.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineAuthenticationPolicy.ps1')
 

@@ -33,15 +33,10 @@ function Invoke-CIPPBaselineExoRequest {
             if ($Records.Count -ne 1) {
                 throw "$($Step.cmdlet) references a read-record token ($($Matches[0])) but the read returned $($Records.Count) records."
             }
-            foreach ($Property in $Records[0].PSObject.Properties) {
-                $Token = '%{0}%' -f $Property.Name
-                $StepJson = $StepJson.Replace(('"{0}"' -f $Token), (ConvertTo-Json -Compress -Depth 100 -InputObject $Property.Value))
-                $StepJson = $StepJson.Replace($Token, "$($Property.Value)")
-            }
-            if ($StepJson -match '%[A-Za-z_][A-Za-z0-9_.]*%') {
+            $StepParams = Expand-CIPPBaselineToken -Template $StepParams -Values $Records[0]
+            if ((ConvertTo-Json -Compress -Depth 100 -InputObject $StepParams) -match '%[A-Za-z_][A-Za-z0-9_.]*%') {
                 throw "$($Step.cmdlet) has an unresolved token ($($Matches[0])) that the read record does not provide."
             }
-            $StepParams = $StepJson | ConvertFrom-Json
         }
         $CmdParams = @{}
         foreach ($Property in $StepParams.PSObject.Properties) {
