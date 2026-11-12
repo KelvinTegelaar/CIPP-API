@@ -150,7 +150,7 @@ function Push-ExecOnboardTenantQueue {
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Validating GDAP security group mappings against the partner tenant' })
                 $GroupCheck = Test-CIPPGDAPGroupMappings -RoleMappings $Item.Roles -CreateMissing:([bool]$Item.AddMissingGroups) -WriteBack -PartnerTenantId $PartnerTenantId
                 foreach ($GroupResult in $GroupCheck.Results) {
-                    if ($GroupResult.Status -in @('Stale', 'Created', 'Missing')) {
+                    if ($GroupResult.Status -in @('Stale', 'Created', 'Missing', 'Reserved')) {
                         $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = $GroupResult.Message })
                     }
                 }

@@ -28,6 +28,13 @@ function Invoke-ExecGDAPRoleTemplate {
             }
         }
     } else {
+        # Templates apply to every customer, so a tenant-limited role cannot change them.
+        if ($Request.Query.Action -in @('Add', 'Save', 'Edit', 'Delete') -and -not (Test-CippTenantInScope -Tenant 'AllTenants')) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ Results = 'GDAP role templates apply to every tenant. Changing them needs a role that is not limited to specific tenants.' }
+                })
+        }
         switch ($Request.Query.Action) {
             'Add' {
                 $RowKey = ($Request.Body | Select-Object -First 1 -ExpandProperty TemplateId).value ?? $Request.Body.TemplateId

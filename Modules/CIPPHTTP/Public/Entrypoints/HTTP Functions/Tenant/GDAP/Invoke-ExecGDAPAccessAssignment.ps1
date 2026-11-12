@@ -55,6 +55,14 @@ function Invoke-ExecGDAPAccessAssignment {
                 $Relationship = ($RelationshipResults | Where-Object id -EQ 'getRelationship').body
                 $AccessAssignments = ($RelationshipResults | Where-Object id -EQ 'getAccessAssignments').body.value
 
+                # The router cannot see the relationship's customer; an unknown customer needs an unlimited role.
+                if (-not (Test-CippTenantInScope -Tenant ($Relationship.customer.tenantId ?? 'AllTenants'))) {
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::Forbidden
+                            Body       = @{ Results = @(@{ state = 'error'; resultText = "Your roles don't include this relationship's customer tenant." }) }
+                        })
+                }
+
                 $Groups = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups?`$top=999&`$select=id,displayName&`$filter=securityEnabled eq true" -asApp $true -NoAuthCheck $true -tenantid $PartnerTenantId
 
                 # Validate/correct the template's group mappings against the partner tenant before creating any
@@ -69,7 +77,7 @@ function Invoke-ExecGDAPAccessAssignment {
                 foreach ($GroupResult in $GroupCheck.Results) {
                     if ($GroupResult.Status -eq 'Stale') {
                         $MappingResults.Add(@{ resultText = $GroupResult.Message; state = 'success' })
-                    } elseif ($GroupResult.Status -eq 'Missing') {
+                    } elseif ($GroupResult.Status -in @('Missing', 'Reserved')) {
                         $MappingResults.Add(@{ resultText = $GroupResult.Message; state = 'error' })
                     }
                 }

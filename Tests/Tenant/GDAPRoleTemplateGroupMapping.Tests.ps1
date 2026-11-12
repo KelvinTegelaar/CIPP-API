@@ -7,9 +7,12 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Add-CIPPGDAPRoleTemplate.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Set-CIPPGDAPInviteGroups.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Test-CIPPGDAPGroupMappings.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
+    $ReservedHelper = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPGDAPReservedGroupName.ps1'
+    if (Test-Path $ReservedHelper) { . $ReservedHelper }
 
     function Get-CIPPTable { param($TableName) @{ TableName = $TableName } }
-    function Get-CIPPAzDataTableEntity { param($TableName, $Filter) $script:Rows[$TableName] }
+    function Get-CIPPAzDataTableEntity { param($TableName, $Filter) $script:LastFilter = $Filter; $script:Rows[$TableName] }
     function Add-CIPPAzDataTableEntity { param($TableName, $Entity, [switch]$Force) $script:Saved = $Entity }
     function Remove-CIPPAzDataTableEntity { param($TableName, $Entity, [switch]$Force) $script:Removed = $Entity }
     function New-GraphGetRequest { param($Uri) $script:Assignments }
@@ -91,6 +94,43 @@ Describe 'GDAP role template group mapping' {
             Test-CIPPGDAPGroupMappings -RoleMappings @($script:M365Reader, $script:PimReader) -PartnerGroups @() -CreateMissing | Out-Null
             $script:BulkIds | Should -HaveCount 2
             @($script:BulkIds | Select-Object -Unique) | Should -HaveCount 2
+        }
+    }
+
+    Context 'Test-CIPPGDAPGroupMappings reserved partner groups' {
+        BeforeEach {
+            $script:BulkIds = $null
+            $script:Groups = @(
+                [pscustomobject]@{ id = 'g-aa'; displayName = 'AdminAgents' }
+                [pscustomobject]@{ id = 'g-hd'; displayName = 'HelpdeskAgents' }
+                [pscustomobject]@{ id = 'g-exo'; displayName = 'M365 GDAP Exchange Administrator' }
+            )
+        }
+
+        It 'drops a mapping whose group id is a reserved group, whatever name the mapping claims' {
+            $Mapping = [pscustomobject]@{ RoleName = 'Global Reader'; GroupName = 'M365 GDAP Global Reader'; GroupId = 'g-aa'; roleDefinitionId = $script:GR }
+            $Check = Test-CIPPGDAPGroupMappings -RoleMappings @($Mapping, $script:Exchange) -PartnerGroups $script:Groups
+            @($Check.RoleMappings.GroupId) | Should -Be @('g-exo')
+            @($Check.Results).Where({ $_.GroupId -eq 'g-aa' }).Status | Should -Be 'Reserved'
+        }
+
+        It 'does not remap a stale group id onto a reserved group by name' {
+            $Mapping = [pscustomobject]@{ RoleName = 'Global Reader'; GroupName = 'HelpdeskAgents'; GroupId = 'gone'; roleDefinitionId = $script:GR }
+            $Check = Test-CIPPGDAPGroupMappings -RoleMappings @($Mapping) -PartnerGroups $script:Groups
+            @($Check.RoleMappings) | Should -HaveCount 0
+        }
+
+        It 'does not create a missing group with a reserved name' {
+            $Mapping = [pscustomobject]@{ RoleName = 'Global Reader'; GroupName = 'SalesAgents'; GroupId = 'gone'; roleDefinitionId = $script:GR }
+            $Check = Test-CIPPGDAPGroupMappings -RoleMappings @($Mapping) -PartnerGroups @() -CreateMissing
+            $script:BulkIds | Should -BeNullOrEmpty
+            @($Check.RoleMappings) | Should -HaveCount 0
+        }
+
+        It 'escapes the stale group id in the registry lookup' {
+            $Mapping = [pscustomobject]@{ RoleName = 'Exchange Administrator'; GroupName = 'M365 GDAP Exchange Administrator'; GroupId = "x' or PartitionKey eq 'Roles"; roleDefinitionId = '29232cdf-9323-42fd-ade2-1d097af3e4de' }
+            Test-CIPPGDAPGroupMappings -RoleMappings @($Mapping) -PartnerGroups $script:Groups -WriteBack | Out-Null
+            $script:LastFilter | Should -Be "PartitionKey eq 'Roles' and RowKey eq 'x'' or PartitionKey eq ''Roles'"
         }
     }
 }

@@ -25,12 +25,13 @@ BeforeAll {
                 ) | ConvertTo-Json -Compress) }
     }
     function New-GraphGetRequest { param($Uri, $asApp, $NoAuthCheck) @() }
-    function Test-CIPPGDAPGroupMappings { param($RoleMappings, $PartnerGroups, [switch]$WriteBack, $TemplateId, $Headers) [pscustomobject]@{ RoleMappings = $RoleMappings; Results = @() } }
+    function Test-CIPPGDAPGroupMappings { param($RoleMappings, $PartnerGroups, [switch]$WriteBack, $TemplateId, $Headers, $PartnerTenantId) [pscustomobject]@{ RoleMappings = $RoleMappings; Results = @($script:GroupResults) } }
+    function Test-CippTenantInScope { param($Tenant) $script:ScopeAsked = $Tenant; $script:InScope }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev) }
     function New-GraphBulkRequest { param($Requests, $NoAuthCheck)
         if ($Requests[0].id -eq 'getRelationship') {
             return @(
-                [pscustomobject]@{ id = 'getRelationship'; body = @{ accessDetails = @{ unifiedRoles = @(@{ roleDefinitionId = $script:GR }, @{ roleDefinitionId = $script:EXO }) } } }
+                [pscustomobject]@{ id = 'getRelationship'; body = @{ customer = @{ tenantId = 'cust-1' }; accessDetails = @{ unifiedRoles = @(@{ roleDefinitionId = $script:GR }, @{ roleDefinitionId = $script:EXO }) } } }
                 [pscustomobject]@{ id = 'getAccessAssignments'; body = @{ value = $script:Assignments } }
             )
         }
@@ -46,7 +47,12 @@ BeforeAll {
 }
 
 Describe 'Invoke-ExecGDAPAccessAssignment ResetMappings' {
-    BeforeEach { $script:Sent = @() }
+    BeforeEach {
+        $script:Sent = @()
+        $script:InScope = $true
+        $script:ScopeAsked = $null
+        $script:GroupResults = @()
+    }
 
     It 'does not recreate a group that already has a live assignment next to a deleted one' {
         $script:Assignments = @(
@@ -75,5 +81,27 @@ Describe 'Invoke-ExecGDAPAccessAssignment ResetMappings' {
         )
         Invoke-Reset | Out-Null
         @($script:Sent.Where({ $_.method -eq 'DELETE' }).id) | Should -Be @('delete-a4')
+    }
+
+    It 'refuses a caller whose roles do not include the relationship customer' {
+        $script:InScope = $false
+        $script:Assignments = @(
+            New-Assignment 'a3' 'g-exo' $script:EXO 'active'
+            New-Assignment 'a4' 'g-extra' $script:GR 'active'
+        )
+        $Response = Invoke-Reset
+        $Response.StatusCode | Should -Be 403
+        $script:ScopeAsked | Should -Be 'cust-1'
+        $script:Sent | Should -HaveCount 0
+    }
+
+    It 'reports a reserved group the template maps as an error' {
+        $script:Assignments = @(
+            New-Assignment 'a2' 'g-reader' $script:GR 'active'
+            New-Assignment 'a3' 'g-exo' $script:EXO 'active'
+        )
+        $script:GroupResults = @([pscustomobject]@{ GroupId = 'g-aa'; Status = 'Reserved'; Message = 'reserved' })
+        $Response = Invoke-Reset
+        @($Response.Body.Results).Where({ $_.resultText -eq 'reserved' }).state | Should -Be 'error'
     }
 }

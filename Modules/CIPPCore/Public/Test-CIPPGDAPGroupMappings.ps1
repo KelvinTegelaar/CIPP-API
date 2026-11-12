@@ -67,9 +67,27 @@ function Test-CIPPGDAPGroupMappings {
     $Corrections = [System.Collections.Generic.List[object]]::new()
     $CreateRequests = [System.Collections.Generic.List[object]]::new()
     $CreateLookup = @{}
+    $ReservedNames = Get-CIPPGDAPReservedGroupName
+    $ReservedMappings = [System.Collections.Generic.List[object]]::new()
 
     foreach ($Mapping in $Mappings) {
         $ExpectedName = if ($Mapping.GroupName) { $Mapping.GroupName } else { "M365 GDAP $($Mapping.RoleName)" }
+
+        # Reserved partner groups are dropped whichever way the mapping would resolve to them
+        $ResolvedGroup = @($PartnerGroups).Where({ $Mapping.GroupId -and $_.id -eq $Mapping.GroupId }, 'First')[0] ?? @($PartnerGroups).Where({ $_.displayName -eq $ExpectedName }, 'First')[0]
+        $ResolvedName = if ($ResolvedGroup) { $ResolvedGroup.displayName } else { $ExpectedName }
+        if ($ResolvedName -in $ReservedNames) {
+            $Results.Add([PSCustomObject]@{
+                    RoleName   = $Mapping.RoleName
+                    GroupName  = $ResolvedName
+                    GroupId    = $Mapping.GroupId
+                    Status     = 'Reserved'
+                    Message    = "Group '$ResolvedName' is a reserved partner group and cannot be mapped to a GDAP role"
+                    OldGroupId = $null
+                })
+            $ReservedMappings.Add($Mapping)
+            continue
+        }
 
         # 1. GroupId still valid in the partner tenant
         if ($Mapping.GroupId -and $PartnerGroups.id -contains $Mapping.GroupId) {
@@ -176,7 +194,7 @@ function Test-CIPPGDAPGroupMappings {
             foreach ($Correction in $Corrections) {
                 $Mapping = $Correction.Mapping
                 if ($Correction.OldGroupId -and $Correction.OldGroupId -ne $Mapping.GroupId) {
-                    $OldEntity = Get-CIPPAzDataTableEntity @RolesTable -Filter "PartitionKey eq 'Roles' and RowKey eq '$($Correction.OldGroupId)'"
+                    $OldEntity = Get-CIPPAzDataTableEntity @RolesTable -Filter "PartitionKey eq 'Roles' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Correction.OldGroupId)'"
                     if ($OldEntity) {
                         Remove-CIPPAzDataTableEntity -Force @RolesTable -Entity $OldEntity
                     }
@@ -226,7 +244,7 @@ function Test-CIPPGDAPGroupMappings {
     }
 
     return [PSCustomObject]@{
-        RoleMappings  = @($Mappings)
+        RoleMappings  = @($Mappings.Where({ $ReservedMappings -notcontains $_ }))
         Results       = @($Results)
         Valid         = (($MissingGroups | Measure-Object).Count -eq 0)
         MissingGroups = @($MissingGroups)

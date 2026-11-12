@@ -16,8 +16,16 @@ function Invoke-ExecAddGDAPRole {
         $PartnerTenantId = $env:TenantID
     }
     $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'AddRoleSimple'
-    $GroupBlockList = @('All Users', 'AdminAgents', 'HelpdeskAgents', 'SalesAgents')
+    $GroupBlockList = Get-CIPPGDAPReservedGroupName
     $StatusCode = [HttpStatusCode]::OK
+
+    # Group mappings and templates apply to every customer, so a tenant-limited role cannot change them.
+    if ($Action -ne 'ListGroups' -and -not (Test-CippTenantInScope -Tenant 'AllTenants')) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = @{ Results = @('GDAP group mappings apply to every tenant. Changing them needs a role that is not limited to specific tenants.') }
+            })
+    }
 
     switch ($Action) {
         'ListGroups' {

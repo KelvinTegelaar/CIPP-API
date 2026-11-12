@@ -67,6 +67,17 @@ function Invoke-ExecGDAPInvite {
                     Write-Information "GDAP invite role check skipped: $($_.Exception.Message)"
                 }
             }
+            # The invite's groups are mapped on approval with no further check, so reserved groups are refused here.
+            try {
+                $GroupIds = @($RoleMappings.GroupId | Where-Object { $_ })
+                $ReservedNames = Get-CIPPGDAPReservedGroupName
+                $PartnerGroups = New-GraphGetRequest -NoAuthCheck $true -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $PartnerTenantId -AsApp $true
+                foreach ($Group in @($PartnerGroups).Where({ $_.id -in $GroupIds -and $_.displayName -in $ReservedNames })) {
+                    $Problems.Add("'$($Group.displayName)' is a reserved partner group and cannot be mapped to a GDAP role.")
+                }
+            } catch {
+                $Problems.Add("The partner tenant groups could not be checked: $($_.Exception.Message)")
+            }
             if ($Problems.Count -gt 0) {
                 $Message = "The role template cannot be used for an invite. Edit the template and fix: $($Problems -join ' ')"
                 Write-LogMessage -headers $Headers -API $APIName -tenant $env:TenantID -message $Message -Sev 'Error'
