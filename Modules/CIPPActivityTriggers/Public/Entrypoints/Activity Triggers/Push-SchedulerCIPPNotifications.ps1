@@ -24,7 +24,9 @@ function Push-SchedulerCIPPNotifications {
     $LogTable = Get-CIPPTable
     $StandardsTable = Get-CIPPTable -tablename CippStandardsAlerts
     $RunInstant = Get-Date
-    $LogZone = if ($env:CIPP_TIMEZONE) { $env:CIPP_TIMEZONE } else { 'UTC' }
+    # Must match the Logbook partition zone in Write-LogMessage
+    $LogZone = [Environment]::GetEnvironmentVariable('CIPP_TIMEZONE')
+    if (-not $LogZone) { $LogZone = 'UTC' }
     $LogToday = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($RunInstant.ToUniversalTime(), $LogZone)
     $LogPartitions = $LogToday.ToString('yyyyMMdd'), $LogToday.AddDays(-1).ToString('yyyyMMdd')
     $StandardsPartitions = $RunInstant.ToString('yyyyMMdd'), $RunInstant.AddDays(-1).ToString('yyyyMMdd')

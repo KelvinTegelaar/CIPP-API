@@ -64,7 +64,7 @@ Describe 'Push-SchedulerCIPPNotifications day boundary' {
     BeforeEach {
         $script:Tables = @{ CippLogs = @{}; CippStandardsAlerts = @{} }
         $script:NotificationConfig = [pscustomobject]@{ email = 'ops@contoso.test'; Severity = 'Alert,Warning' }
-        Mock Get-Date { if ($UFormat) { $script:Clock.ToString('yyyyMMdd') } else { $script:Clock } }
+        Mock Get-Date { $script:Clock }
     }
 
     It 'sends unsent rows across a date change: <Name>' -ForEach @(
