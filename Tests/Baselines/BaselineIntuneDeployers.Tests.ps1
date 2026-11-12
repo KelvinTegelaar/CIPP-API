@@ -6,6 +6,7 @@
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
+    . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Tools/ConvertTo-CIPPScriptBlockValue.ps1')
 
     function New-CIPPDbRequest { param($TenantFilter, $Type, $Fields) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }

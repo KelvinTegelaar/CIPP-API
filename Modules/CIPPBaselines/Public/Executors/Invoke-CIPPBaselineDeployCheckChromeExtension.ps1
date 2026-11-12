@@ -85,9 +85,9 @@ foreach (`$b in `$browsers) {
     New-ItemProperty -Path `$b.ManagedStorageKey -Name 'enableValidPageBadge' -PropertyType DWord  -Value $EnableValidPageBadge -Force | Out-Null
     New-ItemProperty -Path `$b.ManagedStorageKey -Name 'enablePageBlocking'   -PropertyType DWord  -Value $EnablePageBlocking   -Force | Out-Null
     New-ItemProperty -Path `$b.ManagedStorageKey -Name 'enableCippReporting'  -PropertyType DWord  -Value $EnableCippReporting  -Force | Out-Null
-    New-ItemProperty -Path `$b.ManagedStorageKey -Name 'cippServerUrl'        -PropertyType String -Value '$CippServerUrl'      -Force | Out-Null
-    New-ItemProperty -Path `$b.ManagedStorageKey -Name 'cippTenantId'         -PropertyType String -Value '$CippTenantId'       -Force | Out-Null
-    New-ItemProperty -Path `$b.ManagedStorageKey -Name 'customRulesUrl'       -PropertyType String -Value '$CustomRulesUrl'     -Force | Out-Null
+    New-ItemProperty -Path `$b.ManagedStorageKey -Name 'cippServerUrl'        -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $CippServerUrl)'      -Force | Out-Null
+    New-ItemProperty -Path `$b.ManagedStorageKey -Name 'cippTenantId'         -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $CippTenantId)'       -Force | Out-Null
+    New-ItemProperty -Path `$b.ManagedStorageKey -Name 'customRulesUrl'       -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $CustomRulesUrl)'     -Force | Out-Null
     New-ItemProperty -Path `$b.ManagedStorageKey -Name 'updateInterval'       -PropertyType DWord  -Value $UpdateInterval       -Force | Out-Null
     New-ItemProperty -Path `$b.ManagedStorageKey -Name 'enableDebugLogging'   -PropertyType DWord  -Value $EnableDebugLogging   -Force | Out-Null
 
@@ -99,21 +99,21 @@ foreach (`$b in `$browsers) {
     # Managed storage - customBranding subkey
     `$brandingKey = "`$(`$b.ManagedStorageKey)\customBranding"
     if (!(Test-Path `$brandingKey)) { New-Item -Path `$brandingKey -Force | Out-Null }
-    New-ItemProperty -Path `$brandingKey -Name 'companyName'   -PropertyType String -Value '$($CompanyName -replace "'", "''")'   -Force | Out-Null
+    New-ItemProperty -Path `$brandingKey -Name 'companyName'   -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $CompanyName)'   -Force | Out-Null
 
-    New-ItemProperty -Path `$brandingKey -Name 'productName'   -PropertyType String -Value '$($ProductName -replace "'", "''")'   -Force | Out-Null
-    New-ItemProperty -Path `$brandingKey -Name 'supportEmail'  -PropertyType String -Value '$($SupportEmail -replace "'", "''")' -Force | Out-Null
-    New-ItemProperty -Path `$brandingKey -Name 'supportUrl'    -PropertyType String -Value '$($SupportUrl -replace "'", "''")'  -Force | Out-Null
-    New-ItemProperty -Path `$brandingKey -Name 'privacyPolicyUrl' -PropertyType String -Value '$($PrivacyPolicyUrl -replace "'", "''")'  -Force | Out-Null
-    New-ItemProperty -Path `$brandingKey -Name 'aboutUrl'      -PropertyType String -Value '$($AboutUrl -replace "'", "''")'  -Force | Out-Null
-    New-ItemProperty -Path `$brandingKey -Name 'primaryColor'  -PropertyType String -Value '$PrimaryColor'  -Force | Out-Null
-    New-ItemProperty -Path `$brandingKey -Name 'logoUrl'       -PropertyType String -Value '$($LogoUrl -replace "'", "''")'       -Force | Out-Null
+    New-ItemProperty -Path `$brandingKey -Name 'productName'   -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $ProductName)'   -Force | Out-Null
+    New-ItemProperty -Path `$brandingKey -Name 'supportEmail'  -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $SupportEmail)' -Force | Out-Null
+    New-ItemProperty -Path `$brandingKey -Name 'supportUrl'    -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $SupportUrl)'  -Force | Out-Null
+    New-ItemProperty -Path `$brandingKey -Name 'privacyPolicyUrl' -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $PrivacyPolicyUrl)'  -Force | Out-Null
+    New-ItemProperty -Path `$brandingKey -Name 'aboutUrl'      -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $AboutUrl)'  -Force | Out-Null
+    New-ItemProperty -Path `$brandingKey -Name 'primaryColor'  -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $PrimaryColor)'  -Force | Out-Null
+    New-ItemProperty -Path `$brandingKey -Name 'logoUrl'       -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $LogoUrl)'       -Force | Out-Null
 
     # Managed storage - genericWebhook subkey
     `$webhookKey = "`$(`$b.ManagedStorageKey)\genericWebhook"
     if (!(Test-Path `$webhookKey)) { New-Item -Path `$webhookKey -Force | Out-Null }
     New-ItemProperty -Path `$webhookKey -Name 'enabled' -PropertyType DWord  -Value $EnableGenericWebhook -Force | Out-Null
-    New-ItemProperty -Path `$webhookKey -Name 'url'     -PropertyType String -Value '$($WebhookUrl -replace "'", "''")'     -Force | Out-Null
+    New-ItemProperty -Path `$webhookKey -Name 'url'     -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $WebhookUrl)'     -Force | Out-Null
 
     # Managed storage - genericWebhook\events subkey
     `$webhookEventsKey = "`$(`$b.ManagedStorageKey)\genericWebhook\events"
@@ -122,7 +122,7 @@ $(if ($WebhookEvents.Count -gt 0) {
     "    if (!(Test-Path `$webhookEventsKey)) { New-Item -Path `$webhookEventsKey -Force | Out-Null }`n"
     $i = 1
     foreach ($evt in $WebhookEvents) {
-        "    New-ItemProperty -Path `$webhookEventsKey -Name '$i' -PropertyType String -Value '$($evt -replace "'", "''")' -Force | Out-Null`n"
+        "    New-ItemProperty -Path `$webhookEventsKey -Name '$i' -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $evt)' -Force | Out-Null`n"
         $i++
     }
 })
@@ -133,7 +133,7 @@ $(if ($UrlAllowlist.Count -gt 0) {
     "    if (!(Test-Path `$allowlistKey)) { New-Item -Path `$allowlistKey -Force | Out-Null }`n"
     $i = 1
     foreach ($url in $UrlAllowlist) {
-        "    New-ItemProperty -Path `$allowlistKey -Name '$i' -PropertyType String -Value '$($url -replace "'", "''")' -Force | Out-Null`n"
+        "    New-ItemProperty -Path `$allowlistKey -Name '$i' -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $url)' -Force | Out-Null`n"
         $i++
     }
 })
@@ -197,9 +197,9 @@ foreach (`$key in @(`$chromeKey, `$edgeKey)) {
     if (!(Test-RegValue `$key 'enableDebugLogging'   $EnableDebugLogging))   { exit 1 }
 
     # Core string settings
-    if (!(Test-RegValue `$key 'cippServerUrl'  '$CippServerUrl'))  { exit 1 }
-    if (!(Test-RegValue `$key 'cippTenantId'   '$CippTenantId'))   { exit 1 }
-    if (!(Test-RegValue `$key 'customRulesUrl' '$CustomRulesUrl')) { exit 1 }
+    if (!(Test-RegValue `$key 'cippServerUrl'  '$(ConvertTo-CIPPScriptBlockValue -Value $CippServerUrl)'))  { exit 1 }
+    if (!(Test-RegValue `$key 'cippTenantId'   '$(ConvertTo-CIPPScriptBlockValue -Value $CippTenantId)'))   { exit 1 }
+    if (!(Test-RegValue `$key 'customRulesUrl' '$(ConvertTo-CIPPScriptBlockValue -Value $CustomRulesUrl)')) { exit 1 }
 
     # domainSquatting subkey
     `$domainSquattingKey = "`$key\domainSquatting"
@@ -209,21 +209,21 @@ foreach (`$key in @(`$chromeKey, `$edgeKey)) {
     # customBranding subkey
     `$brandingKey = "`$key\customBranding"
     if (!(Test-Path `$brandingKey)) { exit 1 }
-    if (!(Test-RegValue `$brandingKey 'companyName'  '$($CompanyName -replace "'", "''")'))  { exit 1 }
+    if (!(Test-RegValue `$brandingKey 'companyName'  '$(ConvertTo-CIPPScriptBlockValue -Value $CompanyName)'))  { exit 1 }
 
-    if (!(Test-RegValue `$brandingKey 'productName'  '$($ProductName -replace "'", "''")'))  { exit 1 }
-    if (!(Test-RegValue `$brandingKey 'supportEmail'    '$($SupportEmail -replace "'", "''")'))    { exit 1 }
-    if (!(Test-RegValue `$brandingKey 'supportUrl'       '$($SupportUrl -replace "'", "''")'))       { exit 1 }
-    if (!(Test-RegValue `$brandingKey 'privacyPolicyUrl' '$($PrivacyPolicyUrl -replace "'", "''")')) { exit 1 }
-    if (!(Test-RegValue `$brandingKey 'aboutUrl'         '$($AboutUrl -replace "'", "''")'))         { exit 1 }
-    if (!(Test-RegValue `$brandingKey 'primaryColor' '$PrimaryColor')) { exit 1 }
-    if (!(Test-RegValue `$brandingKey 'logoUrl'      '$($LogoUrl -replace "'", "''")'))      { exit 1 }
+    if (!(Test-RegValue `$brandingKey 'productName'  '$(ConvertTo-CIPPScriptBlockValue -Value $ProductName)'))  { exit 1 }
+    if (!(Test-RegValue `$brandingKey 'supportEmail'    '$(ConvertTo-CIPPScriptBlockValue -Value $SupportEmail)'))    { exit 1 }
+    if (!(Test-RegValue `$brandingKey 'supportUrl'       '$(ConvertTo-CIPPScriptBlockValue -Value $SupportUrl)'))       { exit 1 }
+    if (!(Test-RegValue `$brandingKey 'privacyPolicyUrl' '$(ConvertTo-CIPPScriptBlockValue -Value $PrivacyPolicyUrl)')) { exit 1 }
+    if (!(Test-RegValue `$brandingKey 'aboutUrl'         '$(ConvertTo-CIPPScriptBlockValue -Value $AboutUrl)'))         { exit 1 }
+    if (!(Test-RegValue `$brandingKey 'primaryColor' '$(ConvertTo-CIPPScriptBlockValue -Value $PrimaryColor)')) { exit 1 }
+    if (!(Test-RegValue `$brandingKey 'logoUrl'      '$(ConvertTo-CIPPScriptBlockValue -Value $LogoUrl)'))      { exit 1 }
 
     # genericWebhook subkey
     `$webhookKey = "`$key\genericWebhook"
     if (!(Test-Path `$webhookKey)) { exit 1 }
     if (!(Test-RegValue `$webhookKey 'enabled' $EnableGenericWebhook)) { exit 1 }
-    if (!(Test-RegValue `$webhookKey 'url'     '$($WebhookUrl -replace "'", "''")'))     { exit 1 }
+    if (!(Test-RegValue `$webhookKey 'url'     '$(ConvertTo-CIPPScriptBlockValue -Value $WebhookUrl)'))     { exit 1 }
 
     # genericWebhook\events subkey - verify exact count and values
     `$eventsKey = "`$key\genericWebhook\events"
@@ -231,7 +231,7 @@ $(if ($WebhookEvents.Count -gt 0) {
     "    if (!(Test-Path `$eventsKey)) { exit 1 }`n"
     $i = 1
     foreach ($evt in $WebhookEvents) {
-        "    if (!(Test-RegValue `$eventsKey '$i' '$($evt -replace "'", "''")')) { exit 1 }`n"
+        "    if (!(Test-RegValue `$eventsKey '$i' '$(ConvertTo-CIPPScriptBlockValue -Value $evt)')) { exit 1 }`n"
         $i++
     }
     "    `$eventsCount = (Get-Item `$eventsKey).Property.Count`n"
@@ -248,7 +248,7 @@ $(if ($UrlAllowlist.Count -gt 0) {
     "    if (!(Test-Path `$allowlistKey)) { exit 1 }`n"
     $i = 1
     foreach ($url in $UrlAllowlist) {
-        "    if (!(Test-RegValue `$allowlistKey '$i' '$($url -replace "'", "''")')) { exit 1 }`n"
+        "    if (!(Test-RegValue `$allowlistKey '$i' '$(ConvertTo-CIPPScriptBlockValue -Value $url)')) { exit 1 }`n"
         $i++
     }
     "    `$allowlistCount = (Get-Item `$allowlistKey).Property.Count`n"
