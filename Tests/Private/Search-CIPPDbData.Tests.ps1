@@ -12,6 +12,7 @@ BeforeAll {
 
     $script:CippAllowedTenantsStorage = [System.Threading.AsyncLocal[object]]::new()
 
+    . (Join-Path $Public 'ConvertTo-CIPPODataFilterValue.ps1')
     . (Join-Path $Public 'Get-CIPPDbItem.ps1')
     . (Join-Path $Public 'Search-CIPPDbData.ps1')
 

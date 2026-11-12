@@ -77,22 +77,24 @@ function Get-CIPPDbItem {
         }
 
         $Query = @{}
+        # Type and partition reach the filter as literals; unescaped quotes would let a caller leave its partition
+        $SafeType = ConvertTo-CIPPODataFilterValue -Value $Type -Type String
         if ($CountsOnly) {
             # Exact match for the count row when a type is given, otherwise every count row
-            $RowFilter = if ($Type) { "RowKey eq '{0}-Count'" -f $Type } else { 'DataCount ge 0' }
+            $RowFilter = if ($Type) { "RowKey eq '{0}-Count'" -f $SafeType } else { 'DataCount ge 0' }
             $Query.Property = @('PartitionKey', 'RowKey', 'DataCount', 'Timestamp'; if ($IncludeShape) { 'Shape' })
         } else {
             if (-not $Type) {
                 throw 'Type parameter is required when CountsOnly is not specified'
             }
-            $RowFilter = "RowKey ge '{0}-' and RowKey lt '{0}.'" -f $Type
+            $RowFilter = "RowKey ge '{0}-' and RowKey lt '{0}.'" -f $SafeType
         }
 
         $Results = if ($null -eq $Partitions) {
             Get-CIPPAzDataTableEntity @Table @Query -Filter $RowFilter
         } else {
             foreach ($Partition in $Partitions) {
-                Get-CIPPAzDataTableEntity @Table @Query -Filter ("PartitionKey eq '{0}' and {1}" -f $Partition, $RowFilter)
+                Get-CIPPAzDataTableEntity @Table @Query -Filter ("PartitionKey eq '{0}' and {1}" -f (ConvertTo-CIPPODataFilterValue -Value $Partition -Type String), $RowFilter)
             }
         }
 

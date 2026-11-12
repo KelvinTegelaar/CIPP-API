@@ -13,6 +13,7 @@ BeforeAll {
 
     $script:CippAllowedTenantsStorage = [System.Threading.AsyncLocal[object]]::new()
 
+    . (Join-Path $Public 'ConvertTo-CIPPODataFilterValue.ps1')
     . (Join-Path $Public 'Get-CIPPDbItem.ps1')
     . (Join-Path $Public 'Get-CIPPMailboxRulesReport.ps1')
 
@@ -119,6 +120,19 @@ Describe 'Get-CIPPDbItem allTenants' {
             $script:CIPPLockedTenant = $null
         }
         @($Result.PartitionKey | Sort-Object -Unique) | Should -Be @('a.com')
+    }
+
+    It 'escapes quotes in Type so it cannot widen a single-tenant read' {
+        $script:CippAllowedTenantsStorage.Value = $null
+        Mock Get-Tenants { @($script:TenantA) }
+        $null = Get-CIPPDbItem -TenantFilter 'a.com' -Type "X' or RowKey ne 'z"
+        $script:Filters | Should -Be @("PartitionKey eq 'a.com' and RowKey ge 'X'' or RowKey ne ''z-' and RowKey lt 'X'' or RowKey ne ''z.'")
+    }
+
+    It 'escapes quotes in Type for -CountsOnly and in -Partition' {
+        $script:CippAllowedTenantsStorage.Value = $null
+        $null = Get-CIPPDbItem -Partition "b.com' or PartitionKey ne '" -Type "X' or RowKey ne '" -CountsOnly
+        $script:Filters | Should -Be @("PartitionKey eq 'b.com'' or PartitionKey ne ''' and RowKey eq 'X'' or RowKey ne ''-Count'")
     }
 
     AfterAll { $script:CippAllowedTenantsStorage.Value = $null }

@@ -12,6 +12,10 @@ Function Invoke-ListTeamsActivity {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $type = $request.Query.Type
+    # Type is spliced into a Graph report URL and a cache type name, so only a bare report name is allowed
+    if ($type -and $type -notmatch '^[A-Za-z0-9]+$') {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Invalid Type' } })
+    }
     # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
     $UseReportDB = $Request.Query.UseReportDB -eq $true
     if ($TenantFilter -eq 'AllTenants' -or $UseReportDB) {
