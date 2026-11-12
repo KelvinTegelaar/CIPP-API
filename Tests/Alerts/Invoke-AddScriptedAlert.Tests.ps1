@@ -16,8 +16,15 @@ BeforeAll {
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function Get-CIPPTable { param($TableName) }
     function Update-AzDataTableEntity { param($Context, $Entity, [switch]$Force) }
+    function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
+    function ConvertTo-CIPPODataFilterValue { param($Value, $Type) $Value }
 
-    . $FunctionPath
+    class HttpResponseContext {
+        [int]$StatusCode
+        [object]$Body
+    }
+
+    . ([ScriptBlock]::Create("using namespace System.Net`n" + (Get-Content -LiteralPath $FunctionPath -Raw)))
 
     function New-AlertRequest {
         param($TenantFilter, $ExcludedTenants)
@@ -121,5 +128,56 @@ Describe 'Invoke-AddScriptedAlert tenant selection' {
         Invoke-AddScriptedAlert -Request (New-AlertRequest -TenantFilter $script:TwoGroups)
 
         Should -Invoke -CommandName Update-AzDataTableEntity -Times 0
+    }
+}
+
+Describe 'Invoke-AddScriptedAlert only stores alerts' {
+    BeforeEach {
+        $script:Forwarded = $null
+        $script:ExistingTask = $null
+        Mock -CommandName Invoke-AddScheduledItem -MockWith { $script:Forwarded = $Request; 'Task added' }
+        Mock -CommandName Get-CIPPTable -MockWith { @{ Context = 'stub' } }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { $script:ExistingTask }
+    }
+
+    It 'refuses a command of <Command>' -ForEach @(
+        @{ Command = [pscustomobject]@{ value = 'Get-CIPPMFAState' } }
+        @{ Command = 'Set-CIPPUserJITAdmin' }
+        @{ Command = [pscustomobject]@{ value = 'Get-CIPPAlert' } }
+        @{ Command = [pscustomobject]@{ value = 'Get-CIPPAlertFixture; Remove-Item' } }
+        @{ Command = $null }
+    ) {
+        $Request = New-AlertRequest -TenantFilter 'contoso.com'
+        $Request.Body.Command = $Command
+        $Response = Invoke-AddScriptedAlert -Request $Request
+        $Response.StatusCode | Should -Be 400
+        Should -Invoke Invoke-AddScheduledItem -Times 0 -Exactly
+    }
+
+    It 'refuses to overwrite or re-run an existing task that is not an alert' {
+        $script:ExistingTask = [pscustomobject]@{ RowKey = 'task-1'; Command = 'Push-ExecOffboardingJob' }
+        $Request = New-AlertRequest -TenantFilter 'contoso.com'
+        $Request.Body | Add-Member -NotePropertyMembers @{ RowKey = 'task-1'; RunNow = $true }
+        $Response = Invoke-AddScriptedAlert -Request $Request
+        $Response.StatusCode | Should -Be 403
+        Should -Invoke Invoke-AddScheduledItem -Times 0 -Exactly
+    }
+
+    It 'updates an existing alert' {
+        $script:ExistingTask = [pscustomobject]@{ RowKey = 'task-1'; Command = 'Get-CIPPAlertFixture' }
+        $Request = New-AlertRequest -TenantFilter 'contoso.com'
+        $Request.Body | Add-Member -NotePropertyName RowKey -NotePropertyValue 'task-1'
+        Invoke-AddScriptedAlert -Request $Request | Should -Be 'Task added'
+        $script:Forwarded.Body.RowKey | Should -Be 'task-1'
+    }
+
+    It 'stores a new alert given the command as <Name>' -ForEach @(
+        @{ Name = 'an object'; Command = [pscustomobject]@{ value = 'Get-CIPPAlertFixture' } }
+        @{ Name = 'a string'; Command = 'Get-CIPPAlertFixture' }
+    ) {
+        $Request = New-AlertRequest -TenantFilter 'contoso.com'
+        $Request.Body.Command = $Command
+        Invoke-AddScriptedAlert -Request $Request | Should -Be 'Task added'
+        $script:Forwarded.Query.hidden | Should -Be 'true'
     }
 }

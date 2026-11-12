@@ -13,6 +13,25 @@ function Invoke-AddScriptedAlert {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    # This endpoint only stores alerts; any other scheduled command needs the scheduler permission.
+    $AlertCommand = '^Get-CIPPAlert\w+$'
+    if ([string]($Request.Body.Command.value ?? $Request.Body.Command) -notmatch $AlertCommand) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'Command must be a CIPP alert.' }
+            })
+    }
+    if ($Request.Body.RowKey) {
+        $Table = Get-CIPPTable -TableName 'ScheduledTasks'
+        $ExistingTask = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ScheduledTask' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Request.Body.RowKey)'"
+        if ($ExistingTask -and [string]$ExistingTask.Command -notmatch $AlertCommand) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ Results = 'This scheduled task is not an alert.' }
+                })
+        }
+    }
+
     # The tenants, tenant groups or *All Tenants the alert applies to. At least one is required.
     if ($Request.Body.tenantFilter -is [array] -and @($Request.Body.tenantFilter).Count -eq 1) {
         $Request.Body | Add-Member -MemberType NoteProperty -Name 'tenantFilter' -Value $Request.Body.tenantFilter[0] -Force
