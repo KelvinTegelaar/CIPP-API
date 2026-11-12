@@ -6320,9 +6320,15 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "Command": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
                   "excludedTenants": {
                     "type": "string",
                     "description": "Tenants or tenant groups to skip even when they fall within the selection above. Optional."
+                  },
+                  "RowKey": {
+                    "type": "string"
                   },
                   "tenantFilter": {
                     "type": "array",
@@ -6349,10 +6355,119 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "properties": {
+                    "AdditionalProperties": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "AlertComment": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "AlertReNotify": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Command": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "CustomSubject": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "excludedTenantGroups": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "excludedTenants": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ExecutedTime": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Hidden": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Name": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Parameters": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PostExecution": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PsaTicketId": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PsaTicketPriority": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PsaTicketStrategy": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Recurrence": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Reference": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Results": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ScheduledTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SyncType": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "TaskState": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Tenant": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Trigger": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    }
+                  }
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -39392,8 +39507,8 @@
             "in": "query",
             "required": false,
             "schema": {
-              "format": "uuid",
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
