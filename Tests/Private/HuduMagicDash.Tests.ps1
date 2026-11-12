@@ -250,6 +250,46 @@ Describe 'Get-HuduMagicDashAttentionItems' {
         $Params.Roles[0].Members = @(1..4 | ForEach-Object { New-Member "Admin $_" })
         Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) | Should -BeNullOrEmpty
     }
+
+    It 'hides only the fully assigned license warning with HideLicenseFull' {
+        $Params = New-DashParams
+        $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Exchange Online' 100 95))
+        $Params.HideLicenseFull = $true
+        $Items = @((Get-TestDash $Params).Attention)
+        $Items.Count | Should -Be 1
+        $Items[0] | Should -Be '**1 license is** nearly fully assigned: Exchange Online (95%)'
+    }
+
+    It 'hides only the nearly full license warning with HideLicenseNearFull' {
+        $Params = New-DashParams
+        $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Exchange Online' 100 95))
+        $Params.HideLicenseNearFull = $true
+        $Items = @((Get-TestDash $Params).Attention)
+        $Items.Count | Should -Be 1
+        $Items[0] | Should -Be '**1 license is** fully assigned: Business Premium'
+    }
+
+    It 'leaves a success tile when both license warnings are hidden' {
+        $Params = New-DashParams
+        $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Exchange Online' 100 95))
+        $Params.HideLicenseFull = $true
+        $Params.HideLicenseNearFull = $true
+        $Dash = Get-TestDash $Params
+        @($Dash.Attention).Count | Should -Be 0
+        $Dash.Tile.Shade | Should -Be 'success'
+    }
+
+    It 'still warns about five Global Administrators when both license warnings are hidden' {
+        $Params = New-DashParams
+        $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Exchange Online' 100 95))
+        $Params.Roles[0].Members = @(1..5 | ForEach-Object { New-Member "Admin $_" })
+        $Params.HideLicenseFull = $true
+        $Params.HideLicenseNearFull = $true
+        $Dash = Get-TestDash $Params
+        @($Dash.Attention).Count | Should -Be 1
+        $Dash.Attention[0] | Should -Be '**5 accounts** hold Global Administrator (Microsoft recommends fewer than 5)'
+        $Dash.Tile.Shade | Should -Be 'danger'
+    }
 }
 
 Describe 'Get-HuduStaleMagicDash' {

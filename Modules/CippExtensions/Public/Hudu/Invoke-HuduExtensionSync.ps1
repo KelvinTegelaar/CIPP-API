@@ -1264,6 +1264,8 @@ function Invoke-HuduExtensionSync {
             Roles    = $Roles
             Users    = $OutputUsers
             Culture  = $Culture
+            HideLicenseFull     = [bool]$Configuration.HideLicenseFullWarning
+            HideLicenseNearFull = [bool]$Configuration.HideLicenseNearFullWarning
         }
         $DashTitle = "Microsoft 365 - $($Tenant.displayName)"
         $DashSet = $false

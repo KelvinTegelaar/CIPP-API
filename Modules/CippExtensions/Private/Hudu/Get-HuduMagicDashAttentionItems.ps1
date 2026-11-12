@@ -7,16 +7,20 @@ function Get-HuduMagicDashAttentionItems {
         Returns plain sentences; **text** marks emphasis. License and Global Administrator
         thresholds are the ones the model was built with.
     #>
-    param([Parameter(Mandatory)][System.Collections.IDictionary]$Model)
+    param(
+        [Parameter(Mandatory)][System.Collections.IDictionary]$Model,
+        [switch]$HideLicenseFull,
+        [switch]$HideLicenseNearFull
+    )
 
     $m = $Model
     $Items = [System.Collections.Generic.List[string]]::new()
     $Count = { param([int]$n, $One, $Many) if ($n -eq 1) { "1 $One" } else { "$n $Many" } }
 
     $Full = @($m.Licenses.Items | Where-Object { $_.IsFull } | ForEach-Object { $_.Name } | Sort-Object)
-    if ($Full.Count) { $Items.Add("**$(& $Count $Full.Count 'license is' 'licenses are')** fully assigned: $($Full -join ', ')") }
+    if ($Full.Count -and -not $HideLicenseFull) { $Items.Add("**$(& $Count $Full.Count 'license is' 'licenses are')** fully assigned: $($Full -join ', ')") }
     $Near = @($m.Licenses.Items | Where-Object { $_.IsNearFull } | Sort-Object { $_.Name } | ForEach-Object { "$($_.Name) ($($_.PctText))" })
-    if ($Near.Count) { $Items.Add("**$(& $Count $Near.Count 'license is' 'licenses are')** nearly fully assigned: $($Near -join ', ')") }
+    if ($Near.Count -and -not $HideLicenseNearFull) { $Items.Add("**$(& $Count $Near.Count 'license is' 'licenses are')** nearly fully assigned: $($Near -join ', ')") }
     $Ga = @($m.Roles.GlobalAdmins).Count
     $GaSp = @($m.Roles.GlobalAdmins | Where-Object { $_.IsServicePrincipal }).Count
     if ($Ga -ge $m.Roles.GlobalAdminWarnAt) {
