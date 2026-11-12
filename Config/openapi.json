@@ -7107,7 +7107,8 @@
                     "description": "Optional. Pushes the saved template to a GitHub template repository after the save: FullName is the repository (owner/repo), Message is the commit message. Not stored on the template."
                   },
                   "GUID": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "tenantFilter is a selector list the dispatcher does not check, and standards runs never re-check access, so check every target here by its value; an edit must also cover the row it replaces. 'Template Tenant' is the repo-import placeholder and targets nothing."
                   },
                   "standards": {
                     "type": "string",
@@ -25269,6 +25270,9 @@
                   "roleMappings": {
                     "type": "object",
                     "properties": {
+                      "GroupId": {
+                        "type": "string"
+                      },
                       "roleDefinitionId": {
                         "type": "string",
                         "description": "Entra role definition id; a role mapped to more than one group is sent to Graph once"
@@ -25620,6 +25624,7 @@
           {
             "name": "Action",
             "in": "query",
+            "description": "Templates apply to every customer, so a tenant-limited role cannot change them.",
             "required": false,
             "schema": {
               "type": "string",
@@ -39454,8 +39459,8 @@
             "in": "query",
             "required": false,
             "schema": {
-              "format": "uuid",
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -41185,9 +41190,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
