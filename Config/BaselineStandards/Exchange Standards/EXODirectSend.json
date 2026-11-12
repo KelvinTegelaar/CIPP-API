@@ -3,7 +3,10 @@
   "label": "Set Direct Send state",
   "cat": "Exchange Standards",
   "tag": [
-    "CIS M365 7.0.0 (6.5.5)"
+    "CIS M365 7.0.0 (6.5.5)",
+    "CMMC (IA.L1-b.1.vi)",
+    "CMMC (IA.L2-3.5.2)",
+    "NIST SP 800-171 (3.5.2)"
   ],
   "impact": "Medium Impact",
   "helpText": "Sets the state of Direct Send in Exchange Online. Direct Send allows applications to send emails directly to Exchange Online mailboxes as the tenants domains, without requiring authentication.",

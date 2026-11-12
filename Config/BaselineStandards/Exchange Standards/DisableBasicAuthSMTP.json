@@ -4,7 +4,10 @@
   "cat": "Exchange Standards",
   "tag": [
     "CIS M365 7.0.0 (6.5.4)",
-    "NIST CSF 2.0 (PR.IR-01)"
+    "NIST CSF 2.0 (PR.IR-01)",
+    "CMMC (CM.L2-3.4.7)",
+    "FedRAMP A-D (KSI-IAM-APM)",
+    "NIST SP 800-171 (3.4.7)"
   ],
   "impact": "Medium Impact",
   "helpText": "Disables SMTP AUTH organization-wide, impacting POP and IMAP clients that rely on SMTP for sending emails. Default for new tenants. For more information, see the [Microsoft documentation](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission)",

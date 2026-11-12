@@ -4,7 +4,10 @@
   "cat": "Exchange Standards",
   "tag": [
     "CIS M365 7.0.0 (6.5.3)",
-    "exo_storageproviderrestricted"
+    "exo_storageproviderrestricted",
+    "CMMC (AC.L1-b.1.iii)",
+    "CMMC (AC.L2-3.1.20)",
+    "NIST SP 800-171 (3.1.20)"
   ],
   "impact": "Low Impact",
   "helpText": "Disables the ability for users to open files in Outlook on the Web, from other providers such as Box, Dropbox, Facebook, Google Drive, OneDrive Personal, etc.",

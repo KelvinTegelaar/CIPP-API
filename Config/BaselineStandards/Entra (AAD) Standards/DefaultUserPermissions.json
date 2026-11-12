@@ -6,7 +6,13 @@
     "EIDSCA.AP05",
     "EIDSCA.AP06",
     "EIDSCA.AP09",
-    "EIDSCA.AP14"
+    "EIDSCA.AP14",
+    "CMMC (AC.L1-b.1.ii)",
+    "CMMC (AC.L2-3.1.2)",
+    "CMMC (AC.L2-3.1.5)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.2)",
+    "NIST SP 800-171 (3.1.5)"
   ],
   "impact": "Low Impact",
   "helpText": "Sets four switches on the Microsoft Entra authorization policy: whether users can sign up for email-based subscriptions, whether users with a verified email can join the tenant on their own, whether users may consent to apps that Microsoft flags as risky, and whether members can read other users in the directory. The EIDSCA recommendation is off, off, off and on.",

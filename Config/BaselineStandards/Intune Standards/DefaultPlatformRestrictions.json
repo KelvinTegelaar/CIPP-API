@@ -2,7 +2,10 @@
   "name": "DefaultPlatformRestrictions",
   "label": "Set Default Platform Restrictions",
   "cat": "Intune Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (AC.L2-3.1.18)",
+    "NIST SP 800-171 (3.1.18)"
+  ],
   "impact": "High Impact",
   "helpText": "Sets the default enrollment platform restrictions, controlling which device platforms may enroll, whether personally-owned devices of each platform are allowed, and the minimum/maximum OS version each platform may enroll with.",
   "executiveText": "Controls which kinds of device can enrol into management, whether employees may enrol personal devices, and how up to date a device's operating system must be to enrol. This keeps unmanaged, unsupported or out-of-date platforms off corporate resources.",

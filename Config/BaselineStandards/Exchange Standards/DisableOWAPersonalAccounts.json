@@ -3,7 +3,10 @@
   "label": "Disable personal email accounts and calendars in Outlook",
   "cat": "Exchange Standards",
   "tag": [
-    "CIS M365 7.0.0 (6.3.2)"
+    "CIS M365 7.0.0 (6.3.2)",
+    "CMMC (AC.L1-b.1.iii)",
+    "CMMC (AC.L2-3.1.20)",
+    "NIST SP 800-171 (3.1.20)"
   ],
   "impact": "Low Impact",
   "helpText": "Prevents users from adding personal email accounts (Outlook.com, Gmail, Yahoo) in the new Outlook for Windows and from connecting personal Outlook.com or Google calendars in Outlook on the web. Applies to the default OWA mailbox policy only, so exceptions can be made with a separate policy. Changes can take up to 60 minutes to apply and personal accounts already added are disabled.",

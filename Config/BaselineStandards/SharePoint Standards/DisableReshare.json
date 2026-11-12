@@ -6,7 +6,10 @@
     "CIS M365 7.0.0 (7.2.5)",
     "CISA (MS.AAD.14.2v1)",
     "CISA (MS.SPO.1.2v1)",
-    "spo_external_users_sharing"
+    "spo_external_users_sharing",
+    "CMMC (AC.L2-3.1.3)",
+    "FedRAMP A-D (KSI-SVC-SIN)",
+    "NIST SP 800-171 (3.1.3)"
   ],
   "impact": "High Impact",
   "helpText": "Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access",

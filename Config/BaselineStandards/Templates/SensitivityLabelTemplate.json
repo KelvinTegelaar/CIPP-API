@@ -2,7 +2,13 @@
   "name": "SensitivityLabelTemplate",
   "label": "Sensitivity Label Template",
   "cat": "Templates",
-  "tag": [],
+  "tag": [
+    "CMMC (AC.L2-3.1.3)",
+    "CMMC (MP.L2-3.8.4)",
+    "FedRAMP A-D (KSI-SVC-SIN)",
+    "NIST SP 800-171 (3.1.3)",
+    "NIST SP 800-171 (3.8.4)"
+  ],
   "impact": "Medium Impact",
   "helpText": "Deploy Microsoft Purview sensitivity labels from CIPP templates. Existing labels and label policies are overwritten in place.",
   "executiveText": "Deploys sensitivity labels for classification and protection of files, emails, and Microsoft 365 group content. Ensures consistent classification taxonomy and encryption settings across tenants.",

@@ -9,7 +9,10 @@
     "EIDSCA.ST08",
     "EIDSCA.ST09",
     "NIST CSF 2.0 (PR.AA-05)",
-    "SMB1001 (2.8)"
+    "SMB1001 (2.8)",
+    "CMMC (AC.L2-3.1.5)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.5)"
   ],
   "impact": "Low Impact",
   "helpText": "Disables Guest access to enumerate directory objects. This prevents guest users from seeing other users or guests in the directory.",

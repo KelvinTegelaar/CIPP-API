@@ -9,7 +9,13 @@
     "Essential 8 (1175)",
     "NIST CSF 2.0 (PR.AA-05)",
     "SMB1001 (2.8)",
-    "aad_third_party_apps"
+    "aad_third_party_apps",
+    "CMMC (AC.L1-b.1.ii)",
+    "CMMC (AC.L2-3.1.2)",
+    "CMMC (AC.L2-3.1.5)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.2)",
+    "NIST SP 800-171 (3.1.5)"
   ],
   "impact": "Low Impact",
   "helpText": "Disables the ability for users to create App registrations in the tenant.",

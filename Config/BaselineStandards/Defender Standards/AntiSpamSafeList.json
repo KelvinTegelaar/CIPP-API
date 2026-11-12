@@ -3,7 +3,9 @@
   "label": "Set Anti-Spam Connection Filter Safe List",
   "cat": "Defender Standards",
   "tag": [
-    "CIS M365 7.0.0 (2.1.13)"
+    "CIS M365 7.0.0 (2.1.13)",
+    "CMMC (SI.L2-3.14.6)",
+    "NIST SP 800-171 (3.14.6)"
   ],
   "impact": "Medium Impact",
   "helpText": "Sets the anti-spam connection filter policy option 'safe list' in Defender.",

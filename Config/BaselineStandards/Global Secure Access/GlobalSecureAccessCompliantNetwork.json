@@ -3,7 +3,13 @@
   "label": "Require a compliant network (Global Secure Access)",
   "cat": "Global Secure Access",
   "tag": [
-    "HighImpact"
+    "HighImpact",
+    "CMMC (AC.L2-3.1.12)",
+    "CMMC (AC.L2-3.1.14)",
+    "CMMC (AC.L3-3.1.2e)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.12)",
+    "NIST SP 800-171 (3.1.14)"
   ],
   "impact": "High Impact",
   "helpText": "Makes stolen sign-in tokens useless off company devices using Entra ID P1: onboards the tenant to Global Secure Access, enables the Microsoft 365 traffic profile for all users, deploys the client through Intune (Windows and macOS) and creates a Conditional Access policy that blocks every sign-in not coming from the compliant network. The policy is created in report-only mode until 'Enforce the policy' is switched on and its name can be changed to match your naming convention. Admin roles, your break-glass accounts, Intune and Explicit Forward Proxy are excluded.",

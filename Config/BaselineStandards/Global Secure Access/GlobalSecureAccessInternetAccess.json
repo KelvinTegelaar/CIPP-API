@@ -2,6 +2,12 @@
   "name": "GlobalSecureAccessInternetAccess",
   "label": "Manage Microsoft Entra Internet Access",
   "cat": "Global Secure Access",
+  "tag": [
+    "CMMC (SC.L1-b.1.x)",
+    "CMMC (SC.L2-3.13.1)",
+    "FedRAMP A-D (KSI-CNA-RNT)",
+    "NIST SP 800-171 (3.13.1)"
+  ],
   "impact": "Medium Impact",
   "helpText": "Enables or disables the Global Secure Access Internet traffic forwarding profile, keeps its traffic policies enabled, sets who and which remote networks it is assigned to, and optionally manages its custom bypass and acquire rules and the custom block page. Uses Microsoft Entra Internet Access. The tenant must be onboarded, which the Set up Global Secure Access standard does.",
   "executiveText": "Routes internet traffic from managed devices through Microsoft's Security Service Edge so web content filtering and threat protection apply, and sets the message users see when a site is blocked.",

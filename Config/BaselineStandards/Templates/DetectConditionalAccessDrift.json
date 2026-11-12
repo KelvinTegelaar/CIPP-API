@@ -2,7 +2,14 @@
   "name": "DetectConditionalAccessDrift",
   "label": "Detect Conditional Access Drift",
   "cat": "Templates",
-  "tag": ["HighImpact"],
+  "tag": [
+    "HighImpact",
+    "CMMC (CM.L2-3.4.3)",
+    "CMMC (CA.L2-3.12.3)",
+    "FedRAMP B-D (KSI-SVC-ACM)",
+    "NIST SP 800-171 (3.4.3)",
+    "NIST SP 800-171 (3.12.3)"
+  ],
   "impact": "Low Impact",
   "helpText": "Flags every Conditional Access policy in the tenant that is not covered by a CA template from a baseline applying to it, nor deployed by another standard in those baselines such as the compliant network policy (matched by display name across ALL baselines). Each unmanaged policy is its own deviation: accept it to tolerate a tenant-specific policy, or deny it to queue it for deletion. Report-only - nothing is ever changed automatically.",
   "executiveText": "Watches for sign-in security policies created outside the agreed baseline - for example by a local admin - and raises each one for review, so unauthorized changes to account protection never go unnoticed.",

@@ -2,7 +2,10 @@
   "name": "AppManagementPolicy",
   "label": "App Management Policy - Credential Restrictions",
   "cat": "Entra (AAD) Standards",
-  "tag": [],
+  "tag": [
+    "FedRAMP B-D (KSI-IAM-SNU)",
+    "FedRAMP B-D (KSI-SVC-ASM)"
+  ],
   "impact": "Medium Impact",
   "helpText": "Restricts how credentials can be added to applications and service principals: block password secrets, block custom passwords, and cap credential lifetimes.",
   "executiveText": "Enforces modern credential hygiene on application registrations - blocking long-lived or user-chosen application passwords limits the blast radius of leaked app secrets, a common attack path.",

@@ -164,12 +164,29 @@ Describe 'Build-CippBaselineWhatIfReportTree' {
 
     It 'tells the rollout in waves with a baseline prefix, an expected date and the approval clause' {
         $Items = (Get-After (Build-Sample) 'How The Rollout Works' 'richbullets').items
-        @($Items.label) | Should -Be @("Core Security Baseline $Dash Wave 1 of 3 ('Foundations'):", "Core Security Baseline $Dash Wave 2 ('Hardening'):", "Device Baseline $Dash Wave 2 of 2 ('Rollout'):")
+        @($Items.label) | Should -Be @("Core Security Baseline $Dash Wave 1 of 3 ('Foundations'):", "Core Security Baseline $Dash Wave 2 ('Hardening'):", "Core Security Baseline $Dash Wave 3 ('Lockdown'):", "Device Baseline $Dash Wave 2 of 2 ('Rollout'):")
         @($Items.text) | Should -Be @(
             'live now, covering 18 protections.'
             'adds 5 more protections - Intune Template, Intune Template, Enable Security Defaults and more. Expected around October 7, 2026, after we approve the move together.'
+            'adds 1 more protection - Define Global Meeting Policy for Teams. Follows once wave 2 has settled in.'
             'live now, covering 2 protections.'
         )
+    }
+
+    It 'lists every wave after the next one, with the approval clause where the stage asks for it' {
+        $Stages = @(
+            @{ name = 'One'; standards = @('AuditLog') }
+            @{ name = 'Two'; conditions = @(@{ type = 'time'; days = 7 }); standards = @('DisableAppCreation') }
+            @{ name = 'Three'; conditionGroups = @(@{ logic = 'and'; conditions = @(@{ type = 'manual' }) }); standards = @('EnableMailTips', 'SecurityDefaults') }
+            @{ standards = @() }
+        )
+        $Data = $script:Sparse.Clone()
+        $Data.stageStates = @(@{ templateId = 'tpl-min'; templateName = 'Minimum Baseline'; currentStage = 1; totalStages = 4; stageName = 'One'; nextStage = $Stages[1]; nextStageName = 'Two' })
+        $Data.assignedTemplates = @(@{ GUID = 'tpl-min'; templateName = 'Minimum Baseline'; stages = $Stages })
+        $Items = (Get-After (Build-CippBaselineWhatIfReportTree -Data $Data) 'How The Rollout Works' 'richbullets').items
+        @($Items.label) | Should -Be @("Wave 1 of 4 ('One'):", "Wave 2 ('Two'):", "Wave 3 ('Three'):", 'Wave 4:')
+        $Items[2].text | Should -Be 'adds 2 more protections - Enable all MailTips, Enable Security Defaults. Follows once wave 2 has settled in, after we approve the move together.'
+        $Items[3].text | Should -Be 'adds further protections. Follows once wave 3 has settled in, after we approve the move together.'
     }
 
     It 'dates the waves in the instance timezone' {

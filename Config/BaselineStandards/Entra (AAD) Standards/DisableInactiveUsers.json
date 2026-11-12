@@ -4,6 +4,7 @@
   "cat": "Entra (AAD) Standards",
   "tag": [
     "CMMC (IA.L2-3.5.6)",
+    "FedRAMP A-D (KSI-IAM-AAM)",
     "NIST SP 800-171 (3.5.6)"
   ],
   "impact": "High Impact",

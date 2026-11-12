@@ -6,7 +6,13 @@
     "CIS M365 7.0.0 (1.2.2)",
     "CISA (MS.AAD.10.1v1)",
     "NIST CSF 2.0 (PR.AA-01)",
-    "SMB1001 (2.3)"
+    "SMB1001 (2.3)",
+    "CMMC (AC.L1-b.1.i)",
+    "CMMC (AC.L2-3.1.1)",
+    "CMMC (AU.L2-3.3.2)",
+    "FedRAMP A-D (KSI-IAM-AAM)",
+    "NIST SP 800-171 (3.1.1)",
+    "NIST SP 800-171 (3.3.2)"
   ],
   "impact": "Medium Impact",
   "helpText": "Blocks login for all accounts that are marked as a shared mailbox. This is Microsoft best practice to prevent direct logons to shared mailboxes. Directory-synced accounts are excluded.",

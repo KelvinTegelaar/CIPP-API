@@ -3,7 +3,9 @@
   "label": "Control BitLocker key recovery for owned devices",
   "cat": "Entra (AAD) Standards",
   "tag": [
-    "CIS M365 7.0.0 (5.1.4.6)"
+    "CIS M365 7.0.0 (5.1.4.6)",
+    "CMMC (SC.L2-3.13.10)",
+    "NIST SP 800-171 (3.13.10)"
   ],
   "impact": "Low Impact",
   "helpText": "Controls whether standard users can recover BitLocker keys for devices they own.",

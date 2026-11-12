@@ -2,7 +2,10 @@
   "name": "DeployCheckChromeExtension",
   "label": "Deploy Check by CyberDrain Browser Extension",
   "cat": "Intune Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (SI.L2-3.14.6)",
+    "NIST SP 800-171 (3.14.6)"
+  ],
   "impact": "Low Impact",
   "helpText": "Deploys the Check by CyberDrain browser extension via a Win32 script app in Intune for both Chrome and Edge with configurable settings.",
   "executiveText": "Automatically protects staff browsers against phishing with the Check extension, consistently configured and force-installed fleet-wide.",

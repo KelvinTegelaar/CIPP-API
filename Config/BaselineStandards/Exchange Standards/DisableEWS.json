@@ -2,7 +2,10 @@
   "name": "DisableEWS",
   "label": "Disable Exchange Web Services",
   "cat": "Exchange Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (CM.L2-3.4.7)",
+    "NIST SP 800-171 (3.4.7)"
+  ],
   "impact": "High Impact",
   "helpText": "Disables Exchange Web Services (EWS) organization-wide. This reduces the attack surface by blocking legacy API access to mailbox data. Warning: This may break Office web add-ins on builds older than 16.0.19127. Conflicts with the \"Configure EWS allowed applications\" standard, which sets EwsEnabled to true: do not apply both to a tenant.",
   "executiveText": "Disables Exchange Web Services (EWS) across the organization to reduce attack surface and prevent legacy API access to sensitive mailbox data. This aligns with Microsoft's Baseline Security Mode recommendation to minimize exploitable endpoints while requiring updates to applications that depend on EWS.",

@@ -7,7 +7,10 @@
     "EIDSCA.AG01",
     "EIDSCA.AG02",
     "EIDSCA.AG03",
-    "SMB1001 (2.8)"
+    "SMB1001 (2.8)",
+    "CMMC (IA.L2-3.5.3)",
+    "FedRAMP B-D (KSI-IAM-SUS)",
+    "NIST SP 800-171 (3.5.3)"
   ],
   "impact": "Low Impact",
   "helpText": "Configures the report suspicious activity settings and system credential preferences in the authentication methods policy.",

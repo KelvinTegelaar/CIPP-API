@@ -2,7 +2,10 @@
   "name": "SPDisableLegacyWorkflows",
   "label": "Disable Legacy Workflows",
   "cat": "SharePoint Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (CM.L2-3.4.7)",
+    "NIST SP 800-171 (3.4.7)"
+  ],
   "impact": "Low Impact",
   "helpText": "Disables the creation of new SharePoint 2010 and 2013 classic workflows and removes the 'Return to classic SharePoint' link on modern SharePoint list and library pages.",
   "executiveText": "Disables outdated SharePoint workflow features and classic interface options, encouraging use of modern, more secure and efficient collaboration tools. This helps maintain security standards while guiding users toward current, supported functionality.",

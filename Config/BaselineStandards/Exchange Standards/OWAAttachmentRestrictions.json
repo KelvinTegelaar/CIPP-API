@@ -4,7 +4,11 @@
   "cat": "Exchange Standards",
   "tag": [
     "Security",
-    "NIST CSF 2.0 (PR.AA-05)"
+    "NIST CSF 2.0 (PR.AA-05)",
+    "CMMC (AC.L1-b.1.iii)",
+    "CMMC (AC.L2-3.1.20)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.20)"
   ],
   "impact": "Medium Impact",
   "helpText": "Restricts how users on unmanaged devices can interact with email attachments in Outlook on the web and new Outlook for Windows. Prevents downloading attachments or blocks viewing them entirely.",

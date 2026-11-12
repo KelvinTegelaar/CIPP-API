@@ -4,7 +4,9 @@
   "cat": "Entra (AAD) Standards",
   "tag": [
     "CIS M365 7.0.0 (5.2.3.10)",
-    "EIDSCA.AM01"
+    "EIDSCA.AM01",
+    "CMMC (IA.L2-3.5.3)",
+    "NIST SP 800-171 (3.5.3)"
   ],
   "impact": "Low Impact",
   "helpText": "Sets the state of Authenticator Lite, Authenticator lite is a companion app for passwordless authentication.",

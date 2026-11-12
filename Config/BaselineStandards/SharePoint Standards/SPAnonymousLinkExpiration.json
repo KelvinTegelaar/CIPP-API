@@ -4,7 +4,13 @@
   "cat": "SharePoint Standards",
   "tag": [
     "CISA (MS.SPO.3.1v1)",
-    "CISA (MS.SPO.3.2v1)"
+    "CISA (MS.SPO.3.2v1)",
+    "CMMC (AC.L1-b.1.iv)",
+    "CMMC (AC.L2-3.1.3)",
+    "CMMC (AC.L2-3.1.22)",
+    "FedRAMP A-D (KSI-SVC-SIN)",
+    "NIST SP 800-171 (3.1.3)",
+    "NIST SP 800-171 (3.1.22)"
   ],
   "impact": "Medium Impact",
   "helpText": "Requires every Anyone sharing link in SharePoint and OneDrive to expire after the configured number of days. Optionally restricts the permission Anyone links can grant on files and folders (View only, or View and edit). By default Anyone links never expire.",

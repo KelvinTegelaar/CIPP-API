@@ -7,7 +7,12 @@
     "EIDSCA.PR02",
     "EIDSCA.PR03",
     "EIDSCA.PR05",
-    "EIDSCA.PR06"
+    "EIDSCA.PR06",
+    "CMMC (AC.L2-3.1.8)",
+    "CMMC (IA.L2-3.5.7)",
+    "FedRAMP B-D (KSI-IAM-SUS)",
+    "NIST SP 800-171 (3.1.8)",
+    "NIST SP 800-171 (3.5.7)"
   ],
   "impact": "Medium Impact",
   "helpText": "Sets the smart lockout threshold and duration, optionally on-premises password protection mode, and optionally enforces that the Microsoft global banned password check stays on.",

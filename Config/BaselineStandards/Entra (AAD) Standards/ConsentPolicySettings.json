@@ -4,7 +4,13 @@
   "cat": "Entra (AAD) Standards",
   "tag": [
     "EIDSCA.CP03",
-    "EIDSCA.CP04"
+    "EIDSCA.CP04",
+    "CMMC (AC.L1-b.1.ii)",
+    "CMMC (AC.L2-3.1.2)",
+    "CMMC (CM.L2-3.4.9)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.2)",
+    "NIST SP 800-171 (3.4.9)"
   ],
   "impact": "Low Impact",
   "helpText": "Sets the two values on the Consent Policy Settings directory setting: block user consent when Microsoft detects a risky request, and let users request admin consent for apps they cannot consent to themselves. The EIDSCA recommendation is on for both.",

@@ -7,7 +7,9 @@
     "mdo_recipientexternallimitperhour",
     "mdo_recipientinternallimitperhour",
     "mdo_recipientlimitperday",
-    "mdo_thresholdreachedaction"
+    "mdo_thresholdreachedaction",
+    "CMMC (SI.L2-3.14.6)",
+    "NIST SP 800-171 (3.14.6)"
   ],
   "impact": "Low Impact",
   "helpText": "Configures the outbound spam recipient limits (external per hour, internal per hour, per day) and the action to take when a limit is reached. The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one. ",

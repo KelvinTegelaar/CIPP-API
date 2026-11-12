@@ -2,7 +2,10 @@
   "name": "SafeLinksTemplatePolicy",
   "label": "SafeLinks Policy Template",
   "cat": "Templates",
-  "tag": [],
+  "tag": [
+    "CMMC (SI.L2-3.14.6)",
+    "NIST SP 800-171 (3.14.6)"
+  ],
   "impact": "Medium Impact",
   "helpText": "Deploy SafeLinks policies and rules from CIPP templates. Existing policies and rules are rewritten from the template on every remediation run.",
   "executiveText": "Deploys standardized SafeLinks policies that protect users from malicious links in email, Teams and Office documents. Template-driven deployment keeps link protection settings uniform across tenants.",

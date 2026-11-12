@@ -6,7 +6,13 @@
     "CISA (MS.AAD.18.1v1)",
     "EIDSCA.AP04",
     "EIDSCA.AP07",
-    "SMB1001 (2.8)"
+    "SMB1001 (2.8)",
+    "CMMC (AC.L1-b.1.ii)",
+    "CMMC (AC.L2-3.1.2)",
+    "CMMC (AC.L2-3.1.5)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.2)",
+    "NIST SP 800-171 (3.1.5)"
   ],
   "impact": "Medium Impact",
   "helpText": "This setting controls who can invite guests to your directory to collaborate on resources secured by your company, such as SharePoint sites or Azure resources.",

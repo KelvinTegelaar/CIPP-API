@@ -6,7 +6,9 @@
     "CIS M365 7.0.0 (2.1.1)",
     "mdo_safelinksforemail",
     "mdo_safelinksforOfficeApps",
-    "NIST CSF 2.0 (DE.CM-09)"
+    "NIST CSF 2.0 (DE.CM-09)",
+    "CMMC (SI.L2-3.14.6)",
+    "NIST SP 800-171 (3.14.6)"
   ],
   "impact": "Low Impact",
   "helpText": "This creates a SafeLinks policy. An existing policy carrying a legacy CIPP or Microsoft default name is adopted and updated rather than duplicated.",

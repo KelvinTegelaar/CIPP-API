@@ -3,7 +3,9 @@
   "label": "Defender EDR Configuration",
   "cat": "Defender Standards",
   "tag": [
-    "scid_20000"
+    "scid_20000",
+    "CMMC (SI.L2-3.14.6)",
+    "NIST SP 800-171 (3.14.6)"
   ],
   "impact": "High Impact",
   "helpText": "Deploys and enforces a Microsoft Defender for Endpoint EDR configuration policy via Intune. Controls auto-configuration from the MDE connector and sample sharing.",

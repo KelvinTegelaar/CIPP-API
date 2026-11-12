@@ -9,7 +9,12 @@
     "exo_mailboxaudit",
     "Essential 8 (1509)",
     "Essential 8 (1683)",
-    "NIST CSF 2.0 (DE.CM-09)"
+    "NIST CSF 2.0 (DE.CM-09)",
+    "CMMC (AU.L2-3.3.1)",
+    "CMMC (AU.L2-3.3.2)",
+    "FedRAMP B-D (KSI-MLA-LET)",
+    "NIST SP 800-171 (3.3.1)",
+    "NIST SP 800-171 (3.3.2)"
   ],
   "impact": "Low Impact",
   "helpText": "Enables Mailbox auditing for all mailboxes and on tenant level. Disables audit bypass on all mailboxes. Unified Audit Log needs to be enabled for this standard to function.",

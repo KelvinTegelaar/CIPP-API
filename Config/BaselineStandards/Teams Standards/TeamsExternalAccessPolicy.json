@@ -5,7 +5,10 @@
   "tag": [
     "CIS M365 7.0.0 (8.2.1)",
     "CIS M365 7.0.0 (8.2.2)",
-    "CIS M365 7.0.0 (8.2.3)"
+    "CIS M365 7.0.0 (8.2.3)",
+    "CMMC (AC.L1-b.1.iii)",
+    "CMMC (AC.L2-3.1.20)",
+    "NIST SP 800-171 (3.1.20)"
   ],
   "impact": "Medium Impact",
   "helpText": "Sets the properties of the Global external access policy.",

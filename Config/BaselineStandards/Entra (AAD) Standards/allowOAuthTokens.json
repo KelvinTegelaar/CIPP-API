@@ -4,7 +4,9 @@
   "cat": "Entra (AAD) Standards",
   "tag": [
     "EIDSCA.AT01",
-    "EIDSCA.AT02"
+    "EIDSCA.AT02",
+    "CMMC (IA.L2-3.5.3)",
+    "NIST SP 800-171 (3.5.3)"
   ],
   "impact": "Low Impact",
   "helpText": "Allows you to use any software OAuth token generator",

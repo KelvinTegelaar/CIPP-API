@@ -2,7 +2,10 @@
   "name": "SPDisableStoreAccess",
   "label": "Disable SharePoint Store access",
   "cat": "SharePoint Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (CM.L2-3.4.9)",
+    "NIST SP 800-171 (3.4.9)"
+  ],
   "impact": "Low Impact",
   "helpText": "Disables end users from installing applications from the Microsoft Store into SharePoint sites.",
   "executiveText": "Prevents end users from installing applications from the Microsoft Store into SharePoint sites, ensuring that only approved applications are available. This reduces governance overhead and aligns with Microsoft's Baseline Security Mode recommendations.",

@@ -4,7 +4,13 @@
   "cat": "Entra (AAD) Standards",
   "tag": [
     "CIS M365 7.0.0 (5.1.4.1)",
-    "SMB1001 (2.8)"
+    "SMB1001 (2.8)",
+    "CMMC (AC.L1-b.1.ii)",
+    "CMMC (AC.L2-3.1.2)",
+    "CMMC (AC.L2-3.1.5)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.2)",
+    "NIST SP 800-171 (3.1.5)"
   ],
   "impact": "High Impact",
   "helpText": "Controls whether users can join devices to Entra: no users, all users, or only members of selected groups. Tenants where Entra reports this setting as not admin-configurable are reported but not written to.",

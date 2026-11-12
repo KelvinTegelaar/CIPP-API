@@ -2,7 +2,14 @@
   "name": "OauthConsent",
   "label": "Require admin consent for applications (Prevent OAuth phishing)",
   "cat": "Entra (AAD) Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (AC.L1-b.1.ii)",
+    "CMMC (AC.L2-3.1.2)",
+    "CMMC (CM.L2-3.4.9)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.2)",
+    "NIST SP 800-171 (3.4.9)"
+  ],
   "impact": "Medium Impact",
   "helpText": "Routes user application consent through the CIPP consent policy so only allow-listed applications can be consented to without admin review.",
   "executiveText": "Blocks the most common OAuth phishing path by requiring admin review before applications gain access to company data, while allow-listed business apps keep working frictionlessly.",

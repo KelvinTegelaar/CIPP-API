@@ -4,7 +4,10 @@
   "cat": "Entra (AAD) Standards",
   "tag": [
     "CIS M365 7.0.0 (1.2.1)",
-    "aad_managed_approved_public_groups_only"
+    "aad_managed_approved_public_groups_only",
+    "CMMC (AC.L2-3.1.5)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.5)"
   ],
   "impact": "Medium Impact",
   "helpText": "Sets all public Microsoft 365 groups to private automatically. Groups can be excluded by display name keyword.",

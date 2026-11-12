@@ -4,7 +4,13 @@
   "cat": "Exchange Standards",
   "tag": [
     "Security",
-    "NIST CSF 2.0 (PR.AA-05)"
+    "NIST CSF 2.0 (PR.AA-05)",
+    "CMMC (AC.L1-b.1.ii)",
+    "CMMC (AC.L2-3.1.2)",
+    "CMMC (AC.L2-3.1.5)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.2)",
+    "NIST SP 800-171 (3.1.5)"
   ],
   "impact": "Medium Impact",
   "helpText": "Disables Exchange Online PowerShell access for non-admin users by setting the RemotePowerShellEnabled property to false for each user. Users holding a directory role, directly or through a group, are automatically excluded.",

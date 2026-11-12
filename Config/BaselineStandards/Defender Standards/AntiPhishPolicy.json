@@ -16,7 +16,9 @@
     "mdo_targeteddomainprotectionaction",
     "mdo_similaruserssafetytips",
     "mdo_similardomainssafetytips",
-    "mdo_unusualcharacterssafetytips"
+    "mdo_unusualcharacterssafetytips",
+    "CMMC (SI.L2-3.14.6)",
+    "NIST SP 800-171 (3.14.6)"
   ],
   "impact": "Low Impact",
   "helpText": "This creates an Anti-Phishing policy. On tenants without Defender for Office 365 only the settings that exist there are graded; impersonation and mailbox-intelligence protection are skipped.",

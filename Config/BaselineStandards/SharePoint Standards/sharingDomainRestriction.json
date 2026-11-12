@@ -3,7 +3,10 @@
   "label": "Restrict sharing to a specific domain list",
   "cat": "SharePoint Standards",
   "tag": [
-    "spo_external_sharing_managed"
+    "spo_external_sharing_managed",
+    "CMMC (AC.L2-3.1.3)",
+    "FedRAMP A-D (KSI-SVC-SIN)",
+    "NIST SP 800-171 (3.1.3)"
   ],
   "impact": "High Impact",
   "helpText": "Restricts SharePoint external sharing to an allow-list or block-list of domains, or removes the restriction.",

@@ -3,7 +3,11 @@
   "label": "Global app permission policy for Microsoft Teams",
   "cat": "Teams Standards",
   "tag": [
-    "CIS M365 7.0.0 (8.4.1)"
+    "CIS M365 7.0.0 (8.4.1)",
+    "CMMC (CM.L2-3.4.8)",
+    "CMMC (CM.L2-3.4.9)",
+    "NIST SP 800-171 (3.4.8)",
+    "NIST SP 800-171 (3.4.9)"
   ],
   "impact": "Medium Impact",
   "helpText": "Sets which class of apps users may install through the Global (Org-wide default) app permission policy: Microsoft apps, third-party apps and custom apps are each either allowed except a block list, or blocked except an allow list. Only the mode is written; the policy's existing allow and block lists are kept. CIS recommends blocking third-party and custom apps by default and approving the apps the organization needs.",

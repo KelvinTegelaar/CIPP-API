@@ -3,7 +3,10 @@
   "label": "Disable Guest accounts that have not logged on for a number of days",
   "cat": "Entra (AAD) Standards",
   "tag": [
-    "SMB1001 (2.8)"
+    "SMB1001 (2.8)",
+    "CMMC (IA.L2-3.5.6)",
+    "FedRAMP A-D (KSI-IAM-AAM)",
+    "NIST SP 800-171 (3.5.6)"
   ],
   "impact": "High Impact",
   "helpText": "Blocks login for guest users whose most recent sign-in attempt, interactive or non-interactive, is older than the number of days. Optionally soft-deletes already-disabled guests after a configurable grace period past that threshold (0 = never delete). Guests that have never signed in are only included when 'Disable accounts that have not yet signed in' is enabled. Accounts an administrator re-enabled in the last 7 days are left alone. Deleted guests remain recoverable from Deleted Items for about 30 days.",

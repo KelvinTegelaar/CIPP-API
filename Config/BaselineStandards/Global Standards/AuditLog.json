@@ -5,7 +5,12 @@
   "tag": [
     "CIS M365 7.0.0 (3.1.1)",
     "mip_search_auditlog",
-    "NIST CSF 2.0 (DE.CM-09)"
+    "NIST CSF 2.0 (DE.CM-09)",
+    "CMMC (AU.L2-3.3.1)",
+    "CMMC (AU.L2-3.3.2)",
+    "FedRAMP B-D (KSI-MLA-LET)",
+    "NIST SP 800-171 (3.3.1)",
+    "NIST SP 800-171 (3.3.2)"
   ],
   "impact": "Low Impact",
   "helpText": "Enables the Unified Audit Log for tracking and auditing activities. Also runs Enable-OrganizationCustomization if necessary.",
