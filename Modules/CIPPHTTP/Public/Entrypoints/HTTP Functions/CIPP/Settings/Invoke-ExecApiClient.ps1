@@ -352,6 +352,10 @@ function Invoke-ExecApiClient {
                         copyField  = $ApiConfig.ApplicationSecret
                         state      = 'success'
                     }
+                    if ($ApiConfig.Results.resultText) {
+                        $Results.resultText = "$($Results.resultText) $($ApiConfig.Results.resultText)"
+                        $Results.state = 'warning'
+                    }
                 } else {
                     $StatusCode = [HttpStatusCode]::InternalServerError
                     $Results = @{

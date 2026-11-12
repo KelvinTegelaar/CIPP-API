@@ -256,49 +256,53 @@ function New-CIPPAPIConfig {
                     $NewPasswordCredential.endDateTime = $ExpirationDate
                 }
 
-                Write-Information 'Removing all old passwords'
+                # The new secret is added before the old ones are removed, so a failed add leaves the
+                # app with the secrets it already had.
+                $OldKeyIds = @($APIApp.passwordCredentials.keyId | Where-Object { $_ })
+                $PasswordBody = ConvertTo-Json -Compress -InputObject @{ passwordCredential = $NewPasswordCredential }
                 for ($Attempt = 1; $Attempt -le 6; $Attempt++) {
-                    $Requests = @(
-                        @{
-                            id      = 'removeOldPasswords'
-                            method  = 'PATCH'
-                            url     = "applications/$($APIApp.id)/"
-                            headers = @{
-                                'Content-Type' = 'application/json'
-                            }
-                            body    = @{
-                                passwordCredentials = @()
-                            }
-                        },
-                        @{
-                            id        = 'addNewPassword'
-                            method    = 'POST'
-                            url       = "applications/$($APIApp.id)/addPassword"
-                            headers   = @{
-                                'Content-Type' = 'application/json'
-                            }
-                            body      = @{
-                                passwordCredential = $NewPasswordCredential
-                            }
-                            dependsOn = @('removeOldPasswords')
-                        }
-                    )
-                    $BatchResponse = New-GraphBulkRequest -tenantid $env:TenantID -NoAuthCheck $true -asapp $true -Requests $Requests
-                    $AddPasswordResponse = $BatchResponse | Where-Object { $_.id -eq 'addNewPassword' }
-                    if ($AddPasswordResponse.status -ge 400) {
-                        $ErrorBody = $AddPasswordResponse.body
-                        $ErrorMsg = $ErrorBody.error.message ?? ($ErrorBody | ConvertTo-Json -Compress -Depth 5)
-                        $IsCredentialPolicyBlocked = $ErrorMsg -match 'Credential type not allowed as per assigned policy'
-                        if ($IsCredentialPolicyBlocked -and $Attempt -lt 6) {
+                    try {
+                        $APIPassword = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($APIApp.id)/addPassword" -AsApp $true -NoAuthCheck $true -type POST -body $PasswordBody -maxRetries 3
+                        break
+                    } catch {
+                        $ErrorMsg = $_.Exception.Message
+                        $IsRetryable = $ErrorMsg -match 'Credential type not allowed as per assigned policy|concurrent requests'
+                        if ($IsRetryable -and $Attempt -lt 6) {
                             $DelaySeconds = [Math]::Min(10, 1 * $Attempt)
-                            Write-Information "Credential policy still blocks addPassword (attempt $Attempt of 6). Waiting for policy propagation and retrying in $DelaySeconds second(s)."
+                            Write-Information "addPassword not accepted yet (attempt $Attempt of 6): $ErrorMsg. Retrying in $DelaySeconds second(s)."
                             Start-Sleep -Seconds $DelaySeconds
                             continue
                         }
                         throw "Failed to add new password during secret reset: $ErrorMsg"
                     }
-                    $APIPassword = $AddPasswordResponse.body
-                    break
+                }
+
+                Write-Information "Removing $($OldKeyIds.Count) old password(s)"
+                $NotRemoved = [System.Collections.Generic.List[string]]::new()
+                foreach ($KeyId in $OldKeyIds) {
+                    $RemoveBody = ConvertTo-Json -Compress -InputObject @{ keyId = $KeyId }
+                    for ($Attempt = 1; $Attempt -le 4; $Attempt++) {
+                        try {
+                            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($APIApp.id)/removePassword" -AsApp $true -NoAuthCheck $true -type POST -body $RemoveBody -maxRetries 3
+                            break
+                        } catch {
+                            if ($_.Exception.Message -match 'concurrent requests' -and $Attempt -lt 4) {
+                                Start-Sleep -Seconds $Attempt
+                                continue
+                            }
+                            Write-Information "Could not remove old password $KeyId : $($_.Exception.Message)"
+                            $NotRemoved.Add($KeyId)
+                            break
+                        }
+                    }
+                }
+                if ($NotRemoved.Count -gt 0) {
+                    # A reset is often done because a secret leaked, so a surviving old secret must be reported.
+                    $Results = @{
+                        resultText = "The new secret was created, but $($NotRemoved.Count) old secret(s) could not be removed and are still valid. Remove them from the app registration, or reset the secret again."
+                        state      = 'warning'
+                    }
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant 'None' -message "Reset CIPP-API Password for '$($APIApp.displayName)', but $($NotRemoved.Count) old secret(s) could not be removed." -Sev 'Warning'
                 }
                 Write-LogMessage -headers $Headers -API $APINAME -tenant 'None '-message "Reset CIPP-API Password for '$($APIApp.displayName)'." -Sev 'info'
             }
