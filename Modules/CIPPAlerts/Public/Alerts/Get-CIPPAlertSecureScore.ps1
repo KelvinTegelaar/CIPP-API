@@ -1,5 +1,5 @@
 
-function Get-CippAlertSecureScore {
+function Get-CIPPAlertSecureScore {
     <#
     .FUNCTIONALITY
         Entrypoint

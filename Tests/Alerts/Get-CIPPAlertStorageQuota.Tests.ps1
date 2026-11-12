@@ -13,7 +13,7 @@ BeforeAll {
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-AlertContentHash.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPAlerts/Public/Alerts/Get-CIPPAlertSharepointQuota.ps1')
-    . (Join-Path $RepoRoot 'Modules/CIPPAlerts/Public/Alerts/Get-CIPPAlertOnedriveQuota.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPAlerts/Public/Alerts/Get-CIPPAlertOneDriveQuota.ps1')
 }
 
 Describe 'Storage quota alert content hash' {
