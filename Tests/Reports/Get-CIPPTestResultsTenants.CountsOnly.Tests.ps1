@@ -139,3 +139,29 @@ Describe 'Get-CIPPTestResultsTenants filter values' {
         ([regex]::Matches($script:Filters[0], "x'' or PartitionKey ne ''")).Count | Should -Be 5
     }
 }
+
+Describe 'Get-CIPPTestResultsTenants custom rows' {
+    It 'enriches Custom rows from the latest script version, reading the scripts table once' {
+        Mock -CommandName Get-CippTable -MockWith { param($tablename) @{ Table = $tablename } }
+        Mock -CommandName Get-Tenants -MockWith { $script:Tenants }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            param($Table, $Filter, $Property)
+            if ($Table -eq 'CustomPowershellScripts') {
+                return @(
+                    [pscustomobject]@{ ScriptGuid = 'g1'; Version = '1'; ScriptName = 'Old'; Description = 'old' }
+                    [pscustomobject]@{ ScriptGuid = 'g1'; Version = '2'; ScriptName = 'New'; Description = 'new'; Enabled = $false }
+                )
+            }
+            $Match = [regex]::Match([string]$Filter, "PartitionKey eq '([^']+)'")
+            @([pscustomobject]@{ PartitionKey = $Match.Groups[1].Value; RowKey = 'CustomScript-g1'; Status = 'Failed'; TestType = 'Custom'; Name = '' })
+        }
+
+        $Rows = @(Get-CIPPTestResultsTenants)
+
+        $Rows.Count | Should -Be 2
+        $Rows.Description | Should -Be @('new', 'new')
+        $Rows.Name | Should -Be @('New', 'New')
+        $Rows.Enabled | Should -Be @($false, $false)
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Table -eq 'CustomPowershellScripts' }
+    }
+}
