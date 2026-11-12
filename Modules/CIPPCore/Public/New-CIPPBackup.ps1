@@ -38,6 +38,7 @@ function New-CIPPBackup {
                         'AccessRoleGroups'
                         'AccessIPRanges'
                         'allowedAppRoles'
+                        'allowedUsers'
                         'ApiClients'
                         'CippReplacemap'
                         'CustomPowershellScripts'
@@ -74,6 +75,10 @@ function New-CIPPBackup {
                         }
                         if ($CSVTable -eq 'Config') {
                             $Entities = $Entities | Where-Object { $_.PartitionKey -ne 'OffloadFunctions' }
+                        }
+                        if ($CSVTable -eq 'allowedUsers') {
+                            # Rows prefixed with '_' are user sync bookkeeping, rebuilt on the next sync.
+                            $Entities = $Entities | Where-Object { -not "$($_.RowKey)".StartsWith('_') }
                         }
                         $Entities | Select-Object * -ExcludeProperty DomainAnalyser, table, Timestamp, ETag, Results | Select-Object *, @{l = 'table'; e = { $CSVTable } }
                     }
