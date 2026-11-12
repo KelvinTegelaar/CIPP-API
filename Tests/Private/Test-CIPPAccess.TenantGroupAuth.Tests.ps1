@@ -49,6 +49,13 @@ BeforeAll {
         }
     }
 
+    function New-SelectorRequest {
+        param($Selector)
+        $Request = New-GroupRequest -RequestedGroupId 'unused'
+        $Request.Body = @{ tenantFilter = $Selector }
+        $Request
+    }
+
     # The restricted role grants exactly one group ('group-allowed') and nothing else.
     function Set-RestrictedRoleMocks {
         Mock -CommandName Get-CippApiClient -MockWith {
@@ -85,5 +92,23 @@ Describe 'Test-CIPPAccess tenant-group authorization' {
         Mock -CommandName Expand-CIPPTenantGroups -MockWith { [pscustomobject]@{ addedFields = [pscustomobject]@{ customerId = 'tenant-outside-role' } } }
         $result = Test-CIPPAccess -Request (New-GroupRequest -RequestedGroupId 'group-allowed')
         $result | Should -BeTrue
+    }
+
+    It 'denies a <Type> selector whose value is <Case>' -ForEach @(
+        @{ Type = 'Group'; Case = 'empty'; Value = '' }
+        @{ Type = 'Group'; Case = 'whitespace'; Value = '  ' }
+        @{ Type = 'Group'; Case = 'an empty list'; Value = @() }
+        @{ Type = 'Tenant'; Case = 'empty'; Value = '' }
+    ) {
+        $Selector = [pscustomobject]@{ type = $Type; value = $Value; label = 'Empty' }
+        { Test-CIPPAccess -Request (New-SelectorRequest -Selector $Selector) } | Should -Throw
+    }
+
+    It 'denies an empty selector named alongside a granted group' {
+        $Selectors = @(
+            [pscustomobject]@{ type = 'Group'; value = 'group-allowed'; label = 'Allowed Group' }
+            [pscustomobject]@{ type = 'Group'; value = ''; label = 'Empty' }
+        )
+        { Test-CIPPAccess -Request (New-SelectorRequest -Selector $Selectors) } | Should -Throw
     }
 }

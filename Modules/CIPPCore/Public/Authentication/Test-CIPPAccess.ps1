@@ -387,8 +387,8 @@ function Test-CIPPAccess {
                 foreach ($Named in $Sources) {
                     foreach ($Item in @($Named)) {
                         if ($null -eq $Item) { continue }
-                        # A selector without .value stays a target (unresolvable, so denied) rather than vanishing.
-                        $Id = if ($Item -is [string]) { $Item } elseif ($null -ne $Item.value) { "$($Item.value)" } else { "$Item" }
+                        # A selector with no or an empty .value stays a target (unresolvable, so denied) rather than vanishing.
+                        $Id = if ($Item -is [string]) { $Item } elseif (-not [string]::IsNullOrWhiteSpace("$($Item.value)")) { "$($Item.value)" } else { "$Item" }
                         if ([string]::IsNullOrWhiteSpace($Id)) { continue }
                         $IsGroup = $Item -isnot [string] -and $Item.type -eq 'Group'
                         if ($Targets.Where({ $_.Id -eq $Id -and $_.IsGroup -eq $IsGroup }).Count -eq 0) {
