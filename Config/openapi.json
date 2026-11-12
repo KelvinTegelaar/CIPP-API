@@ -24695,6 +24695,9 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
@@ -28491,14 +28494,15 @@
                     "$ref": "#/components/schemas/LabelValue"
                   },
                   "userAction": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "A TAP signs in as the existing user with every role they already hold."
                   },
                   "Username": {
                     "type": "string"
                   },
                   "UseTAP": {
                     "type": "string",
-                    "description": "Region TAP creation"
+                    "description": "A TAP signs in as the existing user with every role they already hold."
                   }
                 },
                 "required": [
@@ -39507,8 +39511,8 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           },
           {
