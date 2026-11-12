@@ -79,7 +79,7 @@ foreach ($cmd in @('Get-CippKeyVaultSecret')) {
 Assert-True 'Blocklist contains Get-Tenants' ('Get-Tenants' -in $blocked)
 
 # Dispatchers, SAM credentials and unscoped Graph or URL helpers
-foreach ($cmd in @('Push-TableCleanupTask', 'Push-CIPPOffboardingTask', 'Push-ExecScheduledCommand', 'Start-CIPPOrchestrator', 'Get-CIPPSAMCredentials', 'New-GraphMultiTenantBulkRequest', 'New-GraphDeltaQuery', 'New-CIPPMFAConnectorToken', 'Get-CIPPIntuneReportRows', 'Get-CIPPAuditLogContent', 'Set-CIPPNotificationConfig')) {
+foreach ($cmd in @('Push-TableCleanupTask', 'Push-CIPPOffboardingTask', 'Push-ExecScheduledCommand', 'Start-CIPPOrchestrator', 'Invoke-CippSandboxScript', 'New-CippCustomScriptExecution', 'Get-CIPPSAMCredentials', 'New-GraphMultiTenantBulkRequest', 'New-GraphDeltaQuery', 'New-CIPPMFAConnectorToken', 'Get-CIPPIntuneReportRows', 'Get-CIPPAuditLogContent', 'Set-CIPPNotificationConfig')) {
     Assert-True "Blocklist contains $cmd" ($cmd -in $blocked)
 }
 

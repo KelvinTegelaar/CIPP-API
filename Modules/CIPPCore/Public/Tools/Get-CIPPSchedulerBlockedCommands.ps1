@@ -142,6 +142,8 @@ function Get-CIPPSchedulerBlockedCommands {
         'Push-CIPPOffboardingTask'
         'Push-ExecScheduledCommand'
         'Start-CIPPOrchestrator'
+        'Invoke-CippSandboxScript'
+        'New-CippCustomScriptExecution'
 
         # SAM credentials & notification routing
         'Get-CIPPSAMCredentials'

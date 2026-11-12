@@ -7,8 +7,8 @@ function New-CippSandboxInitialSessionState {
         - LanguageMode = ConstrainedLanguage. This is what actually contains user scripts:
           it blocks New-Object on arbitrary types and all .NET method/reflection access,
           which the previous AST allowlist could not.
-        - Command allowlist: every command from CreateDefault() that is NOT in
-          Get-CippCustomScriptAllowedCommand is set Private (invisible to the user script).
+        - Command allowlist: only the cmdlets in Get-CippCustomScriptAllowedCommand (and their
+          aliases) exist in the session. No providers, external programs or module auto-loading.
         - Get-CIPPTestData is added as a CLM-safe proxy that serves only the host-injected,
           tenant-locked cache data ($CIPPSandboxData). It is Constant so a test cannot shadow
           it to feed bogus data to a later test in the same suite.
@@ -23,11 +23,16 @@ function New-CippSandboxInitialSessionState {
     $InitialSessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
     $InitialSessionState.LanguageMode = [System.Management.Automation.PSLanguageMode]::ConstrainedLanguage
 
-    foreach ($Entry in @($InitialSessionState.Commands)) {
-        if ($Entry.Name -notin $Allowed) {
-            $Entry.Visibility = [System.Management.Automation.SessionStateEntryVisibility]::Private
-        }
-    }
+    $Keep = @($InitialSessionState.Commands | Where-Object {
+            ($_ -is [System.Management.Automation.Runspaces.SessionStateCmdletEntry] -and $_.Name -in $Allowed) -or
+            ($_ -is [System.Management.Automation.Runspaces.SessionStateAliasEntry] -and $_.Definition -in $Allowed)
+        })
+    $InitialSessionState.Commands.Clear()
+    foreach ($Entry in $Keep) { $InitialSessionState.Commands.Add($Entry) }
+
+    # No providers: no file or Env: access, and native programs cannot start.
+    $InitialSessionState.Providers.Clear()
+    $InitialSessionState.Variables.Add([System.Management.Automation.Runspaces.SessionStateVariableEntry]::new('PSModuleAutoLoadingPreference', 'None', ''))
 
     # CLM-safe data proxy. No script-level .NET — indexes the injected hashtable only.
     $ProxyBody = @'
