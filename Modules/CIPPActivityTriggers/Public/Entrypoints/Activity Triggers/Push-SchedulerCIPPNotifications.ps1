@@ -23,16 +23,24 @@ function Push-SchedulerCIPPNotifications {
 
     $LogTable = Get-CIPPTable
     $StandardsTable = Get-CIPPTable -tablename CippStandardsAlerts
-    $PartitionKey = Get-Date -UFormat '%Y%m%d'
+    $RunInstant = Get-Date
+    $LogZone = if ($env:CIPP_TIMEZONE) { $env:CIPP_TIMEZONE } else { 'UTC' }
+    $LogToday = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($RunInstant.ToUniversalTime(), $LogZone)
+    $LogPartitions = $LogToday.ToString('yyyyMMdd'), $LogToday.AddDays(-1).ToString('yyyyMMdd')
+    $StandardsPartitions = $RunInstant.ToString('yyyyMMdd'), $RunInstant.AddDays(-1).ToString('yyyyMMdd')
 
     # Server-side: sentAsAlert + severity (small fixed set). API is filtered client-side
     # because the API list is open-ended and OR-expanding it can exceed the OData filter limit.
     $sevOr = ($severity | ForEach-Object { "Severity eq '$($_ -replace "'", "''")'" }) -join ' or '
-    $LogFilter = "PartitionKey eq '$PartitionKey' and sentAsAlert eq false and ($sevOr)"
-    $StandardsFilter = "PartitionKey eq '$PartitionKey' and sentAsAlert eq false"
 
-    $Currentlog = @(Get-CIPPAzDataTableEntity @LogTable -Filter $LogFilter | Where-Object { $_.API -in $Settings })
-    $CurrentStandardsLogs = @(Get-CIPPAzDataTableEntity @StandardsTable -Filter $StandardsFilter)
+    $Currentlog = @(foreach ($PartitionKey in $LogPartitions) {
+            foreach ($Row in Get-CIPPAzDataTableEntity @LogTable -Filter "PartitionKey eq '$PartitionKey' and sentAsAlert eq false and ($sevOr)") {
+                if ($Row.API -in $Settings) { $Row }
+            }
+        })
+    $CurrentStandardsLogs = @(foreach ($PartitionKey in $StandardsPartitions) {
+            Get-CIPPAzDataTableEntity @StandardsTable -Filter "PartitionKey eq '$PartitionKey' and sentAsAlert eq false"
+        })
 
     Write-Information "Alerts: $($Currentlog.Count) found"
     Write-Information "Standards: $($CurrentStandardsLogs.Count) found"
