@@ -5,12 +5,6 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
 
-    class HttpResponseContext {
-        [int]$StatusCode
-        [object]$Body
-        [object]$ContentType
-    }
-
     # Rows-exist path returns a raw-JSON string Body; queue/cold paths return an object.
     function ConvertFrom-ResponseBody {
         param($Response)
@@ -33,7 +27,10 @@ BeforeAll {
     function Select-CippAllowedTenantData { param([Parameter(ValueFromPipeline)]$Row, $TenantProperty) process { $Row } }
 
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Tenant/Conditional/Invoke-ListConditionalAccessPolicies.ps1'
-    $EndpointScript = [ScriptBlock]::Create("using namespace System.Net`n" + (Get-Content -LiteralPath $EndpointPath -Raw))
+    # The response stub is declared inside the endpoint script so the type binds at parse time;
+    # looked up at run time it can resolve to another test file's stub that has no ContentType.
+    $ResponseStub = 'class HttpResponseContext { [int]$StatusCode; [object]$Body; [object]$ContentType }'
+    $EndpointScript = [ScriptBlock]::Create("using namespace System.Net`n$ResponseStub`n" + (Get-Content -LiteralPath $EndpointPath -Raw))
     . $EndpointScript
 
     function New-CaRequest {

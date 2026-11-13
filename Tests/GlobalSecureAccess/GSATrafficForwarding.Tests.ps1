@@ -51,6 +51,7 @@ BeforeAll {
 Describe 'Invoke-ListGSATrafficForwarding' {
     BeforeEach {
         Mock New-GraphGetRequest { [pscustomobject]@{ onboardingStatus = 'onboarded' } } -ParameterFilter { $uri -like '*/tenantStatus' }
+        Mock New-GraphGetRequest { @() } -ParameterFilter { $uri -like '*/identity/conditionalAccess/policies*' }
         Mock New-GraphGetRequest { Get-TrafficProfiles } -ParameterFilter { $uri -eq "$script:Graph/networkAccess/forwardingProfiles?`$expand=policies(`$expand=policy)" }
         Mock New-GraphGetRequest { Get-Networks } -ParameterFilter { $uri -like '*/remoteNetworks?*' }
         Mock New-GraphGetRequest { [pscustomobject]@{ appRoleAssignmentRequired = $false } } -ParameterFilter { $uri -like '*/servicePrincipals/sp-*?$select=appRoleAssignmentRequired' }

@@ -39459,8 +39459,8 @@
             "in": "query",
             "required": false,
             "schema": {
-              "format": "uuid",
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
