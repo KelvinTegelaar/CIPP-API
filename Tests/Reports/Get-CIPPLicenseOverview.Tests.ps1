@@ -180,6 +180,22 @@ Describe 'Get-CIPPLicenseOverview SKU name backfill' {
         Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
     }
 
+    It 'names a SKU from the CSV even when the live admin name differs' {
+        Mock -CommandName New-GraphGetRequest -MockWith {
+            @(
+                [pscustomobject]@{ aadSkuId = $script:KioskGuid; displayName = 'Exchange Online Kiosk for GCC' },
+                [pscustomobject]@{ aadSkuId = $script:E5Guid; displayName = 'Microsoft 365 E5, renamed' }
+            )
+        }
+        Mock -CommandName Get-CIPPLicenseSkuName -MockWith { }
+        $CsvName = (Get-CIPPConversionTable).NameBySkuId[$script:E5Guid]
+
+        $Result = Get-CIPPLicenseOverview -TenantFilter 'contoso.onmicrosoft.com'
+
+        $CsvName | Should -Not -BeNullOrEmpty
+        @($Result).Where({ $_.skuId -eq $script:E5Guid })[0].License | Should -Be $CsvName
+    }
+
     It 'still returns the overview when the name table fails' {
         Mock -CommandName Get-CIPPLicenseSkuName -MockWith { throw 'table down' }
 

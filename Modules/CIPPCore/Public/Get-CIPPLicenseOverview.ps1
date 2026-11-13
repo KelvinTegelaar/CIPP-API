@@ -139,7 +139,7 @@ function Get-CIPPLicenseOverview {
             }
             $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.aadSkuId -eq $sku.skuId } | Select-Object -ExpandProperty displayName -First 1
             $PrettyNameCSV = $SkuNames[[string]$sku.skuid]
-            $PrettyName = $PrettyNameAdmin ?? $PrettyNameCSV ?? $StoredNames[([string]$sku.skuId).ToLowerInvariant()] ?? $sku.skuPartNumber
+            $PrettyName = $PrettyNameCSV ?? $PrettyNameAdmin ??$StoredNames[([string]$sku.skuId).ToLowerInvariant()] ?? $sku.skuPartNumber
             if ($PrettyNameAdmin -and -not $PrettyNameCSV -and $PrettyNameAdmin -cne $StoredNames[([string]$sku.skuId).ToLowerInvariant()]) {
                 $NewNames.Add(@{ PartitionKey = 'Sku'; RowKey = ([string]$sku.skuId).ToLowerInvariant(); DisplayName = [string]$PrettyNameAdmin })
             }
