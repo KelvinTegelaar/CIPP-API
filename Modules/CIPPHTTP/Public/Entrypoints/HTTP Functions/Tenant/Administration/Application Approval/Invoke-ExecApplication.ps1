@@ -198,38 +198,35 @@ function Invoke-ExecApplication {
                 }
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
             } else {
-                # For password credentials, use bulk removePassword requests
-                $BulkRequests = foreach ($KeyId in $KeyIds) {
-                    $RemoveBody = @{
-                        keyId = $KeyId
-                    }
-
-                    @{
-                        id      = $KeyId
-                        method  = 'POST'
-                        url     = "$($Type)$($IdPath)/removePassword"
-                        body    = $RemoveBody
-                        headers = @{
-                            'Content-Type' = 'application/json'
+                # One at a time: Graph refuses concurrent removePassword calls on one object (Directory_ConcurrencyViolation)
+                $Failed = 0
+                $PasswordResults = foreach ($Item in @($Request.Body.KeyIds)) {
+                    $KeyId = [string]($Item.value ?? $Item)
+                    $Label = $Item.label ?? $KeyId
+                    for ($Attempt = 1; $Attempt -le 4; $Attempt++) {
+                        try {
+                            $null = New-GraphPOSTRequest -Uri "$Uri/removePassword" -Type 'POST' -Body (@{ keyId = $KeyId } | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
+                            $Message = "Removed password credential $Label from $Type"
+                            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
+                            @{ resultText = $Message; state = 'success' }
+                            break
+                        } catch {
+                            if ($_.Exception.Message -match 'concurrent requests' -and $Attempt -lt 4) {
+                                Start-Sleep -Seconds $Attempt
+                                continue
+                            }
+                            $Failed++
+                            $Message = "Failed to remove password credential $Label from $Type`: $(Get-NormalizedError -message $_.Exception.Message)"
+                            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Error'
+                            @{ resultText = $Message; state = 'error' }
+                            break
                         }
                     }
                 }
-
-                $BulkResults = New-GraphBulkRequest -Requests @($BulkRequests) -tenantid $TenantFilter -AsApp $true
-
-                $SuccessCount = ($BulkResults | Where-Object { $_.status -eq 204 }).Count
-                $FailureCount = ($BulkResults | Where-Object { $_.status -ne 204 }).Count
-
-                $Results = @{
-                    resultText = "Bulk RemovePassword completed. Success: $SuccessCount, Failures: $FailureCount"
-                    state      = if ($FailureCount -eq 0) { 'success' } else { 'error' }
-                    details    = @($BulkResults)
-                }
-                if ($FailureCount -eq 0) {
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Info'
-                } else {
-                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results.resultText -Sev 'Error'
-                }
+                return ([HttpResponseContext]@{
+                        StatusCode = Get-CippBulkStatusCode -Total @($PasswordResults).Count -Failed $Failed
+                        Body       = @{ Results = @($PasswordResults) }
+                    })
             }
         } elseif ($Action -in @('ListSigningCertificates', 'AddSigningCertificate', 'SetPreferredSigningKey', 'RemoveSigningCertificate')) {
             # SAML token-signing certificates. Graph identifies the active one by SHA-1 thumbprint
