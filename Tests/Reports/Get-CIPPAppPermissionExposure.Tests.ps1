@@ -870,10 +870,11 @@ Describe 'Get-CIPPAppPermissionExposure' {
             function script:Get-Row { param($Id) @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com') | Where-Object ServicePrincipalId -EQ $Id }
         }
 
-        It 'reports an app whose mailbox access is granted only in Exchange, ignoring disabled assignments and apps not in Entra' {
+        It 'reports an app whose mailbox access is granted only in Exchange, ignoring disabled and delegating assignments and apps not in Entra' {
             script:Add-ExoRole -Id 'sp-exo' -Role 'Application Mail.ReadWrite'
             script:Add-ExoRole -Id 'sp-exo' -Role 'Application Mail.Send' -Enabled $false
             $script:Caches['contoso.onmicrosoft.com'].ExoAppRoleAssignments += [pscustomobject]@{ role = 'Application Mail.Read'; servicePrincipalId = 'sp-gone'; enabled = $true }
+            $script:Caches['contoso.onmicrosoft.com'].ExoAppRoleAssignments += [pscustomobject]@{ role = 'Application Mail.Read'; servicePrincipalId = 'sp-exo'; enabled = $true; delegating = $true }
 
             $Rows = @(Get-CIPPAppPermissionExposure -TenantFilter 'contoso.onmicrosoft.com')
             $Row = $Rows | Where-Object ServicePrincipalId -EQ 'sp-exo'

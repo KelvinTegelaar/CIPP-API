@@ -423,12 +423,13 @@ function Get-CIPPAppPermissionExposure {
             if ($Item.RowKey -ne 'ExoAppRoleAssignments-Count') { $TypeRows.Add($Item) }
         }
         if ($TypeRows.Count -gt 0) {
-            $ExoAppAssignments = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoAppRoleAssignments' -Rows $TypeRows.ToArray() -Fields 'role', 'servicePrincipalId', 'enabled', 'customResourceScope', 'customResourceScopeFilter', 'recipientAdministrativeUnitScope', 'whenCreatedUTC')
+            $ExoAppAssignments = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoAppRoleAssignments' -Rows $TypeRows.ToArray() -Fields 'role', 'servicePrincipalId', 'delegating', 'enabled', 'customResourceScope', 'customResourceScopeFilter', 'recipientAdministrativeUnitScope', 'whenCreatedUTC')
         }
     }
     foreach ($ExoAssignment in $ExoAppAssignments) {
         $PrincipalId = [string]$ExoAssignment.servicePrincipalId
-        if ($ExoAssignment.enabled -eq $false -or -not $PrincipalId -or -not $SpById.ContainsKey($PrincipalId)) { continue }
+        # A delegating assignment lets its holder assign the role, it gives no mailbox access itself.
+        if ($ExoAssignment.enabled -eq $false -or $ExoAssignment.delegating -eq $true -or -not $PrincipalId -or -not $SpById.ContainsKey($PrincipalId)) { continue }
         $RoleName = [string]$ExoAssignment.role
         $Entry = $null
         if (-not $Catalog.ExchangeRole.TryGetValue($RoleName, [ref]$Entry)) {

@@ -5,7 +5,8 @@ function Get-CIPPExoAppRoleAssignment {
     .DESCRIPTION
         Exchange can give an app mailbox access through its own role assignments (RBAC for Applications), which
         Entra does not show as a permission or consent. Reads the service principals registered in Exchange and,
-        when there are any, the assignments of the 'Application *' roles. Returns one row per assignment with the
+        when there are any, the assignments of the 'Application *' roles, less the delegating ones Exchange gives
+        Organization Management by default. Returns one row per assignment with the
         app's Entra appId and service principal object id, the scope (a management scope with its recipient
         filter, or an administrative unit) and when it was created. Errors reading the service principals or
         assignments are thrown; a scope filter that cannot be read is left out.
@@ -37,7 +38,15 @@ function Get-CIPPExoAppRoleAssignment {
         }
     }
 
-    $Assignments = @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ManagementRoleAssignment' | Where-Object { [string]$_.Role -like 'Application *' })
+    # A delegating assignment grants no access, it lets its holder assign the role to apps. Exchange gives one to
+    # Organization Management for every role, so those defaults are left out; any other holder was added by
+    # someone and is kept.
+    $Assignments = @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ManagementRoleAssignment' | Where-Object {
+            [string]$_.Role -like 'Application *' -and -not (
+                [string]$_.RoleAssignmentDelegationType -like 'Delegating*' -and
+                'Organization Management' -in @([string]$_.RoleAssigneeName, [string]$_.RoleAssignee)
+            )
+        })
     if ($Assignments.Count -eq 0) { return @() }
 
     $ScopeFilters = @{}
@@ -66,6 +75,7 @@ function Get-CIPPExoAppRoleAssignment {
             appId                            = [string]$ExoSp.AppId
             appDisplayName                   = [string]$ExoSp.DisplayName
             servicePrincipalId               = [string]$ExoSp.ObjectId
+            delegating                       = [string]$Assignment.RoleAssignmentDelegationType -like 'Delegating*'
             enabled                          = $Assignment.Enabled
             customResourceScope              = $ResourceScope
             customResourceScopeFilter        = if ($ResourceScope) { $ScopeFilters[$ResourceScope] } else { $null }
