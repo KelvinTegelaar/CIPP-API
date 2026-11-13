@@ -30,7 +30,7 @@ function Invoke-ListSafeLinksPolicyTemplateDetails {
         $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $Template) {
-            throw "Template with ID '$ID' not found"
+            throw [System.Management.Automation.ItemNotFoundException]::new("Template with ID '$ID' not found")
         }
 
         # Parse the JSON data and add metadata
@@ -44,7 +44,7 @@ function Invoke-ListSafeLinksPolicyTemplateDetails {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to retrieve template details for ID '$ID'. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error'
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{
