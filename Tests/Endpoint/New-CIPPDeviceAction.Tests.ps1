@@ -38,3 +38,27 @@ Describe 'New-CIPPDeviceAction - removePrimaryUser' {
             Should -Throw '*removePrimaryUser*No primary user*'
     }
 }
+
+Describe 'New-CIPPDeviceAction - action names' {
+    BeforeEach {
+        Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName New-GraphPOSTRequest -MockWith { }
+        Mock -CommandName Get-CippException -MockWith { [pscustomobject]@{ NormalizedError = "$($Exception.Exception.Message)" } }
+    }
+
+    It 'refuses <_> without calling Graph' -ForEach @('deviceCompliancePolicyStates', 'users/$ref', 'logCollectionRequests', 'notARealAction', '') {
+        { New-CIPPDeviceAction -Action $_ -DeviceFilter 'device-guid' -TenantFilter 'contoso.com' } | Should -Throw
+        Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
+    }
+
+    It 'queues <_>' -ForEach @(
+        'syncDevice', 'rebootNow', 'locateDevice', 'setDeviceName', 'RotateLocalAdminPassword', 'WindowsDefenderScan',
+        'windowsDefenderUpdateSignatures', 'cleanWindowsDevice', 'wipe', 'retire', 'createDeviceLogCollectionRequest',
+        'initiateOnDemandProactiveRemediation'
+    ) {
+        New-CIPPDeviceAction -Action $_ -DeviceFilter 'device-guid' -TenantFilter 'contoso.com' | Should -Be "Queued $_ on device-guid"
+        Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+            $uri -eq "https://graph.microsoft.com/beta/deviceManagement/managedDevices('device-guid')/$_" -and $type -eq 'POST'
+        }
+    }
+}

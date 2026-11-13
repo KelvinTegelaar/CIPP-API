@@ -18,7 +18,9 @@ function New-GraphBulkRequest {
         [int]$MaxConcurrency = 1
     )
 
-    if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
+    # Each sub-request URL gets the same check as a single request to that URL.
+    $Refused = { -not (Get-AuthorisedRequest -Uri "https://graph.microsoft.com/$Version/$("$($_.url)".TrimStart('/'))" -TenantID $tenantid) }
+    if ($NoAuthCheck -or ((Get-AuthorisedRequest -TenantID $tenantid) -and -not @($Requests).Where($Refused, 'First'))) {
         if ($Headers) {
             $Headers = $Headers
         } else {
@@ -82,7 +84,7 @@ function New-GraphBulkRequest {
                     $ConcRequests.Add($ConcRequest)
                 }
                 # SendConcurrent retries a throttled or failed batch itself; one that still fails throws, as the sequential path does
-                foreach ($ConcResult in [CIPP.CIPPRestClient]::SendConcurrent($ConcRequests, $MaxConcurrency, 3)) {
+                foreach ($ConcResult in [CIPP.CIPPRestClient]::SendConcurrent($ConcRequests, $MaxConcurrency, 3, ($PSCmdlet.PipelineStopToken ?? $global:CraftPipelineStopToken))) {
                     if (-not $ConcResult.IsSuccess) {
                         $Detail = if ($ConcResult.Error) { $ConcResult.Error } elseif ($ConcResult.Result.HasContent) { $ConcResult.Result.Content }
                         throw "Graph batch request failed (HTTP $($ConcResult.StatusCode)): $Detail"

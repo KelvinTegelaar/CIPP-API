@@ -68,6 +68,14 @@ function Invoke-ExecGDAPTrace {
         }
     }
 
+    # The value is one path segment of the Graph URL and must stay one.
+    if (-not (Test-IsGuid -String $UPN) -and $UPN -notmatch '^[^\s/\\?]+@[^\s/\\?@]+\.[^\s/\\?@]+$') {
+        return [HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::BadRequest
+            Body       = @{ Error = 'UPN must be a user principal name or an object id' }
+        }
+    }
+
     # The trace runs from the perspective of the customer's owning partner
     $TraceTenant = Get-Tenants -TenantFilter $TenantFilter -IncludeErrors | Select-Object -First 1
     $PartnerTenantId = if ($TraceTenant.partnerTenantId) { "$($TraceTenant.partnerTenantId)" } else { "$env:TenantID" }
@@ -164,7 +172,7 @@ function Invoke-ExecGDAPTrace {
         $User = $null
         try {
             # Filter didn't work, try direct lookup by UPN (works if UPN is unique identifier)
-            $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UPN" -tenantid $PartnerTenantId -NoAuthCheck $true
+            $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$([uri]::EscapeDataString($UPN))" -tenantid $PartnerTenantId -NoAuthCheck $true
         } catch {
             Write-LogMessage -Headers $Headers -API $APIName -message "Could not find user $UPN in partner tenant: $($_.Exception.Message)" -sev 'Warning'
         }

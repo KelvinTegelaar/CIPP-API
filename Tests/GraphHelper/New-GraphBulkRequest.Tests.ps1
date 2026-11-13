@@ -2,6 +2,7 @@ BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     function Get-AuthorisedRequest { param($Uri, $TenantID) $true }
+    function Get-AuthorisedRequestError { param($TenantID, $Context) 'not authorised' }
     function Get-GraphToken { param($tenantid, $scope, $AsApp) @{ Authorization = 'Bearer x' } }
     function Get-CippUserAgent { 'CIPP/test (baseline:tpl-1)' }
     function Get-CippTable { param($tablename) @{} }
@@ -61,5 +62,30 @@ Describe 'New-GraphBulkRequest' {
         $Responses = @(New-GraphBulkRequest -tenantid 'contoso.com' -asapp $true -Requests @(1..12 | ForEach-Object { @{ id = "s$_"; method = 'GET'; url = 'auditLogs/signIns' } }))
         @($Responses | Where-Object { $_.status -eq 200 }).Count | Should -Be 12
         @($script:Sent | ForEach-Object { $_.Count }) | Should -Be @(10, 2, 10, 2)
+    }
+
+    It 'sends nothing when a sub-request URL is refused' {
+        Mock Get-AuthorisedRequest { $Uri -notlike '*/../*' }
+        $Requests = @(
+            @{ id = '1'; method = 'GET'; url = 'users/u1' }
+            @{ id = '2'; method = 'GET'; url = '/users/u1/../../organization' }
+        )
+        $null = New-GraphBulkRequest -tenantid 'contoso.com' -asapp $true -Requests $Requests -ErrorAction SilentlyContinue
+        $script:Sent.Count | Should -Be 0
+        Should -Invoke Get-AuthorisedRequest -Times 1 -Exactly -ParameterFilter { $Uri -eq 'https://graph.microsoft.com/beta/users/u1/../../organization' -and $TenantID -eq 'contoso.com' }
+    }
+
+    It 'checks sub-request URLs against the version the batch is sent to' {
+        Mock Get-AuthorisedRequest { $true }
+        $null = New-GraphBulkRequest -tenantid 'contoso.com' -asapp $true -Version 'v1.0' -Requests @(@{ id = '1'; method = 'GET'; url = 'users/u1' })
+        Should -Invoke Get-AuthorisedRequest -Times 1 -Exactly -ParameterFilter { $Uri -eq 'https://graph.microsoft.com/v1.0/users/u1' }
+        $script:Sent.Count | Should -Be 1
+    }
+
+    It 'leaves sub-request URLs unchecked with NoAuthCheck' {
+        Mock Get-AuthorisedRequest { $false }
+        $null = New-GraphBulkRequest -tenantid 'contoso.com' -asapp $true -NoAuthCheck $true -Requests @(@{ id = '1'; method = 'GET'; url = 'users/u1' })
+        Should -Invoke Get-AuthorisedRequest -Times 0 -Exactly
+        $script:Sent.Count | Should -Be 1
     }
 }

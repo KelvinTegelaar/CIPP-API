@@ -8,6 +8,12 @@ function New-CIPPDeviceAction {
         $Headers,
         $APIName
     )
+    # The action name becomes part of the Graph path, so only known actions are queued.
+    $QueuedActions = @(
+        'syncDevice', 'rebootNow', 'locateDevice', 'setDeviceName', 'RotateLocalAdminPassword', 'WindowsDefenderScan',
+        'windowsDefenderUpdateSignatures', 'cleanWindowsDevice', 'wipe', 'retire', 'createDeviceLogCollectionRequest',
+        'initiateOnDemandProactiveRemediation'
+    )
     try {
         if ($Action -eq 'delete') {
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices/$DeviceFilter" -type DELETE -tenantid $TenantFilter
@@ -22,6 +28,8 @@ function New-CIPPDeviceAction {
         } elseif ($Action -eq 'removePrimaryUser') {
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices('$DeviceFilter')/users/`$ref" -type DELETE -tenantid $TenantFilter
             $Result = "Removed primary user from device $DeviceFilter"
+        } elseif ($Action -notin $QueuedActions) {
+            throw "'$Action' is not a supported device action"
         } else {
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices('$DeviceFilter')/$($Action)" -type POST -tenantid $TenantFilter -body $ActionBody
             $Result = "Queued $Action on $DeviceFilter"
