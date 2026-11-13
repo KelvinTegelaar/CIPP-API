@@ -26,7 +26,7 @@ function Invoke-ExecAddTenant {
         # The account that consented is recorded so the connection can be traced and refreshed
         # later. The auth date is stamped server side rather than trusting the client.
         $ServiceAccount = $Request.body.username ?? ''
-        $AuthDate = (Get-Date).ToUniversalTime()
+        $AuthDate = (Get-Date).ToUniversalTime().ToString('o')
 
         # Get the Tenants table
         $TenantsTable = Get-CippTable -tablename 'Tenants'

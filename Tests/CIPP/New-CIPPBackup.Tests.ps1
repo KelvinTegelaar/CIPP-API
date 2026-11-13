@@ -15,7 +15,7 @@ BeforeAll {
             'Tenants' {
                 # The real table applies the filter; assert it asks for the right rows and serve them.
                 $script:TenantFilterUsed = $Filter
-                [pscustomobject]@{ PartitionKey = 'Tenants'; RowKey = 'direct-id'; customerId = 'direct-id'; defaultDomainName = 'direct.com'; initialDomainName = 'direct.onmicrosoft.com'; displayName = 'Direct'; delegatedPrivilegeStatus = 'directTenant'; directTenantUserPrincipalName = 'svc@direct.com'; directTenantAuthDate = '2026-01-01'; Excluded = $false; LastGraphError = 'stale'; RequiresRefresh = $false }
+                [pscustomobject]@{ PartitionKey = 'Tenants'; RowKey = 'direct-id'; customerId = 'direct-id'; defaultDomainName = 'direct.com'; initialDomainName = 'direct.onmicrosoft.com'; displayName = 'Direct'; delegatedPrivilegeStatus = 'directTenant'; directTenantUserPrincipalName = 'svc@direct.com'; directTenantAuthDate = [DateTimeOffset]::new(2026, 1, 1, 9, 30, 0, [TimeSpan]::Zero); Excluded = $false; LastGraphError = 'stale'; RequiresRefresh = $false }
                 [pscustomobject]@{ PartitionKey = 'Tenants'; RowKey = 'excl-id'; customerId = 'excl-id'; defaultDomainName = 'excl.com'; displayName = 'Excluded'; delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges'; Excluded = $true; ExcludeUser = 'admin'; domains = 'a,b' }
             }
         }
@@ -50,6 +50,12 @@ Describe 'New-CIPPBackup CIPP backup contents' {
         $Direct.directTenantUserPrincipalName | Should -Be 'svc@direct.com'
         $Direct.RequiresRefresh | Should -BeTrue
         $Direct.PSObject.Properties.Name | Should -Not -Contain 'LastGraphError'
+    }
+
+    It 'writes the direct tenant auth date as a UTC string, as the restore reads it' {
+        $Direct = $script:Captured | ConvertFrom-Json -AsHashtable | Where-Object { $_.table -eq 'Tenants' -and $_.RowKey -eq 'direct-id' }
+        $Direct.directTenantAuthDate.Kind | Should -Be 'Utc'
+        $Direct.directTenantAuthDate | Should -Be ([datetime]::new(2026, 1, 1, 9, 30, 0, [DateTimeKind]::Utc))
     }
 
     It 'keeps an excluded tenant as exclusion state only' {

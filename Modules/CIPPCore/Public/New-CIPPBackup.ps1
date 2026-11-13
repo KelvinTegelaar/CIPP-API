@@ -91,7 +91,7 @@ function New-CIPPBackup {
                     foreach ($TenantRow in $TenantRows) {
                         $BackupRow = if ($TenantRow.delegatedPrivilegeStatus -eq 'directTenant') {
                             # Restored as needing a refresh: the token is not part of the backup.
-                            $TenantRow | Select-Object PartitionKey, RowKey, customerId, defaultDomainName, initialDomainName, displayName, delegatedPrivilegeStatus, directTenantUserPrincipalName, directTenantAuthDate, Excluded, ExcludeDate, ExcludeUser, @{l = 'RequiresRefresh'; e = { $true } }
+                            $TenantRow | Select-Object PartitionKey, RowKey, customerId, defaultDomainName, initialDomainName, displayName, delegatedPrivilegeStatus, directTenantUserPrincipalName, @{l = 'directTenantAuthDate'; e = { if ($_.directTenantAuthDate -is [DateTimeOffset]) { $_.directTenantAuthDate.UtcDateTime.ToString('o') } else { $_.directTenantAuthDate } } }, Excluded, ExcludeDate, ExcludeUser, @{l = 'RequiresRefresh'; e = { $true } }
                         } else {
                             $TenantRow | Select-Object PartitionKey, RowKey, customerId, defaultDomainName, displayName, Excluded, ExcludeDate, ExcludeUser
                         }
