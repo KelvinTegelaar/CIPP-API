@@ -18,7 +18,13 @@ function Invoke-ListGDAPServicePrincipals {
     $Filter = $null
     switch ($OwnerType) {
         'partner' {
-            $Filter = "appOwnerOrganizationId eq $($env:TenantID)"
+            # Apps owned by any configured partner tenant
+            $PartnerIds = @((Get-CIPPPartnerTenantList).partnerTenantId | Where-Object { $_ })
+            $Filter = if ($PartnerIds.Count -gt 1) {
+                'appOwnerOrganizationId in ({0})' -f ($PartnerIds -join ',')
+            } else {
+                "appOwnerOrganizationId eq $($env:TenantID)"
+            }
         }
         'vendor' {
             $VendorTenantIdsRaw = $Request.Query.vendorTenantIds ?? ''

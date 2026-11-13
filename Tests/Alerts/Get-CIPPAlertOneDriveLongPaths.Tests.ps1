@@ -9,7 +9,7 @@ BeforeAll {
     function Write-AlertMessage { param($message, $tenant, $tenantId, $LogData) }
     function Write-LogMessage { param($API, $tenant, $message, $sev, $LogData) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = "$Exception" } }
-    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset) }
+    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) }
 
     . $AlertPath
 }

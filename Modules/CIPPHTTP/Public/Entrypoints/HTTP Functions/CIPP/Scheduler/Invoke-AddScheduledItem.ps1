@@ -18,6 +18,12 @@ function Invoke-AddScheduledItem {
     if ($Request.Body.RowKey) {
         $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Request.Body.RowKey)'"
         $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+        if ($ExistingTask -and -not (Test-CippTenantInScope -Tenant $ExistingTask.Tenant)) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ Results = 'Access to this scheduled task is not allowed' }
+                })
+        }
     }
 
     if ($null -eq $Request.Query.hidden) {

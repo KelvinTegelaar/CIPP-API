@@ -34,6 +34,13 @@ function Get-CIPPAppPermissionExposure {
         (one on the same object expires, or was removed, within 30 days of it) raises suspicion one step only:
         an attacker adds a credential next to the app's own, since removing that breaks the app.
 
+        Federated credentials on the app registration (the AppFederatedCredentials cache, or Graph with -Live) let
+        tokens from another identity provider sign in as the app with no secret. They are listed in
+        CredentialDetails (Type 'Federated') with the issuer, subject and who runs the issuer. One trusting an issuer
+        CIPP does not recognise raises suspicion two steps; one trusting another Entra tenant that is not the
+        partner tenant or a listed vendor, one step. GitHub Actions, Azure Kubernetes Service, this tenant and
+        common CI providers raise nothing. Graph does not date federated credentials, so their age is not rated.
+
         Managed identities (servicePrincipalType ManagedIdentity) are their own ownership class whatever their owner
         organisation: no suspicion adjustment, no credential scoring (Azure manages those), and the Azure resource
         named from alternativeNames. Who controls that resource is set in Azure, which CIPP cannot read.
@@ -75,6 +82,18 @@ function Get-CIPPAppPermissionExposure {
         (AccessPolicy 'RestrictAccess'); a DenyAccess policy alone still leaves every other mailbox and lowers nothing.
         A policy Exchange marks invalid is not counted. Without the policies, those permissions count as reaching
         every mailbox.
+
+        Further signals for apps that are not Microsoft's or CIPP's:
+        - Credential use, from the AppCredentialSignInActivities cache (Entra ID P1, read from the cache with -Live
+          too): each credential's last sign-in is in CredentialDetails, and a recently added credential that has
+          already signed in raises suspicion one more step.
+        - Microsoft disabling the app (disabledByMicrosoftStatus) or an administrator confirming it compromised in
+          Identity Protection (RiskyServicePrincipals cache, or Graph with -Live; Workload Identities Premium) makes
+          suspicion Critical; a high or medium Identity Protection risk raises it two or one steps.
+        - An app owned elsewhere without a verified publisher, named like a Microsoft product, one step.
+        - On the app registration of an app registered here: a redirect URI on plain http, a raw IP address or a
+          tunnelling service one step; owners (listed in Owners, every one can add a credential) that are guests
+          or apps one step each. Multi-tenant registration and the app instance property lock are noted only.
     .PARAMETER TenantFilter
         The tenant to report on.
     .PARAMETER Live
@@ -86,6 +105,9 @@ function Get-CIPPAppPermissionExposure {
         Don't read sign-in activity; every row reports 'Unknown'.
     .PARAMETER ServicePrincipalId
         Return only the row of this service principal (none when it holds no catalogued permission).
+    .PARAMETER IncludeUncatalogued
+        With -ServicePrincipalId, return the row even when the app holds no catalogued permission: the NHI
+        compromise check rates every app it investigates.
     #>
     [CmdletBinding()]
     param(
@@ -94,7 +116,8 @@ function Get-CIPPAppPermissionExposure {
         [switch]$Live,
         [switch]$ExcludeDelegated,
         [switch]$SkipSignInActivity,
-        [string]$ServicePrincipalId
+        [string]$ServicePrincipalId,
+        [switch]$IncludeUncatalogued
     )
 
     $Types = [System.Collections.Generic.List[string]]::new()
@@ -121,19 +144,10 @@ function Get-CIPPAppPermissionExposure {
         break
     }
 
-    $ApiByAppId = @{
-        '00000003-0000-0000-c000-000000000000' = 'Microsoft Graph'
-        '00000003-0000-0ff1-ce00-000000000000' = 'SharePoint Online'
-        '00000002-0000-0ff1-ce00-000000000000' = 'Exchange Online'
-        '797f4846-ba00-4fd7-ba43-dac1f8f63013' = 'Azure Service Management'
-    }
-    $ApiByDisplayName = @{
-        'Microsoft Graph'                      = 'Microsoft Graph'
-        'Office 365 SharePoint Online'         = 'SharePoint Online'
-        'Office 365 Exchange Online'           = 'Exchange Online'
-        'Windows Azure Service Management API' = 'Azure Service Management'
-    }
-    $SpFields = @('id', 'appId', 'displayName', 'appOwnerOrganizationId', 'accountEnabled', 'publisherName', 'verifiedPublisher', 'servicePrincipalType', 'signInAudience', 'createdDateTime', 'passwordCredentials', 'keyCredentials', 'alternativeNames')
+    $Catalog = Get-CIPPRiskyPermissionCatalog
+    $ApiByAppId = $Catalog.ApiByAppId
+    $ApiByDisplayName = $Catalog.ApiByDisplayName
+    $SpFields = @('id', 'appId', 'displayName', 'appOwnerOrganizationId', 'accountEnabled', 'publisherName', 'verifiedPublisher', 'servicePrincipalType', 'signInAudience', 'createdDateTime', 'passwordCredentials', 'keyCredentials', 'alternativeNames', 'disabledByMicrosoftStatus')
     $CacheTimestamp = $null
 
     if ($Live) {
@@ -158,7 +172,9 @@ function Get-CIPPAppPermissionExposure {
                 throw [System.Management.Automation.ItemNotFoundException]::new("No $Type data is cached for $TenantFilter yet. Run a cache sync first.")
             }
             $RawRows[$Type] = $Data.ToArray()
-            if ($Count.Timestamp -and (-not $CacheTimestamp -or $Count.Timestamp -lt $CacheTimestamp)) { $CacheTimestamp = $Count.Timestamp }
+            # A table Timestamp is a DateTimeOffset; rows carry plain UTC DateTimes, which CippJson can store.
+            $Collected = if ($Count.Timestamp) { ([datetimeoffset]$Count.Timestamp).UtcDateTime } else { $null }
+            if ($Collected -and (-not $CacheTimestamp -or $Collected -lt $CacheTimestamp)) { $CacheTimestamp = $Collected }
         }
 
         $ServicePrincipals = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals' -Rows $RawRows['ServicePrincipals'] -Fields $SpFields)
@@ -171,7 +187,6 @@ function Get-CIPPAppPermissionExposure {
         throw [System.Management.Automation.ItemNotFoundException]::new("No service principals are available for $TenantFilter yet. Run a cache sync first.")
     }
 
-    $Catalog = Get-CIPPRiskyPermissionCatalog
     $SpById = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $ResourceApi = @{}
     foreach ($Sp in $ServicePrincipals) {
@@ -408,12 +423,13 @@ function Get-CIPPAppPermissionExposure {
             if ($Item.RowKey -ne 'ExoAppRoleAssignments-Count') { $TypeRows.Add($Item) }
         }
         if ($TypeRows.Count -gt 0) {
-            $ExoAppAssignments = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoAppRoleAssignments' -Rows $TypeRows.ToArray() -Fields 'role', 'servicePrincipalId', 'enabled', 'customResourceScope', 'customResourceScopeFilter', 'recipientAdministrativeUnitScope', 'whenCreatedUTC')
+            $ExoAppAssignments = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoAppRoleAssignments' -Rows $TypeRows.ToArray() -Fields 'role', 'servicePrincipalId', 'delegating', 'enabled', 'customResourceScope', 'customResourceScopeFilter', 'recipientAdministrativeUnitScope', 'whenCreatedUTC')
         }
     }
     foreach ($ExoAssignment in $ExoAppAssignments) {
         $PrincipalId = [string]$ExoAssignment.servicePrincipalId
-        if ($ExoAssignment.enabled -eq $false -or -not $PrincipalId -or -not $SpById.ContainsKey($PrincipalId)) { continue }
+        # A delegating assignment lets its holder assign the role, it gives no mailbox access itself.
+        if ($ExoAssignment.enabled -eq $false -or $ExoAssignment.delegating -eq $true -or -not $PrincipalId -or -not $SpById.ContainsKey($PrincipalId)) { continue }
         $RoleName = [string]$ExoAssignment.role
         $Entry = $null
         if (-not $Catalog.ExchangeRole.TryGetValue($RoleName, [ref]$Entry)) {
@@ -552,7 +568,11 @@ function Get-CIPPAppPermissionExposure {
         $Only = $null
         [void]$PermissionsByApp.TryGetValue($ServicePrincipalId, [ref]$Only)
         $PermissionsByApp = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        if ($Only) { $PermissionsByApp[$ServicePrincipalId] = $Only }
+        if ($Only) {
+            $PermissionsByApp[$ServicePrincipalId] = $Only
+        } elseif ($IncludeUncatalogued -and $SpById.ContainsKey($ServicePrincipalId)) {
+            $PermissionsByApp[$ServicePrincipalId] = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        }
     }
 
     # appId -> sign-in activity; stays $null when the cache was never collected.
@@ -566,13 +586,62 @@ function Get-CIPPAppPermissionExposure {
             if ($Item.RowKey -eq 'ServicePrincipalSignInActivities-Count') { $ActivityCount = $Item } else { $ActivityRows.Add($Item) }
         }
         if ($ActivityCount -or $ActivityRows.Count -gt 0) {
-            $ActivityTimestamp = $ActivityCount.Timestamp
+            $ActivityTimestamp = if ($ActivityCount.Timestamp) { ([datetimeoffset]$ActivityCount.Timestamp).UtcDateTime } else { $null }
             $ActivityByAppId = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
             if ($ActivityRows.Count -gt 0) {
                 foreach ($Item in @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipalSignInActivities' -Rows $ActivityRows.ToArray() -Fields (@('appId') + $ActivityFields))) {
                     if ($Item.appId) { $ActivityByAppId[[string]$Item.appId] = $Item }
                 }
             }
+        }
+    }
+    # keyId -> when that credential last signed in, from the AppCredentialSignInActivities cache (Entra ID P1); read from
+    # the cache with -Live too, like the app's own sign-in activity. $null when never collected.
+    $CredentialUseByKeyId = $null
+    if (-not $SkipSignInActivity -and $PermissionsByApp.Count -gt 0) {
+        $UseRows = [System.Collections.Generic.List[object]]::new()
+        $UseCount = $null
+        foreach ($Item in @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'AppCredentialSignInActivities')) {
+            if ($Item.RowKey -eq 'AppCredentialSignInActivities-Count') { $UseCount = $Item } else { $UseRows.Add($Item) }
+        }
+        if ($UseCount -or $UseRows.Count -gt 0) {
+            $CredentialUseByKeyId = @{}
+            if ($UseRows.Count -gt 0) {
+                foreach ($Item in @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'AppCredentialSignInActivities' -Rows $UseRows.ToArray() -Fields 'keyId', 'signInActivity')) {
+                    $Raw = $Item.signInActivity.lastSignInDateTime
+                    $When = $null
+                    if ($Raw -is [datetime]) {
+                        $When = $Raw.ToUniversalTime()
+                    } elseif ($Raw -and [datetimeoffset]::TryParse([string]$Raw, [cultureinfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AssumeUniversal, [ref]$Parsed)) {
+                        $When = $Parsed.UtcDateTime
+                    }
+                    if ($Item.keyId -and $When) { $CredentialUseByKeyId[([string]$Item.keyId).ToLowerInvariant()] = $When }
+                }
+            }
+        }
+    }
+
+    # Identity Protection's risk on each service principal (Workload Identities Premium), read best effort.
+    $RiskBySpId = @{}
+    if ($PermissionsByApp.Count -gt 0) {
+        $RiskRows = @()
+        if ($Live) {
+            try {
+                $RiskRows = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identityProtection/riskyServicePrincipals?$select=id,riskLevel,riskState,riskDetail,riskLastUpdatedDateTime&$top=500' -tenantid $TenantFilter)
+            } catch {
+                Write-Information "Risky service principals unavailable for $($TenantFilter): $($_.Exception.Message)"
+            }
+        } else {
+            $TypeRows = [System.Collections.Generic.List[object]]::new()
+            foreach ($Item in @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'RiskyServicePrincipals')) {
+                if ($Item.RowKey -ne 'RiskyServicePrincipals-Count') { $TypeRows.Add($Item) }
+            }
+            if ($TypeRows.Count -gt 0) {
+                $RiskRows = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'RiskyServicePrincipals' -Rows $TypeRows.ToArray() -Fields 'id', 'riskLevel', 'riskState', 'riskDetail', 'riskLastUpdatedDateTime')
+            }
+        }
+        foreach ($Row in $RiskRows) {
+            if ($Row.id -and $Row.riskState -in 'atRisk', 'confirmedCompromised') { $RiskBySpId[[string]$Row.id] = $Row }
         }
     }
     $Now = [datetime]::UtcNow
@@ -586,12 +655,13 @@ function Get-CIPPAppPermissionExposure {
         [void]$SpById.TryGetValue($PrincipalId, [ref]$Sp)
         if ($Sp.appId -and $TenantId -and [string]$Sp.appOwnerOrganizationId -eq $TenantId) { [void]$OwnAppIds.Add([string]$Sp.appId) }
     }
-    $AppFields = @('id', 'appId', 'createdDateTime', 'passwordCredentials', 'keyCredentials')
+    $AppFields = @('id', 'appId', 'createdDateTime', 'passwordCredentials', 'keyCredentials', 'signInAudience', 'web', 'spa', 'publicClient', 'servicePrincipalLockConfiguration', 'disabledByMicrosoftStatus', 'owners')
     if ($OwnAppIds.Count -gt 0) {
         if ($Live) {
             $Requests = [System.Collections.Generic.List[object]]::new()
             foreach ($OwnAppId in $OwnAppIds) {
-                if ($OwnAppId -match $GuidPattern) { $Requests.Add(@{ id = $OwnAppId; method = 'GET'; url = "applications(appId='$OwnAppId')?`$select=$($AppFields -join ',')" }) }
+                # owners is a relationship: expanded, not selected
+                if ($OwnAppId -match $GuidPattern) { $Requests.Add(@{ id = $OwnAppId; method = 'GET'; url = "applications(appId='$OwnAppId')?`$select=$(($AppFields -ne 'owners') -join ',')&`$expand=owners(`$select=id,displayName,userPrincipalName,userType,appId)" }) }
             }
             if ($Requests.Count -gt 0) {
                 try {
@@ -611,6 +681,41 @@ function Get-CIPPAppPermissionExposure {
                 foreach ($App in @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Apps' -Rows $AppRows.ToArray() -Fields $AppFields)) {
                     if ($App.appId -and $OwnAppIds.Contains([string]$App.appId)) { $AppRegByAppId[[string]$App.appId] = $App }
                 }
+            }
+        }
+    }
+
+    # Federated credentials of those app registrations, by appId: tokens from another identity provider that sign in
+    # as the app without a secret. $null when they were not read.
+    $FederatedByAppId = $null
+    if ($AppRegByAppId.Count -gt 0) {
+        $FederatedRows = $null
+        if ($Live) {
+            try {
+                $FederatedRows = @(Get-CIPPAppFederatedCredential -TenantFilter $TenantFilter -Applications @($AppRegByAppId.Values))
+            } catch {
+                Write-Information "Federated credentials unavailable for $($TenantFilter): $($_.Exception.Message)"
+            }
+        } else {
+            $Cached = [System.Collections.Generic.List[object]]::new()
+            $CachedCount = $null
+            foreach ($Item in @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'AppFederatedCredentials')) {
+                if ($Item.RowKey -eq 'AppFederatedCredentials-Count') { $CachedCount = $Item } else { $Cached.Add($Item) }
+            }
+            if ($CachedCount -or $Cached.Count -gt 0) {
+                $FederatedRows = if ($Cached.Count -gt 0) { @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'AppFederatedCredentials' -Rows $Cached.ToArray() -Fields 'appId', 'credentialId', 'name', 'issuer', 'subject', 'audiences', 'description', 'claimsMatchingExpression') } else { @() }
+            }
+        }
+        if ($null -ne $FederatedRows) {
+            $FederatedByAppId = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($Row in $FederatedRows) {
+                if (-not $Row.appId) { continue }
+                $List = $null
+                if (-not $FederatedByAppId.TryGetValue([string]$Row.appId, [ref]$List)) {
+                    $List = [System.Collections.Generic.List[object]]::new()
+                    $FederatedByAppId[[string]$Row.appId] = $List
+                }
+                $List.Add($Row)
             }
         }
     }
@@ -836,6 +941,7 @@ function Get-CIPPAppPermissionExposure {
         $NewestWindow = $null
         $NewestReplaces = $null
         $NewestCredential = $null
+        $NewestUsed = $false
         $AddedByApp = $null
         $Backdated = $null
         # Azure manages a managed identity's credentials and Graph cannot add one: there is nothing to rate.
@@ -882,19 +988,24 @@ function Get-CIPPAppPermissionExposure {
                     }
                     $Added = if ($Times[2]) { $Times[2] } else { $Times[0] }
                     $Expired = [bool]($Times[1] -and $Times[1] -lt $Now)
-                    $CredentialDetails.Add([PSCustomObject]@{
-                            Location      = if ($Location -eq 'enterprise app') { 'Enterprise app' } else { 'App registration' }
-                            Type          = $Kind
-                            Purpose       = $Purpose
-                            Expired       = $Expired
-                            DisplayName   = [string]$Credential.displayName
-                            KeyId         = [string]$Credential.keyId
-                            StartDateTime = $Times[0]
-                            AddedDateTime = $Added
-                            AddedBy       = $Audit.initiatedByName
-                            AddedByType   = $Audit.initiatedByType
-                            EndDateTime   = $Times[1]
-                        })
+                    $LastUsed = if ($null -ne $CredentialUseByKeyId -and $Credential.keyId) { $CredentialUseByKeyId[([string]$Credential.keyId).ToLowerInvariant()] } else { $null }
+                    # Flags: what this credential contributed to the rating (AddedRecently, Rotation, AddedByApp, Backdated).
+                    $Detail = [PSCustomObject]@{
+                        Location           = if ($Location -eq 'enterprise app') { 'Enterprise app' } else { 'App registration' }
+                        Type               = $Kind
+                        Purpose            = $Purpose
+                        Expired            = $Expired
+                        DisplayName        = [string]$Credential.displayName
+                        KeyId              = [string]$Credential.keyId
+                        StartDateTime      = $Times[0]
+                        AddedDateTime      = $Added
+                        AddedBy            = $Audit.initiatedByName
+                        AddedByType        = $Audit.initiatedByType
+                        EndDateTime        = $Times[1]
+                        LastSignInDateTime = $LastUsed
+                        Flags              = [System.Collections.Generic.List[string]]::new()
+                    }
+                    $CredentialDetails.Add($Detail)
                     if ($Purpose -eq 'Sign-in') { $SignInKeys.Add(@{ KeyId = [string]$Credential.keyId; Added = $Added; End = $Times[1] }) }
                     # An expired credential can no longer sign in, and token keys never could.
                     if ($Purpose -ne 'Sign-in' -or $Expired) { continue }
@@ -902,24 +1013,30 @@ function Get-CIPPAppPermissionExposure {
                     # The portal and addPassword start a credential when it is added; the audit log says when that
                     # was. A start more than 2 days earlier was set by hand to look older, or is a certificate
                     # reused or uploaded long after it was issued: one certificate per app keeps this quiet.
-                    if (-not $Backdated -and $Times[2] -and $Times[0] -and ($Times[2] - $Times[0]).TotalDays -gt 2) {
-                        $Backdated = if ($Kind -eq 'Secret') {
-                            'Secret on its {0} backdated: added {1:yyyy-MM-dd} but marked valid from {2:yyyy-MM-dd}' -f $Location, $Times[2], $Times[0]
-                        } else {
-                            'Certificate on its {0} added {1:yyyy-MM-dd} but valid from {2:yyyy-MM-dd}: backdated, or reused or uploaded long after it was issued' -f $Location, $Times[2], $Times[0]
+                    if ($Times[2] -and $Times[0] -and ($Times[2] - $Times[0]).TotalDays -gt 2) {
+                        $Detail.Flags.Add('Backdated')
+                        if (-not $Backdated) {
+                            $Backdated = if ($Kind -eq 'Secret') {
+                                'Secret on its {0} backdated: added {1:yyyy-MM-dd} but marked valid from {2:yyyy-MM-dd}' -f $Location, $Times[2], $Times[0]
+                            } else {
+                                'Certificate on its {0} added {1:yyyy-MM-dd} but valid from {2:yyyy-MM-dd}: backdated, or reused or uploaded long after it was issued' -f $Location, $Times[2], $Times[0]
+                            }
                         }
                     }
                     # Credentials created together with the app or service principal are part of setting it up.
                     if (-not $Added -or $Added -gt $Now -or ($OwnerCreated -and ($Added - $OwnerCreated).TotalDays -lt 1)) { continue }
-                    $Candidates.Add(@{ KeyId = [string]$Credential.keyId; Added = $Added; Kind = $Kind })
-                    if (-not $AddedByApp -and $Audit.initiatedByType -eq 'Application') {
+                    $Candidates.Add(@{ KeyId = [string]$Credential.keyId; Added = $Added; Kind = $Kind; Used = $LastUsed -and $LastUsed -ge $Added; Detail = $Detail })
+                    if ($Audit.initiatedByType -eq 'Application') {
                         $ActorSp = $null
                         if ($Audit.initiatedByServicePrincipalId) { [void]$SpById.TryGetValue([string]$Audit.initiatedByServicePrincipalId, [ref]$ActorSp) }
                         $ActorVendor = $null
                         if ($ActorSp.appOwnerOrganizationId) { [void]$VendorTenants.TryGetValue([string]$ActorSp.appOwnerOrganizationId, [ref]$ActorVendor) }
                         $IsSelf = $Audit.initiatedByAppId -eq $AppId -or $Audit.initiatedByServicePrincipalId -eq $PrincipalId
-                        $IsTrustedActor = ($CippAppId -and $Audit.initiatedByAppId -eq $CippAppId) -or $ActorVendor.VendorType -eq 'Microsoft'
-                        if (-not $IsSelf -and -not $IsTrustedActor) { $AddedByApp = "$Kind added to its $Location by the app $($Audit.initiatedByName)" }
+                        $IsTrustedActor = ($CippAppId -and $CippAppId -in @($Audit.initiatedByAppId, $ActorSp.appId)) -or $ActorVendor.VendorType -eq 'Microsoft'
+                        if (-not $IsSelf -and -not $IsTrustedActor) {
+                            $Detail.Flags.Add('AddedByApp')
+                            if (-not $AddedByApp) { $AddedByApp = "$Kind added to its $Location by the app $($Audit.initiatedByName)" }
+                        }
                     }
                 }
             }
@@ -940,12 +1057,77 @@ function Get-CIPPAppPermissionExposure {
                 $Age = ($Now - $Candidate.Added).TotalDays
                 $AgeTier = if ($Age -le 7) { 3 } elseif ($Age -le 30) { 2 } elseif ($Age -le 90) { 1 } else { 0 }
                 $Tier = if ($Replaces) { [Math]::Min(1, $AgeTier) } else { $AgeTier }
+                if ($AgeTier -ge 2) { $Candidate.Detail.Flags.Add('AddedRecently') }
+                if ($Replaces) { $Candidate.Detail.Flags.Add('Rotation') }
                 if ($Tier -gt $NewestTier) {
                     $NewestTier = $Tier
                     $NewestWindow = @{ 3 = '7'; 2 = '30'; 1 = '90' }[$AgeTier]
                     $NewestReplaces = $Replaces
                     $NewestCredential = "$($Candidate.Kind) added to its $Location"
+                    $NewestUsed = [bool]$Candidate.Used
                 }
+            }
+        }
+
+        # Federated credentials on its app registration: a token from the issuer for the subject signs in as the app,
+        # with no secret or certificate to find or expire. Rated by who runs the issuer.
+        $FederatedCount = 0
+        $FederatedReasons = [System.Collections.Generic.List[object]]::new()
+        $FederatedList = $null
+        if ($AppReg -and $null -ne $FederatedByAppId -and $AppId) { [void]$FederatedByAppId.TryGetValue($AppId, [ref]$FederatedList) }
+        foreach ($Federated in @($FederatedList)) {
+            if (-not $Federated) { continue }
+            $FederatedCount++
+            $Issuer = ([string]$Federated.issuer).TrimEnd('/')
+            $IssuerTenant = if ($Issuer -match '^https://(login\.microsoftonline\.com|sts\.windows\.net)/([0-9a-fA-F-]{36})(/v2\.0)?$') { $Matches[2] } else { $null }
+            $IssuerVendor = $null
+            if ($IssuerTenant) { [void]$VendorTenants.TryGetValue($IssuerTenant, [ref]$IssuerVendor) }
+            # Steps: how much a credential trusting this issuer raises suspicion.
+            $Trust, $Steps = if ($Issuer -eq 'https://token.actions.githubusercontent.com' -or $Issuer -like 'https://token.actions.githubusercontent.com/*') {
+                'GitHub Actions', 0
+            } elseif ($Issuer -match '^https://[a-z0-9-]+\.oic\.prod-aks\.azure\.com/') {
+                'Azure Kubernetes Service', 0
+            } elseif ($IssuerTenant -and $TenantId -and $IssuerTenant -eq $TenantId) {
+                'This tenant (a managed identity or app here)', 0
+            } elseif ($IssuerTenant -and $PartnerTenantId -and $IssuerTenant -eq $PartnerTenantId) {
+                'Your partner tenant', 0
+            } elseif ($IssuerTenant -and $IssuerVendor) {
+                "Entra tenant of $($IssuerVendor.Name)", 0
+            } elseif ($IssuerTenant) {
+                "Another Entra tenant ($IssuerTenant)", 1
+            } elseif ($Issuer -in 'https://gitlab.com', 'https://app.terraform.io', 'https://accounts.google.com', 'https://cognito-identity.amazonaws.com') {
+                ([uri]$Issuer).Host, 0
+            } else {
+                'Unrecognised issuer', 2
+            }
+            $Matching = if ($Federated.claimsMatchingExpression) { "subjects matching $($Federated.claimsMatchingExpression)" } else { [string]$Federated.subject }
+            $CredentialDetails.Add([PSCustomObject]@{
+                    Location      = 'App registration'
+                    Type          = 'Federated'
+                    Purpose       = 'Sign-in'
+                    Expired       = $false
+                    DisplayName   = [string]$Federated.name
+                    KeyId         = [string]$Federated.credentialId
+                    Issuer        = [string]$Federated.issuer
+                    Subject       = $Matching
+                    Trust         = $Trust
+                    StartDateTime = $null
+                    AddedDateTime = $null
+                    AddedBy       = $null
+                    AddedByType   = $null
+                    EndDateTime   = $null
+                    LastSignInDateTime = $null
+                    Flags         = @(if ($Steps -gt 0) { 'UntrustedIssuer' })
+                })
+            if ($Steps -gt 0) {
+                $FederatedReasons.Add(@{
+                        Steps = $Steps
+                        Text  = if ($Steps -ge 2) {
+                            "Federated credential '$($Federated.name)' on its app registration trusts tokens from $($Federated.issuer), not a recognised identity provider: whoever runs that issuer signs in as this app with no secret (a self-hosted cluster looks the same; suspicion two steps higher)"
+                        } else {
+                            "Federated credential '$($Federated.name)' on its app registration lets identities in another Entra tenant ($IssuerTenant) sign in as this app (suspicion one step higher)"
+                        }
+                    })
             }
         }
 
@@ -1027,7 +1209,7 @@ function Get-CIPPAppPermissionExposure {
                     $ActorVendor = $null
                     if ($ActorSp.appOwnerOrganizationId) { [void]$VendorTenants.TryGetValue([string]$ActorSp.appOwnerOrganizationId, [ref]$ActorVendor) }
                     # An app assigning a role to itself is escalation, not housekeeping: only CIPP and Microsoft are trusted.
-                    if (-not (($CippAppId -and $RoleEvent.initiatedByAppId -eq $CippAppId) -or $ActorVendor.VendorType -eq 'Microsoft')) {
+                    if (-not (($CippAppId -and $CippAppId -in @($RoleEvent.initiatedByAppId, $ActorSp.appId)) -or $ActorVendor.VendorType -eq 'Microsoft')) {
                         $IsSelf = $RoleEvent.initiatedByAppId -eq $AppId -or $RoleEvent.initiatedByServicePrincipalId -eq $PrincipalId
                         $RoleAddedByApp = if ($IsSelf) { "$RoleLabel assigned by the app to itself" } else { "$RoleLabel assigned by the app $($RoleEvent.initiatedByName)" }
                     }
@@ -1064,7 +1246,7 @@ function Get-CIPPAppPermissionExposure {
             if ($GrantEvent.initiatedByServicePrincipalId) { [void]$SpById.TryGetValue([string]$GrantEvent.initiatedByServicePrincipalId, [ref]$ActorSp) }
             $ActorVendor = $null
             if ($ActorSp.appOwnerOrganizationId) { [void]$VendorTenants.TryGetValue([string]$ActorSp.appOwnerOrganizationId, [ref]$ActorVendor) }
-            if (($CippAppId -and $GrantEvent.initiatedByAppId -eq $CippAppId) -or $ActorVendor.VendorType -eq 'Microsoft') { continue }
+            if (($CippAppId -and $CippAppId -in @($GrantEvent.initiatedByAppId, $ActorSp.appId)) -or $ActorVendor.VendorType -eq 'Microsoft') { continue }
             $IsSelf = $GrantEvent.initiatedByAppId -eq $AppId -or $GrantEvent.initiatedByServicePrincipalId -eq $PrincipalId
             $GrantAddedByApp = 'Delegated {0} for a single user granted by {1}' -f (@($Matched.Name) -join ', '), $(if ($IsSelf) { 'the app to itself' } else { "the app $($GrantEvent.initiatedByName)" })
         }
@@ -1072,7 +1254,7 @@ function Get-CIPPAppPermissionExposure {
         [Array]::Sort[string, object]($DetailKeys, $Details, [System.StringComparer]::OrdinalIgnoreCase)
         $IsCippApp = [bool]($CippAppId -and $AppId -eq $CippAppId)
         # A Microsoft or CIPP app listed only to check its credentials, and holding none that sign in.
-        if ($Details.Count -eq 0 -and $CredentialCount -eq 0) { continue }
+        if ($Details.Count -eq 0 -and $CredentialCount -eq 0 -and -not $IncludeUncatalogued) { continue }
 
         $Labels = [string[]]::new($Details.Count)
         for ($i = 0; $i -lt $Details.Count; $i++) {
@@ -1120,6 +1302,9 @@ function Get-CIPPAppPermissionExposure {
         if ($RecentExchangeRole) { $ActorFlags.Add("Exchange application role $RecentExchangeRole assigned in the last 7 days (suspicion two steps higher)") }
         if ($RoleAddedByApp) { $ActorFlags.Add("Directory role $RoleAddedByApp rather than by a person (suspicion two steps higher)") }
         if ($GrantAddedByApp) { $ActorFlags.Add("$GrantAddedByApp rather than by that user's consent (suspicion two steps higher)") }
+        # Microsoft stops issuing tokens to an app it finds malicious or abusive, on the app or on this tenant's copy.
+        $DisabledBy = @([string]$Sp.disabledByMicrosoftStatus, [string]$AppReg.disabledByMicrosoftStatus) | Where-Object { $_ -and $_ -ne 'NotDisabled' } | Select-Object -First 1
+        $Impersonates = $null
         $RiskLevel = 0
         if ($IsCippApp -or $IsMicrosoftApp) {
             $AppSuspicion = 1
@@ -1131,6 +1316,13 @@ function Get-CIPPAppPermissionExposure {
                 $EffectiveImpact = 4
                 $RiskLevel = 4
                 $Reasons.Add(("{0} sign-in credential(s) on its service principal in this tenant, which {1} never adds: whoever holds one signs in as this app with all of its access, including access not visible as grants (Critical)" -f $CredentialCount, $(if ($IsCippApp) { 'CIPP' } else { 'Microsoft' })))
+            } elseif ($FederatedCount -gt 0) {
+                # Only CIPP's own registration can sit here, when the report runs on the partner tenant.
+                $AppSuspicion = 4
+                $MaxImpact = 4
+                $EffectiveImpact = 4
+                $RiskLevel = 4
+                $Reasons.Add("$FederatedCount federated credential(s) on its app registration, which CIPP never adds: whoever controls the trusted issuer signs in as this app with all of its access, with no secret (Critical)")
             } elseif ($ActorFlags.Count -gt 0) {
                 foreach ($Flag in $ActorFlags) { $AppSuspicion += 2; $Reasons.Add($Flag) }
                 $AppSuspicion = [Math]::Min(4, $AppSuspicion)
@@ -1203,6 +1395,62 @@ function Get-CIPPAppPermissionExposure {
                         } else {
                             "$NewestCredential in the last $NewestWindow days (suspicion $Steps higher)"
                         }))
+                if ($NewestUsed) {
+                    $AppSuspicion++
+                    $Reasons.Add("The $($NewestCredential.Substring(0, 1).ToLowerInvariant())$($NewestCredential.Substring(1)) has already signed in (suspicion one step higher)")
+                }
+            }
+            if ($DisabledBy) {
+                $AppSuspicion = 4
+                $Reasons.Add("Microsoft disabled this app ($DisabledBy): it gets no tokens, but Microsoft found it malicious or abusive. Review what it did and remove it (suspicion Critical)")
+            }
+            $Risky = $RiskBySpId[$PrincipalId]
+            if ($Risky.riskState -eq 'confirmedCompromised') {
+                $AppSuspicion = 4
+                $Reasons.Add('Identity Protection: an administrator confirmed this service principal compromised (suspicion Critical)')
+            } elseif ($Risky.riskLevel -in 'high', 'medium') {
+                $Steps = if ($Risky.riskLevel -eq 'high') { 2 } else { 1 }
+                $AppSuspicion += $Steps
+                $Reasons.Add("Identity Protection rates this service principal at $($Risky.riskLevel) risk$(if ($Risky.riskDetail -and $Risky.riskDetail -ne 'none') { " ($($Risky.riskDetail))" }) (suspicion $(if ($Steps -eq 2) { 'two steps' } else { 'one step' }) higher)")
+            }
+            # An app owned elsewhere that takes a Microsoft product's name to look trusted on a consent prompt.
+            if ($Ownership -in 'Third party', 'Unknown', 'Personal account' -and -not $Sp.verifiedPublisher.displayName -and $DisplayName -match '(?i)\b(microsoft|office ?365|o365|outlook|azure|entra|sharepoint|onedrive|teams|exchange|defender|intune|windows)\b') {
+                $Impersonates = $Matches[1]
+                $AppSuspicion++
+                $Reasons.Add("Named like a Microsoft product ($Impersonates) but neither owned by Microsoft nor from a verified publisher (suspicion one step higher)")
+            }
+            # The app registration of an app registered here: where sign-in codes and tokens are sent, and who can add a credential.
+            if ($AppReg) {
+                $SuspectUris = [System.Collections.Generic.List[string]]::new()
+                foreach ($RedirectUri in @($AppReg.web.redirectUris) + @($AppReg.spa.redirectUris) + @($AppReg.publicClient.redirectUris)) {
+                    $UriObject = $null
+                    if (-not $RedirectUri -or -not [uri]::TryCreate([string]$RedirectUri, [System.UriKind]::Absolute, [ref]$UriObject) -or $UriObject.IsLoopback) { continue }
+                    if ($UriObject.Scheme -eq 'http' -or $UriObject.HostNameType -in 'IPv4', 'IPv6' -or $UriObject.Host -match '(?i)(^|\.)(ngrok(-free)?\.(io|app|dev)|trycloudflare\.com|loca\.lt|localtunnel\.me|serveo\.net|localhost\.run|pagekite\.me|webhook\.site|requestbin\.(com|net)|pipedream\.net|beeceptor\.com|interact\.sh|oast\.(fun|live|me|online|pro|site))$') {
+                        $SuspectUris.Add([string]$RedirectUri)
+                    }
+                }
+                if ($SuspectUris.Count -gt 0) {
+                    $AppSuspicion++
+                    $Reasons.Add("Redirect URI $($SuspectUris -join ', ') on its app registration uses plain http, a raw IP address or a tunnelling service: sign-in codes and tokens for this app can be sent there (suspicion one step higher)")
+                }
+                $Owners = @($AppReg.owners | Where-Object { $_ })
+                if ($Owners.Count -gt 0) {
+                    $OwnerNames = @(foreach ($Owner in $Owners) { if ($Owner.userPrincipalName) { [string]$Owner.userPrincipalName } elseif ($Owner.displayName) { [string]$Owner.displayName } else { [string]$Owner.id } })
+                    $Reasons.Add("$($Owners.Count) owner(s) of its app registration ($($OwnerNames -join ', ')) can add a credential and act with all of this access")
+                    $GuestOwners = @(foreach ($Owner in $Owners) { if ($Owner.userType -eq 'Guest' -or [string]$Owner.userPrincipalName -like '*#EXT#*') { if ($Owner.userPrincipalName) { [string]$Owner.userPrincipalName } else { [string]$Owner.displayName } } })
+                    if ($GuestOwners.Count -gt 0) {
+                        $AppSuspicion++
+                        $Reasons.Add("Owned by guest account(s) $($GuestOwners -join ', '): someone outside the organisation can add a credential to it (suspicion one step higher)")
+                    }
+                    $AppOwners = @(foreach ($Owner in $Owners) { if ($Owner.appId -or $Owner.'@odata.type' -eq '#microsoft.graph.servicePrincipal') { [string]$Owner.displayName } })
+                    if ($AppOwners.Count -gt 0) {
+                        $AppSuspicion++
+                        $Reasons.Add("Owned by the app(s) $($AppOwners -join ', '): whoever controls that app can add a credential to this one (suspicion one step higher)")
+                    }
+                }
+                if ($AppReg.signInAudience -in 'AzureADMultipleOrgs', 'AzureADandPersonalMicrosoftAccount') {
+                    $Reasons.Add("Registered here for other organisations to use ($($AppReg.signInAudience)): its credentials sign in wherever it is consented$(if ($AppReg.servicePrincipalLockConfiguration.isEnabled -ne $true) { ', and its app instance property lock is off, so an organisation that consents can add credentials to its own copy' })")
+                }
             }
             if ($AddedByApp) {
                 $AppSuspicion += 2
@@ -1211,6 +1459,13 @@ function Get-CIPPAppPermissionExposure {
             if ($Backdated) {
                 $AppSuspicion += 2
                 $Reasons.Add("$Backdated (suspicion two steps higher)")
+            }
+            if ($FederatedReasons.Count -gt 0) {
+                # Each credential is named; together they raise suspicion by the most any one does.
+                foreach ($Flag in $FederatedReasons) { $Reasons.Add($Flag.Text) }
+                $AppSuspicion += ($FederatedReasons | Measure-Object -Property Steps -Maximum).Maximum
+            } elseif ($FederatedCount -gt 0) {
+                $Reasons.Add("$FederatedCount federated credential(s) on its app registration, each trusting a recognised identity provider: tokens it issues for the configured subject sign in as this app with no secret")
             }
             foreach ($Flag in $ActorFlags) { $AppSuspicion += 2; $Reasons.Add($Flag) }
             $Created = $null
@@ -1285,7 +1540,13 @@ function Get-CIPPAppPermissionExposure {
                 SignInActivityTimestamp         = $ActivityTimestamp
                 ServicePrincipalCredentialCount = $CredentialCount
                 AppRegistrationCredentialCount  = if ($AppReg) { $AppRegCredentialCount } else { $null }
+                FederatedCredentialCount        = if ($AppReg -and $null -ne $FederatedByAppId) { $FederatedCount } else { $null }
                 CredentialDetails               = $CredentialDetails.ToArray()
+                Owners                          = @(foreach ($Owner in @($AppReg.owners | Where-Object { $_ })) { [PSCustomObject]@{ Id = [string]$Owner.id; DisplayName = [string]$Owner.displayName; UserPrincipalName = [string]$Owner.userPrincipalName; UserType = [string]$Owner.userType; AppId = [string]$Owner.appId } })
+                DisabledByMicrosoftStatus       = $DisabledBy
+                ImpersonatedProduct             = $Impersonates
+                IdentityProtectionRiskLevel     = [string]$RiskBySpId[$PrincipalId].riskLevel
+                IdentityProtectionRiskState     = [string]$RiskBySpId[$PrincipalId].riskState
                 Risk                            = $RankName[$RiskLevel]
                 RiskReasons                     = $Reasons.ToArray()
                 Suspicion                       = $RankName[$AppSuspicion]

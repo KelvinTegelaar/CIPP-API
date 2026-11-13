@@ -22,11 +22,21 @@ function Invoke-ExecSetUserPhoto {
             $FailCode = [HttpStatusCode]::BadRequest
             throw 'User ID is required'
         }
+        if ([string]::IsNullOrWhiteSpace($tenantFilter)) {
+            $FailCode = [HttpStatusCode]::BadRequest
+            throw 'Tenant is required'
+        }
+        if ($userId -match '^\.+$') {
+            $FailCode = [HttpStatusCode]::BadRequest
+            throw 'User ID is invalid'
+        }
+        # The id is one path segment of the Graph URL and must stay one.
+        $UserSegment = [uri]::EscapeDataString($userId)
 
         if ($action -eq 'remove') {
             # Remove the user's profile picture
             try {
-                $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$userId/photo/`$value" -tenantid $tenantFilter -type DELETE -NoAuthCheck $true
+                $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$UserSegment/photo/`$value" -tenantid $tenantFilter -type DELETE
                 $Results.Add('Successfully removed user profile picture.')
                 Write-LogMessage -API $APIName -tenant $tenantFilter -headers $Headers -message "Removed profile picture for user $userId" -Sev Info
             } catch {
@@ -68,7 +78,7 @@ function Invoke-ExecSetUserPhoto {
             }
 
             # Upload the photo using Graph API
-            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$userId/photo/`$value" -tenantid $tenantFilter -type PUT -body $photoBytes -ContentType 'image/jpeg'
+            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$UserSegment/photo/`$value" -tenantid $tenantFilter -type PUT -body $photoBytes -ContentType 'image/jpeg'
 
             $Results.Add('Successfully set user profile picture.')
             Write-LogMessage -API $APIName -tenant $tenantFilter -headers $Headers -message "Set profile picture for user $userId" -Sev Info

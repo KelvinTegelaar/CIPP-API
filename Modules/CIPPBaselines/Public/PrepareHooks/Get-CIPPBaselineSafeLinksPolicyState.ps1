@@ -89,6 +89,14 @@ function Get-CIPPBaselineSafeLinksPolicyState {
     $Current | Add-Member -NotePropertyName 'ruleExists' -NotePropertyValue ([bool]$Rule)
     $Current | Add-Member -NotePropertyName 'ruleLinkedPolicy' -NotePropertyValue "$($Rule.SafeLinksPolicy)"
     $Current | Add-Member -NotePropertyName 'acceptedDomains' -NotePropertyValue @($AcceptedDomains)
+    # Written by the hook so a blank list clears the tenant's entries instead of being omitted.
+    $ExtraPolicyParams = [ordered]@{}
+    if ($DoNotRewrite.Count -gt 0) {
+        $ExtraPolicyParams['DoNotRewriteUrls'] = @($DoNotRewrite)
+    } elseif ($Policy) {
+        $ExtraPolicyParams['DoNotRewriteUrls'] = @{ '@odata.type' = '#Exchange.GenericHashTable' }
+    }
+    $Current | Add-Member -NotePropertyName 'extraPolicyParams' -NotePropertyValue ([PSCustomObject]$ExtraPolicyParams)
 
     @{ Expected = $Expected; Current = $Current }
 }

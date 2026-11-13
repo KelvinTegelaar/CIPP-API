@@ -28,6 +28,15 @@ function Start-UpdatePermissionsOrchestrator {
         if ($Tenants.customerId -notcontains $env:TenantID) {
             $Tenants.Add($PartnerTenant)
         }
+        foreach ($Partner in @(Get-CIPPPartnerTenant | Where-Object { $_.IsPrimary -ne $true })) {
+            if ($Tenants.customerId -notcontains $Partner.RowKey) {
+                $Tenants.Add(@{
+                        'customerId'        = $Partner.RowKey
+                        'defaultDomainName' = 'PartnerTenant'
+                        'displayName'       = "*Partner Tenant ($($Partner.displayName))"
+                    })
+            }
+        }
 
         $CPVTable = Get-CIPPTable -TableName cpvtenants
         $CPVRows = Get-CIPPAzDataTableEntity @CPVTable

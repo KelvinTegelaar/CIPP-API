@@ -34,7 +34,7 @@ function Get-CIPPIntuneApplicationReport {
         throw "No Intune application data found for $TenantFilter. Run a cache sync first."
     }
 
-    $GroupItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneApplicationGroups' | Where-Object { $_.RowKey -notlike '*-Count' }
+    $GroupItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntunePolicyGroups' | Where-Object { $_.RowKey -notlike '*-Count' }
     if (-not $GroupItems) {
         $GroupItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'Groups' | Where-Object { $_.RowKey -notlike '*-Count' }
     }

@@ -179,6 +179,38 @@ Describe 'Get-CIPPBaselineGroupTemplateState' {
         $Prepared = Get-CIPPBaselineGroupTemplateState -Item $Item -TenantFilter $script:Tenant
         (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
     }
+
+    # Issue 1252: a bare null Current reached the executor, which did nothing and was recorded as deployed.
+    It 'grades a tenant with no groups at all as drift, not as no data' {
+        Mock Get-CIPPDbItem { [PSCustomObject]@{ RowKey = 'Groups-Count'; DataCount = 0 } }
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ RowKey = 'tpl-g'; JSON = '{"displayName":"Sec Group","groupType":"generic"}' } }
+        Mock New-CIPPDbRequest { @() }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ groupTemplate = 'tpl-g' } }
+        $Prepared = Get-CIPPBaselineGroupTemplateState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.deployed | Should -BeFalse
+        $Prepared.Current.templateBody.displayName | Should -Be 'Sec Group'
+    }
+
+    It 'names the reason when the Groups cache was never collected, so the executor does not run' {
+        Mock Get-CIPPDbItem { }
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ RowKey = 'tpl-g'; JSON = '{"displayName":"Sec Group","groupType":"generic"}' } }
+        Mock New-CIPPDbRequest { @() }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ groupTemplate = 'tpl-g' } }
+        $Prepared = Get-CIPPBaselineGroupTemplateState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current | Should -BeNullOrEmpty
+        $Prepared.NoDataReason | Should -Match 'groups cache'
+        $Prepared.ConfigError | Should -BeNullOrEmpty
+    }
+
+    It 'names the reason when the selected template no longer exists' {
+        Mock Get-CIPPAzDataTableEntity { }
+        Mock New-CIPPDbRequest { @() }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ groupTemplate = [PSCustomObject]@{ label = 'Sec Group'; value = 'tpl-gone' } } }
+        $Prepared = Get-CIPPBaselineGroupTemplateState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current | Should -BeNullOrEmpty
+        $Prepared.NoDataReason | Should -Match "'Sec Group' could not be found"
+        $Prepared.ConfigError | Should -BeTrue
+    }
 }
 
 Describe 'Get-CIPPBaselineExchangeConnectorTemplateState' {

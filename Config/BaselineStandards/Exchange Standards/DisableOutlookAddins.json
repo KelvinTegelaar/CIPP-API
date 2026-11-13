@@ -3,7 +3,9 @@
   "label": "Disable users from installing add-ins in Outlook",
   "cat": "Exchange Standards",
   "tag": [
-    "exo_outlookaddins"
+    "exo_outlookaddins",
+    "CMMC (CM.L2-3.4.9)",
+    "NIST SP 800-171 (3.4.9)"
   ],
   "impact": "Medium Impact",
   "helpText": "Disables the ability for users to install add-ins in Outlook. This is to prevent users from installing malicious add-ins.",

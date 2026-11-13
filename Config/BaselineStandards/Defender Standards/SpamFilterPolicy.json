@@ -12,7 +12,9 @@
     "mdo_highconfidencephishaction",
     "mdo_quarantineretentionperiod",
     "mdo_zapspam",
-    "mdo_zapphish"
+    "mdo_zapphish",
+    "CMMC (SI.L2-3.14.6)",
+    "NIST SP 800-171 (3.14.6)"
   ],
   "impact": "Low Impact",
   "helpText": "This creates a Spam filter policy. When the adopted policy is the built-in \"Default\", Exchange owns its scoping and no rule is graded or written.",

@@ -29,6 +29,12 @@ BeforeAll {
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp, [switch]$Stream, $ComplexFilter, $NoPagination) }
     function Add-CIPPApplicationPermission { param($RequiredResourceAccess, $ApplicationId, $TenantFilter) }
     function Get-CIPPPartnerUserLookup { @{} }
+    function Get-CIPPVendorTenantMap {
+        @{
+            'f8cdef31-a31e-4b4a-93e4-5f571e91255a' = [pscustomobject]@{ Name = 'Microsoft'; VendorType = 'Microsoft' }
+            'dddddddd-dddd-4ddd-8ddd-dddddddddddd' = [pscustomobject]@{ Name = 'Vendor'; VendorType = 'Business' }
+        }
+    }
 
     # The IP allow/block list helpers run for real (over the mocked table reads) so the CIDR and
     # most-specific-range matching is exercised end to end.
@@ -38,6 +44,7 @@ BeforeAll {
             'Authentication/Test-IpInRange.ps1'
             'Authentication/ConvertTo-CIPPIPRange.ps1'
             'BEC/ConvertTo-CIPPBecHostAddress.ps1'
+            'Tools/ConvertTo-CIPPScriptBlockValue.ps1'
             'Webhooks/Get-CIPPAuditLogRuleSet.ps1'
         )) {
         . (Join-Path $RepoRoot "Modules/CIPPCore/Public/$Helper")
@@ -331,6 +338,105 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
         }
     }
 
+    Context 'an app acting on another app' {
+        BeforeAll {
+            $script:MsActor = 'a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1'
+            $script:VendorActor = 'b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2'
+            $script:MsApp = 'c3c3c3c3-c3c3-4c3c-8c3c-c3c3c3c3c3c3'
+            $script:VendorApp = 'd4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4'
+            $script:Graph = 'e5e5e5e5-e5e5-4e5e-8e5e-e5e5e5e5e5e5'
+            $script:UserActor = 'f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6'
+
+            # Shapes from Fixtures/AuditLogPresetSamples.json: credentials and role members name the app in Target;
+            # grants and owner changes name it in ServicePrincipal.ObjectID, with the resource or new owner in Target.
+            function New-AppActionRow {
+                param([string]$Actor, [string]$Subject, [switch]$InModifiedProperties, [switch]$UserActor)
+                $Row = New-AuditRow
+                $Row.auditData | Add-Member -NotePropertyName 'Actor' -NotePropertyValue @(
+                    if ($UserActor) {
+                        [pscustomobject]@{ ID = 'admin@contoso.com'; Type = 5 }
+                        [pscustomobject]@{ ID = "User_$Actor"; Type = 2 }
+                        [pscustomobject]@{ ID = $Actor; Type = 2 }
+                    } else {
+                        [pscustomobject]@{ ID = 'Some App'; Type = 1 }
+                        [pscustomobject]@{ ID = "ServicePrincipal_$Actor"; Type = 2 }
+                        [pscustomobject]@{ ID = $Actor; Type = 2 }
+                    }
+                )
+                if ($InModifiedProperties) {
+                    $Row.auditData.ModifiedProperties = @([pscustomobject]@{ Name = 'ServicePrincipal.ObjectID'; NewValue = $Subject; OldValue = '' })
+                    $TargetId = $script:Graph
+                } else {
+                    $TargetId = $Subject
+                }
+                $Row.auditData | Add-Member -NotePropertyName 'Target' -NotePropertyValue @(
+                    [pscustomobject]@{ ID = "ServicePrincipal_$TargetId"; Type = 2 }
+                    [pscustomobject]@{ ID = $TargetId; Type = 2 }
+                    [pscustomobject]@{ ID = 'ServicePrincipal'; Type = 2 }
+                )
+                $Row
+            }
+        }
+
+        BeforeEach {
+            $Microsoft = 'f8cdef31-a31e-4b4a-93e4-5f571e91255a'
+            $Vendor = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+            $Sps = @{}
+            foreach ($Sp in @(
+                    @{ Id = $script:MsActor; Owner = $Microsoft }
+                    @{ Id = $script:VendorActor; Owner = $Vendor }
+                    @{ Id = $script:MsApp; Owner = $Microsoft }
+                    @{ Id = $script:VendorApp; Owner = $Vendor }
+                    @{ Id = $script:Graph; Owner = $Microsoft }
+                )) {
+                $Sps[$Sp.Id] = @{ id = $Sp.Id; displayName = $Sp.Id; servicePrincipalType = 'Application'; appOwnerOrganizationId = $Sp.Owner }
+            }
+            $script:LookupRows = @(
+                New-LookupRow 'users'
+                New-LookupRow 'groups'
+                New-LookupRow 'devices'
+                [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = 'servicePrincipals'; Format = 'hashtable'; Data = ($Sps | ConvertTo-Json -Compress -Depth 5) }
+            )
+        }
+
+        It 'flags <Name>' -ForEach @(
+            @{ Name = 'a Microsoft app changing a Microsoft app named in Target'; Actor = 'MsActor'; Subject = 'MsApp'; InModifiedProperties = $false; Expected = 'true' }
+            @{ Name = 'a Microsoft app changing a Microsoft app named in ServicePrincipal.ObjectID'; Actor = 'MsActor'; Subject = 'MsApp'; InModifiedProperties = $true; Expected = 'true' }
+        ) {
+            $Row = New-AppActionRow -Actor (Get-Variable -Scope Script -Name $Actor -ValueOnly) -Subject (Get-Variable -Scope Script -Name $Subject -ValueOnly) -InModifiedProperties:$InModifiedProperties
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($Row)).DataToProcess)[0]
+            $data.CIPPMicrosoftAppToMicrosoftApp | Should -Be $Expected
+        }
+
+        It 'does not flag <Name>' -ForEach @(
+            @{ Name = 'a third-party app changing a Microsoft app'; Actor = 'VendorActor'; Subject = 'MsApp'; InModifiedProperties = $false }
+            @{ Name = 'a Microsoft app changing a third-party app'; Actor = 'MsActor'; Subject = 'VendorApp'; InModifiedProperties = $false }
+            @{ Name = 'a Microsoft app granting a third-party app access to a Microsoft resource'; Actor = 'MsActor'; Subject = 'VendorApp'; InModifiedProperties = $true }
+        ) {
+            $Row = New-AppActionRow -Actor (Get-Variable -Scope Script -Name $Actor -ValueOnly) -Subject (Get-Variable -Scope Script -Name $Subject -ValueOnly) -InModifiedProperties:$InModifiedProperties
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($Row)).DataToProcess)[0]
+            $data.CIPPMicrosoftAppToMicrosoftApp | Should -BeNullOrEmpty
+        }
+
+        It 'does not fall back to the Microsoft resource in Target when the changed app is unknown' {
+            $Row = New-AppActionRow -Actor $script:MsActor -Subject '99999999-9999-4999-8999-999999999999' -InModifiedProperties
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($Row)).DataToProcess)[0]
+            $data.CIPPMicrosoftAppToMicrosoftApp | Should -BeNullOrEmpty
+        }
+
+        It 'does not flag a user acting on a Microsoft app' {
+            $Row = New-AppActionRow -Actor $script:UserActor -Subject $script:MsApp -UserActor
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($Row)).DataToProcess)[0]
+            $data.CIPPMicrosoftAppToMicrosoftApp | Should -BeNullOrEmpty
+        }
+
+        It 'flags the same way when a batch is large enough to take the full parse' {
+            $Rows = @(1..60 | ForEach-Object { New-AppActionRow -Actor $script:MsActor -Subject $script:MsApp })
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows $Rows).DataToProcess)[0]
+            $data.CIPPMicrosoftAppToMicrosoftApp | Should -Be 'true'
+        }
+    }
+
     Context 'a record carrying an ignore-listed extended property' {
         BeforeEach {
             # 'Consent:Set' is on $ExtendedPropertiesIgnoreList inside the function.
@@ -523,7 +629,7 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
 
         It 'keeps the service principal fields alerting reads' {
             $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($script:MappedRow)).DataToProcess)[0]
-            @($data.CIPPAppId.Keys) | Should -Be @('id', 'appId', 'displayName', 'appDisplayName', 'accountEnabled', 'servicePrincipalType', 'tags')
+            @($data.CIPPAppId.Keys) | Should -Be @('id', 'appId', 'displayName', 'appDisplayName', 'accountEnabled', 'servicePrincipalType', 'appOwnerOrganizationId', 'tags')
             @($data.CIPPAppId.tags) | Should -Be @('WindowsAzureActiveDirectoryIntegratedApp')
         }
 

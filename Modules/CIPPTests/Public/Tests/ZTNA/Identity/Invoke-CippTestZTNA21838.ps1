@@ -12,14 +12,14 @@ function Invoke-CippTestZTNA21838 {
         $AuthMethodsPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'AuthenticationMethodsPolicy'
 
         if (-not $AuthMethodsPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Security key authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Access control'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Security key authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'
             return
         }
 
         $Fido2Config = $AuthMethodsPolicy.authenticationMethodConfigurations.Where({ $_.id -eq 'Fido2' })
 
         if (-not $Fido2Config) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Security key authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Access control'
+            Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Security key authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'
             return
         }
 
@@ -51,11 +51,11 @@ function Invoke-CippTestZTNA21838 {
         }
         $null = $ResultMarkdown.Append("- Exclude targets: $ExcludeTargetsDisplay`n")
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'Security key authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Access control'
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'Security key authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Error running test: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Security key authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Access control'
+        Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Error running test: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Security key authentication method enabled' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Credential management'
     }
 }

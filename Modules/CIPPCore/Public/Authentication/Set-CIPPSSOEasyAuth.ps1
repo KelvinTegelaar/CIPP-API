@@ -27,7 +27,11 @@ function Set-CIPPSSOEasyAuth {
         [switch]$UseKvReferences,
 
         [Parameter()]
-        [switch]$ImplicitAuth
+        [switch]$ImplicitAuth,
+
+        # Restricted multi-tenant mode: other tenants that may sign in. Empty = any tenant; omitted = keep the current list
+        [Parameter()]
+        [string[]]$AllowedTenants
     )
 
     $SiteName = $env:WEBSITE_SITE_NAME
@@ -99,10 +103,18 @@ function Set-CIPPSSOEasyAuth {
         }
     }
 
-    # Always remove WEBSITE_AUTH_AAD_ALLOWED_TENANTS — we rely on the issuer URL
-    # for tenant restriction ("Use default restrictions based on issuer" in the portal).
-    # Multi-tenant uses common/v2.0 issuer, single-tenant uses {tenantId}/v2.0.
-    $MergedSettings.Remove('WEBSITE_AUTH_AAD_ALLOWED_TENANTS')
+    # Single tenant is restricted by its {tenantId}/v2.0 issuer. Multi-tenant (common issuer) is restricted
+    # by WEBSITE_AUTH_AAD_ALLOWED_TENANTS, which always lists this tenant so its admins keep access.
+    if (-not $MultiTenant) {
+        $MergedSettings.Remove('WEBSITE_AUTH_AAD_ALLOWED_TENANTS')
+    } elseif ($PSBoundParameters.ContainsKey('AllowedTenants')) {
+        $OtherTenants = @(@($AllowedTenants).Where({ $_ }))
+        if ($OtherTenants.Count -gt 0) {
+            $MergedSettings['WEBSITE_AUTH_AAD_ALLOWED_TENANTS'] = (@(@($TenantId; $OtherTenants).ToLower() | Select-Object -Unique) -join ',')
+        } else {
+            $MergedSettings.Remove('WEBSITE_AUTH_AAD_ALLOWED_TENANTS')
+        }
+    }
 
     $SettingsBody = @{ properties = $MergedSettings } | ConvertTo-Json -Depth 5
     Invoke-RestMethod -Uri "$BaseUri/config/appsettings?api-version=2024-11-01" -Method Put -Headers $ArmHeaders -Body $SettingsBody

@@ -2,7 +2,14 @@
   "name": "IntuneTemplatePackage",
   "label": "Intune Template Package",
   "cat": "Templates",
-  "tag": ["HighImpact"],
+  "tag": [
+    "HighImpact",
+    "CMMC (CM.L2-3.4.1)",
+    "CMMC (CM.L2-3.4.2)",
+    "FedRAMP B-D (KSI-SVC-ACM)",
+    "NIST SP 800-171 (3.4.1)",
+    "NIST SP 800-171 (3.4.2)"
+  ],
   "impact": "High Impact",
   "helpText": "Deploys and drift-checks EVERY Intune template tagged with the selected package. Membership is resolved fresh on every run: tag a new template with the package and it joins this baseline automatically, untag it and it leaves. All templates in the package share the assignment options configured here - add a template individually instead when it needs different options.",
   "executiveText": "Deploys a complete, named bundle of device management configurations in one step - for example an entire Windows security baseline - and keeps every policy in the bundle enforced as the bundle evolves.",

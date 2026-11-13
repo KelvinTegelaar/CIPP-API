@@ -4,8 +4,9 @@ function Invoke-SherwebScheduledLicenseRemoval {
         Decreases a Sherweb subscription quantity, but only when unassigned licenses are available.
 
     .DESCRIPTION
-        Designed to run as a scheduled task shortly before a subscription's renewal date (inside
-        the cancellation window). Checks the actual license assignment state in the tenant first:
+        Designed to run as a scheduled task shortly after a subscription's renewal date, inside the
+        window in which Sherweb accepts decreases on committed (NCE) subscriptions. Checks the actual
+        license assignment state in the tenant first:
         the Sherweb product is matched to its Microsoft 365 SKU by product name via the cached
         license overview, and live assignment counts come from Graph subscribedSkus. The decrease
         only executes when at least the requested number of licenses is unassigned; otherwise the

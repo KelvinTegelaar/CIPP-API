@@ -202,6 +202,12 @@ function Get-CIPPBaselineSpamFilterPolicyState {
     if ($BulkMovesEnabled -in @('On', 'Off')) {
         $ExtraPolicyParams['BulkMovesEnabled'] = $BulkMovesEnabled
     }
+    # A blank list clears the tenant's entries, as the classic did.
+    if ($AllowedSenderDomains.Count -gt 0) {
+        $ExtraPolicyParams['AllowedSenderDomains'] = @($AllowedSenderDomains)
+    } elseif ($Policy) {
+        $ExtraPolicyParams['AllowedSenderDomains'] = @{ '@odata.type' = '#Exchange.GenericHashTable' }
+    }
     $Current | Add-Member -NotePropertyName 'extraPolicyParams' -NotePropertyValue ([PSCustomObject]$ExtraPolicyParams)
 
     @{ Expected = $Expected; Current = $Current }

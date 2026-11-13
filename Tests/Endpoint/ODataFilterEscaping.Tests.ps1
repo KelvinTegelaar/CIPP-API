@@ -14,6 +14,7 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
     function Get-CippException { param($Exception) @{ NormalizedError = "$Exception" } }
     function Test-CIPPAccess { param($Request, [switch]$TenantList) @('AllTenants') }
+    function Test-CippTemplateWriteAccess { param($Permission, $PartitionKey, $RowKey) $true }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     $Http = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions'
     foreach ($Name in 'Invoke-ExecSharePointTemplate', 'Invoke-ExecAppApprovalTemplate', 'Invoke-ExecAppPermissionTemplate', 'Invoke-ExecGraphExplorerPreset', 'Invoke-ExecPushSubscription', 'Invoke-ExecRemoveCippCveException') {

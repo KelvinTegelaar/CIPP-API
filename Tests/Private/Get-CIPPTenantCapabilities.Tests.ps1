@@ -23,7 +23,24 @@ BeforeAll {
 }
 
 Describe 'Get-CIPPTenantCapabilities' {
-    BeforeEach { $script:Reads = 0; $script:CIPPTenantCapabilitiesCache = $null }
+    BeforeEach { $script:Reads = 0; $script:CIPPTenantCapabilitiesCache = $null; $script:CIPPTenantCapabilitiesSweep = $null }
+
+    It 'removes expired tenants when it caches a new one' {
+        $script:CIPPTenantCapabilitiesCache = @{}
+        foreach ($i in 1..500) { $script:CIPPTenantCapabilitiesCache["tenant$i.com"] = @{ Value = [pscustomobject]@{}; Expires = [datetime]::UtcNow.AddMinutes(-1) } }
+
+        $null = Get-CIPPTenantCapabilities -TenantFilter 'contoso.com'
+
+        @($script:CIPPTenantCapabilitiesCache.Keys) | Should -Be @('contoso.com')
+    }
+
+    It 'caches only the message of a failed Graph lookup' {
+        Mock Get-CIPPAzDataTableEntity { }
+        Mock New-GraphGetRequest { throw 'AADSTS53003: blocked by Conditional Access' }
+
+        { Get-CIPPTenantCapabilities -TenantFilter 'contoso.com' } | Should -Throw
+        $script:CIPPTenantCapabilitiesCache['contoso.com'].Error | Should -BeOfType [string]
+    }
 
     It 'returns the enabled service plans the original pipeline returned' {
         $Org = $script:Json | ConvertFrom-Json

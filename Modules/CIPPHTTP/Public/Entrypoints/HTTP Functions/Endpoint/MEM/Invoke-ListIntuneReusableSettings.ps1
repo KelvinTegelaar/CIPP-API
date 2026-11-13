@@ -1,7 +1,7 @@
 function Invoke-ListIntuneReusableSettings {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Endpoint.MEM.Read
     .DESCRIPTION

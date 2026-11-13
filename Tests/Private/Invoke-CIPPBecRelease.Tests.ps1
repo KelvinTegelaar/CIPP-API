@@ -15,6 +15,7 @@ BeforeAll {
     function Remove-CIPPBecTargetedCAPolicy { param($TenantFilter, $PolicyId, $UserId, $Headers, $APIName) }
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $Anchor) }
     function Write-LogMessage { param($message, $tenant, $API, $headers, $Sev, $LogData) }
+    function Set-CippBecCaseContext { param($CaseId) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = [string]$Exception.Exception.Message } }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecContainmentActions.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Invoke-CIPPBecRelease.ps1')
@@ -40,6 +41,18 @@ Describe 'Invoke-CIPPBecRelease' {
         Mock Remove-CIPPBecTargetedCAPolicy { 'Removed BEC containment Conditional Access policy pol-1' }
         Mock New-ExoRequest { }
         Mock Write-LogMessage { }
+    }
+
+    It 'runs the release under the case id, so its log rows and Graph user agent carry it, then clears it' {
+        $script:CaseAtSignIn = $null
+        Mock Set-CippBecCaseContext { $script:CaseContext = $CaseId }
+        Mock Set-CIPPSignInState { $script:CaseAtSignIn = $script:CaseContext; 'enabled' }
+        Mock Get-CIPPBecReport { New-Case -Containment @([pscustomobject]@{ Actions = @('DisableAccount'); Results = @((New-Row 'DisableAccount')) }) }
+
+        $null = Invoke-CIPPBecRelease -TenantFilter 'contoso.com' -CaseId 'BEC-1'
+
+        $script:CaseAtSignIn | Should -Be 'BEC-1'
+        $script:CaseContext | Should -BeNullOrEmpty
     }
 
     It 'reverses only lockouts that succeeded and lists cleanup and one-way actions instead' {

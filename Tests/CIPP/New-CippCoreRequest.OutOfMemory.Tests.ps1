@@ -24,11 +24,15 @@ BeforeAll {
         $script:CippAllowedTenantsStorage = [pscustomobject]@{ Value = $null }
         $script:CippAllowedGroupsStorage = [pscustomobject]@{ Value = $null }
         . $Path
+        . (Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $Path))) 'Get-CippErrorStatusCode.ps1')
         Export-ModuleMember -Function New-CippCoreRequest
     }
     $null = New-Module -Name OomHintHttp -ScriptBlock {
+        # Tagged pscustomobject, not the worker type: the dispatcher's cast resolves to the test runner's own HttpResponseContext class when one is loaded
         function New-Response($StatusCode, $Body) {
-            [Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext]@{ StatusCode = $StatusCode; Body = $Body }
+            $Response = [pscustomobject]@{ StatusCode = $StatusCode; Body = $Body }
+            $Response.PSObject.TypeNames.Insert(0, 'Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext')
+            $Response
         }
         function Invoke-ListPaged {
             param($Request, $TriggerMetadata)
@@ -46,6 +50,10 @@ BeforeAll {
         function Invoke-ListRecovers {
             param($Request, $TriggerMetadata)
             try { throw [System.OutOfMemoryException]::new() } catch { return (New-Response 200 @('fallback')) }
+        }
+        function Invoke-ExecRefused {
+            param($Request, $TriggerMetadata)
+            throw [System.UnauthorizedAccessException]::new('refused')
         }
         function Invoke-ListFails {
             param($Request, $TriggerMetadata)
@@ -99,5 +107,11 @@ Describe 'New-CippCoreRequest out-of-memory responses' {
         $Response = Send-Request 'ListFails'
         [int]$Response.StatusCode | Should -Be 500
         $Response.Body | Should -Be @('Graph said no')
+    }
+
+    It 'returns 403 for an access refusal that escapes the endpoint' {
+        $Response = Send-Request 'ExecRefused'
+        [int]$Response.StatusCode | Should -Be 403
+        $Response.Body | Should -Be 'refused'
     }
 }

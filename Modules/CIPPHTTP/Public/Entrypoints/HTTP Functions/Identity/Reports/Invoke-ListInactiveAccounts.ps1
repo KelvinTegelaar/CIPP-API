@@ -1,7 +1,7 @@
 Function Invoke-ListInactiveAccounts {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Tenant.Directory.Read
     .DESCRIPTION

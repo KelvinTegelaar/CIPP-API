@@ -58,9 +58,9 @@ function Invoke-CippTestZTNA22124 {
 
             foreach ($issue in $HighPriorityIssues) {
                 $displayName = if ($issue.displayName) { $issue.displayName } else { 'N/A' }
-                $status = if ($issue.status) { $issue.status } else { 'N/A' }
+                $IssueStatus = if ($issue.status) { $issue.status } else { 'N/A' }
                 $insights = if ($issue.insights) { $issue.insights } else { 'N/A' }
-                $null = $ResultMarkdown.Append("| $displayName | $status | $insights |`n")
+                $null = $ResultMarkdown.Append("| $displayName | $IssueStatus | $insights |`n")
             }
 
             $null = $ResultMarkdown.Append("`n[Address recommendations](https://entra.microsoft.com/#view/Microsoft_Azure_SecureScore/OverviewBlade)")

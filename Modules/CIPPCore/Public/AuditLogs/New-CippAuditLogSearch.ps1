@@ -14,7 +14,7 @@ function New-CippAuditLogSearch {
         The end time to filter on.
     .PARAMETER RecordTypeFilters
         The record types to filter on.
-    .PARAMETER KeywordFilter
+    .PARAMETER KeywordFilters
         The keyword to filter on.
     .PARAMETER OperationsFilters
         The operations to filter on.

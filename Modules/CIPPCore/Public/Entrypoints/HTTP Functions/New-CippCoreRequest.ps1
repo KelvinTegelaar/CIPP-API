@@ -44,9 +44,7 @@ function New-CippCoreRequest {
         }
     }
 
-    $DisabledEndpoint = $FeatureFlags | Where-Object {
-        $_.Enabled -eq $false -and $_.Endpoints -contains $Request.Params.CIPPEndpoint
-    } | Select-Object -First 1
+    $DisabledEndpoint = @($FeatureFlags).Where({ $_.Enabled -eq $false -and $_.Endpoints -contains $Request.Params.CIPPEndpoint }, 'First')[0]
 
     if ($DisabledEndpoint) {
         Write-Information "Endpoint $($Request.Params.CIPPEndpoint) is disabled via feature flag: $($DisabledEndpoint.Name)"
@@ -88,6 +86,42 @@ function New-CippCoreRequest {
         }
     }
 
+    # A request names a tenant (tenantFilter) or a tenant group (tenantGroup), in the query or the body, never both. A group
+    # runs the endpoint's All Tenants path with the request scope narrowed to the group, so endpoints see
+    # tenantFilter=AllTenants and tenantGroup in the query, on a copy.
+    $BodyTenantFilter = @($Request.Body.tenantFilter).Where({ $_ }, 'First')[0]
+    $BodyTenantFilter = [string]($BodyTenantFilter.value ?? $BodyTenantFilter)
+    if ([string]$Request.Query.tenantFilter -like 'group:*' -or $BodyTenantFilter -like 'group:*') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = 'Send a tenant group as tenantGroup, not tenantFilter.'
+            })
+    }
+    $TenantGroup = $Request.Query.tenantGroup ?? @($Request.Body.tenantGroup).Where({ $_ }, 'First')[0]
+    if ($TenantGroup) {
+        if (@($FeatureFlags).Where({ $_.Id -eq 'TenantGroupSelector' -and -not $_.Enabled }).Count) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = 'Tenant group selection is turned off. Enable it in Application Settings > Features.'
+                })
+        }
+        if ($Request.Query.tenantFilter -or $BodyTenantFilter) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = 'Send tenantFilter or tenantGroup, not both.'
+                })
+        }
+        $Query = @{}
+        if ($Request.Query -is [System.Collections.IDictionary]) {
+            foreach ($Key in $Request.Query.Keys) { $Query[$Key] = $Request.Query[$Key] }
+        } else {
+            foreach ($Property in $Request.Query.PSObject.Properties) { $Query[$Property.Name] = $Property.Value }
+        }
+        $Query.tenantFilter = 'AllTenants'
+        $Query.tenantGroup = $TenantGroup
+        $Request.Query = $Query
+    }
+
     $HttpTrigger = @{
         Request         = [pscustomobject]($Request)
         TriggerMetadata = $TriggerMetadata
@@ -97,7 +131,7 @@ function New-CippCoreRequest {
         # Set script scope variables for Graph API to indicate HTTP request/high priority
         $script:XMsThrottlePriority = 'high'
 
-        if ((Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) -or $FunctionName -eq 'Invoke-Me') {
+        if ($ExecutionContext.InvokeCommand.GetCommand($FunctionName, 'Function') -or $FunctionName -eq 'Invoke-Me') {
             try {
                 $swAccess = [System.Diagnostics.Stopwatch]::StartNew()
                 $Access = Test-CIPPAccess -Request $Request
@@ -106,9 +140,11 @@ function New-CippCoreRequest {
                 if ($FunctionName -eq 'Invoke-Me') {
                     $HttpTotalStopwatch.Stop()
                     $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
-                    $HttpTimingsRounded = [ordered]@{}
-                    foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                    Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+                    if ($DebugPreference -ne 'SilentlyContinue') {
+                        $HttpTimingsRounded = [ordered]@{}
+                        foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+                        Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+                    }
                     return $Access
                 }
                 # One access line per real endpoint call; /me returns above and the
@@ -122,11 +158,13 @@ function New-CippCoreRequest {
                 Write-Information "Access denied for $FunctionName$($DeniedUser) : $($_.Exception.Message)"
                 $HttpTotalStopwatch.Stop()
                 $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
-                $HttpTimingsRounded = [ordered]@{}
-                foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+                if ($DebugPreference -ne 'SilentlyContinue') {
+                    $HttpTimingsRounded = [ordered]@{}
+                    foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+                    Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+                }
                 return ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::Forbidden
+                        StatusCode = if ($_.Exception -is [System.ArgumentException]) { [HttpStatusCode]::BadRequest } else { [HttpStatusCode]::Forbidden }
                         Body       = $_.Exception.Message
                     })
             }
@@ -194,7 +232,7 @@ function New-CippCoreRequest {
                     $HttpTimings['InvokeEndpoint'] = $swInvoke.Elapsed.TotalMilliseconds
 
                     # Filter to only return HttpResponseContext objects
-                    $HttpResponse = $Response | Where-Object { $_.PSObject.TypeNames -eq 'Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext' } | Select-Object -First 1
+                    $HttpResponse = @($Response).Where({ $_.PSObject.TypeNames -eq 'Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext' }, 'First')[0]
                     if (-not $HttpResponse) {
                         # If no valid response context found, create a default success response
                         $HttpResponse = if ($Response.PSObject.Properties.Name -contains 'StatusCode' -and $Response.PSObject.Properties.Name -contains 'Body') {
@@ -208,7 +246,7 @@ function New-CippCoreRequest {
             } catch {
                 Write-Warning "Exception occurred on HTTP trigger ($FunctionName): $($_.Exception.Message)"
                 $HttpResponse = [HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::InternalServerError
+                    StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
                     Body       = $_.Exception.Message
                 }
             }
@@ -232,16 +270,20 @@ function New-CippCoreRequest {
 
             $HttpTotalStopwatch.Stop()
             $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
-            $HttpTimingsRounded = [ordered]@{}
-            foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-            Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+            if ($DebugPreference -ne 'SilentlyContinue') {
+                $HttpTimingsRounded = [ordered]@{}
+                foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+                Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+            }
             return $HttpResponse
         } else {
             $HttpTotalStopwatch.Stop()
             $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
-            $HttpTimingsRounded = [ordered]@{}
-            foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-            Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+            if ($DebugPreference -ne 'SilentlyContinue') {
+                $HttpTimingsRounded = [ordered]@{}
+                foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+                Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+            }
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::NotFound
                     Body       = 'Endpoint not found'
@@ -250,9 +292,11 @@ function New-CippCoreRequest {
     } else {
         $HttpTotalStopwatch.Stop()
         $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
-        $HttpTimingsRounded = [ordered]@{}
-        foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-        Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+        if ($DebugPreference -ne 'SilentlyContinue') {
+            $HttpTimingsRounded = [ordered]@{}
+            foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+            Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+        }
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::PreconditionFailed
                 Body       = 'Request not processed'

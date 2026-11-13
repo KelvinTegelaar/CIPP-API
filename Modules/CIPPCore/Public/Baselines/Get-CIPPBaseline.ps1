@@ -192,6 +192,10 @@ function Get-CIPPBaseline {
                     name            = $StageDefinition.name
                     logic           = $StageDefinition.logic
                     conditions      = @($StageDefinition.conditions | Where-Object { $_.type })
+                    conditionGroups = @(foreach ($Group in @($StageDefinition.conditionGroups)) {
+                            $GroupConditions = @($Group.conditions | Where-Object { $_.type })
+                            if ($GroupConditions.Count -gt 0) { [PSCustomObject]@{ logic = $Group.logic ?? 'and'; conditions = $GroupConditions } }
+                        })
                     # Enumerated explicitly: member access on an empty array yields a lone $null.
                     standards       = @($StageConfigs | ForEach-Object { $_.instance })
                     standardsConfig = @($StageConfigs)
@@ -267,18 +271,27 @@ function Get-CIPPBaseline {
                 } elseif ("$EnteredStageAt") {
                     [int64]$EnteredStageAt
                 } else { $null }
-                # A tenant outside the group an AND stage requires never reaches that stage or any after it.
-                $TotalStages = $Stages.Count
-                for ($i = 1; $i -lt $Stages.Count -and $TotalStages -eq $Stages.Count; $i++) {
-                    if ($Stages[$i].logic -eq 'or') { continue }
-                    foreach ($Condition in @($Stages[$i].conditions).Where({ $_.type -eq 'group' })) {
-                        $GroupKey = "$($Condition.group.value ?? $Condition.group)"
-                        $Group = $Groups.Where({ $_.Id -eq $GroupKey -or $_.Name -eq $GroupKey }, 'First')[0]
-                        if (@($Group.Members.defaultDomainName) -notcontains $TenantDomain) { $TotalStages = [Math]::Max($i, $CurrentStage) }
+                $NextStageDef = if ($CurrentStage -lt $Stages.Count) { $Stages[$CurrentStage] } else { $null }
+                # A tenant outside the group an AND condition set requires cannot be moved into the
+                # stage until it joins - unless another set (say a lone manual approval) is open to it.
+                $Sets = @(@([PSCustomObject]@{ logic = $NextStageDef.logic; conditions = @($NextStageDef.conditions) }) + @($NextStageDef.conditionGroups)).Where({ $_ -and @($_.conditions).Where({ $_ }).Count -gt 0 })
+                $GroupBlocked = $Sets.Count -gt 0
+                # A stage saved before conditions were required can only be reached by a manual move.
+                $ManualAdvance = $null -ne $NextStageDef -and $Sets.Count -eq 0
+                foreach ($Set in $Sets) {
+                    $SetBlocked = $false
+                    if ($Set.logic -ne 'or') {
+                        foreach ($Condition in @($Set.conditions).Where({ $_.type -eq 'group' })) {
+                            $GroupKey = "$($Condition.group.value ?? $Condition.group)"
+                            $Group = $Groups.Where({ $_.Id -eq $GroupKey -or $_.Name -eq $GroupKey }, 'First')[0]
+                            if (@($Group.Members.defaultDomainName) -notcontains $TenantDomain) { $SetBlocked = $true }
+                        }
                     }
+                    if ($SetBlocked) { continue }
+                    $GroupBlocked = $false
+                    if (@($Set.conditions).Where({ $_.type -eq 'manual' }).Count -gt 0) { $ManualAdvance = $true }
                 }
-                $NextStageDef = if ($CurrentStage -lt $TotalStages) { $Stages[$CurrentStage] } else { $null }
-                $TimeCondition = $NextStageDef.conditions | Where-Object { $_.type -eq 'time' } | Select-Object -First 1
+                $TimeCondition = @(foreach ($Set in $Sets) { @($Set.conditions) }).Where({ $_.type -eq 'time' }, 'First')[0]
                 $EstimatedAdvanceAt = if ($TimeCondition -and $EnteredStageAt) {
                     $Multiplier = if ($TimeCondition.unit -eq 'weeks') { 7 } else { 1 }
                     $EnteredStageAt + ([int64]$TimeCondition.days * $Multiplier * 86400)
@@ -288,13 +301,14 @@ function Get-CIPPBaseline {
                     customerId         = $TenantLookup[$TenantDomain].customerId
                     tenantName         = $TenantNames[$TenantDomain] ?? $TenantDomain
                     currentStage       = $CurrentStage
-                    totalStages        = $TotalStages
+                    totalStages        = $Stages.Count
                     stageName          = $Stages[$CurrentStage - 1].name
                     enteredStageAt     = $EnteredStageAt
                     nextStage          = $NextStageDef
                     nextStageName      = $NextStageDef.name
                     estimatedAdvanceAt = $EstimatedAdvanceAt
-                    manualAdvance      = [bool]($NextStageDef.conditions | Where-Object { $_.type -eq 'manual' })
+                    groupBlocked       = $GroupBlocked
+                    manualAdvance      = $ManualAdvance
                 }
             }
 
@@ -304,15 +318,7 @@ function Get-CIPPBaseline {
             # tenant: no state, no work items, no resolved rows.
             $StateRows = Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeGuid'"
             $TenantStates = [System.Collections.Generic.List[object]]::new()
-            # customerId-keyed rows first: they win over a row an older save keyed by domain.
-            foreach ($State in @($StateRows | Sort-Object -Property { $TenantLookup["$($_.RowKey)"].customerId -ne "$($_.RowKey)" })) {
-                if ("$($State.RowKey)" -eq 'Exported Template') { continue }
-                $Domain = $TenantLookup["$($State.RowKey)"].defaultDomainName ?? "$($State.RowKey)"
-                if ($TenantStates.tenantFilter -contains $Domain) { continue }
-                $TenantStates.Add((& $NewState $Domain ([int]($State.currentStage ?? 1)) $State.enteredStageAt))
-            }
 
-            # Every assigned tenant without a state row defaults to stage 1 since assignment.
             # Groups expand by ID so renames never detach members.
             $AssignedDomains = foreach ($Assignment in $AssignmentScopes) {
                 if ($Assignment.scope -eq 'allTenants') {
@@ -324,6 +330,17 @@ function Get-CIPPBaseline {
                 }
             }
             $AssignedDomains = @($AssignedDomains | Where-Object { $_ -and $_ -ne 'Exported Template' -and $ExpandedExcludedTenants -notcontains $_ } | Select-Object -Unique)
+
+            # customerId-keyed rows first: they win over a row an older save keyed by domain.
+            foreach ($State in @($StateRows | Sort-Object -Property { $TenantLookup["$($_.RowKey)"].customerId -ne "$($_.RowKey)" })) {
+                $Domain = $TenantLookup["$($State.RowKey)"].defaultDomainName ?? "$($State.RowKey)"
+                # A state row outlives its assignment: it only counts while the tenant is still assigned.
+                if ($AssignedDomains -notcontains $Domain) { continue }
+                if ($TenantStates.tenantFilter -contains $Domain) { continue }
+                $TenantStates.Add((& $NewState $Domain ([int]($State.currentStage ?? 1)) $State.enteredStageAt))
+            }
+
+            # Every assigned tenant without a state row defaults to stage 1 since assignment.
             foreach ($Domain in $AssignedDomains) {
                 if ($TenantStates.tenantFilter -notcontains $Domain) {
                     $TenantStates.Add((& $NewState $Domain 1 $RolloutRow.updatedAt))

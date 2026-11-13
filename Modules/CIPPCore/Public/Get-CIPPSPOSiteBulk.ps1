@@ -109,7 +109,7 @@ function Get-CIPPSPOSiteBulk {
         $BatchUrls.Add($Chunk)
     }
 
-    $Results = [CIPP.CIPPRestClient]::SendConcurrent($Requests, $MaxConcurrency, $MaxRetries)
+    $Results = [CIPP.CIPPRestClient]::SendConcurrent($Requests, $MaxConcurrency, $MaxRetries, ($PSCmdlet.PipelineStopToken ?? $global:CraftPipelineStopToken))
 
     @(foreach ($Result in $Results) {
             $Chunk = $BatchUrls[$Result.Index]

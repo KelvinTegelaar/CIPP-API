@@ -12,6 +12,9 @@ function Get-NinjaOneOrgFieldBody {
         TenantLinks: Portals, CippActions (lists of @{ Label; Url; Tip }).
         TenantSummary: Tiles, Header, Details, Licenses, Devices, Standards, SecureScore, Users (see Invoke-NinjaOneTenantSync).
         UsersSummary: Users (list), Total, Url.
+
+        .PARAMETER MaxLength
+        UsersSummary drops users until the field is at most this many characters.
     #>
     [CmdletBinding()]
     param(
@@ -19,7 +22,9 @@ function Get-NinjaOneOrgFieldBody {
         [Parameter(Mandatory)][System.Collections.IDictionary]$Model,
         [Nullable[datetime]]$SyncedAt,
         [cultureinfo]$Culture = [cultureinfo]::GetCultureInfo('en-GB'),
-        [TimeZoneInfo]$TimeZone = [TimeZoneInfo]::Utc
+        [TimeZoneInfo]$TimeZone = [TimeZoneInfo]::Utc,
+        # The legacy table reached about 158k characters for 100 users and NinjaOne accepted it
+        [int]$MaxLength = 150000
     )
 
     $m = $Model
@@ -181,7 +186,10 @@ function Get-NinjaOneOrgFieldBody {
             }
             $Rows = -join @(foreach ($u in $Shown) {
                     $Lics = @(foreach ($l in $u.Licenses) { New-CippExtensionUiChip -Text $l -Small }) -join ' '
-                    $Devs = -join @(foreach ($d in $u.Devices) {
+                    # Enrollment accounts can own hundreds of devices, which alone would fill the field
+                    $Devices = if ($u.Devices) { @($u.Devices) } else { @() }
+                    $MoreDevs = if ($Devices.Count -gt 5) { "<div style=`"opacity:.7`">+$($Devices.Count - 5) more</div>" }
+                    $Devs = -join @(foreach ($d in $Devices.Where({ $true }, 'First', 5)) {
                             $State = if ($d.Compliant) { "<i class=`"fas fa-check-circle`" style=`"color:$((Get-CippExtensionUiTone ok).Bar);margin-right:6px`"></i>" } else { "<i class=`"fas fa-times-circle`" style=`"color:$((Get-CippExtensionUiTone err).Bar);margin-right:6px`"></i>" }
                             $OsIcon = switch ($d.Os) { 'Windows' { '<i class="fab fa-windows" style="margin-right:6px"></i>' } { $_ -in 'iOS', 'macOS' } { '<i class="fab fa-apple" style="margin-right:6px"></i>' } 'Android' { '<i class="fab fa-android" style="margin-right:6px"></i>' } }
                             $Login = if ($d.LastLogin) { & $Date $d.LastLogin } else { 'Unknown' }
@@ -190,12 +198,12 @@ function Get-NinjaOneOrgFieldBody {
                     $Links = "$(New-CippExtensionUiLink -Url $u.CippUrl -Label 'CIPP' -Tip 'View in CIPP' -Variant cipp) $(New-CippExtensionUiLink -Url $u.EntraUrl -Label 'Entra' -Tip 'View in Entra ID' -Variant button)"
                     "<tr><td style=`"$Td;font-weight:600`">$(ConvertTo-CippExtensionUiText $u.Name)</td><td style=`"$Td`">$(ConvertTo-CippExtensionUiText $u.Upn)</td>" +
                     "<td style=`"$Td`">$(if ($Lics) { $Lics } else { $Muted })</td><td style=`"$Td;width:12%`">$(& $Usage $u.Mailbox)</td><td style=`"$Td;width:12%`">$(& $Usage $u.OneDrive)</td>" +
-                    "<td style=`"$Td`">$(if ($Devs) { $Devs } else { $Muted })</td><td style=`"$Td;white-space:nowrap`">$Links</td></tr>"
+                    "<td style=`"$Td`">$(if ($Devs) { "$Devs$MoreDevs" } else { $Muted })</td><td style=`"$Td;white-space:nowrap`">$Links</td></tr>"
                 })
-            $Note = if ($Total -gt 100) {
+            $Note = if ($Total -gt $Shown.Count) {
                 "<div style=`"margin-bottom:12px;padding:10px 14px;border-radius:6px;background:rgba(247,144,9,.12);border:1px solid rgba(247,144,9,.5)`">" +
                 "<div style=`"font-size:13px;font-weight:600`">$(Get-CippExtensionUiIcon -Name info-circle)$Total users found in Tenant</div>" +
-                "<div style=`"margin-top:2px;font-size:13px`">Only the first 100 users are displayed here. To see all users please $(New-CippExtensionUiLink -Url $m.Url -Label 'view users in CIPP' -Tip 'Open users in CIPP' -Variant strong).</div></div>"
+                "<div style=`"margin-top:2px;font-size:13px`">Only the first $($Shown.Count) users are displayed here. To see all users please $(New-CippExtensionUiLink -Url $m.Url -Label 'view users in CIPP' -Tip 'Open users in CIPP' -Variant strong).</div></div>"
             }
             $Body = if ($Rows) { & $Grid @('Name', 'User Principal Name', 'Licenses', 'Mailbox Usage', 'OneDrive Usage', 'Devices (Last Login)', 'Actions') $Rows } else { "<div style=`"font-size:13px;opacity:.7`">No users</div>" }
             "<div style=`"overflow:hidden`">$Note$(New-CippExtensionUiCard -Title 'Users' -Icon 'users' -Count "$Total" -Flag (& $Open $m.Url 'Open users in CIPP') -Body $Body)</div>"
@@ -217,5 +225,11 @@ function Get-NinjaOneOrgFieldBody {
             " style=`"$($Out -join ';')`""
         })
     # Titles survive only on links
-    [regex]::Replace($Html, '<(?!a )[a-z0-9]+ [^>]*>', { param($Tag) $Tag.Value -replace ' title="[^"]*"', '' })
+    $Html = [regex]::Replace($Html, '<(?!a )[a-z0-9]+ [^>]*>', { param($Tag) $Tag.Value -replace ' title="[^"]*"', '' })
+    # NinjaOne rejects the whole organisation update when one field is too long
+    if ($Field -eq 'UsersSummary' -and $Html.Length -gt $MaxLength -and $Shown.Count) {
+        $Fit = [int][math]::Min($Shown.Count - 1, [math]::Floor($Shown.Count * $MaxLength / $Html.Length))
+        return Get-NinjaOneOrgFieldBody -Field $Field -Model @{ Users = @($Shown | Select-Object -First $Fit); Total = $Total; Url = $m.Url } -SyncedAt $SyncedAt -Culture $Culture -TimeZone $TimeZone -MaxLength $MaxLength
+    }
+    $Html
 }

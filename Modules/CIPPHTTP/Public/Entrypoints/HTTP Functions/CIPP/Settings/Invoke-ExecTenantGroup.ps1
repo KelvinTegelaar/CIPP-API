@@ -52,6 +52,24 @@ function Invoke-ExecTenantGroup {
             })
     }
 
+    # Onboarding owns this group and finds it by name; the other names are placeholders that baselines and templates treat specially
+    $OnboardingGroupName = 'Excluded onboarded tenants'
+    $ReservedNames = @('AllTenants', 'Exported Template', 'Template Tenant', $OnboardingGroupName)
+    if ($Action -in @('AddEdit', 'Delete')) {
+        $ExistingGroup = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $groupId)'"
+        $Refusal = if ($ExistingGroup.Name -eq $OnboardingGroupName) {
+            "'$OnboardingGroupName' is managed by tenant onboarding and can't be edited or deleted."
+        } elseif ($Action -eq 'AddEdit' -and $groupName -in $ReservedNames) {
+            "'$groupName' is a reserved name. Choose a different group name."
+        }
+        if ($Refusal) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::BadRequest
+                    Body       = @{ Results = $Refusal }
+                })
+        }
+    }
+
     switch ($Action) {
         'AddEdit' {
             $Results = [System.Collections.Generic.List[object]]::new()

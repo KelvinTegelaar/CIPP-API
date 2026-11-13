@@ -13,9 +13,10 @@ function Invoke-ListUserMailboxDetails {
     $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.UserID
     $UserMail = $Request.Query.userMail
-    Write-Host "TenantFilter: $TenantFilter"
-    Write-Host "UserID: $UserID"
-    Write-Host "UserMail: $UserMail"
+    if (-not $UserID) {
+        # Without a user every cmdlet below runs against every mailbox in the tenant
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'UserID is required' } })
+    }
 
     # Archive size and item count are the slow part of the mailbox detail (Get-MailboxStatistics
     # -Archive). Set-CIPPDBCacheMailboxes already caches both per mailbox, keyed by the Entra object

@@ -3,7 +3,7 @@ function ConvertTo-CIPPSafePwshArg {
     .SYNOPSIS
         Escapes a value for safe use as a single PowerShell command-line argument.
     .DESCRIPTION
-        Wraps values in single quotes and escapes embedded single quotes by doubling them.
+        Wraps values in single quotes and doubles every character PowerShell accepts as a single quote.
         Also strips CR/LF to prevent multiline argument injection when command lines are
         generated as strings for downstream execution (for example, Intune install commands).
     .PARAMETER Value
@@ -24,7 +24,8 @@ function ConvertTo-CIPPSafePwshArg {
         return "''"
     }
 
-    $EscapedValue = $Value -replace "'", "''"
+    # PowerShell also treats the typographic single quotes as string delimiters.
+    $EscapedValue = ConvertTo-CIPPScriptBlockValue -Value $Value
     $EscapedValue = $EscapedValue -replace "`r|`n", ' '
 
     return "'{0}'" -f $EscapedValue

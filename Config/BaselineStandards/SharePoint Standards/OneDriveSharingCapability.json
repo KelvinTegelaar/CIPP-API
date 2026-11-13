@@ -3,7 +3,13 @@
   "label": "Set Sharing Level for OneDrive",
   "cat": "SharePoint Standards",
   "tag": [
-    "CIS M365 7.0.0 (7.2.4)"
+    "CIS M365 7.0.0 (7.2.4)",
+    "CMMC (AC.L1-b.1.iv)",
+    "CMMC (AC.L2-3.1.3)",
+    "CMMC (AC.L2-3.1.22)",
+    "FedRAMP A-D (KSI-SVC-SIN)",
+    "NIST SP 800-171 (3.1.3)",
+    "NIST SP 800-171 (3.1.22)"
   ],
   "impact": "High Impact",
   "helpText": "Sets the external sharing level for OneDrive independently of SharePoint. OneDrive can be more restrictive than SharePoint but never more permissive, so set the SharePoint level (the 'Set Sharing Level for OneDrive and SharePoint' standard) at least as open as this one. CIS recommends 'Only people in your organization'.",

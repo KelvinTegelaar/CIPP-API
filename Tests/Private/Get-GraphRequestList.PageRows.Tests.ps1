@@ -156,4 +156,16 @@ Describe 'Get-GraphRequestList AllTenants cache page rows' {
         Get-Ids $First.CippPagedJson | Should -Be @('a1', 'a2')
         $script:FetchedKeys | Should -Not -Contain 'a.com|00003'
     }
+
+    It 'serves a queue''s rows only for tenants in the caller''s scope' {
+        Mock -CommandName Get-Tenants -MockWith { [PSCustomObject]@{ defaultDomainName = 'a.com' } }
+        Set-FakeRows @{
+            'a.com' = @{ Data = '[{"id":"a1"}]' }
+            'b.com' = @{ Data = '[{"id":"b1"}]' }
+        }
+
+        $Json = Get-GraphRequestList -TenantFilter 'AllTenants' -Endpoint 'users' -QueueId 'queue-1' -RawJsonArray
+
+        Get-Ids $Json | Should -Be @('a1')
+    }
 }

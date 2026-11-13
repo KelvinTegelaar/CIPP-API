@@ -57,6 +57,18 @@ $ErrorActionPreference = 'Stop'
 $TestsRoot = $PSScriptRoot
 $RepoRoot = Split-Path -Parent $TestsRoot
 
+# Endpoint test files each stub the Functions host's HttpResponseContext in their BeforeAll. In one
+# session the first class loaded under a name wins and later definitions are ignored, so a stub with
+# only StatusCode/Body loaded earlier in a shard breaks any later file that reads ContentType or
+# Headers, and which file loads first shifts whenever test files are added. Define the superset here,
+# before any test file, so every file resolves the same shape.
+class HttpResponseContext {
+    [int]$StatusCode
+    [object]$Body
+    [object]$ContentType
+    [object]$Headers
+}
+
 # Pester 5 is required for the Should -Invoke / -ParameterFilter syntax the suite uses.
 $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version -ge [version]'5.0.0' } | Sort-Object Version -Descending | Select-Object -First 1
 if (-not $pester) {

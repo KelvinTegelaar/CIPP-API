@@ -17,6 +17,9 @@ function New-CIPPBecEvidencePackage {
         CIPP request headers, for logging.
     .PARAMETER APIName
         Logging API name.
+    .PARAMETER Kind
+        BEC, or NHI for a non-human identity case: its own finding sets, and no PDFs (there is no NHI report
+        template yet).
     .FUNCTIONALITY
         Internal
     #>
@@ -25,12 +28,13 @@ function New-CIPPBecEvidencePackage {
         [Parameter(Mandatory = $true)][string]$TenantFilter,
         [Parameter(Mandatory = $true)][string]$CaseId,
         $Headers,
-        [string]$APIName = 'BECEvidenceExport'
+        [string]$APIName = 'BECEvidenceExport',
+        [ValidateSet('BEC', 'NHI')][string]$Kind = 'BEC'
     )
 
-    $Run = Get-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -IncludeResults
-    if (-not $Run) { throw "BEC run $CaseId was not found for $TenantFilter" }
-    if ($Run.Status -ne 'Completed') { throw "BEC run $CaseId is $($Run.Status); only completed runs can be exported" }
+    $Run = Get-CIPPBecReport -Kind $Kind -TenantFilter $TenantFilter -CaseId $CaseId -IncludeResults
+    if (-not $Run) { throw "$Kind run $CaseId was not found for $TenantFilter" }
+    if ($Run.Status -ne 'Completed') { throw "$Kind run $CaseId is $($Run.Status); only completed runs can be exported" }
     $Results = $Run.Results
     $GeneratedUtc = (Get-Date).ToUniversalTime()
     $Utf8 = [System.Text.UTF8Encoding]::new($false)
@@ -50,15 +54,26 @@ function New-CIPPBecEvidencePackage {
     }
 
     $Files = [ordered]@{}
+    # the package is about this tenant and may go to its customer: never the names of other tenants
+    if ($Kind -eq 'NHI' -and $Results.PSObject.Properties['OtherTenants']) { $Results.PSObject.Properties.Remove('OtherTenants') }
     $Files['results.json'] = $Utf8.GetBytes((ConvertTo-Json -InputObject $Results -Depth 20))
-    $CsvSections = @('NewRules', 'InboxRuleChanges', 'MailboxPermissionChanges', 'SentMessages', 'SafelistChanges', 'SharingChanges', 'SuspectUserSignIns', 'SuspectUserDevices', 'NewUsers', 'ChangedPasswords', 'MFADevices', 'IntuneDevices', 'AddedApps', 'MaliciousSPs', 'Delegations', 'MailboxAddIns', 'UserGrants', 'TransportRuleChanges', 'TransportRulesFlagged', 'ReceivedMailFindings', 'DefenderDetections', 'DirectoryAudits', 'RegisteredDevices', 'NonInteractiveSignIns', 'MailActivity')
+    $CsvSections = if ($Kind -eq 'NHI') {
+        @('Owners', 'AppRoleAssignments', 'DelegatedGrants', 'DirectoryRoles', 'RiskDetections', 'Changes', 'Consents', 'SignInsByIP', 'SignInsByCredential', 'RecentSignIns', 'DelegatedSignIns', 'DirectoryActions', 'IPVerdicts')
+    } else { @('NewRules', 'InboxRuleChanges', 'MailboxPermissionChanges', 'SentMessages', 'SafelistChanges', 'SharingChanges', 'SuspectUserSignIns', 'SuspectUserDevices', 'NewUsers', 'ChangedPasswords', 'MFADevices', 'IntuneDevices', 'AddedApps', 'MaliciousSPs', 'Delegations', 'MailboxAddIns', 'UserGrants', 'TransportRuleChanges', 'TransportRulesFlagged', 'ReceivedMailFindings', 'DefenderDetections', 'DirectoryAudits', 'RegisteredDevices', 'NonInteractiveSignIns', 'MailActivity') }
     foreach ($Section in $CsvSections) {
         $Rows = @($Results.$Section | Where-Object { $_ -and $_ -isnot [string] })
         if ($Rows.Count -eq 0) { continue }
         $Csv = @($Rows | ForEach-Object { & $Flatten $_ } | ConvertTo-Csv -NoTypeInformation) -join "`r`n"
         $Files["findings/$Section.csv"] = $Utf8.GetBytes($Csv)
     }
-    if ($Results.RiskState -and @($Results.RiskState.Detections).Count -gt 0) {
+    if ($Kind -eq 'NHI') {
+        foreach ($Section in 'Mailboxes', 'Sites', 'InboxRules', 'ByIP') {
+            $Rows = @($Results.WorkloadActivity.$Section | Where-Object { $_ })
+            if ($Rows.Count -gt 0) { $Files["findings/Workload$Section.csv"] = $Utf8.GetBytes((@($Rows | ForEach-Object { & $Flatten $_ } | ConvertTo-Csv -NoTypeInformation) -join "`r`n")) }
+        }
+        $Credentials = @($Results.Exposure.CredentialDetails | Where-Object { $_ })
+        if ($Credentials.Count -gt 0) { $Files['findings/Credentials.csv'] = $Utf8.GetBytes((@($Credentials | ForEach-Object { & $Flatten $_ } | ConvertTo-Csv -NoTypeInformation) -join "`r`n")) }
+    } elseif ($Results.RiskState -and @($Results.RiskState.Detections).Count -gt 0) {
         $Files['findings/RiskDetections.csv'] = $Utf8.GetBytes((@($Results.RiskState.Detections | ForEach-Object { & $Flatten $_ } | ConvertTo-Csv -NoTypeInformation) -join "`r`n"))
     }
     if ($Results.Score) { $Files['score.json'] = $Utf8.GetBytes((ConvertTo-Json -InputObject $Results.Score -Depth 10)) }
@@ -95,30 +110,32 @@ function New-CIPPBecEvidencePackage {
     # builder and kit the report endpoint uses. The builder reads containment off becData.Run, so
     # attach the run block exactly as ExecGetBecReportPdf does. A render failure must not lose the rest
     # of the evidence, so it is caught and the package ships without the PDFs.
-    try {
-        $BecData = $Results
-        $RunBlock = [pscustomobject]@{
-            CaseId      = $Run.CaseId
-            Status      = $Run.Status
-            ExtractedAt = $Run.ExtractedAt
-            RequestedAt = $Run.RequestedAt
-            RequestedBy = $Run.RequestedBy
-            Containment = $Run.Containment
+    if ($Kind -eq 'BEC') {
+        try {
+            $BecData = $Results
+            $RunBlock = [pscustomobject]@{
+                CaseId      = $Run.CaseId
+                Status      = $Run.Status
+                ExtractedAt = $Run.ExtractedAt
+                RequestedAt = $Run.RequestedAt
+                RequestedBy = $Run.RequestedBy
+                Containment = $Run.Containment
+            }
+            $BecData | Add-Member -NotePropertyName 'Run' -NotePropertyValue $RunBlock -Force
+            $ReportDefaults = try { (Get-CIPPBrandingSettings).reportDefaults } catch { $null }
+            $FullId = [string]$ReportDefaults.bec
+            $SummaryId = [string]$ReportDefaults.becSummary
+            $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $FullId
+            $DisplayName = @($Run.DisplayName, $Run.UserPrincipalName, $Run.UserId) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1
+            $UserData = [pscustomobject]@{ displayName = $DisplayName; userPrincipalName = $Run.UserPrincipalName; id = $Run.UserId }
+            $Full = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $TenantName
+            $Files['report-full.pdf'] = ConvertTo-CippReportPdf -Blocks $Full.Blocks -Variables $Full.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'BEC Analysis Report' -BrandingPresetId $FullId
+            $SummaryName = if ($SummaryId -eq $FullId) { $TenantName } else { Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $SummaryId }
+            $Summary = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $SummaryName -Variant summary
+            $Files['report-summary.pdf'] = ConvertTo-CippReportPdf -Blocks $Summary.Blocks -Variables $Summary.Variables -TenantName $SummaryName -TenantFilter $TenantFilter -ReportName 'BEC Analysis Report' -BrandingPresetId $SummaryId
+        } catch {
+            Write-Information "BEC evidence: server-side PDF render failed for $CaseId`: $($_.Exception.Message)"
         }
-        $BecData | Add-Member -NotePropertyName 'Run' -NotePropertyValue $RunBlock -Force
-        $ReportDefaults = try { (Get-CIPPBrandingSettings).reportDefaults } catch { $null }
-        $FullId = [string]$ReportDefaults.bec
-        $SummaryId = [string]$ReportDefaults.becSummary
-        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $FullId
-        $DisplayName = @($Run.DisplayName, $Run.UserPrincipalName, $Run.UserId) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1
-        $UserData = [pscustomobject]@{ displayName = $DisplayName; userPrincipalName = $Run.UserPrincipalName; id = $Run.UserId }
-        $Full = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $TenantName
-        $Files['report-full.pdf'] = ConvertTo-CippReportPdf -Blocks $Full.Blocks -Variables $Full.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'BEC Analysis Report' -BrandingPresetId $FullId
-        $SummaryName = if ($SummaryId -eq $FullId) { $TenantName } else { Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $SummaryId }
-        $Summary = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $SummaryName -Variant summary
-        $Files['report-summary.pdf'] = ConvertTo-CippReportPdf -Blocks $Summary.Blocks -Variables $Summary.Variables -TenantName $SummaryName -TenantFilter $TenantFilter -ReportName 'BEC Analysis Report' -BrandingPresetId $SummaryId
-    } catch {
-        Write-Information "BEC evidence: server-side PDF render failed for $CaseId`: $($_.Exception.Message)"
     }
 
     $Stream = [System.IO.MemoryStream]::new()
@@ -135,7 +152,7 @@ function New-CIPPBecEvidencePackage {
     $ZipBytes = $Stream.ToArray()
     $Stream.Dispose()
 
-    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Exported the evidence package for BEC case $CaseId ($($Files.Count) files, $([math]::Round($ZipBytes.Length / 1KB)) KB); the package was handed to the requester and not stored" -Sev 'Info'
+    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Exported the evidence package for $Kind case $CaseId ($($Files.Count) files, $([math]::Round($ZipBytes.Length / 1KB)) KB); the package was handed to the requester and not stored" -Sev 'Info'
 
     return [pscustomobject]@{
         CaseId    = $CaseId

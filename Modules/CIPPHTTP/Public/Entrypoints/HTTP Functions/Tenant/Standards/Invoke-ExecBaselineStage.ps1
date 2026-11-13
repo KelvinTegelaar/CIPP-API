@@ -41,7 +41,7 @@ function Invoke-ExecBaselineStage {
             throw [System.ArgumentException]::new("$TenantFilter is already in the final stage of $($Baseline.templateName).")
         }
         $TenantState = @($Baseline.tenantStates).Where({ $_.tenantFilter -eq $Tenant.defaultDomainName }, 'First')[0]
-        if (-not $MovingBack -and $TenantState -and -not $TenantState.nextStage) {
+        if (-not $MovingBack -and $Request.Body.action -ne 'evaluate' -and $TenantState.groupBlocked) {
             throw [System.ArgumentException]::new("Stage $($CurrentStage + 1) of $($Baseline.templateName) requires a tenant group $TenantFilter is not a member of.")
         }
 
@@ -75,6 +75,15 @@ function Invoke-ExecBaselineStage {
             currentStage    = $NewStage
             enteredStageAt  = $Now
             firstDeployedAt = $State.firstDeployedAt ?? $State.enteredStageAt ?? $Now
+        }
+
+        if ($MovingBack) {
+            # Standards only the later stages rolled out would otherwise keep showing under those stages.
+            $Kept = @(Get-CIPPBaselineStageStandards -Baseline $Baseline -Definitions @(Get-CIPPBaselineDefinition) | Select-Object -First $NewStage | ForEach-Object { $_ })
+            $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
+            $SafeTenant = ConvertTo-CIPPODataFilterValue -Value ($Tenant.defaultDomainName ?? $TenantFilter)
+            $Stale = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant' and TemplateId eq '$SafeTemplate'").Where({ $Kept -notcontains $_.StandardName })
+            if ($Stale.Count -gt 0) { Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $Stale }
         }
 
         $StageName = $Baseline.stages[$NewStage - 1].name

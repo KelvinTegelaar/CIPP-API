@@ -29,6 +29,18 @@ Describe 'Get-CIPPExoApplicationAccessPolicy' {
         $Rows[2].isValid | Should -BeFalse
         Should -Invoke New-ExoRequest -Times 1 -Exactly -ParameterFilter { $cmdlet -eq 'Get-ApplicationAccessPolicy' }
     }
+
+    It 'returns nothing for a tenant without policies, which Exchange reports as an object not found' {
+        Mock New-ExoRequest { throw "Ex6F9304|Microsoft.Exchange.Configuration.Tasks.ManagementObjectNotFoundException|The operation couldn't be performed because object 'OU=contoso.onmicrosoft.com,OU=Microsoft Exchange Hosted Organizations,DC=NAMP222A001,DC=PROD,DC=OUTLOOK,DC=COM\*' couldn't be found on 'DC002.NAMP222A001.PROD.OUTLOOK.COM'." }
+
+        @(Get-CIPPExoApplicationAccessPolicy -TenantFilter 'contoso.onmicrosoft.com').Count | Should -Be 0
+    }
+
+    It 'throws other errors' {
+        Mock New-ExoRequest { throw 'Forbidden' }
+
+        { Get-CIPPExoApplicationAccessPolicy -TenantFilter 'contoso.onmicrosoft.com' } | Should -Throw '*Forbidden*'
+    }
 }
 
 Describe 'Set-CIPPDBCacheExoApplicationAccessPolicies' {
@@ -47,6 +59,14 @@ Describe 'Set-CIPPDBCacheExoApplicationAccessPolicies' {
 
     It 'records an empty set when there is no policy' {
         Mock New-ExoRequest { }
+
+        Set-CIPPDBCacheExoApplicationAccessPolicies -TenantFilter 'contoso.onmicrosoft.com'
+
+        Should -Invoke Add-CIPPDbItem -Times 1 -Exactly -ParameterFilter { $ClearOnEmpty -and @($Data).Count -eq 0 }
+    }
+
+    It 'records an empty set when Exchange reports no policy as an object not found' {
+        Mock New-ExoRequest { throw 'Ex6F9304|Microsoft.Exchange.Configuration.Tasks.ManagementObjectNotFoundException|object not found' }
 
         Set-CIPPDBCacheExoApplicationAccessPolicies -TenantFilter 'contoso.onmicrosoft.com'
 

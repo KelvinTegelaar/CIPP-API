@@ -35,7 +35,8 @@ function Get-CIPPBaselineSPGuestPeoplePickerState {
     }
     if (-not $Tenant) { return @{ Current = $null; NoDataReason = 'Could not read the SharePoint tenant configuration.' } }
 
-    $Sites = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'SPOSites' | Where-Object { $_ -and $_.Url })
+    # SharePoint refuses this setting on the My Site host
+    $Sites = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'SPOSites').Where({ $_ -and $_.Url -and $_.Template -ne 'SPSMSITEHOST#0' })
 
     $Offenders = [System.Collections.Generic.List[string]]::new()
     $Targets = [System.Collections.Generic.List[object]]::new()

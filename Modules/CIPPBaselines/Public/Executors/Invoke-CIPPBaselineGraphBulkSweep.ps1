@@ -19,7 +19,9 @@ function Invoke-CIPPBaselineGraphBulkSweep {
                       down to the expected keys, so it never reaches the compare.
 
         Spec (fully rendered):
-          writes[]      - ordered write groups, each { from, method, uri, body, asApp }.
+          writes[]      - ordered write groups, each { from, method, uri, body, asApp, sequential }.
+                          sequential sends the group's requests one at a time, in order, for
+                          services that lose concurrent writes to one parent object.
                           'from' names the property on -Current holding the objects (default
                           'targets'); a group whose property does not exist is an authoring
                           error and throws, while one that exists and is empty is simply
@@ -46,17 +48,6 @@ function Invoke-CIPPBaselineGraphBulkSweep {
         $Current
     )
 
-    $Expand = {
-        param($Template, $Object)
-        $Json = ConvertTo-Json -Compress -Depth 100 -InputObject $Template
-        foreach ($Property in $Object.PSObject.Properties) {
-            $Token = '%{0}%' -f $Property.Name
-            $Json = $Json.Replace(('"{0}"' -f $Token), (ConvertTo-Json -Compress -Depth 100 -InputObject $Property.Value))
-            $Json = $Json.Replace($Token, "$($Property.Value)")
-        }
-        $Json | ConvertFrom-Json
-    }
-
     $Version = "$($Remediate.version)"
     if ($Version -notin @('beta', 'v1.0')) { $Version = 'beta' }
 
@@ -82,18 +73,23 @@ function Invoke-CIPPBaselineGraphBulkSweep {
                 # rejects the whole batch with 'Id property cannot be empty'.
                 id     = "$Index"
                 method = ($Write.method ?? 'PATCH')
-                url    = "/$((& $Expand $Write.uri $Object) -replace '^/')"
+                url    = "/$((Expand-CIPPBaselineToken -Template $Write.uri -Values $Object) -replace '^/')"
             }
             $Index++
             if ($Write.PSObject.Properties.Name -contains 'body' -and $null -ne $Write.body) {
-                $Request['body'] = & $Expand $Write.body $Object
+                $Request['body'] = Expand-CIPPBaselineToken -Template $Write.body -Values $Object
                 $Request['headers'] = @{ 'Content-Type' = 'application/json' }
             }
             $Request
         }
 
         $Attempted += $Objects.Count
-        $Responses = @(New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp ([bool]($Write.asApp ?? $true)) -Version $Version)
+        $AsApp = [bool]($Write.asApp ?? $true)
+        $Responses = if ($Write.sequential -eq $true) {
+            @(foreach ($Request in @($Requests)) { New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Request) -asapp $AsApp -Version $Version })
+        } else {
+            @(New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $AsApp -Version $Version)
+        }
         foreach ($Response in $Responses) {
             if ([int]$Response.status -lt 200 -or [int]$Response.status -gt 299) {
                 $Failed++

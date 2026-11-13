@@ -10,7 +10,19 @@ function Invoke-ListGDAPAccessAssignments {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $Id = $Request.Query.Id
-    $TenantFilter = $env:TenantID
+    if (-not $Id) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Id is required' } })
+    }
+    # The id is placed in a Graph URL, so it must be a relationship id and nothing else.
+    if (-not (Test-CIPPGDAPRelationshipId -Id "$Id")) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Invalid relationship id' } })
+    }
+    # Multi-partner: act as the relationship's source partner (defaults to the primary)
+    $PartnerTenantId = $Request.Query.partnerTenantId ?? $Request.Body.partnerTenantId
+    if (!$PartnerTenantId -or -not (Get-CIPPPartnerTenantList | Where-Object { $_.partnerTenantId -eq $PartnerTenantId })) {
+        $PartnerTenantId = $env:TenantID
+    }
+    $TenantFilter = $PartnerTenantId
 
     Write-Information "Getting access assignments for $Id"
 
@@ -21,7 +33,8 @@ function Invoke-ListGDAPAccessAssignments {
 
 
     # Get all the access containers
-    $AccessContainers = $AccessAssignments.accessContainer.accessContainerId
+    # A group mapped again after a removal has a deleted and an active assignment; a batch id must be unique.
+    $AccessContainers = @($AccessAssignments.accessContainer.accessContainerId | Sort-Object -Unique)
     Write-Information "Getting access containers for $($AccessContainers -join ',')"
 
     $ContainerMembers = foreach ($AccessContainer in $AccessContainers) {

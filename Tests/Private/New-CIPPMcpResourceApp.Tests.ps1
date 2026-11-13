@@ -62,6 +62,20 @@ Describe 'New-CIPPMcpResourceApp' {
         Should -Invoke -CommandName Add-CIPPAzDataTableEntity -Times 1 -Exactly
     }
 
+    It 'retries the reconcile when the just-created app has not replicated yet' {
+        Mock -CommandName Start-Sleep -MockWith { }
+        $script:PatchCalls = 0
+        Mock -CommandName New-GraphPOSTRequest -ParameterFilter { $type -eq 'PATCH' } -MockWith {
+            $script:PatchCalls++
+            if ($script:PatchCalls -eq 1) { throw "Resource 'res-obj' does not exist or one of its queried reference-property objects are not present." }
+        }
+
+        { New-CIPPMcpResourceApp -Headers @{} } | Should -Not -Throw
+
+        $script:PatchCalls | Should -Be 2
+        Should -Invoke -CommandName Add-CIPPAzDataTableEntity -Times 1 -Exactly
+    }
+
     It 'throws when WEBSITE_HOSTNAME is not set' {
         $env:WEBSITE_HOSTNAME = ''
         { New-CIPPMcpResourceApp -Headers @{} } | Should -Throw

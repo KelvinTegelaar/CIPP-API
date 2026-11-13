@@ -137,6 +137,15 @@ function New-CIPPCATemplate {
         $JSON | Add-Member -NotePropertyName 'AuthContextInfo' -NotePropertyValue @($AllAuthContexts) -Force
     }
 
+    $GsaControl = $JSON.sessionControls.globalSecureAccessFilteringProfile
+    if ($GsaControl) {
+        $JSON.sessionControls.PSObject.Properties.Remove('networkAccessSecurity')
+        if ($GsaControl.profileId -is [string] -and (Test-IsGuid -String $GsaControl.profileId)) {
+            $GsaProfile = try { New-GraphGetRequest -uri "https://graph.microsoft.com/beta/networkAccess/filteringProfiles/$($GsaControl.profileId)" -tenantid $TenantFilter -AsApp $true } catch { $null }
+            if ($GsaProfile.name) { $GsaControl.profileId = $GsaProfile.name }
+        }
+    }
+
     $JSON = (ConvertTo-Json -Compress -Depth 100 -InputObject $JSON)
     return $JSON
 }

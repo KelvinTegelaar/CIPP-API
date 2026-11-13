@@ -1,7 +1,7 @@
 function Invoke-ListCheckExtAlerts {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         CIPP.Core.Read
     .DESCRIPTION

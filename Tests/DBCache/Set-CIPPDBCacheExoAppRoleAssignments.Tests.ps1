@@ -1,5 +1,5 @@
 # Pester tests for Set-CIPPDBCacheExoAppRoleAssignments and Get-CIPPExoAppRoleAssignment
-# Only 'Application *' role assignments are kept, matched to the app's Entra ids; Exchange is not asked for
+# Only 'Application *' role assignments are kept, less Organization Management's default delegating ones, matched to the app's Entra ids; Exchange is not asked for
 # assignments when no service principal is registered there; an empty read is recorded as an empty set and a
 # failed read writes nothing and rethrows.
 
@@ -46,6 +46,27 @@ Describe 'Get-CIPPExoAppRoleAssignment' {
         @(Get-CIPPExoAppRoleAssignment -TenantFilter 'contoso.onmicrosoft.com').Count | Should -Be 0
         Should -Invoke New-ExoRequest -Times 1 -Exactly
         Should -Invoke New-ExoRequest -Times 0 -ParameterFilter { $cmdlet -eq 'Get-ManagementRoleAssignment' }
+    }
+
+    It 'leaves out the delegating assignments Exchange gives Organization Management and keeps any other' {
+        Mock New-ExoRequest {
+            switch ($cmdlet) {
+                'Get-ServicePrincipal' { $script:ExoSp }
+                'Get-ManagementRoleAssignment' {
+                    [pscustomobject]@{ Guid = 'ra-1'; Role = 'Application Mail.Read'; RoleAssignee = 'a1b2'; RoleAssignmentDelegationType = 'Regular'; Enabled = $true }
+                    [pscustomobject]@{ Guid = 'ra-2'; Role = 'Application Mail.Read'; RoleAssignee = 'Organization Management'; RoleAssigneeName = 'Organization Management'; RoleAssignmentDelegationType = 'DelegatingOrgWide'; Enabled = $true }
+                    [pscustomobject]@{ Guid = 'ra-3'; Role = 'Application Mail.Send'; RoleAssignee = 'Organization Management'; RoleAssignmentDelegationType = 'Delegating'; Enabled = $true }
+                    [pscustomobject]@{ Guid = 'ra-4'; Role = 'Application Mail.Read'; RoleAssignee = 'Helpdesk'; RoleAssigneeName = 'Helpdesk'; RoleAssignmentDelegationType = 'Delegating'; Enabled = $true }
+                }
+            }
+        }
+
+        $Rows = @(Get-CIPPExoAppRoleAssignment -TenantFilter 'contoso.onmicrosoft.com')
+
+        $Rows.id | Should -Be @('ra-1', 'ra-4')
+        $Rows.delegating | Should -Be @($false, $true)
+        $Rows[1].roleAssignee | Should -BeExactly 'Helpdesk'
+        $Rows[1].servicePrincipalId | Should -BeNullOrEmpty
     }
 
     It 'leaves out a scope filter it cannot read' {

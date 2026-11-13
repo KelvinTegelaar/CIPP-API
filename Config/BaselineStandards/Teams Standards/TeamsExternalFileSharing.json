@@ -3,7 +3,10 @@
   "label": "Define approved cloud storage services for external file sharing in Teams",
   "cat": "Teams Standards",
   "tag": [
-    "CIS M365 7.0.0 (8.1.1)"
+    "CIS M365 7.0.0 (8.1.1)",
+    "CMMC (AC.L1-b.1.iii)",
+    "CMMC (AC.L2-3.1.20)",
+    "NIST SP 800-171 (3.1.20)"
   ],
   "impact": "Low Impact",
   "helpText": "Ensure external file sharing in Teams is enabled for only approved cloud storage services.",

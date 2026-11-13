@@ -15,7 +15,9 @@ function Invoke-ListTenantGroups {
     $groupFilter = $Request.Query.groupId ?? $Request.Body.groupId
     # Include, per group, the standards templates and scheduled tasks that reference it.
     $includeUsage = ($Request.Query.includeUsage -eq $true) -or ($Request.Body.includeUsage -eq $true)
-    $TenantGroups = (Get-TenantGroups -GroupId $groupFilter -SkipCache) ?? @()
+    # The tenant selector's list; empty when the caller's roles block viewing a tenant group
+    $TenantSelector = $Request.Query.TenantSelector -eq $true
+    $TenantGroups = if ($TenantSelector -and ((Get-CIPPFeatureFlag -Id 'TenantGroupSelector').Enabled -ne $true -or (Test-CippAllTenantsBlocked -TenantGroups))) { @() } else { (Get-TenantGroups -GroupId $groupFilter -SkipCache) ?? @() }
 
     if ($includeUsage) {
         $UsageByGroup = @{}

@@ -2,7 +2,11 @@
   "name": "PIMRoleSettings",
   "label": "PIM Role Settings Template",
   "cat": "Templates",
-  "tag": [],
+  "tag": [
+    "CMMC (AC.L2-3.1.5)",
+    "FedRAMP B-D (KSI-IAM-JIT)",
+    "NIST SP 800-171 (3.1.5)"
+  ],
   "impact": "High Impact",
   "helpText": "Deploys a Privileged Identity Management role settings template to the tenant: activation limits, MFA or authentication context, justification, approval, eligibility and active-assignment expiry and notification rules for the roles the template covers. Templates cannot weaken settings below CIPP's secure floor.",
   "executiveText": "Enforces consistent Privileged Identity Management settings so that administrator roles can only be used for a limited time, after strong authentication and with a recorded reason. This keeps standing administrative access to a minimum and makes every use of privilege visible and accountable.",

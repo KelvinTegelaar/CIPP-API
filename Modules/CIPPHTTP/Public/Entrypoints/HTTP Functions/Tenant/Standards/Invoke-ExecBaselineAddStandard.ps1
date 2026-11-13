@@ -30,13 +30,13 @@ function Invoke-ExecBaselineAddStandard {
         $BaselineId = "$(& $Unwrap $Request.Body.baselineId)"
         $Standard = "$(& $Unwrap $Request.Body.standard)"
         $StageNumber = [int]($(& $Unwrap $Request.Body.stage) ?? 1)
-        if (-not $BaselineId -or -not $Standard) { throw 'Provide baselineId and standard.' }
+        if (-not $BaselineId -or -not $Standard) { throw [System.ArgumentException]::new('Provide baselineId and standard.') }
         if ($StageNumber -lt 1) { $StageNumber = 1 }
 
         $Definition = Get-CIPPBaselineDefinition -Name $Standard | Select-Object -First 1
-        if (-not $Definition) { throw "Unknown standard '$Standard'." }
+        if (-not $Definition) { throw [System.Management.Automation.ItemNotFoundException]::new("Unknown standard '$Standard'.") }
         $Baseline = Get-CIPPBaseline -ID $BaselineId | Select-Object -First 1
-        if (-not $Baseline) { throw "Baseline '$BaselineId' was not found." }
+        if (-not $Baseline) { throw [System.Management.Automation.ItemNotFoundException]::new("Baseline '$BaselineId' was not found.") }
         $OutOfScope = @(Get-CIPPBaselineOutOfScopeAssignment -Assignments $Baseline.assignments)
         if ($OutOfScope.Count -gt 0) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Forbidden; Body = @{ Results = "Your role can't change this baseline, because it is assigned to tenants outside your access: $($OutOfScope -join ', ')." } })
@@ -51,13 +51,14 @@ function Invoke-ExecBaselineAddStandard {
         $Stages = [System.Collections.Generic.List[object]]::new()
         foreach ($Stage in @($Baseline.stages)) {
             $Stages.Add([PSCustomObject]@{
-                    name       = $Stage.name
-                    logic      = $Stage.logic
-                    conditions = @($Stage.conditions)
-                    standards  = [System.Collections.Generic.List[object]]@($Stage.standardsConfig | Where-Object { $_ })
+                    name            = $Stage.name
+                    logic           = $Stage.logic
+                    conditions      = @($Stage.conditions)
+                    conditionGroups = @($Stage.conditionGroups)
+                    standards       = [System.Collections.Generic.List[object]]@($Stage.standardsConfig | Where-Object { $_ })
                 })
         }
-        if ($Stages.Count -eq 0) { throw 'The baseline has no stages.' }
+        if ($Stages.Count -eq 0) { throw [System.ArgumentException]::new('The baseline has no stages.') }
         if ($StageNumber -gt $Stages.Count) { $StageNumber = $Stages.Count }
         $Target = $Stages[$StageNumber - 1]
 
@@ -105,7 +106,7 @@ function Invoke-ExecBaselineAddStandard {
     } catch {
         Write-LogMessage -headers $Request.Headers -API $APIName -message "Failed to add the standard to the baseline: $($_.Exception.Message)" -Sev 'Error'
         $Results = [pscustomobject]@{ Results = "Failed to add the standard to the baseline: $($_.Exception.Message)" }
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

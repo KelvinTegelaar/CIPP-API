@@ -14,6 +14,8 @@ BeforeAll {
 
     . $HashFunctionPath
     . $FunctionPath
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Get-CIPPTemplateLink.ps1')
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
 }
 
 Describe 'Push-CIPPTemplateToRepo' {
@@ -69,5 +71,50 @@ Describe 'Push-CIPPTemplateToRepo' {
         $Result = Push-CIPPTemplateToRepo -GUID 'guid-1' -FullName 'Org/repo' -Message 'push it' -Branch 'main'
         $Result.state | Should -Be 'error'
         Should -Invoke Add-CIPPAzDataTableEntity -Times 0
+    }
+}
+
+Describe 'Push-CIPPTemplateToRepo with linked templates' {
+    BeforeEach {
+        $script:Pushed = [System.Collections.Generic.List[object]]::new()
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            [pscustomobject]@{ RowKey = 'ca-1'; PartitionKey = 'CATemplate'; JSON = '{"displayName":"Staff web filtering","sessionControls":{"globalSecureAccessFilteringProfile":{"profileId":{"label":"Staff","value":"prof-1"},"isEnabled":true}}}' }
+        } -ParameterFilter { $Filter -like "*'ca-1'*" }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            [pscustomobject]@{ RowKey = 'prof-1'; PartitionKey = 'GSASecurityProfileTemplate'; JSON = '{"name":"Staff","policies":[{"policy":{"label":"Block risky","value":"pol-1"}},{"policy":{"label":"Block social","value":"pol-2"}}]}' }
+        } -ParameterFilter { $Filter -like "*'GSASecurityProfileTemplate'*'prof-1'*" }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { [pscustomobject]@{ RowKey = 'pol-1'; PartitionKey = 'GSAFilteringPolicyTemplate'; JSON = '{"name":"Block risky"}' } } -ParameterFilter { $Filter -like "*'GSAFilteringPolicyTemplate'*'pol-1'*" }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { [pscustomobject]@{ RowKey = 'pol-2'; PartitionKey = 'GSAFilteringPolicyTemplate'; JSON = '{"name":"Block social"}' } } -ParameterFilter { $Filter -like "*'GSAFilteringPolicyTemplate'*'pol-2'*" }
+        Mock -CommandName Push-GitHubContent -MockWith { $script:Pushed.Add([pscustomobject]@{ Path = $Path; Content = $Content }); @{ content = @{ sha = "sha-$Path" } } }
+        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith {}
+    }
+
+    It 'pushes the templates the CA template links first, then the CA template with a manifest of them' {
+        $Result = Push-CIPPTemplateToRepo -GUID 'ca-1' -FullName 'Org/repo' -Message 'push it' -Branch 'main'
+        @($script:Pushed.Path) | Should -Be @('GSASecurityProfileTemplate/Staff.json', 'GSAFilteringPolicyTemplate/Block_risky.json', 'GSAFilteringPolicyTemplate/Block_social.json', 'CATemplate/Staff_web_filtering.json')
+        $Manifest = ($script:Pushed[3].Content | ConvertFrom-Json).LinkedTemplates | ConvertFrom-Json
+        @($Manifest | ForEach-Object { "$($_.partition)|$($_.guid)|$($_.path)" }) | Should -Be @(
+            'GSASecurityProfileTemplate|prof-1|GSASecurityProfileTemplate/Staff.json'
+            'GSAFilteringPolicyTemplate|pol-1|GSAFilteringPolicyTemplate/Block_risky.json'
+            'GSAFilteringPolicyTemplate|pol-2|GSAFilteringPolicyTemplate/Block_social.json'
+        )
+        foreach ($Pushed in $script:Pushed[0..2]) { ($Pushed.Content | ConvertFrom-Json).PSObject.Properties.Name | Should -Not -Contain 'LinkedTemplates' }
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 4 -Exactly -ParameterFilter { $OperationType -eq 'UpsertMerge' }
+        $Result.resultText | Should -Be "Template 'Staff web filtering' uploaded with 3 linked template(s)"
+    }
+
+    It 'does not push the CA template when a template it links fails to push' {
+        Mock -CommandName Push-GitHubContent -MockWith { $script:Pushed.Add([pscustomobject]@{ Path = $Path }); $null } -ParameterFilter { $Path -like 'GSAFilteringPolicyTemplate/*' }
+        $Result = Push-CIPPTemplateToRepo -GUID 'ca-1' -FullName 'Org/repo' -Message 'push it' -Branch 'main'
+        $Result.state | Should -Be 'error'
+        $Result.resultText | Should -BeLike "Template 'Block risky', which this template links, was not pushed*"
+        @($script:Pushed.Path) | Should -Not -Contain 'CATemplate/Staff_web_filtering.json'
+    }
+
+    It 'pushes a template that links nothing as before, without a manifest' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { [pscustomobject]@{ RowKey = 'pol-1'; PartitionKey = 'GSAFilteringPolicyTemplate'; JSON = '{"name":"Block risky"}' } } -ParameterFilter { $Filter -like "*'pol-1'*" }
+        $null = Push-CIPPTemplateToRepo -GUID 'pol-1' -FullName 'Org/repo' -Message 'push it' -Branch 'main'
+        @($script:Pushed.Path) | Should -Be @('GSAFilteringPolicyTemplate/Block_risky.json')
+        ($script:Pushed[0].Content | ConvertFrom-Json).PSObject.Properties.Name | Should -Not -Contain 'LinkedTemplates'
     }
 }

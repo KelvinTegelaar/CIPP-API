@@ -12,6 +12,9 @@ function Invoke-ListMailQuarantineMessage {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $Identity = $Request.Query.Identity
+    if (-not $Identity) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Identity is required' } })
+    }
 
     try {
         $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Export-QuarantineMessage' -cmdParams @{ 'Identity' = $Identity }

@@ -3,7 +3,9 @@
   "label": "Set Intune Compliance Settings",
   "cat": "Intune Standards",
   "tag": [
-    "CIS M365 7.0.0 (4.1)"
+    "CIS M365 7.0.0 (4.1)",
+    "CMMC (CM.L2-3.4.2)",
+    "NIST SP 800-171 (3.4.2)"
   ],
   "impact": "Low Impact",
   "helpText": "Sets the mark devices with no compliance policy assigned as compliance/non compliant and Compliance status validity period.",

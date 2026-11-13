@@ -11,7 +11,8 @@ function Add-CIPPDelegatedPermission {
     $ApplicationId = $ApplicationId ?? $env:ApplicationID
     Set-Location (Get-Item $PSScriptRoot).FullName
 
-    if ($ApplicationId -eq $env:ApplicationID -and $TenantFilter -eq $env:TenantID) {
+    $IsPartnerTenant = $TenantFilter -eq 'PartnerTenant' -or $TenantFilter -eq $env:TenantID -or [bool](Get-CIPPPartnerTenant -PartnerTenantId $TenantFilter)
+    if ($ApplicationId -eq $env:ApplicationID -and $IsPartnerTenant) {
         #return @('Cannot modify delgated permissions for CIPP-SAM on partner tenant')
         $RequiredResourceAccess = 'CIPPDefaults'
     }
@@ -36,7 +37,7 @@ function Add-CIPPDelegatedPermission {
             $RequiredResourceAccess.Add($Resource)
         }
 
-        if ($TenantFilter -eq $env:TenantID -or $TenantFilter -eq 'PartnerTenant') {
+        if ($IsPartnerTenant) {
             $RequiredResourceAccess = $RequiredResourceAccess + ($AdditionalPermissions | Where-Object { $RequiredResourceAccess.resourceAppId -notcontains $_.resourceAppId })
         } else {
             # remove the partner center permission if not pushing to partner tenant

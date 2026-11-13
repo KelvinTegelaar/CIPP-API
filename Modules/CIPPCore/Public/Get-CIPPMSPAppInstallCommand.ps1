@@ -94,7 +94,8 @@ function Get-CIPPMSPAppInstallCommand {
             $installCommandLine = "c:\windows\sysnative\windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass .\install.ps1 -Server $AutomateServer -InstallerToken $AutomateInstallerToken -LocationID $AutomateLocationId"
             $uninstallCommandLine = "c:\windows\sysnative\windowspowershell\v1.0\powershell.exe -ExecutionPolicy Bypass .\uninstall.ps1 -Server $AutomateServer"
             $DetectionScriptPath = Join-Path $env:CIPPRootPath 'AddMSPApp\automate.detection.ps1'
-            $DetectionScriptContent = (Get-Content -LiteralPath $DetectionScriptPath -Raw) -replace '##SERVER##', $ServerRaw
+            # The placeholder sits inside a single-quoted literal in a script that runs on the device.
+            $DetectionScriptContent = (Get-Content -LiteralPath $DetectionScriptPath -Raw).Replace('##SERVER##', (ConvertTo-CIPPScriptBlockValue -Value $ServerRaw))
         }
         'cwcommand' {
             $CwClientUrl = ConvertTo-CIPPSafePwshArg -Value (Resolve-MSPValue $InstallParams.ClientURL)

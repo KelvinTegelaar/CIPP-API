@@ -89,6 +89,8 @@ function Get-CIPPSharedMailboxAccountEnabledReport {
                     assignedLicenses      = $User.assignedLicenses
                     id                    = $User.id
                     onPremisesSyncEnabled = $User.onPremisesSyncEnabled
+                    # Only cached when the tenant has Entra P1 (see Set-CIPPDBCacheUsers), otherwise null
+                    lastSuccessfulSignInDateTime = $User.signInActivity.lastSuccessfulSignInDateTime
                     CacheTimestamp        = $CacheTimestamp
                 })
         }

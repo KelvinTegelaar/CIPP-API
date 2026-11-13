@@ -135,6 +135,18 @@ function Get-GraphToken {
             }
 
             $refreshToken = $ClientRefreshToken.Value
+        } elseif ($tenantid -ne $env:TenantID) {
+            # Multi-partner: use the owning partner's refresh token. No-op while the flag is off.
+            $OwningPartner = Resolve-CIPPOwningPartner -TenantFilter $tenantid
+            if ($OwningPartner -ne $env:TenantID) {
+                $PartnerRefreshToken = Get-CIPPPartnerRefreshToken -PartnerTenantId $OwningPartner
+                if ($PartnerRefreshToken) {
+                    Write-Host "Using refresh token of partner tenant $OwningPartner for $tenantid"
+                    $refreshToken = $PartnerRefreshToken
+                } else {
+                    Write-Host "No refresh token stored for partner tenant $OwningPartner - falling back to the primary partner token for $tenantid"
+                }
+            }
         }
 
         $AuthBody = @{

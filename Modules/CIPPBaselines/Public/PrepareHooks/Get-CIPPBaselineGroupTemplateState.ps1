@@ -23,9 +23,13 @@ function Get-CIPPBaselineGroupTemplateState {
         $TenantFilter
     )
 
+    # Every "cannot grade" return below names its reason: a bare null Current still reaches the
+    # executor on a remediation run, which then does nothing and is recorded as a successful deploy.
     $Reference = $Item.Variables.groupTemplate
+    $TemplateLabel = "$($Reference.label)"
     if ($Reference -is [System.Management.Automation.PSCustomObject] -and $Reference.PSObject.Properties.Name -contains 'value') { $Reference = $Reference.value }
-    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null; NoDataReason = 'no group template is selected'; ConfigError = $true } }
+    if ([string]::IsNullOrWhiteSpace($TemplateLabel)) { $TemplateLabel = "$Reference" }
 
     $Table = Get-CippTable -tablename 'templates'
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
@@ -35,7 +39,9 @@ function Get-CIPPBaselineGroupTemplateState {
     if ($TemplateJson -match '%') { $TemplateJson = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $TemplateJson -EscapeForJson }
     $Template = $(if (-not [string]::IsNullOrWhiteSpace($TemplateJson)) { try { $TemplateJson | ConvertFrom-Json -Depth 20 -ErrorAction Stop } catch { $null } })
     $GroupName = "$($Template.displayName)"
-    if (-not $Template -or [string]::IsNullOrWhiteSpace($GroupName)) { return @{ Current = $null } }
+    if (-not $Template -or [string]::IsNullOrWhiteSpace($GroupName)) {
+        return @{ Current = $null; NoDataReason = "group template '$TemplateLabel' could not be found in the template store or has no display name"; ConfigError = $true }
+    }
 
     if ("$($Template.groupType)" -eq 'dynamicDistribution') {
         # Dynamic Distribution Groups are not supported by CIPP: do not grade them (a graded DDL reads as
@@ -45,7 +51,7 @@ function Get-CIPPBaselineGroupTemplateState {
 
     $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')
     if ($Groups.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'Groups')) {
-        return @{ Current = $null }
+        return @{ Current = $null; NoDataReason = 'the groups cache could not be collected for this tenant' }
     }
     $Existing = $Groups | Where-Object { "$($_.displayName)" -eq $GroupName } | Select-Object -First 1
 

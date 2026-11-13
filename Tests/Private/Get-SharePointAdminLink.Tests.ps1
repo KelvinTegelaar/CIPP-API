@@ -37,6 +37,32 @@ Describe 'Get-SharePointAdminLink' {
         BeforeEach {
             $script:CIPPSharePointAdminLinks = @{}
             $script:CIPPSharePointRootSiteFailures = @{}
+            $script:CIPPSharePointAdminLinkSweep = $null
+        }
+
+        It 'removes expired links and failures when it looks a tenant up' {
+            Mock -CommandName New-GraphGetRequest -MockWith {
+                [PSCustomObject]@{ siteCollection = [PSCustomObject]@{ hostname = 'contoso.sharepoint.com' } }
+            }
+            $Past = [datetime]::UtcNow.AddMinutes(-1)
+            foreach ($i in 1..300) {
+                $script:CIPPSharePointAdminLinks["tenant$i"] = @{ Link = [PSCustomObject]@{}; Expires = $Past }
+                $script:CIPPSharePointRootSiteFailures["failed$i"] = @{ Error = 'Access denied'; Expires = $Past }
+            }
+
+            $null = Get-SharePointAdminLink -Public $false -TenantFilter 'contoso.onmicrosoft.com'
+
+            @($script:CIPPSharePointAdminLinks.Keys) | Should -Be @('contoso.onmicrosoft.com')
+            $script:CIPPSharePointRootSiteFailures.Count | Should -Be 0
+        }
+
+        It 'caches only the message of a failed root site lookup' {
+            Mock -CommandName New-GraphGetRequest -MockWith { throw 'Access denied' }
+
+            { Get-SharePointAdminLink -Public $false -TenantFilter 'contoso.onmicrosoft.com' } | Should -Throw '*Access denied*'
+            { Get-SharePointAdminLink -Public $false -TenantFilter 'contoso.onmicrosoft.com' } | Should -Throw '*Access denied*'
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly
+            $script:CIPPSharePointRootSiteFailures['contoso.onmicrosoft.com'].Error | Should -BeOfType [string]
         }
 
         It 'looks the root site up once per tenant and reuses it' {

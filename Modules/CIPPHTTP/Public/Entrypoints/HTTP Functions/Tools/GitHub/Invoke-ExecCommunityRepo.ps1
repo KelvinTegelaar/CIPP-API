@@ -229,15 +229,29 @@ function Invoke-ExecCommunityRepo {
                             (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $Location.path).content | ConvertFrom-Json
                         }
                     }
+                    # A template pushed with the templates it links carries their repo paths: bring them first, keeping their GUIDs
+                    $LinkedImported = 0
+                    $LinkedFailures = [System.Collections.Generic.List[string]]::new()
+                    $LinkedManifest = $Content.LinkedTemplates
+                    if ($LinkedManifest -is [string]) { $LinkedManifest = $LinkedManifest | ConvertFrom-Json }
+                    foreach ($Linked in @($LinkedManifest).Where({ $_.path })) {
+                        try {
+                            $LinkedFile = Get-GitHubFileContents -FullName $FullName -Path $Linked.path -Branch $Branch
+                            $null = Import-CommunityTemplate -Template ($LinkedFile.content | ConvertFrom-Json) -SHA $LinkedFile.sha -Source $FullName -Path $Linked.path -Force:$Force
+                            $LinkedImported++
+                        } catch {
+                            $LinkedFailures.Add("$($Linked.path): $($_.Exception.Message)")
+                        }
+                    }
                     $ImportResult = Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $FullName -Path $Path -Force:$Force
 
                     $Results = @{
-                        resultText = $ImportResult ?? 'Template imported'
-                        state      = 'success'
+                        resultText = "$($ImportResult ?? 'Template imported')$(if ($LinkedImported) { " Imported $LinkedImported linked template(s)." })$(if ($LinkedFailures.Count) { " Linked templates that could not be imported: $($LinkedFailures -join '; ')" })"
+                        state      = $LinkedFailures.Count ? 'warning' : 'success'
                     }
                 }
             } catch {
-                $StatusCode = [HttpStatusCode]::InternalServerError
+                $StatusCode = $_.Exception -is [System.UnauthorizedAccessException] ? [HttpStatusCode]::Forbidden : [HttpStatusCode]::InternalServerError
                 $Results = @{
                     resultText = "Error importing template: $($_.Exception.Message)"
                     state      = 'error'

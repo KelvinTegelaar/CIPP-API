@@ -2,7 +2,11 @@
   "name": "DisableInactiveApps",
   "label": "Disable enterprise applications that have not signed in for a number of days",
   "cat": "Entra (AAD) Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (IA.L2-3.5.6)",
+    "FedRAMP A-D (KSI-IAM-AAM)",
+    "NIST SP 800-171 (3.5.6)"
+  ],
   "impact": "High Impact",
   "helpText": "Finds enterprise apps with no sign-in for a set number of days (minimum 30), including apps never used since they were added. Microsoft apps and CIPP are skipped. Exclude external MFA (e.g. Cisco Duo) and GSA traffic forwarding apps. Use in Report mode only; auto-remediation is not recommended. Requires Entra ID P1.",
   "executiveText": "Identifies third-party and custom apps that are no longer used, so dormant apps with broad permissions can be reviewed and removed before they are abused.",

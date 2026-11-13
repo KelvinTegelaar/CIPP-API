@@ -90,7 +90,7 @@ Describe 'Test-CIPPAccess BlockedEndpoints tenant scoping' {
         }
 
         { Test-CIPPAccess -Request (New-EndpointRequest -TenantId 'tenant-1') } |
-            Should -Throw -ExpectedMessage '*has blocked this endpoint: ExecResetPass*'
+            Should -Throw -ExpectedMessage 'Your role * blocks ExecResetPass*'
     }
 
     It 'blocks when scoped role covers the request tenant' {
@@ -102,7 +102,7 @@ Describe 'Test-CIPPAccess BlockedEndpoints tenant scoping' {
         }
 
         { Test-CIPPAccess -Request (New-EndpointRequest -TenantId 'tenant-1') } |
-            Should -Throw -ExpectedMessage '*has blocked this endpoint: ExecResetPass*'
+            Should -Throw -ExpectedMessage 'Your role * blocks ExecResetPass*'
     }
 
     It 'allows T2 when RoleA blocks on T1 and RoleB grants T2 without a block' {
@@ -135,7 +135,7 @@ Describe 'Test-CIPPAccess BlockedEndpoints tenant scoping' {
         }
 
         { Test-CIPPAccess -Request (New-EndpointRequest -TenantId 'tenant-2') } |
-            Should -Throw -ExpectedMessage '*Access to this tenant is not allowed*'
+            Should -Throw -ExpectedMessage "Your roles don't include *"
     }
 
     It 'allows when role grants the endpoint with no block and tenant is in scope' {
@@ -159,7 +159,7 @@ Describe 'Test-CIPPAccess BlockedEndpoints tenant scoping' {
         }
 
         { Test-CIPPAccess -Request (New-EndpointRequest -TenantId 'tenant-unknown') } |
-            Should -Throw -ExpectedMessage '*has blocked this endpoint: ExecResetPass*'
+            Should -Throw -ExpectedMessage 'Your role * blocks ExecResetPass*'
     }
 
     It 'fail-closes the block when the request has no tenantFilter (does not invent partner TenantID)' {
@@ -172,7 +172,7 @@ Describe 'Test-CIPPAccess BlockedEndpoints tenant scoping' {
 
         $env:TenantID = 'partner-tenant-id'
         { Test-CIPPAccess -Request (New-EndpointRequest) } |
-            Should -Throw -ExpectedMessage '*has blocked this endpoint: ExecResetPass*'
+            Should -Throw -ExpectedMessage 'Your role * blocks ExecResetPass*'
     }
 
     It 'blocks a granted group-shaped tenantFilter when the endpoint is blocked' {
@@ -187,7 +187,7 @@ Describe 'Test-CIPPAccess BlockedEndpoints tenant scoping' {
 
         $GroupBody = [pscustomobject]@{ type = 'Group'; value = 'group-allowed'; label = 'Allowed Group' }
         { Test-CIPPAccess -Request (New-EndpointRequest -TenantFilterBody $GroupBody) } |
-            Should -Throw -ExpectedMessage '*has blocked this endpoint: ExecResetPass*'
+            Should -Throw -ExpectedMessage 'Your role * blocks ExecResetPass*'
     }
 
     It 'does not apply the block for an ungranted group; allow path denies the group' {
@@ -202,7 +202,7 @@ Describe 'Test-CIPPAccess BlockedEndpoints tenant scoping' {
 
         $GroupBody = [pscustomobject]@{ type = 'Group'; value = 'group-notgranted'; label = 'Other Group' }
         { Test-CIPPAccess -Request (New-EndpointRequest -TenantFilterBody $GroupBody) } |
-            Should -Throw -ExpectedMessage '*Access to this tenant is not allowed*'
+            Should -Throw -ExpectedMessage "Your roles don't include *"
     }
 
     It 'does not block when the role lists BlockedEndpoints but does not grant the permission' {

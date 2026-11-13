@@ -4,7 +4,12 @@
   "cat": "SharePoint Standards",
   "tag": [
     "CISA (MS.SPO.2.1v1)",
-    "NIST CSF 2.0 (PR.AA-05)"
+    "NIST CSF 2.0 (PR.AA-05)",
+    "CMMC (AC.L1-b.1.iii)",
+    "CMMC (AC.L2-3.1.20)",
+    "CMMC (AC.L3-3.1.2e)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.20)"
   ],
   "impact": "High Impact",
   "helpText": "Entra P1 required. Block or limit access to SharePoint and OneDrive content from unmanaged devices (those not hybrid AD joined or compliant in Intune). These controls rely on Microsoft Entra Conditional Access policies and can take up to 24 hours to take effect.",

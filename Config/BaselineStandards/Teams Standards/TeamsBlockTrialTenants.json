@@ -3,7 +3,10 @@
   "label": "Block communication with trial-only Teams tenants",
   "cat": "Teams Standards",
   "tag": [
-    "CIS M365 7.0.0 (8.2.4)"
+    "CIS M365 7.0.0 (8.2.4)",
+    "CMMC (AC.L1-b.1.iii)",
+    "CMMC (AC.L2-3.1.20)",
+    "NIST SP 800-171 (3.1.20)"
   ],
   "impact": "Low Impact",
   "helpText": "Controls whether users can chat, call and meet with accounts in Teams tenants that have no purchased seats (trial-only tenants). Microsoft blocks this by default since July 2024 because threat actors abuse trial tenants; this standard keeps it blocked. When blocked, users from trial-only tenants are removed from existing chats.",

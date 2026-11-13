@@ -11,7 +11,7 @@ function Resolve-CippBulkSelectedTenant {
 
         An AllTenants entry returns the AllTenants sentinel only for an unrestricted caller, since
         downstream code expands the sentinel to every tenant. A scoped caller gets their allowed
-        tenants instead.
+        tenants instead, and a caller whose roles set BlockAllTenants is refused (403 via the dispatcher).
 
     .PARAMETER Request
         The HTTP request, used to resolve the caller's tenant scope.
@@ -36,6 +36,9 @@ function Resolve-CippBulkSelectedTenant {
     }
 
     if ($SelectedTenants | Where-Object { $_.customerId -eq 'AllTenants' -or $_.defaultDomainName -eq 'AllTenants' }) {
+        if (Test-CippAllTenantsBlocked) {
+            throw [System.UnauthorizedAccessException]::new("Your roles don't allow this on all tenants at once. Pick tenants instead, or ask an admin to change your roles.")
+        }
         if ($Unrestricted) {
             return [pscustomobject]@{ customerId = 'AllTenants'; defaultDomainName = 'AllTenants' }
         }

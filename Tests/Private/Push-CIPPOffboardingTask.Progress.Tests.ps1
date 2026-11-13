@@ -97,6 +97,16 @@ Describe 'Push-CIPPOffboardingTask live progress' {
         }
     }
 
+    It 'refuses a cmdlet that is not in the CIPPCore module' {
+        function Remove-OutsideCore { param($userid, $tenantFilter) $global:CippTestResult = 'ran' }
+        $global:CippTestResult = $null
+
+        $Result = Push-CIPPOffboardingTask -Item (New-TaskItem -Cmdlet 'Remove-OutsideCore')
+
+        $global:CippTestResult | Should -BeNullOrEmpty
+        $Result | Should -Be 'Failed to execute Remove-OutsideCore : Cmdlet Remove-OutsideCore does not exist'
+    }
+
     It 'leaves progress alone when the task carries no job id' {
         $global:CippTestResult = 'done'
 

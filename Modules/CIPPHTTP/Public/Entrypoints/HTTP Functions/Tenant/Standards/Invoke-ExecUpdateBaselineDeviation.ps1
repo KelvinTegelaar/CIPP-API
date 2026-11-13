@@ -22,10 +22,10 @@ function Invoke-ExecUpdateBaselineDeviation {
         $TenantFilter = $Request.Body.tenantFilter
         $Standard = $Request.Body.standard
         if (-not ($Action -and $TenantFilter -and $Standard)) {
-            throw 'Provide action, tenantFilter, and standard.'
+            throw [System.ArgumentException]::new('Provide action, tenantFilter, and standard.')
         }
         if ($Action -in @('Accept', 'AcceptPath', 'DenyPath') -and -not $Request.Body.reason) {
-            throw 'A reason is required to triage a deviation.'
+            throw [System.ArgumentException]::new('A reason is required to triage a deviation.')
         }
 
         $Table = Get-CippTable -tablename 'BaselineAlignment'
@@ -36,7 +36,7 @@ function Invoke-ExecUpdateBaselineDeviation {
         # Standard-view bulk complete: mark this manual task done on EVERY tenant's row.
         if ($Action -eq 'CompleteTask' -and $TenantFilter -in @('AllTenants', 'allTenants')) {
             $Entities = @(Get-CIPPAzDataTableEntity @Table -Filter "StandardName eq '$SafeStandard'")
-            if ($Entities.Count -eq 0) { throw "No resolved data for $Standard yet - run the baseline first." }
+            if ($Entities.Count -eq 0) { throw [System.Management.Automation.ItemNotFoundException]::new("No resolved data for $Standard yet - run the baseline first.") }
             $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
             $Table.Force = $true
             foreach ($TaskEntity in $Entities) {
@@ -67,7 +67,7 @@ function Invoke-ExecUpdateBaselineDeviation {
             $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeTenant' and RowKey eq '$SafeStandard'"
         }
         if (-not $Entity) {
-            throw "No resolved data for $Standard on $TenantFilter yet - run the baseline first."
+            throw [System.Management.Automation.ItemNotFoundException]::new("No resolved data for $Standard on $TenantFilter yet - run the baseline first.")
         }
         $Entity = $Entity | Select-Object -First 1
 
@@ -76,20 +76,22 @@ function Invoke-ExecUpdateBaselineDeviation {
 
         switch ($Action) {
             'Accept' {
+                # Unix seconds when the acceptance lapses. Empty for none, unless the instance sets a maximum.
+                $Expires = Resolve-CIPPBaselineExpiry -Expires $Request.Body.expires
                 & $Set 'Status' 'Accepted'
                 & $Set 'DeviationReason' "$($Request.Body.reason)"
                 & $Set 'DeviationBy' "$User"
                 & $Set 'DeviationAt' $Now
-                & $Set 'DeviationExpires' ($Request.Body.expires ?? '')
+                & $Set 'DeviationExpires' $(if ($Expires) { $Expires } else { '' })
                 & $Set 'RemediateOnExpire' ([bool]$Request.Body.remediateOnExpire)
                 $Message = "Accepted the deviation on $Standard for $TenantFilter."
                 $EventOutcome = 'Accepted'
-                $EventDetail = 'Accepted the deviation{0}{1}' -f $(if ($Request.Body.reason) { ": $($Request.Body.reason)" }), $(if ($Request.Body.expires) { " (expires $($Request.Body.expires))" })
+                $EventDetail = 'Accepted the deviation{0}{1}' -f $(if ($Request.Body.reason) { ": $($Request.Body.reason)" }), $(if ($Expires) { ' (expires {0:yyyy-MM-dd})' -f [datetimeoffset]::FromUnixTimeSeconds($Expires).UtcDateTime })
             }
             'Deny' {
                 $Method = $Request.Body.method ?? 'remediate'
                 if ($Method -notin @('remediate', 'delete')) {
-                    throw "Unknown deny method '$Method'. Use remediate or delete."
+                    throw [System.ArgumentException]::new("Unknown deny method '$Method'. Use remediate or delete.")
                 }
                 & $Set 'Status' $(if ($Method -eq 'delete') { 'Denied - Delete Pending' } else { 'Denied - Remediate Pending' })
                 & $Set 'DeviationReason' "$($Request.Body.reason)"
@@ -124,13 +126,13 @@ function Invoke-ExecUpdateBaselineDeviation {
             }
             { $_ -in @('AcceptPath', 'DenyPath', 'ClearPath') } {
                 $Path = $Request.Body.path
-                if (-not $Path) { throw "$Action requires the property path." }
+                if (-not $Path) { throw [System.ArgumentException]::new("$Action requires the property path.") }
                 # A deny-delete verdict orders an OBJECT deletion on the next run. Only
                 # definitions with a delete executor (the detect-drift standards, where
                 # each path is a whole policy) can carry it out - anything else would
                 # park the row at Delete Pending forever.
                 if ($Action -eq 'DenyPath' -and -not (Get-CIPPBaselineDefinition -Name (($Standard -split '#')[0])).delete) {
-                    throw "$Standard does not support deletion. Accept the property to tolerate it, or Deny the deviation to enforce the baseline configuration."
+                    throw [System.ArgumentException]::new("$Standard does not support deletion. Accept the property to tolerate it, or Deny the deviation to enforce the baseline configuration.")
                 }
                 $AcceptedPaths = if ($Entity.AcceptedPaths) { $Entity.AcceptedPaths | ConvertFrom-Json } else { [PSCustomObject]@{} }
                 # Per-path verdicts: 'accept' tolerates that property's drift; 'denyDelete'
@@ -206,7 +208,7 @@ function Invoke-ExecUpdateBaselineDeviation {
                 $EventDetail = 'Marked the manual task as completed'
             }
             default {
-                throw "Unknown action '$Action'. Use Accept, Deny, Clear, AcceptPath, DenyPath, ClearPath, or CompleteTask."
+                throw [System.ArgumentException]::new("Unknown action '$Action'. Use Accept, Deny, Clear, AcceptPath, DenyPath, ClearPath, or CompleteTask.")
             }
         }
 
@@ -220,7 +222,7 @@ function Invoke-ExecUpdateBaselineDeviation {
     } catch {
         Write-LogMessage -headers $Request.Headers -API $APIName -message "Failed to update deviation: $($_.Exception.Message)" -Sev 'Error'
         $Results = [pscustomobject]@{ Results = "Failed to update deviation: $($_.Exception.Message)" }
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

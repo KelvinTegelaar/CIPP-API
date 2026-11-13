@@ -1,7 +1,7 @@
 function Invoke-ListIntuneScript {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Endpoint.MEM.Read
     .DESCRIPTION

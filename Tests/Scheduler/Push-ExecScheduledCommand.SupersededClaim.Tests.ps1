@@ -15,7 +15,8 @@ BeforeAll {
     function Get-Tenants { param($TenantFilter) }
     function Get-CIPPSchedulerBlockedCommands { @() }
     function Write-LogMessage { param($headers, $API, $message, $sev, $tenant, $tenantid, $LogData) }
-    function Add-CIPPGroupMember { param($TenantFilter, $Member) }
+    # The executor only runs functions from the CIPP modules, so the command lives in a module of that name.
+    $null = New-Module -Name CIPPCore -ScriptBlock { function Add-CIPPGroupMember { param($TenantFilter, $Member) } } | Import-Module -Force -PassThru
 
     . $FunctionPath
 
@@ -35,6 +36,10 @@ BeforeAll {
     }
 }
 
+AfterAll {
+    Remove-Module -Name CIPPCore -Force -ErrorAction SilentlyContinue
+}
+
 Describe 'Push-ExecScheduledCommand superseded claim' {
     BeforeEach {
         Mock Set-CippScheduledTaskContext {}
@@ -44,9 +49,6 @@ Describe 'Push-ExecScheduledCommand superseded claim' {
         Mock Get-Tenants { [pscustomobject]@{ customerId = 'cust-a' } }
         Mock Write-LogMessage {}
         Mock Add-CIPPGroupMember { 'Added member' }
-        Mock Get-Command {
-            [pscustomobject]@{ Module = 'CIPPCore'; Parameters = @{ TenantFilter = $null; Member = $null } }
-        }
         Mock Get-AzDataTableEntity {
             [pscustomobject]@{ PartitionKey = 'ScheduledTask'; RowKey = 'task-1'; TaskState = 'Pending'; ExecutedTime = '2000' }
         }

@@ -4,9 +4,11 @@ function Get-CIPPBaselineDetectCADriftState {
         Prepare hook for the DetectConditionalAccessDrift standard: flags admin-created CA policies.
     .DESCRIPTION
         Builds the MANAGED set - the display names of every Conditional Access template
-        any baseline applies to this tenant (across ALL baselines) - and compares it
-        against the tenant's live CA policy cache. Every live policy whose display name
-        matches no managed template is drift: one label-keyed diff per policy, so
+        any baseline applies to this tenant (across ALL baselines), plus the names other
+        standards in those baselines declare in driftManagedNames for the policies they
+        create themselves (the compliant network policy) - and compares it against the
+        tenant's live CA policy cache. Every live policy whose display name matches no
+        managed name is drift: one label-keyed diff per policy, so
         operators accept or deny-delete each rogue policy individually through per-path
         triage. Matching is by display name, case-insensitive, after tenant-token
         replacement. Report-only by design: no remediate executor.
@@ -41,6 +43,24 @@ function Get-CIPPBaselineDetectCADriftState {
         if (-not $TemplateName) { continue }
         $Resolved = $(try { Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $TemplateName } catch { $TemplateName })
         $null = $ManagedNames.Add("$Resolved")
+    }
+    # Standards that create a CA policy without a template (GlobalSecureAccessCompliantNetwork)
+    # declare its name in driftManagedNames: a literal, or "%variable%" for an operator-chosen
+    # name, which falls back to the variable's default for baselines saved before it existed.
+    foreach ($WorkItem in $WorkItems) {
+        if ($WorkItem.BaseName -eq 'ConditionalAccessTemplate') { continue }
+        $Definition = Get-CIPPBaselineDefinition -Name $WorkItem.BaseName
+        foreach ($Declared in @($Definition.driftManagedNames)) {
+            $Name = "$Declared"
+            if ($Name -match '^%([A-Za-z0-9_]+)%$') {
+                $VariableName = $Matches[1]
+                $Name = "$(& $Unwrap $WorkItem.Variables.$VariableName)"
+                if (-not $Name) { $Name = "$($Definition.variables.$VariableName.default)" }
+            }
+            if (-not $Name) { continue }
+            $null = $ManagedNames.Add($Name)
+            $null = $ManagedNames.Add("$(try { Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Name } catch { $Name })")
+        }
     }
 
     # SharePoint CREATES '[SharePoint admin center]...' CA policies itself when the

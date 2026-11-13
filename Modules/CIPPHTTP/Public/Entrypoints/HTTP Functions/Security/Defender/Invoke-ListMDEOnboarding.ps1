@@ -1,7 +1,7 @@
 function Invoke-ListMDEOnboarding {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Security.Defender.Read
     .DESCRIPTION

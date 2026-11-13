@@ -2,7 +2,10 @@
   "name": "SafeSendersDisable",
   "label": "Remove Safe Senders to prevent SPF bypass",
   "cat": "Exchange Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (SI.L2-3.14.6)",
+    "NIST SP 800-171 (3.14.6)"
+  ],
   "impact": "Medium Impact",
   "helpText": "Loops through all users and removes the Safe Senders list. This is to prevent SPF bypass attacks, as the Safe Senders list is not checked by SPF. This is a remediate only standard: the per-mailbox Safe Senders list is not readable at scale, so the standard always reports compliant and applies the change on every run.",
   "executiveText": "Removes user-defined safe sender lists to prevent security bypasses where malicious emails could avoid spam filtering. This ensures all emails go through proper security screening, even if users have previously marked senders as 'safe', improving overall email security.",

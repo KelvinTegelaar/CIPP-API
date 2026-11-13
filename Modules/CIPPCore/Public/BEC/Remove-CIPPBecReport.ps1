@@ -11,23 +11,27 @@ function Remove-CIPPBecReport {
         Tenant default domain name.
     .PARAMETER CaseId
         The run to delete.
+    .PARAMETER Kind
+        BEC (BecReports, BecResults) or NHI, a non-human identity investigation (NhiReports, NhiResults).
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)][string]$TenantFilter,
-        [Parameter(Mandatory = $true)][string]$CaseId
+        [Parameter(Mandatory = $true)][string]$CaseId,
+        [ValidateSet('BEC', 'NHI')][string]$Kind = 'BEC'
     )
+    $TablePrefix = if ($Kind -eq 'NHI') { 'Nhi' } else { 'Bec' }
 
     $Filter = "PartitionKey eq '$($TenantFilter -replace "'", "''")' and RowKey eq '$($CaseId -replace "'", "''")'"
-    $Table = Get-CIPPTable -TableName 'BecReports'
+    $Table = Get-CIPPTable -TableName "$($TablePrefix)Reports"
     $Row = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Select-Object -First 1
     if (-not $Row) {
-        throw "BEC run $CaseId was not found for $TenantFilter"
+        throw [System.Management.Automation.ItemNotFoundException]::new("$Kind run $CaseId was not found for $TenantFilter")
     }
 
-    $ResultsTable = Get-CIPPTable -TableName 'BecResults'
+    $ResultsTable = Get-CIPPTable -TableName "$($TablePrefix)Results"
     $ResultsRow = Get-CIPPAzDataTableEntity @ResultsTable -Filter $Filter | Select-Object -First 1
     if ($ResultsRow -and $PSCmdlet.ShouldProcess("$TenantFilter/$CaseId", 'Delete BEC results row')) {
         $null = Remove-CIPPAzDataTableEntity -Force @ResultsTable -Entity $ResultsRow
@@ -36,5 +40,5 @@ function Remove-CIPPBecReport {
     if ($PSCmdlet.ShouldProcess("$TenantFilter/$CaseId", 'Delete BEC run row')) {
         $null = Remove-CIPPAzDataTableEntity -Force @Table -Entity $Row
     }
-    return "Deleted BEC run $CaseId for $TenantFilter"
+    return "Deleted $Kind run $CaseId for $TenantFilter"
 }

@@ -2,7 +2,11 @@
   "name": "SPDirectSharing",
   "label": "Default to Direct Sharing Links",
   "cat": "SharePoint Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (AC.L2-3.1.3)",
+    "FedRAMP A-D (KSI-SVC-SIN)",
+    "NIST SP 800-171 (3.1.3)"
+  ],
   "impact": "Medium Impact",
   "helpText": "Sets the default SharePoint sharing link type to Direct (specific people).",
   "executiveText": "Makes sharing default to named recipients instead of anyone-with-the-link, so files are not one forward away from public.",

@@ -16,6 +16,7 @@ BeforeAll {
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData, $headers, $level) }
     function Get-CippException { param($Exception) }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) }
+    function Get-CIPPPartnerTenant { param($PartnerTenantId, [switch]$IncludeDisabled) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-Tenants.ps1')
 
@@ -40,6 +41,8 @@ Describe 'Get-Tenants -CleanOld' {
         $script:GDAPRelationships = @()
 
         Mock Get-CippTable { @{} }
+        # Single-partner deployment: cleanup reconciles against the primary partner only.
+        Mock Get-CIPPPartnerTenant { @([PSCustomObject]@{ PartitionKey = 'Partners'; RowKey = $env:TenantID; partnerTenantId = $env:TenantID }) }
         Mock Write-LogMessage {}
         Mock Get-CippException { @{} }
         Mock Remove-CIPPAzDataTableEntity {}

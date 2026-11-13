@@ -21,7 +21,8 @@ function Get-CIPPAlertQuotaUsed {
         $AlertData = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D7')?`$format=application/json&`$top=999" -tenantid $TenantFilter
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Mailbox quota Alert: Unable to get mailbox usage: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+        $Severity = if (Test-CippTransientError -Message $ErrorMessage.NormalizedError) { 'Warning' } else { 'Error' }
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Mailbox quota Alert: Unable to get mailbox usage: $($ErrorMessage.NormalizedError)" -sev $Severity -LogData $ErrorMessage
         return
     }
 

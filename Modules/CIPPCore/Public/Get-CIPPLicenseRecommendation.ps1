@@ -173,27 +173,15 @@ function Get-CIPPLicenseRecommendation {
 
     # ------------------------------------------------------------------ service plans per SKU
     if (-not $PlanIdsBySku -or -not $PlanNamesById) {
-        $NeedIds = -not $PlanIdsBySku
-        $NeedNames = -not $PlanNamesById
-        if ($NeedIds) { $PlanIdsBySku = @{} }
-        if ($NeedNames) { $PlanNamesById = @{} }
         try {
-            $TablePath = Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv'
-            if (Test-Path $TablePath) {
-                foreach ($Row in ([System.IO.File]::ReadAllText($TablePath) | ConvertFrom-Csv)) {
-                    $Key = ([string]$Row.GUID).ToLowerInvariant()
-                    if (-not $Key -or -not $Row.Service_Plan_Id) { continue }
-                    $PlanKey = ([string]$Row.Service_Plan_Id).ToLowerInvariant()
-                    if ($NeedIds) {
-                        if (-not $PlanIdsBySku.ContainsKey($Key)) { $PlanIdsBySku[$Key] = [System.Collections.Generic.List[string]]::new() }
-                        $PlanIdsBySku[$Key].Add($PlanKey)
-                    }
-                    if ($NeedNames -and $Row.Service_Plans_Included_Friendly_Names -and -not $PlanNamesById.ContainsKey($PlanKey)) {
-                        $PlanNamesById[$PlanKey] = [string]$Row.Service_Plans_Included_Friendly_Names
-                    }
-                }
-            }
-        } catch { Write-Information "ConversionTable read failed: $($_.Exception.Message)" }
+            $ConversionTable = Get-CIPPConversionTable
+            if (-not $PlanIdsBySku) { $PlanIdsBySku = $ConversionTable.PlanIdsBySkuId }
+            if (-not $PlanNamesById) { $PlanNamesById = $ConversionTable.PlanNameByPlanId }
+        } catch {
+            Write-Information "ConversionTable read failed: $($_.Exception.Message)"
+            if (-not $PlanIdsBySku) { $PlanIdsBySku = @{} }
+            if (-not $PlanNamesById) { $PlanNamesById = @{} }
+        }
     }
     $PlanNameOf = { param($Id) $Key = ([string]$Id).ToLowerInvariant(); if ($PlanNamesById.ContainsKey($Key)) { $PlanNamesById[$Key] } else { $Key } }
     $PlanSetOf = @{}

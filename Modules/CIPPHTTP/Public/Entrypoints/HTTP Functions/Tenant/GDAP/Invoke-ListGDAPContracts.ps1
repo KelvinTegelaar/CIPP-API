@@ -15,7 +15,20 @@ function Invoke-ListGDAPContracts {
     $Uri = "https://graph.microsoft.com/beta/contracts?`$top=$Top"
 
     try {
-        $Results = New-GraphGetRequest -Uri $Uri -tenantid $env:TenantID -NoAuthCheck $true -ComplexFilter
+        # Enumerate as every configured partner, tagging results with their source partner
+        $Partners = @(Get-CIPPPartnerTenantList)
+        $Results = foreach ($Partner in $Partners) {
+            try {
+                $PartnerResults = New-GraphGetRequest -Uri $Uri -tenantid $Partner.partnerTenantId -NoAuthCheck $true -ComplexFilter
+                foreach ($Result in $PartnerResults) {
+                    $Result | Add-Member -MemberType NoteProperty -Name 'partnerTenantId' -Value $Partner.partnerTenantId -Force
+                    $Result | Add-Member -MemberType NoteProperty -Name 'partnerDisplayName' -Value $Partner.displayName -Force -PassThru
+                }
+            } catch {
+                if ($Partners.Count -eq 1) { throw }
+                Write-LogMessage -API $APIName -headers $Request.Headers -message "Failed to list contracts for partner $($Partner.partnerTenantId): $($_.Exception.Message)" -sev Warning
+            }
+        }
 
         $Body = @{
             Results  = @($Results)

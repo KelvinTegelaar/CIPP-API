@@ -24,6 +24,9 @@ Function Invoke-AddTransportTemplate {
         # GUID overwrites that template, honoured only alongside PowerShellCommand: a posted rule row carries the rule's own Guid.
         $IsUpdate = $Request.Body.PowerShellCommand -and -not [string]::IsNullOrWhiteSpace($Request.Body.GUID)
         $GUID = if ($IsUpdate) { "$($Request.Body.GUID)" } else { (New-Guid).GUID }
+        if (-not (Test-CippTemplateWriteAccess -PartitionKey 'TransportTemplate' -RowKey $GUID)) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Forbidden; Body = @{ Results = 'Roles limited to specific tenants cannot change or remove shared templates.' } })
+        }
         $JSON = if ($request.body.PowerShellCommand) {
             Write-Host 'PowerShellCommand'
             $request.body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID

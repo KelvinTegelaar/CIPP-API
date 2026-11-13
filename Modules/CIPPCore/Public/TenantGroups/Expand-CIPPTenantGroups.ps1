@@ -17,7 +17,8 @@ function Expand-CIPPTenantGroups {
         $FilterValue = $_
         # Group lookup
         if ($_.type -eq 'Group') {
-            $GroupResult = Get-TenantGroups -GroupId $_.value
+            # An empty group id would make Get-TenantGroups return every group
+            $GroupResult = if (-not [string]::IsNullOrWhiteSpace("$($_.value)")) { Get-TenantGroups -GroupId $_.value }
             $members = if ($GroupResult) { $GroupResult.members } else { @() }
             $TenantList | Where-Object -Property customerId -In $members.customerId | ForEach-Object {
                 $GroupMember = $_

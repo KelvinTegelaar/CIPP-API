@@ -29,9 +29,7 @@ function New-GradientServiceSyncRun {
             Write-LogMessage -API $APIName -message "Failed to create tenants in Gradient API. Error: $($_.Exception.Message)" -Sev 'Error' -tenant 'GradientAPI'
         }
 
-        # GUID -> display name, last row wins like the Where-Object | Select-Object -Last 1 it replaces
-        $SkuDisplayNames = @{}
-        foreach ($Row in [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv) { $SkuDisplayNames[$Row.GUID] = $Row.Product_Display_Name }
+        $SkuDisplayNames = (Get-CIPPConversionTable).NameBySkuId
 
         # A failed read must stop the sync: an empty catalogue would create a duplicate service for every SKU.
         try {

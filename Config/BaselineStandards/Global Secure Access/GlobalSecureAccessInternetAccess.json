@@ -1,0 +1,220 @@
+{
+  "name": "GlobalSecureAccessInternetAccess",
+  "label": "Manage Microsoft Entra Internet Access",
+  "cat": "Global Secure Access",
+  "tag": [
+    "CMMC (SC.L1-b.1.x)",
+    "CMMC (SC.L2-3.13.1)",
+    "FedRAMP A-D (KSI-CNA-RNT)",
+    "NIST SP 800-171 (3.13.1)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Enables or disables the Global Secure Access Internet traffic forwarding profile, keeps its traffic policies enabled, sets who and which remote networks it is assigned to, and optionally manages its custom bypass and acquire rules and the custom block page. Uses Microsoft Entra Internet Access. The tenant must be onboarded, which the Set up Global Secure Access standard does.",
+  "executiveText": "Routes internet traffic from managed devices through Microsoft's Security Service Edge so web content filtering and threat protection apply, and sets the message users see when a site is blocked.",
+  "docsDescription": "Grades the Internet traffic forwarding profile the same way the Microsoft 365 profile standard grades its profile: state, enabled traffic policies and assignment, where assigning to groups adds them to what is already assigned and Do not assign leaves the assignment alone. Remote networks matched by name get the profile added to the profiles they already use, while the profile is set to enabled; none is removed. With Manage the custom bypass and acquire rules on, the Custom bypass and Custom Acquire policies hold exactly the listed destinations on TCP and UDP: missing ones are added and any other custom rule is removed. The custom block page is graded only for what is configured: its state when chosen and its message when not blank. The message is markdown and may contain links.",
+  "impactColour": "warning",
+  "addedDate": "2026-11-11",
+  "powershellEquivalent": "Update-MgBetaNetworkAccessForwardingProfile; New-MgServicePrincipalAppRoleAssignedTo; Update-MgBetaNetworkAccessSettingCustomBlockPage",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    [
+      "Entra_Premium_Internet_Access"
+    ]
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "profileState": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Profile state",
+      "options": [
+        {
+          "value": "enabled",
+          "label": "Enabled"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled"
+        }
+      ],
+      "default": "enabled",
+      "recommended": "enabled"
+    },
+    "assignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Who should the profile be assigned to?",
+      "options": [
+        {
+          "value": "DoNotAssign",
+          "label": "Do not assign"
+        },
+        {
+          "value": "AllDevicesAndUsers",
+          "label": "Assign to all users"
+        },
+        {
+          "value": "customGroup",
+          "label": "Assign to Custom Group"
+        }
+      ],
+      "default": "AllDevicesAndUsers"
+    },
+    "customGroup": {
+      "type": "textField",
+      "label": "Custom group names, comma separated (when assigning to a custom group; wildcards allowed)",
+      "omitWhenBlank": true
+    },
+    "remoteNetworks": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Remote networks to assign the profile to (names, wildcards allowed)",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "manageCustomRules": {
+      "type": "switch",
+      "label": "Manage the custom bypass and acquire rules (rules not listed here are removed)",
+      "default": false
+    },
+    "customBypass": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Custom bypass destinations (FQDN with optional *. wildcard, IPv4 address, subnet or range begin-end)",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "customBypassPorts": {
+      "type": "textField",
+      "label": "Custom bypass ports (comma separated, ranges allowed; blank for all ports)",
+      "omitWhenBlank": true
+    },
+    "customAcquire": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Custom acquire destinations (FQDN with optional *. wildcard, IPv4 address, subnet or range begin-end)",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "customAcquirePorts": {
+      "type": "textField",
+      "label": "Custom acquire ports (comma separated, ranges allowed; blank for all ports)",
+      "omitWhenBlank": true
+    },
+    "blockPageState": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Custom block page (leave empty to not manage it)",
+      "options": [
+        {
+          "value": "enabled",
+          "label": "Enabled"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled"
+        }
+      ],
+      "omitWhenBlank": true
+    },
+    "blockMessage": {
+      "type": "textField",
+      "label": "Block page message (markdown, links like [Help](https://example.com) allowed; leave empty to keep the current message)",
+      "omitWhenBlank": true
+    }
+  },
+  "read": {
+    "cacheType": "NetworkAccess"
+  },
+  "prepare": "Get-CIPPBaselineGlobalSecureAccessInternetAccessState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "writes": [
+      {
+        "from": "stateWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/forwardingProfiles/%id%",
+        "body": {
+          "state": "%state%"
+        }
+      },
+      {
+        "from": "linkWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/forwardingProfiles/%profileId%/policies/%id%",
+        "body": {
+          "state": "enabled"
+        }
+      },
+      {
+        "from": "assignmentWrites",
+        "method": "POST",
+        "uri": "servicePrincipals/%servicePrincipalId%/appRoleAssignedTo",
+        "body": {
+          "principalId": "%principalId%",
+          "resourceId": "%servicePrincipalId%",
+          "appRoleId": "00000000-0000-0000-0000-000000000000"
+        }
+      },
+      {
+        "from": "requirementWrites",
+        "method": "PATCH",
+        "uri": "servicePrincipals/%servicePrincipalId%",
+        "body": {
+          "appRoleAssignmentRequired": "%required%"
+        }
+      },
+      {
+        "from": "remoteNetworkWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/connectivity/remoteNetworks/%remoteNetworkId%/forwardingProfiles",
+        "body": {
+          "@context": "#$delta",
+          "value": "%profiles%"
+        }
+      },
+      {
+        "from": "ruleDeletes",
+        "method": "DELETE",
+        "uri": "networkAccess/forwardingPolicies/%policyId%/policyRules/%id%",
+        "sequential": true
+      },
+      {
+        "from": "ruleCreates",
+        "method": "POST",
+        "uri": "networkAccess/forwardingPolicies/%policyId%/policyRules",
+        "body": "%rule%",
+        "sequential": true
+      },
+      {
+        "from": "blockPageWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/settings/customBlockPage",
+        "body": {
+          "state": "%state%",
+          "configuration": {
+            "@odata.type": "#microsoft.graph.networkaccess.markdownBlockMessageConfiguration",
+            "body": "%message%"
+          }
+        }
+      },
+      {
+        "from": "blockPageStateWrites",
+        "method": "PATCH",
+        "uri": "networkAccess/settings/customBlockPage",
+        "body": {
+          "state": "%state%"
+        }
+      }
+    ],
+    "refreshCache": [
+      "NetworkAccess"
+    ]
+  }
+}

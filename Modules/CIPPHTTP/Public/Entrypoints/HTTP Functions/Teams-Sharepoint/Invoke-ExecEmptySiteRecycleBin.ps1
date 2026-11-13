@@ -48,49 +48,47 @@ function Invoke-ExecEmptySiteRecycleBin {
                 [ValidateSet('First', 'Second')]
                 [string]$TargetStage
             )
+            # The recycle bin query returns no next link, so ask SharePoint for this stage only and
+            # read from the top again after each delete until the stage is empty.
             $StateFilter = if ($TargetStage -eq 'Second') { 2 } else { 1 }
+            $ListUri = "$BaseUri/site/RecycleBin?`$select=Id&`$filter=ItemState eq $StateFilter&`$top=100"
+            $Submitted = [System.Collections.Generic.HashSet[string]]::new()
             $BatchDeleted = 0
-            $NextUri = "$BaseUri/site/RecycleBin?`$select=Id,ItemState&`$top=100&`$orderby=DeletedDate desc"
             $Guard = 0
-            while ($NextUri -and $Guard -lt 200) {
+            while ($Guard -lt 200) {
                 $Guard++
-                $Page = New-GraphGetRequest -uri $NextUri -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true -noPagination $true -SkipValueExtraction
-                $Items = @($Page.value)
-                $NextLink = $Page.'@odata.nextLink'
-                $Ids = @(
-                    foreach ($Item in $Items) {
-                        $State = 0
-                        try { $State = [int]$Item.ItemState } catch { $State = 0 }
-                        if ($State -eq $StateFilter -and $Item.Id) { [string]$Item.Id }
+                $Page = New-GraphGetRequest -uri $ListUri -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true -noPagination $true -SkipValueExtraction
+                $Ids = [System.Collections.Generic.List[string]]::new()
+                foreach ($Item in @($Page.value)) {
+                    if (-not $Item.Id) { continue }
+                    $Id = [string]$Item.Id
+                    # An id we already sent is still there: SharePoint accepted the delete and did not act on it.
+                    if ($Submitted.Contains($Id)) {
+                        throw "SharePoint did not delete the $($TargetStage.ToLower())-stage items it accepted for deletion ($BatchDeleted deleted before that)."
                     }
-                )
-                if ($Ids.Count -eq 0) {
-                    if ([string]::IsNullOrWhiteSpace($NextLink)) { break }
-                    $NextUri = $NextLink
-                    continue
+                    $Ids.Add($Id)
                 }
+                if ($Ids.Count -eq 0) { return $BatchDeleted }
                 for ($i = 0; $i -lt $Ids.Count; $i += 25) {
                     $Chunk = @($Ids[$i..([Math]::Min($i + 24, $Ids.Count - 1))])
                     $DeleteBody = ConvertTo-Json -Compress -Depth 5 -InputObject @{ ids = @($Chunk) }
                     $null = New-GraphPostRequest -uri "$BaseUri/site/RecycleBin/DeleteByIds" -tenantid $TenantFilter -scope $Scope -type POST -body $DeleteBody -contentType 'application/json;odata=nometadata' -AddedHeaders $JsonAccept -UseCertificate -AsApp $true
-                    $BatchDeleted += $Chunk.Count
+                    foreach ($Id in $Chunk) { $null = $Submitted.Add($Id) }
+                    $BatchDeleted = $BatchDeleted + $Chunk.Count
                 }
-                # After deletes, restart from the first page so we do not skip items when the list shifts.
-                $NextUri = "$BaseUri/site/RecycleBin?`$select=Id,ItemState&`$top=100&`$orderby=DeletedDate desc"
             }
-            return $BatchDeleted
+            throw "Stopped after deleting $BatchDeleted $($TargetStage.ToLower())-stage items. Run the cleanup again to continue."
         }
 
+        $FirstStageDeleted = 0
         if ($Stage -in @('First', 'Both')) {
+            # Not web/RecycleBin/deleteAll(): for the app-only caller it returns success and leaves the
+            # items other users deleted in place, so delete first-stage items by id from the site collection bin.
             try {
-                Invoke-CIPPRecycleDeleteAll -Uri "$BaseUri/web/RecycleBin/deleteAll()"
-                $DeletedCount += 1 # deleteAll does not return a count; mark attempt
+                $FirstStageDeleted = Invoke-CIPPRecycleDeleteByIdsBatch -TargetStage First
+                $DeletedCount = $DeletedCount + $FirstStageDeleted
             } catch {
-                try {
-                    $DeletedCount += Invoke-CIPPRecycleDeleteByIdsBatch -TargetStage First
-                } catch {
-                    $Errors.Add("First stage: $($_.Exception.Message)")
-                }
+                $Errors.Add("First stage: $($_.Exception.Message)")
             }
         }
 
@@ -117,6 +115,9 @@ function Invoke-ExecEmptySiteRecycleBin {
         }
 
         $Results = "Emptied recycle bin ($Stage) for $SiteUrl."
+        if ($Stage -in @('First', 'Both') -and $Errors.Count -eq 0) {
+            $Results = "$Results Deleted $FirstStageDeleted first-stage item(s)."
+        }
         if ($Errors.Count -gt 0) {
             $Results += " Partial warnings: $($Errors -join '; ')"
         }

@@ -137,7 +137,7 @@ function New-ExoBulkRequest {
                         $ConcRequest.Headers = $ConcHeaders
                         $ConcRequests.Add($ConcRequest)
                     }
-                    foreach ($ConcResult in [CIPP.CIPPRestClient]::SendConcurrent($ConcRequests, $Concurrency, 3)) {
+                    foreach ($ConcResult in [CIPP.CIPPRestClient]::SendConcurrent($ConcRequests, $Concurrency, 3, ($PSCmdlet.PipelineStopToken ?? $global:CraftPipelineStopToken))) {
                         $Parsed = $null
                         if (-not $ConcResult.Error -and $ConcResult.IsSuccess) {
                             try { $Parsed = [CIPP.CippJson]::ConvertFromResponse($ConcResult.Result) } catch { $Parsed = $null }

@@ -1,7 +1,7 @@
 function Invoke-ListTenants {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         CIPP.Core.Read
     .DESCRIPTION
@@ -18,7 +18,7 @@ function Invoke-ListTenants {
     $TenantAccess = Test-CIPPAccess -Request $Request -TenantList
     Write-Host "Tenant Access: $TenantAccess"
 
-    $AllTenantSelector = $Request.Query.AllTenantSelector
+    $AllTenantSelector = $Request.Query.AllTenantSelector -eq $true -and -not (Test-CippAllTenantsBlocked)
 
     # IncludeOffboardingDefaults is the pre-rename query parameter and still accepted.
     $IncludeTenantDefaults = $Request.Query.IncludeTenantDefaults ?? $Request.Query.IncludeOffboardingDefaults

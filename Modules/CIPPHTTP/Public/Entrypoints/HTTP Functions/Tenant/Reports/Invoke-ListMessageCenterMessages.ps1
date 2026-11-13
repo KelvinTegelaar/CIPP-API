@@ -1,7 +1,7 @@
 function Invoke-ListMessageCenterMessages {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Tenant.Administration.Read
     .DESCRIPTION

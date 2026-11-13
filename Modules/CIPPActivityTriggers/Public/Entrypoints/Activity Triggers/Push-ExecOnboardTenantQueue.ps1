@@ -27,6 +27,14 @@ function Push-ExecOnboardTenantQueue {
             }
         }
 
+        # The relationship lives under the partner that created it: explicit item value, else
+        # the invite row, else the primary.
+        $InvitesTable = Get-CIPPTable -TableName 'GDAPInvites'
+        $InviteRow = Get-CIPPAzDataTableEntity @InvitesTable -Filter "RowKey eq '$Id'"
+        $PartnerTenantId = if ($Item.partnerTenantId) { "$($Item.partnerTenantId)" }
+        elseif ($InviteRow.partnerTenantId) { "$($InviteRow.partnerTenantId)" }
+        else { "$env:TenantID" }
+
         $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Starting onboarding for relationship $Id" })
         $OnboardingSteps = $TenantOnboarding.OnboardingSteps | ConvertFrom-Json
         $OnboardingSteps.Step1.Status = 'running'
@@ -72,7 +80,7 @@ function Push-ExecOnboardTenantQueue {
             $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Checking relationship status' })
             $x = 0
             do {
-                $Relationship = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id"
+                $Relationship = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id" -tenantid $PartnerTenantId
                 $x++
                 Start-Sleep -Seconds 30
             } while ($Relationship.status -ne 'active' -and $x -lt 6)
@@ -140,9 +148,9 @@ function Push-ExecOnboardTenantQueue {
             # "access container does not exist" error otherwise.
             if ($OnboardingSteps.Step2.Status -ne 'failed' -and ($Item.Roles | Measure-Object).Count -gt 0) {
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Validating GDAP security group mappings against the partner tenant' })
-                $GroupCheck = Test-CIPPGDAPGroupMappings -RoleMappings $Item.Roles -CreateMissing:([bool]$Item.AddMissingGroups) -WriteBack
+                $GroupCheck = Test-CIPPGDAPGroupMappings -RoleMappings $Item.Roles -CreateMissing:([bool]$Item.AddMissingGroups) -WriteBack -PartnerTenantId $PartnerTenantId
                 foreach ($GroupResult in $GroupCheck.Results) {
-                    if ($GroupResult.Status -in @('Stale', 'Created', 'Missing')) {
+                    if ($GroupResult.Status -in @('Stale', 'Created', 'Missing', 'Reserved')) {
                         $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = $GroupResult.Message })
                     }
                 }
@@ -166,9 +174,12 @@ function Push-ExecOnboardTenantQueue {
 
         if ($OnboardingSteps.Step2.Status -eq 'succeeded') {
             $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Checking group mapping' })
-            $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments"
+            $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments" -tenantid $PartnerTenantId
             $AccessAssignments = $AccessAssignments | Where-Object { $_.status -notin @('deleted', 'deleting') }
-            if ($AccessAssignments.id -and $Item.AutoMapRoles -ne $true) {
+            $InviteTable = Get-CIPPTable -TableName 'GDAPInvites'
+            $Invite = Get-CIPPAzDataTableEntity @InviteTable -Filter "RowKey eq '$Id'"
+            # A pending invite means some of its groups are still unmapped, even when others already are.
+            if ($AccessAssignments.id -and $Item.AutoMapRoles -ne $true -and !$Invite) {
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Groups mapped' })
                 $OnboardingSteps.Step3.Status = 'succeeded'
                 $OnboardingSteps.Step3.Message = 'Your GDAP relationship already has mapped security groups'
@@ -179,9 +190,6 @@ function Push-ExecOnboardTenantQueue {
                 $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
                 $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
                 Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
-
-                $InviteTable = Get-CIPPTable -TableName 'GDAPInvites'
-                $Invite = Get-CIPPAzDataTableEntity @InviteTable -Filter "RowKey eq '$Id'"
 
                 if ($AccessAssignments.id -and !$Invite) {
                     $MissingRoles = [System.Collections.Generic.List[object]]::new()
@@ -269,7 +277,7 @@ function Push-ExecOnboardTenantQueue {
             }
 
             do {
-                $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments"
+                $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments" -tenantid $PartnerTenantId
                 $AccessAssignments = $AccessAssignments | Where-Object { $_.status -notin @('deleted', 'deleting') }
                 Start-Sleep -Seconds 15
             } while ($AccessAssignments.status -contains 'pending' -and (Get-Date) -lt $Start.AddMinutes(8))
@@ -291,10 +299,12 @@ function Push-ExecOnboardTenantQueue {
                         url    = "/me/transitiveMemberOf?`$select=id,displayName"
                     }
                 )
-                $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -NoAuthCheck $true
+                $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -NoAuthCheck $true -tenantid $PartnerTenantId
                 $SamUserId = ($BulkResults | Where-Object { $_.id -eq 'samUserId' }).body.id
                 $CurrentMemberships = ($BulkResults | Where-Object { $_.id -eq 'currentMemberships' }).body.value
-                $ExpectedCippRoles = $Item.Roles | Where-Object { $_.roleDefinitionId -in $ExpectedRoles.Id }
+                # A CIPP-created invite carries the mappings; the request body has none in that flow
+                $SamUserRoles = if (($Item.Roles | Measure-Object).Count -gt 0) { $Item.Roles } elseif ($InviteRow.RoleMappings) { $InviteRow.RoleMappings | ConvertFrom-Json } else { @() }
+                $ExpectedCippRoles = $SamUserRoles | Where-Object { $_.roleDefinitionId -in $ExpectedRoles.Id }
 
                 # Build bulk requests for missing group memberships
                 $GroupMembershipRequests = [System.Collections.Generic.List[object]]::new()
@@ -322,7 +332,7 @@ function Push-ExecOnboardTenantQueue {
 
                 # Execute bulk group membership additions if any are needed
                 if ($GroupMembershipRequests.Count -gt 0) {
-                    $GroupMembershipResults = New-GraphBulkRequest -Requests $GroupMembershipRequests -AsApp $true -NoAuthCheck $true
+                    $GroupMembershipResults = New-GraphBulkRequest -Requests $GroupMembershipRequests -AsApp $true -NoAuthCheck $true -tenantid $PartnerTenantId
 
                     foreach ($LogEntry in $GroupMembershipLogs) {
                         $Result = $GroupMembershipResults | Where-Object { $_.id -eq $LogEntry.id }
@@ -373,13 +383,14 @@ function Push-ExecOnboardTenantQueue {
                             IgnoreMissingRoles         = $Item.IgnoreMissingRoles
                             AddMissingGroups           = $Item.AddMissingGroups
                             StandardsExcludeAllTenants = $StandardsExcludeAllTenants
+                            partnerTenantId            = $PartnerTenantId
                         }
                     }
                     $RetryTask = [PSCustomObject]@{
                         Name          = "GDAP Onboarding retry: $($Relationship.customer.displayName)"
                         Command       = [PSCustomObject]@{ value = 'Push-ExecOnboardTenantQueue' }
                         Parameters    = $RetryParams
-                        TenantFilter  = $env:TenantID
+                        TenantFilter  = $PartnerTenantId
                         Recurrence    = ''
                         ScheduledTime = $RetryEpoch
                     }
@@ -578,6 +589,20 @@ function Push-ExecOnboardTenantQueue {
                         $TemplatesTable.Force = $true
                         Add-CIPPAzDataTableEntity @TemplatesTable -Entity $AllTenantsTemplate
                     }
+                }
+
+                # Baselines assigned to All Tenants exclude the same group
+                $RolloutTable = Get-CIPPTable -tablename 'BaselineRollouts'
+                foreach ($Rollout in @(Get-CIPPAzDataTableEntity @RolloutTable -Filter "PartitionKey eq 'rollout'")) {
+                    $Assigned = @(try { $Rollout.assignedTo | ConvertFrom-Json -ErrorAction Stop } catch { })
+                    if ($Assigned.Where({ ($_.value ?? $_) -eq 'AllTenants' }).Count -eq 0) { continue }
+                    $ExcludedValues = @(try { $Rollout.excludedTenants | ConvertFrom-Json -ErrorAction Stop } catch { })
+                    if ($ExcludedValues -contains $ExclusionGroupId) { continue }
+                    $ExcludedTo = @(try { $Rollout.excludedTo | ConvertFrom-Json -ErrorAction Stop } catch { })
+                    $Rollout | Add-Member -NotePropertyName 'excludedTo' -NotePropertyValue ([string](ConvertTo-Json -Compress -Depth 10 -InputObject @($ExcludedTo + $GroupExclusionObj))) -Force
+                    $Rollout | Add-Member -NotePropertyName 'excludedTenants' -NotePropertyValue ([string](ConvertTo-Json -Compress -Depth 10 -InputObject @($ExcludedValues + $ExclusionGroupId))) -Force
+                    Add-CIPPAzDataTableEntity @RolloutTable -Entity $Rollout -Force
+                    $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Excluded the group from baseline '$($Rollout.templateName)'" })
                 }
 
                 # Bust the tenant groups cache so standards pick up the new member

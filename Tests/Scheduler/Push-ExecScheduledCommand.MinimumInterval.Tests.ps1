@@ -23,8 +23,11 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $message, $sev, $tenant, $tenantid, $LogData) }
     function Send-CIPPScheduledTaskAlert { param($Results, $TaskInfo, $TenantFilter, $TaskType, $Attachments) }
     function Get-CippException { param($Exception) @{ NormalizedError = "$Exception" } }
-    function Get-CIPPAlertBreachAlert { param($TenantFilter, $InputValue, $Headers) }
-    function Get-CIPPAlertNoMinimum { param($TenantFilter, $InputValue, $Headers) }
+    # The executor only runs functions from the CIPP modules, so the command lives in a module of that name.
+    $null = New-Module -Name CIPPAlerts -ScriptBlock {
+        function Get-CIPPAlertBreachAlert { param($TenantFilter, $InputValue, $Headers) }
+        function Get-CIPPAlertNoMinimum { param($TenantFilter, $InputValue, $Headers) }
+    } | Import-Module -Force -PassThru
 
     . $FunctionPath
 
@@ -39,6 +42,10 @@ BeforeAll {
         }
         [pscustomobject]@{ Command = $Command; Parameters = @{ TenantFilter = 'contoso.onmicrosoft.com' }; TaskInfo = $TaskInfo }
     }
+}
+
+AfterAll {
+    Remove-Module -Name CIPPAlerts -Force -ErrorAction SilentlyContinue
 }
 
 Describe 'Push-ExecScheduledCommand minimum alert interval' {
@@ -64,7 +71,6 @@ Describe 'Push-ExecScheduledCommand minimum alert interval' {
         Mock Add-CIPPAlertRunHistory {}
         Mock Get-AzDataTableEntity { [pscustomobject]@{ PartitionKey = 'ScheduledTask'; RowKey = 'task-1'; TaskState = 'Pending' } }
         Mock Get-CIPPAzDataTableEntity { if ($script:LastCompleted) { [pscustomobject]@{ ScheduledTime = [string][datetimeoffset]::new($script:LastCompleted).ToUnixTimeSeconds() } } }
-        Mock Get-Command { [pscustomobject]@{ Module = 'CIPPAlerts'; Parameters = @{ TenantFilter = 1; InputValue = 1; Headers = 1 } } }
         Mock Get-CIPPAlertBreachAlert { $script:Holder.New = 2; $script:Holder.Continuing = 5; $script:Holder.Reported = $true }
         Mock Get-CIPPAlertNoMinimum {}
     }

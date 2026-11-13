@@ -53,7 +53,8 @@ function Get-CIPPAlertPermanentActiveAdminAssigned {
 
         $DeltaTable = Get-CIPPTable -Table DeltaCompare
         $Filter = "PartitionKey eq 'PermanentAdminDelta' and RowKey eq '{0}'" -f $TenantFilter
-        $Previous = (Get-CIPPAzDataTableEntity @DeltaTable -Filter $Filter).delta | ConvertFrom-Json -ErrorAction SilentlyContinue
+        $Entity = Get-CIPPAzDataTableEntity @DeltaTable -Filter $Filter
+        $Previous = $Entity.delta | ConvertFrom-Json -ErrorAction SilentlyContinue
         $PreviousKeys = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Previous.Key | Where-Object { $_ }), [System.StringComparer]::OrdinalIgnoreCase)
 
         Add-CIPPAzDataTableEntity @DeltaTable -Entity @{
@@ -63,7 +64,8 @@ function Get-CIPPAlertPermanentActiveAdminAssigned {
         } -Force
 
         # First run only seeds the baseline; alerting on everything that already existed would be noise.
-        if ($null -eq $Previous) { return }
+        # Test the row, not the parsed value: an empty baseline ('[]') parses to $null.
+        if ($null -eq $Entity) { return }
 
         $AlertData = foreach ($Item in $Current) {
             if ($PreviousKeys.Contains($Item.Key)) { continue }

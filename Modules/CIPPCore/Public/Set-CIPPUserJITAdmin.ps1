@@ -53,6 +53,12 @@ function Set-CIPPUserJITAdmin {
         [string]$ApprovalRequestId
     )
 
+    # Role and group ids are placed in Graph URL paths, so only GUIDs are accepted.
+    $InvalidIds = @($Roles; $Groups).Where({ $_ -and -not (Test-IsGuid -String $_) })
+    if ($InvalidIds.Count -gt 0) {
+        throw "Blocked JIT Admin $Action for $($User.UserPrincipalName): '$($InvalidIds -join "', '")' is not a valid id"
+    }
+
     if ($Action -in @('AddRoles', 'AddGroups', 'AddRolesAndGroups') -and (Get-CIPPJITAdminApprovalRequirement -Roles $Roles -TenantFilter $TenantFilter)) {
         $ApprovalTable = Get-CIPPTable -TableName 'JITAdminRequests'
         $ParsedId = [guid]::Empty

@@ -16,6 +16,10 @@ BeforeAll {
     function Add-CIPPAzDataTableEntity { param($TableName, $Entity, [switch]$Force) }
     function Update-AzDataTableEntity { param($TableName, $Entity) }
     function Send-CIPPJITAdminApprovalNotification { param($ApprovalRequest, $Status, $Note, $Results) }
+    function New-GraphGetRequest { param($uri, $tenantid) }
+    function New-GraphPostRequest { param($uri, $tenantid, $type, $body) }
+    function New-PwPushLink { param($Payload) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Test-IsGuid.ps1')
     . (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-ExecJITAdmin.ps1' | Select-Object -First 1).FullName
 
     function New-Request {
@@ -120,5 +124,95 @@ Describe 'Invoke-ExecJITAdmin approval' {
         $Response.StatusCode | Should -Be 400
         Should -Invoke Update-AzDataTableEntity -Times 0
         Should -Invoke Add-CIPPScheduledTask -Times 0
+    }
+}
+
+Describe 'Invoke-ExecJITAdmin request validation and allow-list' {
+    BeforeAll {
+        $GroupId = 'aaaaaaaa-0000-0000-0000-000000000001'
+        $Restricted = { [pscustomobject]@{ Restricted = $true; AllowedRoleIds = @('62e90394-69f5-4237-9190-012177145e10') } }
+    }
+    BeforeEach {
+        Mock Add-CIPPScheduledTask { }
+        Mock Set-CIPPUserJITAdminProperties { }
+        Mock Start-Sleep { }
+        Mock New-GraphPostRequest { [pscustomobject]@{ temporaryAccessPass = 'tap' } }
+    }
+
+    It 'refuses a group id that is not a GUID' {
+        $Request = New-Request -StartOffsetSeconds 0
+        $Request.Body | Add-Member -NotePropertyName GroupMemberships -NotePropertyValue @([pscustomobject]@{ value = "x/../../directoryRoles(roleTemplateId='62e90394-69f5-4237-9190-012177145e10')" })
+        $Response = Invoke-ExecJITAdmin -Request $Request -TriggerMetadata $null
+        $Response.StatusCode | Should -Be 400
+        Should -Invoke Add-CIPPScheduledTask -Times 0
+    }
+
+    It 'refuses a role id that is not a GUID' {
+        $Request = New-Request -StartOffsetSeconds 0
+        $Request.Body.AdminRoles = @([pscustomobject]@{ value = '62e90394-69f5-4237-9190-012177145e10/x' })
+        $Response = Invoke-ExecJITAdmin -Request $Request -TriggerMetadata $null
+        $Response.StatusCode | Should -Be 400
+        Should -Invoke Add-CIPPScheduledTask -Times 0
+    }
+
+    It 'refuses variants of a role outside the allow-list for a restricted caller' {
+        Mock Get-CIPPJITAdminAllowedRoles $Restricted
+        foreach ($Variant in @('E8611AB8-C189-46E8-94E1-60213AB1F814', '{e8611ab8-c189-46e8-94e1-60213ab1f814}')) {
+            $Request = New-Request -StartOffsetSeconds 0
+            $Request.Body.AdminRoles = @([pscustomobject]@{ value = $Variant })
+            (Invoke-ExecJITAdmin -Request $Request -TriggerMetadata $null).StatusCode | Should -Be 403
+        }
+        Should -Invoke Add-CIPPScheduledTask -Times 0
+    }
+
+    It 'refuses a role-assignable group for a restricted caller' {
+        Mock Get-CIPPJITAdminAllowedRoles $Restricted
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = $GroupId; displayName = 'Tier0'; isAssignableToRole = $true } }
+        $Request = New-Request -StartOffsetSeconds 0
+        $Request.Body | Add-Member -NotePropertyName GroupMemberships -NotePropertyValue @([pscustomobject]@{ value = $GroupId })
+        $Response = Invoke-ExecJITAdmin -Request $Request -TriggerMetadata $null
+        $Response.StatusCode | Should -Be 403
+        $Response.Body.Results[0] | Should -BeLike '*Tier0*'
+        Should -Invoke Add-CIPPScheduledTask -Times 0
+    }
+
+    It 'refuses a group it cannot look up for a restricted caller' {
+        Mock Get-CIPPJITAdminAllowedRoles $Restricted
+        Mock New-GraphGetRequest { throw 'Forbidden' }
+        $Request = New-Request -StartOffsetSeconds 0
+        $Request.Body | Add-Member -NotePropertyName GroupMemberships -NotePropertyValue @([pscustomobject]@{ value = $GroupId })
+        (Invoke-ExecJITAdmin -Request $Request -TriggerMetadata $null).StatusCode | Should -Be 403
+        Should -Invoke Add-CIPPScheduledTask -Times 0
+    }
+
+    It 'allows an ordinary group for a restricted caller when Graph reports isAssignableToRole as <Name>' -ForEach @(
+        @{ Name = 'false'; Flag = $false }
+        @{ Name = 'null'; Flag = $null }
+    ) {
+        Mock Get-CIPPJITAdminAllowedRoles $Restricted
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = $GroupId; displayName = 'Helpdesk'; isAssignableToRole = $Flag } }
+        $Request = New-Request -StartOffsetSeconds 0
+        $Request.Body | Add-Member -NotePropertyName GroupMemberships -NotePropertyValue @([pscustomobject]@{ value = $GroupId })
+        (Invoke-ExecJITAdmin -Request $Request -TriggerMetadata $null).StatusCode | Should -Be 200
+        Should -Invoke Add-CIPPScheduledTask -Times 1 -ParameterFilter { $RunNow -and $Task.Parameters.Groups -contains $GroupId }
+    }
+
+    It 'refuses a temporary access pass for an existing user for a restricted caller' {
+        Mock Get-CIPPJITAdminAllowedRoles $Restricted
+        $Request = New-Request -StartOffsetSeconds 0
+        $Request.Body | Add-Member -NotePropertyName UseTAP -NotePropertyValue $true
+        (Invoke-ExecJITAdmin -Request $Request -TriggerMetadata $null).StatusCode | Should -Be 403
+        Should -Invoke New-GraphPostRequest -Times 0
+        Should -Invoke Add-CIPPScheduledTask -Times 0
+    }
+
+    It 'leaves an unrestricted caller free to use any group and a TAP for an existing user' {
+        Mock New-GraphGetRequest { }
+        $Request = New-Request -StartOffsetSeconds 0
+        $Request.Body | Add-Member -NotePropertyName GroupMemberships -NotePropertyValue @([pscustomobject]@{ value = $GroupId })
+        $Request.Body | Add-Member -NotePropertyName UseTAP -NotePropertyValue $true
+        (Invoke-ExecJITAdmin -Request $Request -TriggerMetadata $null).StatusCode | Should -Be 200
+        Should -Invoke New-GraphPostRequest -Times 1
+        Should -Invoke New-GraphGetRequest -Times 0 -ParameterFilter { $uri -like '*/groups/*' }
     }
 }

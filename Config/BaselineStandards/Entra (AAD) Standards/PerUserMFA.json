@@ -13,7 +13,10 @@
     "SMB1001 (2.6)",
     "SMB1001 (2.9)",
     "MFARegistrationV2",
-    "AdminMFAV2"
+    "AdminMFAV2",
+    "CMMC (IA.L2-3.5.3)",
+    "FedRAMP A-D (KSI-IAM-APM)",
+    "NIST SP 800-171 (3.5.3)"
   ],
   "impact": "High Impact",
   "helpText": "Enables per user MFA for all users. The directory synchronisation service account is excluded - it cannot complete MFA and enforcing it breaks sync.",

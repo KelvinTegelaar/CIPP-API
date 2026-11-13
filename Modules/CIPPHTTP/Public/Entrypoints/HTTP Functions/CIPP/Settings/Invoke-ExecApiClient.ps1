@@ -64,6 +64,19 @@ function Invoke-ExecApiClient {
                     $Body = @{ Results = @(@{ resultText = 'This app is CIPP''s own sign-in (SSO) or SAM app registration and cannot be used as an API client.'; state = 'error' }) }
                     break
                 }
+                if (-not $ExistingClientForAuth) {
+                    # Adopting an app that is not yet an API client: it must carry this site's sign-in callback, as the
+                    # apps CIPP creates do. Any other app in the partner tenant would have its secret reset and returned.
+                    $Candidate = try { New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$AuthClientId')?`$select=appId,signInAudience,web" -NoAuthCheck $true -asapp $true } catch { $null }
+                    $Callbacks = @($Candidate.web.redirectUris | Where-Object { $_ -like '*/.auth/login/aad/callback' })
+                    $SiteCallbacks = @(Get-CIPPSiteHostname -AsRedirectUri)
+                    if ($Candidate.signInAudience -ne 'AzureADMyOrg' -or $Callbacks.Count -eq 0 -or ($SiteCallbacks.Count -gt 0 -and @($Callbacks | Where-Object { $_ -in $SiteCallbacks }).Count -eq 0)) {
+                        Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Blocked adopting app $AuthClientId as an API client: it is not a CIPP API app for this site." -Sev 'Warning'
+                        $StatusCode = [HttpStatusCode]::BadRequest
+                        $Body = @{ Results = @(@{ resultText = 'This app registration was not created as a CIPP API client for this site and cannot be used as one.'; state = 'error' }) }
+                        break
+                    }
+                }
             }
             $RoleGrant = Test-CippApiClientRoleGrant -Request $Request -Role $RolesToAuthorize
             if (-not $RoleGrant.Allowed) {
@@ -202,7 +215,7 @@ function Invoke-ExecApiClient {
                         }
                     } catch {
                         $Results.Add(@{
-                                resultText = "Client saved, but MCP app configuration failed: $($_.Exception.Message)"
+                                resultText = "Client saved, but MCP app configuration failed: $($_.Exception.Message) Do not create the client again - run Save to Azure to retry the MCP setup for it."
                                 state      = 'warning'
                             })
                     }
@@ -338,6 +351,10 @@ function Invoke-ExecApiClient {
                         resultText = "API secret reset for $($Client.AppName). Use the Copy to Clipboard button to retrieve the new secret."
                         copyField  = $ApiConfig.ApplicationSecret
                         state      = 'success'
+                    }
+                    if ($ApiConfig.Results.resultText) {
+                        $Results.resultText = "$($Results.resultText) $($ApiConfig.Results.resultText)"
+                        $Results.state = 'warning'
                     }
                 } else {
                     $StatusCode = [HttpStatusCode]::InternalServerError

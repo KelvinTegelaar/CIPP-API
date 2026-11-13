@@ -4,19 +4,17 @@ function Get-CIPPStatsMobileEnrollment {
 
     try {
         $MobileEnrollment = 0
-        $ManagedDeviceRows = Get-CIPPDbItem -TenantFilter allTenants -Type 'ManagedDevices'
-        foreach ($ManagedDeviceRow in $ManagedDeviceRows) {
-            if (-not $ManagedDeviceRow.Data) { continue }
-
-            try {
-                $ManagedDevice = $ManagedDeviceRow.Data | ConvertFrom-Json -Depth 20 -ErrorAction Stop
-            } catch {
-                continue
-            }
-
-            $OperatingSystem = [string]$ManagedDevice.operatingSystem
-            if ($OperatingSystem -match 'iOS|iPadOS|Android') {
-                $MobileEnrollment++
+        $Fields = [string[]]@('operatingSystem')
+        # Through MethodInfo.Invoke: PowerShell copies a large string passed straight to a method several times per call
+        $ParseJson = [CIPP.CippJson].GetMethod('ConvertFromJson', [type[]]@([string], [string[]]))
+        foreach ($Tenant in (Get-Tenants -IncludeErrors).defaultDomainName) {
+            if ([string]::IsNullOrWhiteSpace($Tenant)) { continue }
+            foreach ($Row in (Get-CIPPDbItem -Partition $Tenant -Type 'ManagedDevices')) {
+                if (-not $Row.Data) { continue }
+                $Parsed = try { $ParseJson.Invoke($null, [object[]]@([string]$Row.Data, $Fields)) } catch { $null }
+                foreach ($Device in @($Parsed)) {
+                    if ([string]$Device.operatingSystem -match 'iOS|iPadOS|Android') { $MobileEnrollment++ }
+                }
             }
         }
 

@@ -105,10 +105,14 @@ function Update-CIPPDynamicTenantGroups {
                     }
                 }
 
+                # Tenants whose data could not be read are left out of the evaluation and keep their
+                # current membership: empty data would read as 'has nothing' and move them.
+                $UnevaluatedIds = [System.Collections.Generic.List[string]]::new()
                 $TenantObj = foreach ($Tenant in $AllTenants) {
                     $SKUId = @()
                     $ServicePlans = @()
                     $TenantVariables = @{}
+                    $FetchFailed = $false
 
                     if ($RequiresLicense) {
                         if ($SkuHashtable.ContainsKey($Tenant.customerId)) {
@@ -128,6 +132,7 @@ function Update-CIPPDynamicTenantGroups {
                                 $SKUId = @($LicenseInfo.skuId)
                                 $SkuHashtable[$Tenant.customerId] = $SKUId
                             } catch {
+                                $FetchFailed = $true
                                 Write-LogMessage -API 'TenantGroups' -message 'Error getting licenses' -Tenant $Tenant.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
                             }
                         }
@@ -138,6 +143,7 @@ function Update-CIPPDynamicTenantGroups {
                         try {
                             $TenantVariables = Get-CIPPTenantVariables -TenantFilter $Tenant.customerId -IncludeGlobal
                         } catch {
+                            $FetchFailed = $true
                             Write-Information "Error fetching custom variables for tenant $($Tenant.defaultDomainName): $($_.Exception.Message)"
                             Write-LogMessage -API 'TenantGroups' -message 'Error getting tenant variables' -Tenant $Tenant.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
                         }
@@ -147,9 +153,15 @@ function Update-CIPPDynamicTenantGroups {
                         try {
                             $ServicePlans = (Get-CIPPTenantCapabilities -TenantFilter $Tenant.defaultDomainName).psobject.properties.name
                         } catch {
+                            $FetchFailed = $true
                             Write-Information "Error fetching capabilities for tenant $($Tenant.defaultDomainName): $($_.Exception.Message)"
                             Write-LogMessage -API 'TenantGroups' -message 'Error getting tenant capabilities' -Tenant $Tenant.defaultDomainName -sev Warning -LogData (Get-CippException -Exception $_)
                         }
+                    }
+
+                    if ($FetchFailed) {
+                        $UnevaluatedIds.Add([string]$Tenant.customerId)
+                        continue
                     }
 
                     [pscustomobject]@{
@@ -170,8 +182,8 @@ function Update-CIPPDynamicTenantGroups {
                 $WhereConditions = foreach ($rule in $Rules) {
                     $condition = Test-CIPPDynamicGroupFilter -Rule $rule -TenantGroupMembersCache $script:TenantGroupMembersCache
                     if ($null -eq $condition) {
-                        Write-Warning "Skipping invalid rule: $($rule | ConvertTo-Json -Compress)"
-                        continue
+                        # Dropping a rule changes what the others select (wider under AND, narrower under OR)
+                        throw "Invalid rule, skipping this group so existing membership is preserved: $($rule | ConvertTo-Json -Compress)"
                     }
                     $condition
                 }
@@ -190,7 +202,8 @@ function Update-CIPPDynamicTenantGroups {
 
                 if ($Group.ExcludePartnerTenant -eq $true -and $env:TenantID) {
                     $BeforeCount = ($MatchingTenants | Measure-Object).Count
-                    $MatchingTenants = @($MatchingTenants | Where-Object { $_.customerId -ne $env:TenantID })
+                    $PartnerIds = @((Get-CIPPPartnerTenant).RowKey)
+                    $MatchingTenants = @($MatchingTenants | Where-Object { $_.customerId -notin $PartnerIds -and $_.isPartnerTenantRow -ne $true })
                     $RemovedCount = $BeforeCount - ($MatchingTenants | Measure-Object).Count
                     if ($RemovedCount -gt 0) {
                         Write-Information "ExcludePartnerTenant is enabled for group '$($Group.Name)'; removed $RemovedCount partner tenant from results"
@@ -204,7 +217,7 @@ function Update-CIPPDynamicTenantGroups {
                 $NewMemberIds = $MatchingTenants.customerId
 
                 $ToAdd = $NewMemberIds | Where-Object { $_ -notin $CurrentMemberIds }
-                $ToRemove = $CurrentMemberIds | Where-Object { $_ -notin $NewMemberIds }
+                $ToRemove = $CurrentMemberIds | Where-Object { $_ -notin $NewMemberIds -and $_ -notin $UnevaluatedIds }
 
                 foreach ($TenantId in $ToAdd) {
                     $TenantInfo = $AllTenants | Where-Object { $_.customerId -eq $TenantId }
@@ -230,7 +243,7 @@ function Update-CIPPDynamicTenantGroups {
                 }
 
                 $GroupsProcessed++
-                Write-LogMessage -API 'TenantGroups' -message "Group '$($Group.Name)' updated: +$($ToAdd.Count) members, -$($ToRemove.Count) members" -sev Info
+                Write-LogMessage -API 'TenantGroups' -message "Group '$($Group.Name)' updated: +$($ToAdd.Count) members, -$($ToRemove.Count) members$(if ($UnevaluatedIds.Count) { ", $($UnevaluatedIds.Count) tenants not evaluated (data unavailable)" })" -sev Info
 
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

@@ -20,6 +20,7 @@ Describe 'Test-CippTransientError' {
         @{ Message = 'Response status code does not indicate success: 429' }
         @{ Message = 'Response status code does not indicate success: 502' }
         @{ Message = 'Response status code does not indicate success: 504' }
+        @{ Message = 'UnknownError' }
     ) {
         param($Message)
         Test-CippTransientError -Message $Message | Should -Be $true

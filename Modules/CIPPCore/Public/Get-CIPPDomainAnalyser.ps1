@@ -32,6 +32,12 @@ function Get-CIPPDomainAnalyser {
             return $CachedEntry.Results
         }
     }
+    if ($script:CIPPDomainAnalyserSweep -lt $CacheNow) {
+        foreach ($Key in @($script:CIPPDomainAnalyserCache.PSBase.Keys)) {
+            if (($CacheNow - $script:CIPPDomainAnalyserCache[$Key].Timestamp) -ge 300) { $script:CIPPDomainAnalyserCache.Remove($Key) }
+        }
+        $script:CIPPDomainAnalyserSweep = $CacheNow + 60
+    }
 
     $DomainTable = Get-CIPPTable -Table 'Domains'
 

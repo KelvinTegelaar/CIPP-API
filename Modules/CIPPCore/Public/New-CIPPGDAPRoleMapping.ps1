@@ -14,14 +14,17 @@ function New-CIPPGDAPRoleMapping {
     [CmdletBinding()]
     param(
         $Roles,
-        [string]$CustomSuffix
+        [string]$CustomSuffix,
+        # Partner tenant the groups live in; defaults to the primary partner
+        [string]$PartnerTenantId = $env:TenantID
     )
+    if (!$PartnerTenantId) { $PartnerTenantId = $env:TenantID }
 
     $Table = Get-CIPPTable -TableName 'GDAPRoles'
 
     $Results = [System.Collections.Generic.List[string]]::new()
     $Requests = [System.Collections.Generic.List[object]]::new()
-    $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups' -tenantid $env:TenantID -AsApp $true
+    $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups' -tenantid $PartnerTenantId -AsApp $true
 
     $ExistingRoleMappings = foreach ($Role in $Roles) {
         $RoleName = $Role.label ?? $Role.Name
@@ -43,6 +46,7 @@ function New-CIPPGDAPRoleMapping {
                 GroupName        = $GroupName
                 GroupId          = ($ExistingGroups | Where-Object -Property displayName -EQ $GroupName | Select-Object -First 1).id
                 roleDefinitionId = $Value
+                partnerTenantId  = "$PartnerTenantId"
             }
             $Results.Add("$GroupName already exists")
         } else {
@@ -69,7 +73,7 @@ function New-CIPPGDAPRoleMapping {
     }
 
     if ($Requests) {
-        $ReturnedData = New-GraphBulkRequest -Requests $Requests -tenantid $env:TenantID -NoAuthCheck $True -asapp $true
+        $ReturnedData = New-GraphBulkRequest -Requests $Requests -tenantid $PartnerTenantId -NoAuthCheck $True -asapp $true
         $NewRoleMappings = foreach ($Return in $ReturnedData) {
             if ($Return.body.error) {
                 $Results.Add("Could not create GDAP group: $($Return.body.error.message)")
@@ -82,6 +86,7 @@ function New-CIPPGDAPRoleMapping {
                     GroupName        = $Return.body.displayName
                     GroupId          = $Return.body.id
                     roleDefinitionId = $Return.id
+                    partnerTenantId  = "$PartnerTenantId"
                 }
                 $Results.Add("Created $($GroupName)")
             }

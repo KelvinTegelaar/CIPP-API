@@ -1,7 +1,7 @@
 function Invoke-ListTenantAlignment {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Tenant.Standards.Read
     .DESCRIPTION
@@ -125,7 +125,7 @@ function Invoke-ListTenantAlignment {
         }
 
         if ($UseBaselines) {
-            $BaselineTenants = @(Get-CIPPBaselineAlignment -TenantScores | Where-Object { $_.applicable -gt 0 })
+            $BaselineTenants = @(Get-CIPPBaselineAlignment -TenantScores | Where-Object { $_.applicable -gt 0 } | Select-CippAllowedTenantData -TenantProperty tenantFilter)
             $Scores = foreach ($Tenant in $BaselineTenants) {
                 [PSCustomObject]@{ Tenant = $Tenant.tenantFilter; Name = $Tenant.displayName; Score = [int]$Tenant.alignedPercentage }
             }

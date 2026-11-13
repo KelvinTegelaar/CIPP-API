@@ -9,7 +9,8 @@ function Invoke-AddGroup {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $SelectedTenants = if ('AllTenants' -in $SelectedTenants) { (Get-Tenants).defaultDomainName } else { $Request.body.tenantFilter.value ? $Request.body.tenantFilter.value : $Request.body.tenantFilter }
+    $SelectedTenants = $Request.body.tenantFilter.value ? $Request.body.tenantFilter.value : $Request.body.tenantFilter
+    if ('AllTenants' -in $SelectedTenants) { $SelectedTenants = (Get-Tenants).defaultDomainName }
 
 
     $GroupObject = $Request.body

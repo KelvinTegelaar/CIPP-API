@@ -1,7 +1,7 @@
 function Invoke-ListBreachesTenant {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         CIPP.BreachLookup.Read
     .DESCRIPTION

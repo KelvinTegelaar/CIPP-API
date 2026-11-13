@@ -4,11 +4,11 @@ function Test-CIPPCAPolicyPhishingResistant {
         Decides whether a Conditional Access policy enforces a phishing-resistant authentication strength.
     .DESCRIPTION
         A policy counts as phishing-resistant when its authentication strength is the built-in Microsoft
-        "Phishing-resistant MFA" strength, when the strength's display name mentions phishing-resistant /
-        FIDO2 / Windows Hello / certificate-based, or (the authoritative signal) when the strength resolves
-        in the tenant's cached authentication-strength catalog and any allowedCombinations entry contains a
-        phishing-resistant method token (fido2, windowsHelloForBusiness, x509 certificate, device-bound
-        passkey, hardware OATH).
+        "Phishing-resistant MFA" strength, or when every allowedCombinations entry of the strength
+        consists only of phishing-resistant method tokens (fido2, windowsHelloForBusiness, x509
+        certificate, device-bound passkey). Only when the combinations are unknown does it fall back to
+        the strength or policy display name mentioning phishing-resistant / FIDO2 / Windows Hello /
+        certificate-based.
     .FUNCTIONALITY
         Internal
     #>
@@ -29,23 +29,28 @@ function Test-CIPPCAPolicyPhishingResistant {
     $Strength = $Policy.grantControls.authenticationStrength
     $DisplayName = "$($Policy.displayName)"
 
-    if ($null -eq $Strength -or [string]::IsNullOrWhiteSpace("$($Strength.id)")) {
-        return [bool]($DisplayName -match $PolicyNameRegex)
-    }
+    # Without an authentication strength the policy cannot enforce one, whatever it is called
+    if ($null -eq $Strength -or [string]::IsNullOrWhiteSpace("$($Strength.id)")) { return $false }
 
     if ("$($Strength.id)" -eq $BuiltInId) { return $true }
-    if ("$($Strength.displayName)" -match $StrengthNameRegex) { return $true }
 
     $Resolved = $null
     if ($Context.AuthStrengths -and $Context.AuthStrengths.ContainsKey("$($Strength.id)")) {
         $Resolved = $Context.AuthStrengths["$($Strength.id)"]
     }
-    foreach ($Combination in @($Resolved.allowedCombinations)) {
-        $Tokens = @("$Combination".ToLowerInvariant() -split '[,\s]+' | Where-Object { $_ })
-        foreach ($Token in $Tokens) {
-            if ($MethodTokens -contains $Token) { return $true }
+    $Combinations = @($Resolved.allowedCombinations | Where-Object { $_ })
+    if ($Combinations.Count -eq 0) { $Combinations = @($Strength.allowedCombinations | Where-Object { $_ }) }
+
+    if ($Combinations.Count -gt 0) {
+        # A sign-in may use any allowed combination, so one weaker combination makes the whole
+        # strength plain MFA (the built-in "Multifactor authentication" strength allows FIDO2 too).
+        foreach ($Combination in $Combinations) {
+            $Tokens = @("$Combination".ToLowerInvariant() -split '[,\s]+' | Where-Object { $_ })
+            if (@($Tokens | Where-Object { $MethodTokens -notcontains $_ }).Count -gt 0) { return $false }
         }
+        return $true
     }
 
-    return [bool]($DisplayName -match $PolicyNameRegex)
+    # Combinations unknown (strength missing from the cached catalog): fall back to the names
+    return [bool]("$($Strength.displayName)" -match $StrengthNameRegex -or $DisplayName -match $PolicyNameRegex)
 }

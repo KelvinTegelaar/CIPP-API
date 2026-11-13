@@ -1,7 +1,7 @@
 function Invoke-ListAuditLogs {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         CIPP.Alert.Read
     .DESCRIPTION

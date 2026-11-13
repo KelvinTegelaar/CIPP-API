@@ -20,7 +20,12 @@
     "scid_2514",
     "scid_2515",
     "scid_2516",
-    "scid_2517"
+    "scid_2517",
+    "CMMC (SI.L1-b.1.xiii)",
+    "CMMC (SC.L2-3.13.13)",
+    "CMMC (SI.L2-3.14.2)",
+    "NIST SP 800-171 (3.13.13)",
+    "NIST SP 800-171 (3.14.2)"
   ],
   "impact": "High Impact",
   "helpText": "Deploys and enforces Microsoft Defender Attack Surface Reduction (ASR) rules via Intune. Controls 20 individual ASR rules that protect against common attack vectors.",

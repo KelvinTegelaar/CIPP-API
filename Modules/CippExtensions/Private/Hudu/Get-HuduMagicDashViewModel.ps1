@@ -25,7 +25,9 @@ function Get-HuduMagicDashViewModel {
         [string]$ResourceAccountPattern = 'Resource Account',
         [int]$GlobalAdminWarnAt = 5,
         [double]$LicenseWarnPct = 90,
-        [int]$PrincipalsShown = 8
+        [int]$PrincipalsShown = 8,
+        [switch]$HideLicenseFull,
+        [switch]$HideLicenseNearFull
     )
 
     $Inv = [cultureinfo]::InvariantCulture
@@ -139,7 +141,7 @@ function Get-HuduMagicDashViewModel {
         People    = $People
         Resource  = $Resource
     }
-    $Model.Attention = Get-HuduMagicDashAttentionItems -Model $Model
+    $Model.Attention = Get-HuduMagicDashAttentionItems -Model $Model -HideLicenseFull:$HideLicenseFull -HideLicenseNearFull:$HideLicenseNearFull
     $Model.Tile = [ordered]@{
         Message = "$(& $Plural $AllUsers.Count 'licensed user' 'licensed users')$(if ($Model.Attention.Count) { " $Dot $(& $Plural $Model.Attention.Count 'item needs attention' 'items need attention')" })"
         Shade   = $(if ($Model.Attention.Count) { 'danger' } else { 'success' })

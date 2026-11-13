@@ -20,7 +20,7 @@ function Invoke-AddTransportRule {
 
     $AllowedTenants = Test-CippAccess -Request $Request -TenantList
 
-    if ($AllowedTenants -ne 'AllTenants') {
+    if ('AllTenants' -notin $AllowedTenants) {
         $AllTenants = Get-Tenants -IncludeErrors
         $AllowedTenantList = $AllTenants | Where-Object { $_.customerId -in $AllowedTenants }
         $Tenants = $Tenants | Where-Object { $_ -in $AllowedTenantList.defaultDomainName }

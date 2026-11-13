@@ -46,8 +46,15 @@ function Get-CIPPBaselineDetectIntuneDriftState {
     }
     foreach ($WorkItem in $WorkItems) {
         if ($WorkItem.BaseName -eq 'IntuneTemplate') { continue }
-        foreach ($Declared in @((Get-CIPPBaselineDefinition -Name $WorkItem.BaseName).driftManagedNames)) {
-            $Name = if ("$Declared" -match '^%([A-Za-z0-9_]+)%$') { "$(& $Unwrap $WorkItem.Variables.($Matches[1]))" } else { "$Declared" }
+        $Definition = Get-CIPPBaselineDefinition -Name $WorkItem.BaseName
+        foreach ($Declared in @($Definition.driftManagedNames)) {
+            $Name = "$Declared"
+            if ($Name -match '^%([A-Za-z0-9_]+)%$') {
+                # An operator-chosen name; baselines saved before the variable existed fall back to its default.
+                $VariableName = $Matches[1]
+                $Name = "$(& $Unwrap $WorkItem.Variables.$VariableName)"
+                if (-not $Name) { $Name = "$($Definition.variables.$VariableName.default)" }
+            }
             if (-not $Name) { continue }
             $null = $ManagedNames.Add($Name)
             $null = $ManagedNames.Add("$(try { Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Name } catch { $Name })")

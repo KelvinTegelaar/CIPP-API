@@ -14,7 +14,7 @@ function Push-PublicWebhookProcess {
         } elseif ($Webhook.Type -eq 'AuditLog') {
             Invoke-CippWebhookProcessing -TenantFilter $Webhook.TenantFilter -Data ($Webhook.Data | ConvertFrom-Json) -CIPPURL $Webhook.CIPPURL
         } elseif ($Webhook.Type -eq 'PartnerCenter') {
-            Invoke-CippPartnerWebhookProcessing -Data ($Webhook.Data | ConvertFrom-Json)
+            Invoke-CippPartnerWebhookProcessing -Data ($Webhook.Data | ConvertFrom-Json) -PartnerTenantId $Webhook.CIPPID
         }
     } catch {
         Write-Host "Webhook Exception: $($_.Exception.Message)"

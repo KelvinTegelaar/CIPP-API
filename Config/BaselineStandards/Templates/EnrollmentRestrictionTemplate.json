@@ -2,7 +2,10 @@
   "name": "EnrollmentRestrictionTemplate",
   "label": "Enrollment Restriction Template",
   "cat": "Templates",
-  "tag": [],
+  "tag": [
+    "CMMC (AC.L2-3.1.18)",
+    "NIST SP 800-171 (3.1.18)"
+  ],
   "impact": "High Impact",
   "helpText": "Deploy enrollment (device type) restrictions for specific groups from CIPP templates, with their platform settings and group assignment. An existing restriction with the same name and platform is updated.",
   "executiveText": "Applies the same rules about which devices staff can enrol, such as allowing personal Android phones only through a work profile or blocking personal iPhones, to the right groups in every tenant.",

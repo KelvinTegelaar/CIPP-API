@@ -27,6 +27,13 @@ Function Invoke-AddCATemplate {
             GUID         = "$GUID"
         }
         $Result = "Created CA Template $($Name) with GUID $GUID"
+        $ProfileRef = ($JSON | ConvertFrom-Json).sessionControls.globalSecureAccessFilteringProfile.profileId
+        if ($ProfileRef -is [string] -and $ProfileRef) {
+            $Result = @(
+                [pscustomobject]@{ state = 'success'; resultText = $Result }
+                [pscustomobject]@{ state = 'warning'; resultText = "This policy applies the Global Secure Access security profile '$ProfileRef'. The CA template refers to it by name, so each tenant it is deployed to needs a security profile with that name. To deploy the profile with the policy, save it with Save as Template on the Global Secure Access Security Profiles page and link that template in this CA template." }
+            )
+        }
         Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Created CA Template $($Name) with GUID $GUID" -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
 
@@ -40,7 +47,7 @@ Function Invoke-AddCATemplate {
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @{'Results' = "$Result" }
+            Body       = @{'Results' = $Result }
         })
 
 }

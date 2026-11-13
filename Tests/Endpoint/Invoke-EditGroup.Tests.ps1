@@ -541,6 +541,50 @@ Describe 'Invoke-EditGroup - membership' {
             Should -Invoke New-ExoBulkRequest -Times 1 -Exactly
         }
     }
+    Context 'Group-based licensing' {
+        # Entra licenses any security-enabled group, synced from on-prem or not; only a group
+        # without securityEnabled (distribution list, plain M365 group) is refused by Graph.
+        It 'assigns licenses to a <Name>' -ForEach @(
+            @{ Name = 'security group'; GroupTypes = @(); Mail = $false; Sec = $true }
+            @{ Name = 'mail-enabled security group'; GroupTypes = @(); Mail = $true; Sec = $true }
+            @{ Name = 'security-enabled Microsoft 365 group'; GroupTypes = @('Unified'); Mail = $true; Sec = $true }
+            @{ Name = 'synced mail-enabled security group'; GroupTypes = @(); Mail = $true; Sec = $true; Synced = $true }
+        ) {
+            Mock -CommandName New-GraphGetRequest -MockWith {
+                [pscustomobject]@{ id = 'group-guid'; displayName = 'All Office'; groupTypes = $GroupTypes; mailEnabled = $Mail; securityEnabled = $Sec; onPremisesSyncEnabled = [bool]$Synced }
+            }
+            $Request = New-GroupRequest -GroupType 'Security' -Body @{ AddLicenses = @(@{ value = 'sku-guid' }) }
+
+            $null = Invoke-EditGroup -Request $Request
+
+            Should -Invoke Set-CIPPGroupLicense -Times 1 -Exactly -ParameterFilter { $AddLicenses -contains 'sku-guid' }
+        }
+
+        It 'skips licenses on a <Name>' -ForEach @(
+            @{ Name = 'distribution list'; GroupTypes = @(); Mail = $true; Sec = $false }
+            @{ Name = 'Microsoft 365 group without security'; GroupTypes = @('Unified'); Mail = $true; Sec = $false }
+        ) {
+            Mock -CommandName New-GraphGetRequest -MockWith {
+                [pscustomobject]@{ id = 'group-guid'; displayName = 'All Office'; groupTypes = $GroupTypes; mailEnabled = $Mail; securityEnabled = $Sec }
+            }
+            $Request = New-GroupRequest -GroupType 'Security' -Body @{ AddLicenses = @(@{ value = 'sku-guid' }) }
+
+            $null = Invoke-EditGroup -Request $Request
+
+            Should -Invoke Set-CIPPGroupLicense -Times 0 -Exactly
+        }
+
+        It 'falls back to the posted <GroupType> type when the lookup carries no flags' -ForEach @(
+            @{ GroupType = 'Security' }
+            @{ GroupType = 'Mail-Enabled Security' }
+        ) {
+            $Request = New-GroupRequest -GroupType $GroupType -Body @{ AddLicenses = @(@{ value = 'sku-guid' }) }
+
+            $null = Invoke-EditGroup -Request $Request
+
+            Should -Invoke Set-CIPPGroupLicense -Times 1 -Exactly
+        }
+    }
 }
 
 Describe 'Invoke-EditGroup - send permissions' {

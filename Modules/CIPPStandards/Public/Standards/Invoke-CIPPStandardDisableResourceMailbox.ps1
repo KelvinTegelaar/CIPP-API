@@ -47,7 +47,12 @@ function Invoke-CIPPStandardDisableResourceMailbox {
 
     # Get all users that are able to be
     try {
-        $AllUsers = New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users'
+        $AllUsers = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'Users')
+        if ($AllUsers.Count -eq 0) {
+            # No user cache means enabled and disabled look alike; reporting nothing beats reporting compliant.
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the DisableResourceMailbox state for $Tenant, the cached user list is empty. Run a user data collection for this tenant first." -Sev Warning
+            return
+        }
         $UserList = $AllUsers | Where-Object {
             $_.accountEnabled -eq $true -and
             $_.onPremisesSyncEnabled -ne $true -and

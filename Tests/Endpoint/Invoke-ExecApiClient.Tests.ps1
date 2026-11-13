@@ -28,6 +28,7 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
     function Get-CippProtectedAppId { @() }
     function New-GraphGetRequest { param($uri, $NoAuthCheck, $asapp, [switch]$ComplexFilter) }
+    function Get-CIPPSiteHostname { param([switch]$AsRedirectUri) }
 
     . $FunctionPath
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
@@ -129,5 +130,65 @@ Describe 'Invoke-ExecApiClient - protected SSO/SAM apps' {
 
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
         Should -Invoke New-CIPPAPIConfig -Times 0 -Exactly
+    }
+}
+
+Describe 'Invoke-ExecApiClient - adopting an existing app registration' {
+    BeforeEach {
+        Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Get-CippProtectedAppId -MockWith { @() }
+        Mock -CommandName New-CIPPAPIConfig -MockWith { [pscustomobject]@{ ApplicationID = $script:AppId; AppName = 'Adopted'; Results = 'ok' } }
+        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { }
+        Mock -CommandName Get-CIPPSiteHostname -MockWith { @('https://cipp.contoso.com/.auth/login/aad/callback') }
+        $script:AppId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        $script:Request = [pscustomobject]@{
+            Headers = @{}
+            Query   = [pscustomobject]@{ Action = 'AddUpdate' }
+            Params  = @{ CIPPEndpoint = 'ExecApiClient' }
+            Body    = [pscustomobject]@{ Action = 'AddUpdate'; ClientId = [pscustomobject]@{ value = $script:AppId }; Role = [pscustomobject]@{ value = 'readonly' }; Enabled = $true; IpRange = [pscustomobject]@{ value = @() }; CIPPAPI = @{ ResetSecret = $true } }
+        }
+    }
+
+    It 'refuses <Name>' -ForEach @(
+        @{ Name = 'an app with no sign-in callback'; App = @{ signInAudience = 'AzureADMyOrg'; web = @{ redirectUris = @('https://other.example/callback') } } }
+        @{ Name = 'an app whose callback belongs to another site'; App = @{ signInAudience = 'AzureADMyOrg'; web = @{ redirectUris = @('https://portal.fabrikam.com/.auth/login/aad/callback') } } }
+        @{ Name = 'a multi-tenant app'; App = @{ signInAudience = 'AzureADMultipleOrgs'; web = @{ redirectUris = @('https://cipp.contoso.com/.auth/login/aad/callback') } } }
+        @{ Name = 'an app that does not exist'; App = $null }
+    ) {
+        Mock -CommandName New-GraphGetRequest -MockWith { if ($App) { [pscustomobject]$App } }
+
+        $Response = Invoke-ExecApiClient -Request $script:Request
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+        Should -Invoke New-CIPPAPIConfig -Times 0 -Exactly
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+    }
+
+    It 'adopts an app that carries this site sign-in callback' {
+        Mock -CommandName New-GraphGetRequest -MockWith { [pscustomobject]@{ signInAudience = 'AzureADMyOrg'; web = @{ redirectUris = @('https://old.example/x', 'https://cipp.contoso.com/.auth/login/aad/callback') } } }
+
+        Invoke-ExecApiClient -Request $script:Request | Out-Null
+
+        Should -Invoke New-CIPPAPIConfig -Times 1 -Exactly
+    }
+
+    It 'accepts any sign-in callback when the site hostnames are unknown' {
+        Mock -CommandName Get-CIPPSiteHostname -MockWith { }
+        Mock -CommandName New-GraphGetRequest -MockWith { [pscustomobject]@{ signInAudience = 'AzureADMyOrg'; web = @{ redirectUris = @('https://whatever.example/.auth/login/aad/callback') } } }
+
+        Invoke-ExecApiClient -Request $script:Request | Out-Null
+
+        Should -Invoke New-CIPPAPIConfig -Times 1 -Exactly
+    }
+
+    It 'does not look the app up when it is already an API client' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { [pscustomobject]@{ RowKey = $script:AppId; PartitionKey = 'ApiClients'; AppName = 'Existing'; Role = 'readonly'; IPRange = '[]'; Enabled = $true; MCPAllowed = $false } }
+        Mock -CommandName New-GraphGetRequest -MockWith { }
+
+        Invoke-ExecApiClient -Request $script:Request | Out-Null
+
+        Should -Invoke New-GraphGetRequest -Times 0 -Exactly
+        Should -Invoke New-CIPPAPIConfig -Times 1 -Exactly
     }
 }

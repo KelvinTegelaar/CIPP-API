@@ -37,12 +37,6 @@ function Get-CIPPStandards {
             $_.runManually -eq $runManually
         }
 
-    if ($TemplateId -ne '*' -and ![string]::IsNullOrEmpty($TemplateId)) {
-        $Templates = $Templates | Where-Object {
-            $_.GUID -like $TemplateId
-        }
-    }
-
     # 1.5. Expand templates that contain TemplateList-Tags into multiple standards
     $ExpandedTemplates = foreach ($Template in $Templates) {
         Write-Information "Template $($Template.templateName) ($($Template.GUID)) processing..."

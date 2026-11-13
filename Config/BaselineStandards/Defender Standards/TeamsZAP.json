@@ -3,7 +3,10 @@
   "label": "Ensure Zero-hour auto purge for Microsoft Teams is on",
   "cat": "Defender Standards",
   "tag": [
-    "CIS M365 7.0.0 (2.4.4)"
+    "CIS M365 7.0.0 (2.4.4)",
+    "CMMC (SI.L1-b.1.xiii)",
+    "CMMC (SI.L2-3.14.2)",
+    "NIST SP 800-171 (3.14.2)"
   ],
   "impact": "Low Impact",
   "helpText": "Ensures Zero-hour auto purge (ZAP) is enabled for Microsoft Teams, automatically removing malicious messages after delivery.",
@@ -47,7 +50,7 @@
       {
         "cmdlet": "Set-TeamsProtectionPolicy",
         "params": {
-          "Identity": "Default Teams Protection Policy",
+          "Identity": "%Name%",
           "ZapEnabled": true
         }
       }

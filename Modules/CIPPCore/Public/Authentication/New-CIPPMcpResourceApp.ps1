@@ -172,7 +172,8 @@ function New-CIPPMcpResourceApp {
                 } catch {
                     $ErrMsg = $_.Exception.Message
                     $InUse = $ErrMsg -match 'identifierUri' -or $ErrMsg -match 'already exists' -or $ErrMsg -match 'in use'
-                    if ($InUse -and $Attempt -lt 5) { Start-Sleep -Seconds 3; continue }
+                    $NotReplicated = $ErrMsg -match 'does not exist or one of its queried reference-property objects are not present'
+                    if (($InUse -or $NotReplicated) -and $Attempt -lt 5) { Start-Sleep -Seconds 3; continue }
                     if ($InUse) {
                         throw "The MCP resource host URIs (https://$Hostname ...) are still assigned to another app registration. If a non-CIPP app holds them, remove it in Entra, then run Save to Azure again. ($ErrMsg)"
                     }

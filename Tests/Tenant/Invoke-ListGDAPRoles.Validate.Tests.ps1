@@ -20,6 +20,8 @@ BeforeAll {
     function Test-CIPPGDAPGroupMappings { param($RoleMappings, $PartnerGroups, $APIName, $Headers) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
     function Get-CippException { param($Exception) @{ NormalizedError = $Exception.Exception.Message } }
+    # Returns nothing: no additional partners configured, so rows attribute to the primary.
+    function Get-CIPPPartnerTenantList { }
 
     . $FunctionPath
 
@@ -70,7 +72,7 @@ Describe 'Invoke-ListGDAPRoles' {
         Should -Invoke Test-CIPPGDAPGroupMappings -Times 0
         Should -Invoke New-GraphGetRequest -Times 0
         $Response.Body.Count | Should -Be 2
-        $Response.Body[0].PSObject.Properties.Name | Should -Be @('GroupName', 'GroupId', 'RoleName', 'roleDefinitionId')
+        $Response.Body[0].PSObject.Properties.Name | Should -Be @('GroupName', 'GroupId', 'RoleName', 'roleDefinitionId', 'partnerTenantId', 'partnerDisplayName')
     }
 
     It 'annotates each mapping with its group status when asked' {
@@ -93,5 +95,18 @@ Describe 'Invoke-ListGDAPRoles' {
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
         $Response.Body.GroupStatus | Should -Be @('Unknown', 'Unknown')
         Should -Invoke Write-LogMessage -Times 1 -ParameterFilter { $Sev -eq 'Warning' }
+    }
+
+    # The template editor filters mappings by partner from the validated list, so a row that loses
+    # its partner on annotation would be reused for every partner instead of a new group created.
+    It 'keeps the partner attribution on validated rows' {
+        $env:TenantID = 'primary-partner'
+        $Response = Invoke-ListGDAPRoles -Request (New-Request -Validate $true) -TriggerMetadata $null
+        $Response.Body.partnerTenantId | Should -Be @('primary-partner', 'primary-partner')
+        $Response.Body[0].PSObject.Properties.Name | Should -Contain 'partnerDisplayName'
+
+        Mock -CommandName Test-CIPPGDAPGroupMappings -MockWith { throw 'graph is down' }
+        $Degraded = Invoke-ListGDAPRoles -Request (New-Request -Validate $true) -TriggerMetadata $null
+        $Degraded.Body.partnerTenantId | Should -Be @('primary-partner', 'primary-partner')
     }
 }

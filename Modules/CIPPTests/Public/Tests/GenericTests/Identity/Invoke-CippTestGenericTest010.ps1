@@ -23,15 +23,7 @@ function Invoke-CippTestGenericTest010 {
         }
 
         # Load the ConversionTable for friendly names
-        $FriendlyNameMap = @{}
-        $ConvertTable = [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv
-        foreach ($Row in $ConvertTable) {
-            if ($Row.Service_Plan_Name -and $Row.Service_Plans_Included_Friendly_Names) {
-                if (-not $FriendlyNameMap.ContainsKey($Row.Service_Plan_Name)) {
-                    $FriendlyNameMap[$Row.Service_Plan_Name] = $Row.Service_Plans_Included_Friendly_Names
-                }
-            }
-        }
+        $FriendlyNameMap = (Get-CIPPConversionTable).PlanNameByName
 
         $Result = [System.Text.StringBuilder]::new("**Total Active Capabilities:** $($CapabilityProperties.Count)`n`n")
 

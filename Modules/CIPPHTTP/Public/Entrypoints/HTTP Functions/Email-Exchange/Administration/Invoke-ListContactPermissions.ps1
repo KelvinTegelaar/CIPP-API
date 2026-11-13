@@ -13,6 +13,9 @@ Function Invoke-ListContactPermissions {
     $APIName = $Request.Params.CIPPEndpoint
     $UserID = $Request.Query.UserID
     $TenantFilter = $Request.Query.tenantFilter
+    if (-not $UserID) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'UserID is required' } })
+    }
 
     try {
         # -Select everywhere: the Contacts scope returns eight folders of ~90 properties, Get-Mailbox

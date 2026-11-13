@@ -8,6 +8,7 @@ BeforeAll {
     function Test-CIPPStandardLicense { $true }
     function Write-LogMessage { param($API, $tenant, $message, $sev, $LogData) }
     function Get-CippException { param($Exception) }
+    function Set-CIPPDBCacheIntunePolicyGroups { param($TenantFilter) }
     function Add-CIPPDbItem {
         param($TenantFilter, $Type, $Data, [switch]$AddCount, [switch]$ClearOnEmpty)
         $script:Written[$Type] = [pscustomobject]@{ Count = @($Data).Count; ClearOnEmpty = $ClearOnEmpty.IsPresent }
@@ -29,7 +30,7 @@ Describe 'Set-CIPPDBCacheIntuneAppProtectionPolicies' {
 
     It 'clears every type when the tenant has no app protection policies left' {
         Set-CIPPDBCacheIntuneAppProtectionPolicies -TenantFilter 'contoso.com'
-        foreach ($Type in 'IntuneAppProtectionPolicyGroups', 'IntuneAppProtectionManagedAppPolicies', 'IntuneAppProtectionMobileAppConfigurations') {
+        foreach ($Type in 'IntuneAppProtectionManagedAppPolicies', 'IntuneAppProtectionMobileAppConfigurations') {
             $script:Written[$Type].Count | Should -Be 0
             $script:Written[$Type].ClearOnEmpty | Should -BeTrue
         }

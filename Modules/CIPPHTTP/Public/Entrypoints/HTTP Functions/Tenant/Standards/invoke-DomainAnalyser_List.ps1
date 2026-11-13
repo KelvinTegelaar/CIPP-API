@@ -4,7 +4,7 @@ using namespace System.Net
 Function Invoke-DomainAnalyser_List {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         Tenant.DomainAnalyser.Read
     .DESCRIPTION

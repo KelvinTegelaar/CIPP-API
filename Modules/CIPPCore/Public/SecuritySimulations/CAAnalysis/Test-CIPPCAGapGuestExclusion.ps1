@@ -22,6 +22,7 @@ function Test-CIPPCAGapGuestExclusion {
     $TypeLabels = $Reference.guestTypeLabels
     $AllKnownTypes = @($Reference.guestTypeOrder | ForEach-Object { "$_" })
     $RegisterSecurityInfo = "$($Reference.registerSecurityInfoAction)"
+    $FullGuestExclusionIds = [System.Collections.Generic.List[string]]::new()
 
     $LabelOf = {
         param($TypeName)
@@ -51,6 +52,8 @@ function Test-CIPPCAGapGuestExclusion {
         }
 
         $ExcludesAllTypes = $ExcludesGuestsSimple -or (@($AllKnownTypes | Where-Object { $ExcludedGuestTypes -notcontains $_ }).Count -eq 0)
+        # An exemption limited to enumerated external organizations leaves every other guest covered
+        if ($ExcludesAllTypes -and "$($ExcludeObject.externalTenants.membershipKind)" -ne 'enumerated') { $FullGuestExclusionIds.Add("$($Policy.id)") }
 
         $Controls = @($Policy.grantControls.builtInControls)
         $RequiresMfa = ($Controls -contains 'mfa') -or ($null -ne $Policy.grantControls.authenticationStrength)
@@ -148,8 +151,9 @@ function Test-CIPPCAGapGuestExclusion {
             $RequiresMfa = (@($_.grantControls.builtInControls) -contains 'mfa') -or ($null -ne $_.grantControls.authenticationStrength)
             $IncludesGuests -and $RequiresMfa
         }).Count -gt 0
+    # An All-users MFA policy that exempts every guest type does not put MFA on guests
     $HasMfaForAll = @($Context.Enabled | Where-Object {
-            (@($_.conditions.users.includeUsers) -contains 'All') -and ((@($_.grantControls.builtInControls) -contains 'mfa') -or ($null -ne $_.grantControls.authenticationStrength))
+            (@($_.conditions.users.includeUsers) -contains 'All') -and ($FullGuestExclusionIds -notcontains "$($_.id)") -and((@($_.grantControls.builtInControls) -contains 'mfa') -or ($null -ne $_.grantControls.authenticationStrength))
         }).Count -gt 0
 
     if ($GuestExcludingPolicies.Count -gt 0 -and -not $HasGuestSpecificMfa -and -not $HasMfaForAll) {

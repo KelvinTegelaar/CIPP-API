@@ -12,7 +12,8 @@ function Invoke-ExecUserSettings {
 
     try {
         $object = $Request.Body.currentSettings | Select-Object * -ExcludeProperty CurrentTenant, pageSizes, sidebarShow, sidebarUnfoldable, _persist | ConvertTo-Json -Compress -Depth 10
-        $User = $Request.Body.user
+        # Saves either the shared allUsers row or the caller's own, never another user's
+        $User = $Request.Body.user -eq 'allUsers' ? 'allUsers' : ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
         $Table = Get-CippTable -tablename 'UserSettings'
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{

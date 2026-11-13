@@ -11,7 +11,7 @@ function Set-CIPPCPVConsent {
     $TenantName = $Tenant.displayName
     $User = $Headers
 
-    if ($TenantFilter -eq $env:TenantID) {
+    if ($TenantFilter -eq $env:TenantID -or $Tenant.isPartnerTenantRow -eq $true -or (Get-CIPPPartnerTenant -PartnerTenantId $TenantFilter)) {
         return @('Cannot modify CPV consent on partner tenant')
     }
     if ($Tenant.customerId -ne $TenantFilter) {
@@ -21,10 +21,13 @@ function Set-CIPPCPVConsent {
         return @('Application is already consented to this tenant')
     }
 
+    # Partner Center consent calls run as the tenant's owning partner
+    $OwningPartner = Resolve-CIPPOwningPartner -TenantRow $Tenant
+
     if ($ResetSP) {
         try {
             if ($PSCmdlet.ShouldProcess($env:ApplicationID, "Delete Service Principal from $TenantName")) {
-                $null = New-GraphPostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($env:ApplicationID)" -scope 'https://api.partnercenter.microsoft.com/.default' -tenantid $env:TenantID
+                $null = New-GraphPostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($env:ApplicationID)" -scope 'https://api.partnercenter.microsoft.com/.default' -tenantid $OwningPartner
             }
             # The SP is gone, so any cached token for this tenant is now invalid.
             $null = Clear-CippTokenCache -TenantFilter $TenantFilter
@@ -51,7 +54,7 @@ function Set-CIPPCPVConsent {
         } | ConvertTo-Json
 
         if ($PSCmdlet.ShouldProcess($env:ApplicationID, "Add Service Principal to $TenantName")) {
-            $null = New-GraphpostRequest -body $AppBody -Type POST -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents" -scope 'https://api.partnercenter.microsoft.com/.default' -tenantid $env:TenantID
+            $null = New-GraphpostRequest -body $AppBody -Type POST -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents" -scope 'https://api.partnercenter.microsoft.com/.default' -tenantid $OwningPartner
             $Table = Get-CIPPTable -TableName cpvtenants
             $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
             $GraphRequest = @{

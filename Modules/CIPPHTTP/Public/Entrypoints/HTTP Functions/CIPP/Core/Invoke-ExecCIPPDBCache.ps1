@@ -1,7 +1,7 @@
 function Invoke-ExecCIPPDBCache {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         CIPP.Core.ReadWrite
     #>
@@ -12,6 +12,8 @@ function Invoke-ExecCIPPDBCache {
     $TenantFilter = $Request.Query.TenantFilter
     $Name = $Request.Query.Name
     $Types = $Request.Query.Types
+    # A tenant group arrives as AllTenants with the request scope narrowed to the group, so Get-Tenants below lists its tenants
+    $TenantGroup = $Request.Query.tenantGroup
 
     $ParsedTypes = @()
     if (-not [string]::IsNullOrWhiteSpace($Types)) {
@@ -57,7 +59,10 @@ function Invoke-ExecCIPPDBCache {
 
     try {
         # Create queue entry for tracking
-        $QueueName = if ($TenantFilter -eq 'AllTenants') {
+        $GroupName = if ($TenantGroup) { (Get-TenantGroups -GroupId $TenantGroup).Name ?? $TenantGroup }
+        $QueueName = if ($TenantGroup) {
+            "$Name Cache Sync ($GroupName)"
+        } elseif ($TenantFilter -eq 'AllTenants') {
             "$Name Cache Sync (All Tenants)"
         } else {
             "$Name Cache Sync ($TenantFilter)"
@@ -85,12 +90,13 @@ function Invoke-ExecCIPPDBCache {
 
             $InputObject = [PSCustomObject]@{
                 Batch            = @($Batch)
-                OrchestratorName = "CIPPDBCache_${Name}_AllTenants"
+                # A group run gets its own name so it neither blocks nor is blocked by an all-tenants run
+                OrchestratorName = if ($TenantGroup) { "CIPPDBCache_${Name}_Group_$TenantGroup" } else { "CIPPDBCache_${Name}_AllTenants" }
                 AllowCollision   = $false
                 SkipLog          = $false
             }
 
-            Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Starting CIPP DB cache for $Name across $($TenantList.Count) tenants" -sev Info
+            Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Starting CIPP DB cache for $Name across $($TenantList.Count) tenants$(if ($TenantGroup) { " in tenant group $GroupName" })" -sev Info
         } else {
             # Single tenant
             $Queue = New-CippQueueEntry -Name $QueueName -TotalTasks 1
@@ -119,7 +125,7 @@ function Invoke-ExecCIPPDBCache {
         $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
 
         $Skipped = "$InstanceId" -like '*-Skipped'
-        $Scope = if ($TenantFilter -eq 'AllTenants') { 'for all tenants' } else { "on tenant $TenantFilter" }
+        $Scope = if ($TenantGroup) { "for tenant group $GroupName" } elseif ($TenantFilter -eq 'AllTenants') { 'for all tenants' } else { "on tenant $TenantFilter" }
         $ResultsMessage = if ($Skipped) {
             "A $Name cache operation is already running $Scope, so this request was skipped"
         } else {

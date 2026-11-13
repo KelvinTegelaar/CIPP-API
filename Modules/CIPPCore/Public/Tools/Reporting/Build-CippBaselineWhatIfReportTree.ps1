@@ -502,6 +502,21 @@ function Build-CippBaselineWhatIfReportTree {
     foreach ($item in $caChanges) { $state = caStateFor $item; if (-not $caStates.Contains($state)) { $caStates.Add($state) } }
     $simulatedNames = @(foreach ($template in $simulatedTemplates) { orEmpty $template.templateName })
 
+    function waveAdds($standards) {
+        $upcoming = arr $standards
+        $names = @(foreach ($key in @($upcoming | Select-Object -First 3)) { orEmpty ((pv (defOf (baseNameOf $key)) 'label') ?? (baseNameOf $key)) })
+        $text = 'adds {0}' -f $(if ($upcoming.Count -gt 0) { "$($upcoming.Count) more $(plural $upcoming.Count 'protection')" } else { 'further protections' })
+        if ($names.Count -gt 0) { $text = '{0} - {1}{2}' -f $text, ($names -join ', '), $(if ($upcoming.Count -gt $names.Count) { ' and more' }) }
+        $text
+    }
+    # A stage without conditions can only be reached by a manual move.
+    function needsApproval($stage) {
+        $types = [System.Collections.Generic.List[object]]::new()
+        foreach ($condition in (arr $stage.conditions)) { $types.Add($condition.type) }
+        foreach ($group in (arr $stage.conditionGroups)) { foreach ($condition in (arr $group.conditions)) { $types.Add($condition.type) } }
+        $types.Count -eq 0 -or $types -ccontains 'manual'
+    }
+
     # The rollout, one bullet per wave, in plain words - what each wave holds and when the next one
     # lands. Never the raw graduation conditions.
     $waveBullets = [System.Collections.Generic.List[object]]::new()
@@ -514,17 +529,23 @@ function Build-CippBaselineWhatIfReportTree {
                 text  = ('live now{0}.' -f $(if ($liveCount -gt 0) { ", covering $liveCount $(plural $liveCount 'protection')" }))
             })
         if (truthy $state.nextStage) {
-            $upcoming = arr $state.nextStage.standards
-            $names = @(foreach ($key in @($upcoming | Select-Object -First 3)) { orEmpty ((pv (defOf (baseNameOf $key)) 'label') ?? (baseNameOf $key)) })
             $date = formatAdvanceDate $state.estimatedAdvanceAt
-            $text = 'adds {0}' -f $(if ($upcoming.Count -gt 0) { "$($upcoming.Count) more $(plural $upcoming.Count 'protection')" } else { 'further protections' })
-            if ($names.Count -gt 0) { $text = '{0} - {1}{2}' -f $text, ($names -join ', '), $(if ($upcoming.Count -gt $names.Count) { ' and more' }) }
-            $text = '{0}. {1}{2}.' -f $text, $(if ($date) { "Expected around $date" } else { 'Deploys once the current wave has settled in' }), $(if (truthy $state.manualAdvance) { ', after we approve the move together' })
+            $text = '{0}. {1}{2}.' -f (waveAdds $state.nextStage.standards), $(if ($date) { "Expected around $date" } else { 'Deploys once the current wave has settled in' }), $(if (truthy $state.manualAdvance) { ', after we approve the move together' })
             $nextName = if (truthy $state.nextStageName) { " ('$(jsStr $state.nextStageName)')" } else { '' }
             $waveBullets.Add(@{
                     label = ('{0}Wave {1}{2}:' -f $prefix, (jsStr ($state.currentStage + 1)), $nextName)
                     text  = $text
                 })
+            # The waves after the next one come from the baseline itself: the state only carries the next stage.
+            $stages = arr (@($assignedTemplates | Where-Object { $_.GUID -ceq $state.templateId })[0]).stages
+            for ($wave = [int]$state.currentStage + 2; $wave -le $stages.Count; $wave++) {
+                $stage = $stages[$wave - 1]
+                $laterName = if (truthy $stage.name) { " ('$(jsStr $stage.name)')" } else { '' }
+                $waveBullets.Add(@{
+                        label = ('{0}Wave {1}{2}:' -f $prefix, $wave, $laterName)
+                        text  = ('{0}. Follows once wave {1} has settled in{2}.' -f (waveAdds $stage.standards), ($wave - 1), $(if (needsApproval $stage) { ', after we approve the move together' }))
+                    })
+            }
         }
     }
 

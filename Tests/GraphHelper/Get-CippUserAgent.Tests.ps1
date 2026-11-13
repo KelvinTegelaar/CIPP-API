@@ -9,6 +9,7 @@ Describe 'Get-CippUserAgent' {
     BeforeEach {
         $env:CippVersion = '11.1.0'
         $script:CippUserAgentContextStorage = [System.Threading.AsyncLocal[hashtable]]::new()
+        $script:CippBecCaseIdStorage = [System.Threading.AsyncLocal[string]]::new()
     }
     AfterAll { Remove-Item Env:\CippVersion -ErrorAction SilentlyContinue }
 
@@ -24,5 +25,12 @@ Describe 'Get-CippUserAgent' {
         $script:CippUserAgentContextStorage.Value = @{ Source = 'user'; Identity = 'john@msp.com' }
         Get-CippUserAgent | Should -BeExactly 'CIPP/11.1.0 (user:john@msp.com)'
         Get-CippUserAgent -SharePoint | Should -BeExactly 'ISV|CIPP/11.1.0 (user:john@msp.com)'
+    }
+
+    It 'names the BEC or NHI case the request belongs to' {
+        $script:CippBecCaseIdStorage.Value = 'BEC-20261110020000-abc123'
+        Get-CippUserAgent | Should -BeExactly 'CIPP/11.1.0 (case:BEC-20261110020000-abc123)'
+        $script:CippUserAgentContextStorage.Value = @{ Source = 'user'; Identity = 'john@msp.com' }
+        Get-CippUserAgent | Should -BeExactly 'CIPP/11.1.0 (user:john@msp.com; case:BEC-20261110020000-abc123)'
     }
 }

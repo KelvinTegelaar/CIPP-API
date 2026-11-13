@@ -9,82 +9,72 @@ function Invoke-CippTestZTNA22128 {
         $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
         $Guests = Get-CIPPTestData -TenantFilter $Tenant -Type 'Guests'
 
-        if (-not $Roles -or -not $Guests) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application management'
+        if (-not $Roles -or (-not $Guests -and -not (Get-CIPPDbItem -TenantFilter $Tenant -Type 'Guests' -CountsOnly))) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'
             return
         }
 
-        if ($Guests.Count -eq 0) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No guest users found in tenant' -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application management'
-            return
-        }
-
-        $GuestIds = $Guests | ForEach-Object { $_.id }
         $GuestIdHash = @{}
         foreach ($Guest in $Guests) {
             $GuestIdHash[$Guest.id] = $Guest
         }
 
-        $PrivilegedRoleTemplateIds = @(
-            '62e90394-69f5-4237-9190-012177145e10'
-            '194ae4cb-b126-40b2-bd5b-6091b380977d'
-            'f28a1f50-f6e7-4571-818b-6a12f2af6b6c'
-            '29232cdf-9323-42fd-ade2-1d097af3e4de'
-            'b1be1c3e-b65d-4f19-8427-f6fa0d97feb9'
-            '729827e3-9c14-49f7-bb1b-9608f156bbb8'
-            'b0f54661-2d74-4c50-afa3-1ec803f12efe'
-            'fe930be7-5e62-47db-91af-98c3a49a38b1'
-        )
+        $PrivilegedRoleTemplateIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $RoleNamesById = @{}
+        foreach ($Role in (Get-CIPPPrivilegedRoleTemplateIds -WithNames)) {
+            [void]$PrivilegedRoleTemplateIds.Add($Role.Id)
+            $RoleNamesById[$Role.Id] = $Role.DisplayName
+        }
 
         $GuestsInPrivilegedRoles = [System.Collections.Generic.List[object]]::new()
-        foreach ($Role in $Roles) {
-            if ($Role.roleTemplateId -in $PrivilegedRoleTemplateIds -and $Role.members) {
+        if ($GuestIdHash.Count -gt 0) {
+            foreach ($Role in $Roles) {
+                if (-not $PrivilegedRoleTemplateIds.Contains([string]$Role.roleTemplateId)) { continue }
                 foreach ($Member in $Role.members) {
                     if ($GuestIdHash.ContainsKey($Member.id)) {
                         $GuestsInPrivilegedRoles.Add([PSCustomObject]@{
-                            RoleName               = $Role.displayName
-                            GuestId                = $Member.id
-                            GuestDisplayName       = $Member.displayName
-                            GuestUserPrincipalName = $Member.userPrincipalName
-                        })
+                                RoleName       = $Role.displayName
+                                GuestId        = $Member.id
+                                DisplayName    = $GuestIdHash[$Member.id].displayName
+                                UPN            = $GuestIdHash[$Member.id].userPrincipalName
+                                AssignmentType = 'Active'
+                            })
                     }
                 }
+            }
+
+            $Now = [datetimeoffset]::UtcNow
+            foreach ($Eligibility in (Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleEligibilitySchedules')) {
+                if (-not $GuestIdHash.ContainsKey($Eligibility.principalId) -or -not $PrivilegedRoleTemplateIds.Contains([string]$Eligibility.roleDefinitionId)) { continue }
+                $EndDateTime = $Eligibility.scheduleInfo.expiration.endDateTime
+                if ($EndDateTime -and [datetimeoffset]$EndDateTime -lt $Now) { continue }
+                $GuestsInPrivilegedRoles.Add([PSCustomObject]@{
+                        RoleName       = $RoleNamesById[[string]$Eligibility.roleDefinitionId]
+                        GuestId        = $Eligibility.principalId
+                        DisplayName    = $GuestIdHash[$Eligibility.principalId].displayName
+                        UPN            = $GuestIdHash[$Eligibility.principalId].userPrincipalName
+                        AssignmentType = 'Eligible'
+                    })
             }
         }
 
         if ($GuestsInPrivilegedRoles.Count -eq 0) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'Guests with privileged roles were not found. All users with privileged roles are members of the tenant' -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application management'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status 'Passed' -ResultMarkdown "Guests with privileged roles were not found.`n`nAll users with privileged roles are members of the tenant." -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'
             return
         }
 
-        $Status = 'Failed'
-
-        $ResultLines = [System.Collections.Generic.List[string]]::new()
-        $ResultLines.Add("Found $($GuestsInPrivilegedRoles.Count) guest user(s) with privileged role assignments.")
-        $ResultLines.Add('')
-        $ResultLines.Add("**Total guests in tenant:** $($Guests.Count)")
-        $ResultLines.Add("**Guests with privileged roles:** $($GuestsInPrivilegedRoles.Count)")
-        $ResultLines.Add('')
-        $ResultLines.Add('**Guest users in privileged roles:**')
-
-        $RoleGroups = $GuestsInPrivilegedRoles | Group-Object -Property RoleName
-        foreach ($RoleGroup in $RoleGroups) {
-            $ResultLines.Add('')
-            $ResultLines.Add("**$($RoleGroup.Name)** ($($RoleGroup.Count) guest(s)):")
-            foreach ($Guest in $RoleGroup.Group) {
-                $ResultLines.Add("- $($Guest.GuestDisplayName) ($($Guest.GuestUserPrincipalName))")
-            }
+        $Result = [System.Text.StringBuilder]::new("Guests with privileged roles were detected.`n`n## Guests with privileged roles`n`n")
+        $null = $Result.Append("| Role name | User name | User principal name | Assignment type |`n")
+        $null = $Result.Append("| :-------- | :-------- | :------------------ | :-------------- |`n")
+        foreach ($Assignment in $GuestsInPrivilegedRoles) {
+            $PortalLink = "https://entra.microsoft.com/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/$($Assignment.GuestId)/hidePreviewBanner~/true"
+            $null = $Result.Append("| $($Assignment.RoleName) | [$($Assignment.DisplayName)]($PortalLink) | $($Assignment.UPN) | $($Assignment.AssignmentType) |`n")
         }
 
-        $ResultLines.Add('')
-        $ResultLines.Add('**Security concern:** Guest users should not have privileged directory roles. Consider using separate admin accounts for external administrators or removing privileged access.')
-
-        $Result = $ResultLines -join "`n"
-
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application management'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status 'Failed' -ResultMarkdown $Result.ToString() -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Application management'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA22128' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Guests are not assigned high privileged directory roles' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'
     }
 }

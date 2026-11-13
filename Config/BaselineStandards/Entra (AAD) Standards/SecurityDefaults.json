@@ -7,7 +7,10 @@
     "SMB1001 (2.5)",
     "SMB1001 (2.6)",
     "SMB1001 (2.9)",
-    "BlockLegacyAuthentication"
+    "BlockLegacyAuthentication",
+    "CMMC (IA.L2-3.5.3)",
+    "FedRAMP A-D (KSI-IAM-APM)",
+    "NIST SP 800-171 (3.5.3)"
   ],
   "impact": "High Impact",
   "helpText": "Enables security defaults for the tenant, for newer tenants this is enabled by default. Do not enable this feature if you use Conditional Access. Microsoft refuses to enable security defaults while any Conditional Access policy exists ('Conditional access policies are enabled. Please disable and try again.'), so remediation always fails on tenants that have CA policies.",

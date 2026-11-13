@@ -92,11 +92,13 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
 
     if ($Settings.remediate -eq $true) {
         try {
-            # Change state to enabled with default settings
-            $CurrentInfo.isEnabled = 'true'
-            $CurrentInfo.notifyReviewers = 'true'
-            $CurrentInfo.remindersEnabled = 'true'
-            $CurrentInfo.requestDurationInDays = 30
+            # Change state to enabled with default settings, on a copy: $CurrentInfo feeds alert
+            # and report below and must keep the real state if the PUT fails
+            $NewInfo = $CurrentInfo | Select-Object -Property *
+            $NewInfo.isEnabled = 'true'
+            $NewInfo.notifyReviewers = 'true'
+            $NewInfo.remindersEnabled = 'true'
+            $NewInfo.requestDurationInDays = 30
 
             $NewReviewers = [System.Collections.Generic.List[object]]::new()
             foreach ($Role in $RolesToAdd) {
@@ -135,10 +137,11 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
             }
 
             # Update reviewer list
-            $CurrentInfo.reviewers = @($Reviewers)
-            $body = (ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo)
+            $NewInfo.reviewers = @($Reviewers)
+            $body = (ConvertTo-Json -Compress -Depth 10 -InputObject $NewInfo)
 
             New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/adminConsentRequestPolicy' -Type put -Body $body -ContentType 'application/json'
+            $CurrentInfo = $NewInfo
             $UserLogSuffix = if ($ReviewerUsers.Count -gt 0) { " and the following users: $(@($ReviewerUsers | ForEach-Object { $_.displayName }) -join ', ')" } else { '' }
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled App consent admin requests for the following roles: $RoleNames$UserLogSuffix" -sev Info
 

@@ -69,6 +69,7 @@ function Invoke-CippTestZTNA21818 {
         )
 
         $NotificationRules = [System.Collections.Generic.List[object]]::new()
+        $MissingRules = [System.Collections.Generic.List[string]]::new()
         $Passed = $true
         $ExitLoop = $false
 
@@ -89,22 +90,28 @@ function Invoke-CippTestZTNA21818 {
             foreach ($NotificationRuleId in $Notifications.RuleId) {
                 $Rule = $Policy.rules.Where({ $_.id -eq $NotificationRuleId }, 'First')[0]
 
-                if ($Rule) {
-                    $RuleWithRole = $Rule | Select-Object *, @{Name = 'RoleDisplayName'; Expression = { $Role.displayName } }
-                    $NotificationRules.Add($RuleWithRole)
+                if (-not $Rule) {
+                    $MissingRules.Add("$($Role.displayName): $NotificationRuleId")
+                    continue
+                }
 
-                    if ($Rule.isDefaultRecipientsEnabled -eq $true -and ($Rule.notificationRecipients.Count -eq 0 -or $null -eq $Rule.notificationRecipients)) {
-                        $Passed = $false
-                        $ExitLoop = $true
-                        break
-                    }
+                $RuleWithRole = $Rule | Select-Object *, @{Name = 'RoleDisplayName'; Expression = { $Role.displayName } }
+                $NotificationRules.Add($RuleWithRole)
+
+                # A rule notifies nobody only when default recipients are off and no extra recipients are set.
+                if ($Rule.isDefaultRecipientsEnabled -eq $false -and ($null -eq $Rule.notificationRecipients -or $Rule.notificationRecipients.Count -eq 0)) {
+                    $Passed = $false
+                    $ExitLoop = $true
+                    break
                 }
             }
 
             if ($ExitLoop) { break }
         }
 
-        if ($Passed) {
+        if ($Passed -and $MissingRules.Count -gt 0) {
+            $ResultMarkdown = [System.Text.StringBuilder]::new("No privileged role was found with silenced notifications, but some notification rules were missing from the cached PIM role settings and could not be checked. Refresh the tenant's cache and re-run.`n`n- $($MissingRules -join "`n- ")`n`n")
+        } elseif ($Passed) {
             $ResultMarkdown = [System.Text.StringBuilder]::new("Role notifications are properly configured for privileged role.`n`n")
         } else {
             $ResultMarkdown = [System.Text.StringBuilder]::new("Role notifications are not properly configured.`n`nNote: To save time, this check stops when it finds the first role that does not have notifications. After fixing this role and all other roles, we recommend running the check again to verify.`n`n")
@@ -120,7 +127,7 @@ function Invoke-CippTestZTNA21818 {
             $null = $ResultMarkdown.Append("| $($NotificationRule.roleDisplayName) | $($MatchingNotification.notificationScenario) | $($MatchingNotification.notificationType) | $($NotificationRule.isDefaultRecipientsEnabled) | $Recipients |`n")
         }
 
-        $Status = if ($Passed) { 'Passed' } else { 'Failed' }
+        $Status = if (-not $Passed) { 'Failed' } elseif ($MissingRules.Count -gt 0) { 'Investigate' } else { 'Passed' }
         Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Status -ResultMarkdown $ResultMarkdown -Risk 'High' -Name 'Privileged role activations have monitoring and alerting configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Monitoring'
 
     } catch {

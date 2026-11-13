@@ -7,11 +7,15 @@ function New-CIPPBecCaseId {
         sortable as table RowKeys (so a user's run history lists in order) and the random suffix keeps
         two runs queued in the same second distinct. The id is stamped on the run row, the results
         row, every logbook entry written during the case and the evidence package.
+    .PARAMETER Prefix
+        BEC for a user investigation, NHI for a non-human identity (service principal) investigation.
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [ValidateSet('BEC', 'NHI')][string]$Prefix = 'BEC'
+    )
 
-    return 'BEC-{0}-{1}' -f (Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss'), [guid]::NewGuid().ToString('N').Substring(0, 6)
+    return '{0}-{1}-{2}' -f $Prefix, (Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss'), [guid]::NewGuid().ToString('N').Substring(0, 6)
 }

@@ -14,6 +14,10 @@ function Get-CIPPBaselineGlobalSecureAccessCompliantNetworkState {
     $DeployWindows = $V.deployWindows -ne $false
     $DeployMacOS = $V.deployMacOS -ne $false
     $Enforce = $V.enforce -eq $true
+    # The policy name is operator-chosen (issue #1173); baselines saved before the variable existed carry none.
+    $PolicyName = "$($V.policyName)"
+    if (-not $PolicyName) { $PolicyName = 'CIPP: Require compliant network (Global Secure Access)' }
+    $PolicyName = $(try { Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $PolicyName } catch { $PolicyName })
     $RoleIds = @($V.excludeAdminRoles | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ } | Sort-Object -Unique)
     $UserRefs = @($V.excludeUsers | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
     $GroupRefs = @($V.excludeGroups | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
@@ -63,7 +67,7 @@ function Get-CIPPBaselineGlobalSecureAccessCompliantNetworkState {
     }
 
     $Policies = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies')
-    $Policy = @($Policies | Where-Object { $_.displayName -eq 'CIPP: Require compliant network (Global Secure Access)' }) | Select-Object -First 1
+    $Policy = @($Policies | Where-Object { $_.displayName -eq $PolicyName }) | Select-Object -First 1
     $Expected.policyPresent = $true
     $Current.policyPresent = $null -ne $Policy
     $Expected.policyState = if ($Enforce) { 'enabled' } else { 'enabledForReportingButNotEnforced' }

@@ -47,6 +47,16 @@ Describe 'Get-CIPPBaselineSPGuestPeoplePickerState' {
         @($p.Current.offenders) | Should -BeNullOrEmpty
     }
 
+    It 'ignores the My Site host, which SharePoint refuses the setting on' {
+        Mock Get-CIPPSPOTenant { [PSCustomObject]@{ ShowPeoplePickerSuggestionsForGuestUsers = $true } }
+        Mock New-CIPPDbRequest { @(
+                [PSCustomObject]@{ Url = 'https://c-my.sharepoint.com/'; Template = 'SPSMSITEHOST#0'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
+                [PSCustomObject]@{ Url = 'https://c.sharepoint.com/sites/A'; Template = 'STS#3'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
+            ) }
+        $p = Get-CIPPBaselineSPGuestPeoplePickerState -Item (New-Item2 -ShowGuests $true) -TenantFilter $script:Tenant
+        @($p.Current.offenders) | Should -Be @('https://c.sharepoint.com/sites/A')
+    }
+
     It 'returns null Current when the tenant read fails' {
         Mock Get-CIPPSPOTenant { throw 'SharePoint admin access denied' }
         Mock New-CIPPDbRequest { @() }

@@ -15,12 +15,12 @@ function Invoke-CippTestCIS_8_2_4 {
 
         $Cfg = @($Federation)[0]
 
-        if ($Cfg.AllowTeamsConsumer -eq $false) {
+        if ($Cfg.ExternalAccessWithTrialTenants -eq 'Blocked') {
             $Status = 'Passed'
-            $Result = 'Trial Teams tenant communication is blocked (AllowTeamsConsumer: false).'
+            $Result = 'Trial Teams tenant communication is blocked (ExternalAccessWithTrialTenants: Blocked).'
         } else {
             $Status = 'Failed'
-            $Result = "Trial Teams tenant communication is allowed (AllowTeamsConsumer: $($Cfg.AllowTeamsConsumer))."
+            $Result = "Trial Teams tenant communication is allowed (ExternalAccessWithTrialTenants: $($Cfg.ExternalAccessWithTrialTenants))."
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_8_2_4' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'The organization cannot communicate with accounts in trial Teams tenants' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'External Collaboration'

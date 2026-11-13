@@ -1,7 +1,7 @@
 function Invoke-ListAlertRunHistory {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         CIPP.Alert.Read
     .SYNOPSIS

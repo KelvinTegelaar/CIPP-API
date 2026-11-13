@@ -16,13 +16,19 @@ Function Invoke-ListGDAPRoles {
 
     $Table = Get-CIPPTable -TableName 'GDAPRoles'
     $Groups = Get-CIPPAzDataTableEntity @Table
+    $Partners = @(Get-CIPPPartnerTenantList)
 
     $MappedGroups = foreach ($Group in $Groups) {
+        # Rows created before multi-partner have no partner column and belong to the primary
+        $PartnerId = if ($Group.partnerTenantId) { "$($Group.partnerTenantId)" } else { "$env:TenantID" }
+        $Partner = $Partners | Where-Object { $_.partnerTenantId -eq $PartnerId } | Select-Object -First 1
         [PSCustomObject]@{
-            GroupName        = $Group.GroupName
-            GroupId          = $Group.GroupId
-            RoleName         = $Group.RoleName
-            roleDefinitionId = $Group.roleDefinitionId
+            GroupName          = $Group.GroupName
+            GroupId            = $Group.GroupId
+            RoleName           = $Group.RoleName
+            roleDefinitionId   = $Group.roleDefinitionId
+            partnerTenantId    = $PartnerId
+            partnerDisplayName = $Partner.displayName ?? $PartnerId
         }
     }
 
@@ -48,6 +54,8 @@ Function Invoke-ListGDAPRoles {
                     GroupId            = $Group.GroupId
                     RoleName           = $Group.RoleName
                     roleDefinitionId   = $Group.roleDefinitionId
+                    partnerTenantId    = $Group.partnerTenantId
+                    partnerDisplayName = $Group.partnerDisplayName
                     GroupStatus        = $Status.Status ?? 'Unknown'
                     GroupStatusMessage = $Status.Message ?? ''
                 }
@@ -61,6 +69,8 @@ Function Invoke-ListGDAPRoles {
                     GroupId            = $Group.GroupId
                     RoleName           = $Group.RoleName
                     roleDefinitionId   = $Group.roleDefinitionId
+                    partnerTenantId    = $Group.partnerTenantId
+                    partnerDisplayName = $Group.partnerDisplayName
                     GroupStatus        = 'Unknown'
                     GroupStatusMessage = ''
                 }

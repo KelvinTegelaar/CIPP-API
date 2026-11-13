@@ -3,7 +3,11 @@
   "label": "Block sign-in for Teams resource accounts",
   "cat": "Teams Standards",
   "tag": [
-    "NIST CSF 2.0 (PR.AA-01)"
+    "NIST CSF 2.0 (PR.AA-01)",
+    "CMMC (AC.L1-b.1.i)",
+    "CMMC (AC.L2-3.1.1)",
+    "FedRAMP A-D (KSI-IAM-AAM)",
+    "NIST SP 800-171 (3.1.1)"
   ],
   "impact": "Medium Impact",
   "helpText": "Blocks sign-in for all Teams resource accounts used by Auto Attendants and Call Queues. Microsoft's guidance is to block sign-in for resource accounts as they do not require an interactive login to function.",

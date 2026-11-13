@@ -36,6 +36,9 @@ function New-CIPPBackup {
                     $BackupTables = @(
                         'AppPermissions'
                         'AccessRoleGroups'
+                        'AccessIPRanges'
+                        'allowedAppRoles'
+                        'allowedUsers'
                         'ApiClients'
                         'CippReplacemap'
                         'CustomPowershellScripts'
@@ -58,6 +61,7 @@ function New-CIPPBackup {
                         'TenantProperties'
                         'TenantGroups'
                         'TenantGroupMembers'
+                        'PartnerTenants'
                         'BaselineRollouts'
                         'Baselines'
                         'BaselineRolloutState'
@@ -72,18 +76,29 @@ function New-CIPPBackup {
                         if ($CSVTable -eq 'Config') {
                             $Entities = $Entities | Where-Object { $_.PartitionKey -ne 'OffloadFunctions' }
                         }
+                        if ($CSVTable -eq 'allowedUsers') {
+                            # Rows prefixed with '_' are user sync bookkeeping, rebuilt on the next sync.
+                            $Entities = $Entities | Where-Object { -not "$($_.RowKey)".StartsWith('_') }
+                        }
                         $Entities | Select-Object * -ExcludeProperty DomainAnalyser, table, Timestamp, ETag, Results | Select-Object *, @{l = 'table'; e = { $CSVTable } }
                     }
-                    # Back up excluded tenant rows (user-configured exclusion state only)
+                    # GDAP tenants are rebuilt from the partner's relationships; exclusions and direct tenants
+                    # exist only in this table, so those rows are the ones kept.
+                    $BackupRows = [System.Collections.Generic.List[object]]::new()
+                    foreach ($Row in $CSVfile) { $BackupRows.Add($Row) }
                     $TenantsTable = Get-CippTable -tablename 'Tenants'
-                    $ExcludedTenants = Get-AzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq true"
-                    if ($ExcludedTenants) {
-                        $CSVfile = @($CSVfile) + @(
-                            $ExcludedTenants | Select-Object PartitionKey, RowKey, customerId, defaultDomainName, displayName, Excluded, ExcludeDate, ExcludeUser | Select-Object *, @{l = 'table'; e = { 'Tenants' } }
-                        )
+                    $TenantRows = Get-AzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and (Excluded eq true or delegatedPrivilegeStatus eq 'directTenant')"
+                    foreach ($TenantRow in $TenantRows) {
+                        $BackupRow = if ($TenantRow.delegatedPrivilegeStatus -eq 'directTenant') {
+                            # Restored as needing a refresh: the token is not part of the backup.
+                            $TenantRow | Select-Object PartitionKey, RowKey, customerId, defaultDomainName, initialDomainName, displayName, delegatedPrivilegeStatus, directTenantUserPrincipalName, @{l = 'directTenantAuthDate'; e = { if ($_.directTenantAuthDate -is [DateTimeOffset]) { $_.directTenantAuthDate.UtcDateTime.ToString('o') } else { $_.directTenantAuthDate } } }, Excluded, ExcludeDate, ExcludeUser, @{l = 'RequiresRefresh'; e = { $true } }
+                        } else {
+                            $TenantRow | Select-Object PartitionKey, RowKey, customerId, defaultDomainName, displayName, Excluded, ExcludeDate, ExcludeUser
+                        }
+                        $BackupRows.Add(($BackupRow | Select-Object *, @{l = 'table'; e = { 'Tenants' } }))
                     }
                     $RowKey = 'CIPPBackup' + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
-                    $BackupData = [string]($CSVfile | ConvertTo-Json -Compress -Depth 100)
+                    $BackupData = [string]($BackupRows | ConvertTo-Json -Compress -Depth 100)
                     $TableName = 'CIPPBackup'
                     $PartitionKey = 'CIPPBackup'
                     $ContainerName = 'cipp-backups'

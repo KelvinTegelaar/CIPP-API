@@ -2,6 +2,8 @@ BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $Orchestrators = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Entrypoints/Orchestrator Functions'
     $Http = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions'
+    # Returns nothing: no additional partner tenants to add to the permission run.
+    function Get-CIPPPartnerTenant { [CmdletBinding()] param($PartnerTenantId, [switch]$IncludeDisabled) }
     . (Join-Path $Orchestrators 'Start-CIPPOrchestrator.ps1')
     . (Join-Path $Orchestrators 'Resolve-CIPPOrchestratorPriority.ps1')
     . (Join-Path $Orchestrators 'Start-SchedulerOrchestrator.ps1')

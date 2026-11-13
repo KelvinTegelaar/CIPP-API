@@ -27,11 +27,11 @@ function Invoke-CippTestZTNA21954 {
                 TestType             = 'Identity'
                 Status               = 'Skipped'
                 ResultMarkdown       = 'Unable to retrieve authorization policy from cache.'
-                Risk                 = 'Low'
-                Name                 = 'Restrict non-admin users from reading BitLocker recovery keys'
+                Risk                 = 'High'
+                Name                 = 'Restrict nonadministrator users from recovering the BitLocker keys for their owned devices'
                 UserImpact           = 'Low'
                 ImplementationEffort = 'Low'
-                Category             = 'Device security'
+                Category             = 'Devices'
             }
             Add-CippTestResult @TestParams
             return
@@ -56,11 +56,11 @@ function Invoke-CippTestZTNA21954 {
             TestType             = 'Identity'
             Status               = $Status
             ResultMarkdown       = $ResultMarkdown
-            Risk                 = 'Low'
-            Name                 = 'Restrict non-admin users from reading BitLocker recovery keys'
+            Risk                 = 'High'
+            Name                 = 'Restrict nonadministrator users from recovering the BitLocker keys for their owned devices'
             UserImpact           = 'Low'
             ImplementationEffort = 'Low'
-            Category             = 'Device security'
+            Category             = 'Devices'
         }
         Add-CippTestResult @TestParams
 
@@ -71,11 +71,11 @@ function Invoke-CippTestZTNA21954 {
             TestType             = 'Identity'
             Status               = 'Failed'
             ResultMarkdown       = "❌ **Error**: $($_.Exception.Message)"
-            Risk                 = 'Low'
-            Name                 = 'Restrict non-admin users from reading BitLocker recovery keys'
+            Risk                 = 'High'
+            Name                 = 'Restrict nonadministrator users from recovering the BitLocker keys for their owned devices'
             UserImpact           = 'Low'
             ImplementationEffort = 'Low'
-            Category             = 'Device security'
+            Category             = 'Devices'
         }
         Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA21954 failed: $($_.Exception.Message)" -sev Error

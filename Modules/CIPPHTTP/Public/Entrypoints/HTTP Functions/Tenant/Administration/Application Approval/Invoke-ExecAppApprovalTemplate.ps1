@@ -16,6 +16,14 @@ function Invoke-ExecAppApprovalTemplate {
     $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json
 
     $Action = $Request.Query.Action ?? $Request.Body.Action
+    $CanWrite = switch ($Action) {
+        'Save' { Test-CippTemplateWriteAccess -PartitionKey 'AppApprovalTemplate' -RowKey $Request.Body.TemplateId }
+        'Delete' { Test-CippTemplateWriteAccess }
+        default { $true }
+    }
+    if (-not $CanWrite) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::Forbidden; Body = @{ Results = 'Roles limited to specific tenants cannot change or remove shared templates.' } })
+    }
     $StatusCode = [HttpStatusCode]::OK
 
     switch ($Action) {

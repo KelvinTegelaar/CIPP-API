@@ -14,6 +14,9 @@ function Invoke-RemoveStandardTemplate {
 
     # Interact with query parameters or the body of the request.
     $ID = $Request.Body.ID ?? $Request.Query.ID
+    if (-not $ID) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'ID is required' } })
+    }
     try {
         $Table = Get-CippTable -tablename 'templates'
         $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
@@ -24,7 +27,11 @@ function Invoke-RemoveStandardTemplate {
         } else {
             $TemplateName = ''
         }
+        # The request names no tenant, so check the tenants the template targets; the import placeholder targets nothing.
+        $Targets = @(foreach ($Row in $ClearRow) { if ($Row.JSON) { (ConvertFrom-Json -InputObject $Row.JSON -ErrorAction SilentlyContinue).tenantFilter } }) | Where-Object { "$($_.value ?? $_)" -ne 'Template Tenant' }
+        if ($Targets) { Assert-CippTenantAccess -Request $Request -TenantFilter @($Targets) }
         $Entities = Get-AzDataTableEntity @Table -Filter $Filter
+        if (-not $Entities) { throw [System.Management.Automation.ItemNotFoundException]::new("No standards template with id $ID was found.") }
         Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entities
 
         # Remove any drift remediation scheduled tasks associated with this template
@@ -61,7 +68,7 @@ function Invoke-RemoveStandardTemplate {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to remove Standards template: $TemplateName with id: $ID. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

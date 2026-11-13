@@ -14,7 +14,8 @@ function Invoke-EditTenantVacationDefaults {
 
     # Interact with query parameters or the body of the request.
     $customerId = $Request.Body.customerId
-    $defaultDomainName = $Request.Body.defaultDomainName
+    # Older rows are keyed by domain; take it from the tenant, never the body, so a clear cannot reach another tenant's row
+    $defaultDomainName = @(Get-Tenants -TenantFilter $customerId -IncludeErrors)[0].defaultDomainName
     $vacationDefaults = $Request.Body.vacationDefaults
 
     if (!$customerId) {

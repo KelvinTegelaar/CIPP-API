@@ -21,7 +21,7 @@ function New-CIPPIntuneReportExportJob {
         [string]$TenantFilter,
 
         [Parameter(Mandatory = $true)]
-        [ValidateSet('AppInvRawData', 'AppInstallStatusAggregate')]
+        [ValidateSet('AppInvRawData', 'AppInstallStatusAggregate', 'NoncompliantDevicesAndSettingsV3')]
         [string]$ReportName
     )
 
@@ -38,6 +38,12 @@ function New-CIPPIntuneReportExportJob {
                 'ApplicationId', 'DisplayName', 'Publisher', 'Platform', 'AppVersion', 'AppPlatform',
                 'InstalledDeviceCount', 'FailedDeviceCount', 'FailedUserCount',
                 'PendingInstallDeviceCount', 'NotInstalledDeviceCount', 'FailedDevicePercentage'
+            )
+        }
+        'NoncompliantDevicesAndSettingsV3' {
+            @(
+                'DeviceId', 'DeviceName', 'UPN', 'OS', 'OSVersion',
+                'PolicyName', 'SettingName', 'SettingNm', 'SettingStatus', 'ErrorCode'
             )
         }
     }

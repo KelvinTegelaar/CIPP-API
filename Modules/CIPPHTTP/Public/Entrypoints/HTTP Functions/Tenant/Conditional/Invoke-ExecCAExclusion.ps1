@@ -79,9 +79,9 @@ function Invoke-ExecCAExclusion {
             $EndDate = $Request.Body.EndDate
             # Detect if policy targets specific named locations (GUIDs) and user requested audit log exclusion
             $GuidRegex = '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-            $LocationIds = @()
-            if ($Policy.conditions.locations.includeLocations) { $LocationIds += $Policy.conditions.locations.includeLocations }
-            if ($Policy.conditions.locations.excludeLocations) { $LocationIds += $Policy.conditions.locations.excludeLocations }
+            $LocationIds = [System.Collections.Generic.List[string]]::new()
+            foreach ($LocationId in $Policy.conditions.locations.includeLocations) { if ($LocationId) { $LocationIds.Add($LocationId) } }
+            foreach ($LocationId in $Policy.conditions.locations.excludeLocations) { if ($LocationId) { $LocationIds.Add($LocationId) } }
             $PolicyHasGuidLocations = $LocationIds | Where-Object { $_ -match $GuidRegex }
 
             $Parameters = [PSCustomObject]@{
@@ -142,6 +142,8 @@ function Invoke-ExecCAExclusion {
 
             # Optional: temporary travel policy that only allows sign-ins from the travel destination
             $TravelCountries = @($Request.Body.TravelCountries.value | Where-Object { $_ })
+            $TravelExistingLocations = @($Request.Body.TravelExistingLocations | ForEach-Object { $_.value ?? $_ } | Where-Object { $_ -match $GuidRegex })
+            $TravelAllowTrusted = [bool]$Request.Body.TravelAllowTrusted
             if ($Request.Body.CreateTravelPolicy -eq $true -and $TravelCountries.Count -gt 0) {
                 $TravelUsers = @($Users.addedFields.userPrincipalName ?? $Users.value ?? $Users ?? $UserID)
                 $StartLabel = [DateTimeOffset]::FromUnixTimeSeconds([int64]$StartDate).ToString('yyyy-MM-dd')
@@ -160,9 +162,11 @@ function Invoke-ExecCAExclusion {
                         label = 'New-CIPPTravelPolicy'
                     }
                     Parameters    = [pscustomobject]@{
-                        Users      = $TravelUsers
-                        Countries  = $TravelCountries
-                        PolicyName = $TravelPolicyName
+                        Users             = $TravelUsers
+                        Countries         = $TravelCountries
+                        PolicyName        = $TravelPolicyName
+                        ExistingLocations = $TravelExistingLocations
+                        AllowTrusted      = $TravelAllowTrusted
                     }
                     ScheduledTime = $StartDate
                     PostExecution = $Request.Body.postExecution

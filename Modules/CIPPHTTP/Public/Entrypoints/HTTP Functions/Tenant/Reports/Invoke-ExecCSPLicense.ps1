@@ -34,8 +34,12 @@ function Invoke-ExecCSPLicense {
         if ($Action -eq 'ScheduleRemoval') {
             $RemoveCount = [int]($Request.Body.Remove ?? 1)
             if ($RemoveCount -lt 1) { $RemoveCount = 1 }
-            $DaysBefore = [int]($Request.Body.DaysBeforeRenewal ?? 3)
-            if ($DaysBefore -lt 1) { $DaysBefore = 3 }
+            # Committed (NCE) subscriptions can only be decreased in the first seven days of a new term,
+            # so the task must run just AFTER the renewal date, never before it. Clamp to 1-6 days so it
+            # always lands inside that window while giving Sherweb a day to process the renewal.
+            $DaysAfter = [int]($Request.Body.DaysAfterRenewal ?? 1)
+            if ($DaysAfter -lt 1) { $DaysAfter = 1 }
+            if ($DaysAfter -gt 6) { $DaysAfter = 6 }
 
             $Subscription = Get-SherwebCurrentSubscription -TenantFilter $TenantFilter -SKU $SKU | Select-Object -First 1
             if (-not $Subscription) {
@@ -45,9 +49,11 @@ function Invoke-ExecCSPLicense {
             if (-not $RenewalDate) {
                 throw "The subscription '$($Subscription.productName)' does not have a renewal date, so a decrease cannot be scheduled at renewal."
             }
-            $RunAt = ([datetimeoffset]$RenewalDate).UtcDateTime.AddDays(-$DaysBefore)
+            # The renewal date is a calendar date (the first day of the next term); treat it as UTC midnight.
+            $RenewalDay = [datetime]::SpecifyKind(([datetime]$RenewalDate).Date, [System.DateTimeKind]::Utc)
+            $RunAt = $RenewalDay.AddDays($DaysAfter)
             if ($RunAt -le [datetime]::UtcNow) {
-                throw "The renewal date ($(([datetimeoffset]$RenewalDate).ToString('yyyy-MM-dd'))) minus $DaysBefore day(s) is already in the past. Use the immediate decrease action instead."
+                throw "The renewal date ($($RenewalDay.ToString('yyyy-MM-dd'))) plus $DaysAfter day(s) is already in the past. If the subscription renewed less than seven days ago, use the immediate decrease action instead."
             }
 
             $TaskBody = [pscustomobject]@{
@@ -64,7 +70,7 @@ function Invoke-ExecCSPLicense {
                 ScheduledTime = [int64]([datetimeoffset]$RunAt).ToUnixTimeSeconds()
             }
             $null = Add-CIPPScheduledTask -Task $TaskBody -hidden $false -Headers $Headers
-            $Result = "Scheduled a decrease of $RemoveCount license(s) for '$($Subscription.productName)' on $($RunAt.ToString('yyyy-MM-dd HH:mm')) UTC, $DaysBefore day(s) before the renewal date. The decrease only executes if at least $RemoveCount license(s) are unassigned at that time."
+            $Result = "Scheduled a decrease of $RemoveCount license(s) for '$($Subscription.productName)' on $($RunAt.ToString('yyyy-MM-dd HH:mm')) UTC, $DaysAfter day(s) after the renewal date of $($RenewalDay.ToString('yyyy-MM-dd')). Committed subscriptions can only be decreased in the first seven days of a new term, so the task runs just after renewal rather than before it. The decrease only executes if at least $RemoveCount license(s) are unassigned at that time."
         } else {
             $Result = 'License change executed successfully.'
         }

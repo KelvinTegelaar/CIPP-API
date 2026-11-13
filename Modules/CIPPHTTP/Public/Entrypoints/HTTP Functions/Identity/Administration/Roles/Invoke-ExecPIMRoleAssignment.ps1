@@ -58,6 +58,14 @@ function Invoke-ExecPIMRoleAssignment {
         return (& $Fail 'Permanent (no-expiration) assignments cannot be created through CIPP. Supply a duration or an end date.')
     }
 
+    # Actions that grant or prolong a role follow the caller's JIT Role Template, like JIT admin does.
+    if ($Action -in @('GrantActive', 'Extend', 'Renew')) {
+        $AllowedRoles = Get-CIPPJITAdminAllowedRoles -Headers $Headers
+        if ($AllowedRoles.Restricted -and $AllowedRoles.AllowedRoleIds -notcontains $RoleDefinitionId) {
+            return (& $Fail "You are not permitted to $Action the role $RoleDefinitionId." ([HttpStatusCode]::Forbidden))
+        }
+    }
+
     $EndDateTime = $null
     if (-not [string]::IsNullOrWhiteSpace("$EndDateTimeRaw")) {
         try {

@@ -3,7 +3,9 @@
   "label": "Set Teams chat with anyone setting",
   "cat": "Teams Standards",
   "tag": [
-    "CIS M365 7.0.0 (8.2.3)"
+    "CMMC (AC.L1-b.1.iii)",
+    "CMMC (AC.L2-3.1.20)",
+    "NIST SP 800-171 (3.1.20)"
   ],
   "impact": "Low Impact",
   "helpText": "Controls whether users can start Teams chats with any email address, inviting external recipients as guests via email.",
@@ -12,9 +14,6 @@
   "impactColour": "info",
   "addedDate": "2025-11-03",
   "powershellEquivalent": "Set-CsTeamsMessagingPolicy -Identity Global -UseB2BInvitesToAddExternalUsers $false/$true",
-  "appliesToTest": [
-    "CIS_8_2_3"
-  ],
   "recommendedBy": [
     "CIPP"
   ],

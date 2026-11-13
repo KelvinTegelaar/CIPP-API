@@ -64,6 +64,11 @@ function Get-CIPPBaselineCATemplateState {
     }
     if (-not $TemplateRow) { throw "Conditional Access template '$TemplateRef' was not found in the template store." }
     $Template = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $TemplateRow.JSON -EscapeForJson | ConvertFrom-Json -Depth 100
+    # Risk conditions are an Entra ID P2 feature; Graph rejects the policy without it (1039).
+    # One capability group per feature, all required: risk conditions need P2 (Graph rejects them with 1039), a security profile needs Internet Access.
+    $RequiredCapabilities = [System.Collections.Generic.List[object]]::new()
+    if ((@($Template.conditions.signInRiskLevels) + @($Template.conditions.userRiskLevels)).Where({ $_ })) { $RequiredCapabilities.Add(@('AAD_PREMIUM_P2')) }
+    if ($Template.sessionControls.globalSecureAccessFilteringProfile.isEnabled -eq $true -and $Template.sessionControls.globalSecureAccessFilteringProfile.profileId) { $RequiredCapabilities.Add(@('Entra_Premium_Internet_Access')) }
 
     # --- lookup maps, cache-only
     $NameById = @{}
@@ -149,6 +154,12 @@ function Get-CIPPBaselineCATemplateState {
         # sessionControls scrub AFTER the null strip, applied to BOTH sides: drop
         # disableResilienceDefaults unless explicitly true, drop the object when empty.
         if ($Policy.sessionControls) {
+            $Policy.sessionControls.PSObject.Properties.Remove('networkAccessSecurity')
+            $ProfileControl = $Policy.sessionControls.globalSecureAccessFilteringProfile
+            if ($ProfileControl.profileId) {
+                $ProfileRef = "$($ProfileControl.profileId.value ?? $ProfileControl.profileId)"
+                $ProfileControl.profileId = $ProfileNameByRef[$ProfileRef] ?? $ProfileRef
+            }
             if ($Policy.sessionControls.disableResilienceDefaults -ne $true) { $Policy.sessionControls.PSObject.Properties.Remove('disableResilienceDefaults') }
             if (@($Policy.sessionControls.PSObject.Properties).Count -eq 0) { $Policy.PSObject.Properties.Remove('sessionControls') }
         }
@@ -196,6 +207,20 @@ function Get-CIPPBaselineCATemplateState {
         }
     }
 
+    # Security profiles grade by name: a template holds a name or a profile template link, the live policy an id
+    $ProfileNameByRef = @{}
+    $TemplateProfileRef = $Template.sessionControls.globalSecureAccessFilteringProfile.profileId
+    if ($TemplateProfileRef.value) {
+        $ProfileRow = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'GSASecurityProfileTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value "$($TemplateProfileRef.value)")'" | Select-Object -First 1
+        $ProfileNameByRef["$($TemplateProfileRef.value)"] = $(try { ($ProfileRow.JSON | ConvertFrom-Json).name } catch { $null }) ?? "$($TemplateProfileRef.label)"
+    }
+    # The CA collector refreshes this cache whenever one of the tenant's policies applies a security profile
+    if ($Live.sessionControls.globalSecureAccessFilteringProfile.profileId -or $TemplateProfileRef -is [string]) {
+        foreach ($Row in @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'NetworkAccessFiltering').Where({ $_.kind -eq 'profile' })) {
+            $ProfileNameByRef["$($Row.id)"] = "$($Row.name)"
+        }
+    }
+
     $Expected = & $Normalize $Template
 
     if ($Policies.Count -eq 0) {
@@ -207,16 +232,17 @@ function Get-CIPPBaselineCATemplateState {
         if ($null -ne $CacheMeta) {
             # EmptyFamily: see the engine's cross-check - a tenant whose CA policies all
             # vanished at once is more likely a failed collection than a mass deletion.
-            return @{ Expected = $Expected; Current = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' }; EmptyFamily = $true }
+            return @{ Expected = $Expected; Current = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' }; EmptyFamily = $true; RequiredCapabilities = $RequiredCapabilities }
         }
-        return @{ Expected = $Expected; Current = $null }
+        return @{ Expected = $Expected; Current = $null; RequiredCapabilities = $RequiredCapabilities }
     }
 
     if (-not $Live) {
         if ($ConfiguredState -and $ConfiguredState -ne 'donotchange') { $Expected.state = $ConfiguredState }
         return @{
-            Expected = $Expected
-            Current  = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' }
+            Expected             = $Expected
+            Current              = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' }
+            RequiredCapabilities = $RequiredCapabilities
         }
     }
 
@@ -255,5 +281,5 @@ function Get-CIPPBaselineCATemplateState {
         $Current | Add-Member -NotePropertyName 'namedLocations' -NotePropertyValue ([PSCustomObject]$CurrentLocations)
     }
 
-    return @{ Expected = $Expected; Current = $Current }
+    return @{ Expected = $Expected; Current = $Current; RequiredCapabilities = $RequiredCapabilities }
 }

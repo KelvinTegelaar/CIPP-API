@@ -18,6 +18,9 @@ function Get-CIPPIntuneReportExportRows {
 
     $Client = [System.Net.Http.HttpClient]::new()
     $Client.Timeout = [TimeSpan]::FromMinutes(30)
+    # Disposing the client aborts a stalled download when Craft stops the pipeline.
+    $StopToken = $PSCmdlet.PipelineStopToken ?? $global:CraftPipelineStopToken
+    $OnStop = if ($StopToken) { $StopToken.Register([Action]$Client.Dispose) }
     try {
         $Download = $Client.GetStreamAsync($Url).GetAwaiter().GetResult()
         $Archive = [System.IO.Compression.ZipArchive]::new($Download, [System.IO.Compression.ZipArchiveMode]::Read)
@@ -45,5 +48,8 @@ function Get-CIPPIntuneReportExportRows {
                 }
             } finally { $Reader.Close() }
         } finally { $Archive.Dispose() }
-    } finally { $Client.Dispose() }
+    } finally {
+        if ($OnStop) { $OnStop.Dispose() }
+        $Client.Dispose()
+    }
 }

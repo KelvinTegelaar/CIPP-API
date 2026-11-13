@@ -1,7 +1,7 @@
 function Invoke-ListGeneratedReports {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         CIPP.ReportBuilder.Read
     .DESCRIPTION
@@ -39,6 +39,8 @@ function Invoke-ListGeneratedReports {
             # Fetch all reports
             $Entities = @(Get-CIPPAzDataTableEntity @Table -Property $ListProperties)
         }
+        # A report belongs to the tenant in its PartitionKey; a restricted caller sees only their own
+        $Entities = @($Entities | Select-CippAllowedTenantData -TenantProperty 'PartitionKey')
 
         if (-not $ReportGUID) {
             # Without the split markers in the projection, split rows come back raw, so skip the part rows

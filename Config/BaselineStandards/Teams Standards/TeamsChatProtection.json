@@ -2,7 +2,11 @@
   "name": "TeamsChatProtection",
   "label": "Set Teams Chat Protection Settings",
   "cat": "Teams Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (SI.L1-b.1.xiii)",
+    "CMMC (SI.L2-3.14.2)",
+    "NIST SP 800-171 (3.14.2)"
+  ],
   "impact": "Low Impact",
   "helpText": "Configures Teams chat protection settings including weaponizable file protection and malicious URL protection.",
   "executiveText": "Enables automated security protections in Microsoft Teams to block dangerous files and warn users about malicious links in chat messages. This helps protect employees from file-based attacks and phishing attempts. These safeguards work seamlessly in the background, providing essential protection without disrupting normal business communication.",

@@ -4,7 +4,8 @@
   "cat": "Entra (AAD) Standards",
   "tag": [
     "CIS M365 7.0.0 (5.1.4.5)",
-    "SMB1001 (2.2)"
+    "SMB1001 (2.2)",
+    "FedRAMP B-D (KSI-SVC-ASM)"
   ],
   "impact": "Low Impact",
   "helpText": "Enables the tenant to use LAPS. You must still create a policy for LAPS to be active on all devices. Use the template standards to deploy this by default.",

@@ -2,8 +2,20 @@ function Test-CIPPAccess {
     param(
         $Request,
         [switch]$TenantList,
-        [switch]$GroupList
+        [switch]$GroupList,
+        # Tenants or tenant-group selectors to check instead of the ones the request names; checked even on AnyTenant endpoints
+        $TenantFilter,
+        # Internal: the role's tenant list before a requested tenant group narrows it
+        [switch]$IgnoreTenantGroup
     )
+    # A requested tenant group narrows the tenant list to the caller's tenants in that group, so the router's
+    # request scope and every endpoint that asks for the list follow the group
+    if ($TenantList.IsPresent -and $Request.Query.tenantGroup -and -not $IgnoreTenantGroup.IsPresent) {
+        $RoleTenants = @(Test-CIPPAccess -Request $Request -TenantList -IgnoreTenantGroup)
+        $Members = @(@(Expand-CIPPTenantGroups -TenantFilter @([PSCustomObject]@{ type = 'Group'; value = $Request.Query.tenantGroup })).addedFields.customerId | Where-Object { $_ })
+        if ($RoleTenants -contains 'AllTenants') { return $Members }
+        return @($Members.Where({ $RoleTenants -contains $_ }))
+    }
     # Initialize per-call profiling
     $AccessTimings = @{}
     $AccessTotalSw = [System.Diagnostics.Stopwatch]::StartNew()
@@ -43,7 +55,7 @@ function Test-CIPPAccess {
             $PermissionData = $script:CIPPFunctionPermissions[$FunctionName]
             $APIRole = $PermissionData['Role']
             $Functionality = $PermissionData['Functionality']
-            Write-Debug "Loaded function permission data from cache for '$FunctionName': Role='$APIRole', Functionality='$Functionality'"
+            if ($DebugPreference -ne 'SilentlyContinue') { Write-Debug "Loaded function permission data from cache for '$FunctionName': Role='$APIRole', Functionality='$Functionality'" }
         } else {
             try {
                 $Help = Get-Help $FunctionName -ErrorAction Stop
@@ -56,6 +68,16 @@ function Test-CIPPAccess {
         }
         $swHelp.Stop()
         $AccessTimings['GetHelp'] = $swHelp.Elapsed.TotalMilliseconds
+    }
+
+    # A tenant group runs the endpoint's All Tenants path narrowed to the group, so only an endpoint whose All Tenants
+    # path honours the request scope may accept one, by declaring '.FUNCTIONALITY Entrypoint,TenantGroup'.
+    $TenantGroup = $Request.Query.tenantGroup
+    if ($TenantGroup -and -not $TenantList.IsPresent -and -not $GroupList.IsPresent -and -not $PSBoundParameters.ContainsKey('TenantFilter')) {
+        if ($Functionality -notmatch '\bTenantGroup\b') {
+            $Message = if ($APIRole -like '*.Read') { "This view doesn't support tenant groups. Pick a tenant or All Tenants." } else { 'A tenant group can only be used to view data. Pick a single tenant to make changes.' }
+            throw [System.ArgumentException]::new($Message)
+        }
     }
 
     # Get default roles from config (cache per runspace for performance)
@@ -220,6 +242,9 @@ function Test-CIPPAccess {
             if ($TenantList.IsPresent) {
                 return @('AllTenants')
             }
+            if ($GroupList.IsPresent) {
+                return @('AllGroups')
+            }
         }
 
         $CustomRoles = $User.userRoles | ForEach-Object {
@@ -282,23 +307,37 @@ function Test-CIPPAccess {
                 $swScopeRules.Stop()
                 $AccessTimings['GetScopeRules'] = $swScopeRules.Elapsed.TotalMilliseconds
 
-                if (($ScopeRules | Measure-Object).Count -eq 0) {
-                    # No role produced a scope, so the caller is entitled to nothing
+                # The scope belongs to the endpoint being called: only roles that grant its
+                # permission contribute, and a granting role that blocks it takes away every
+                # tenant (or group) it reaches - the same rules as the per-request decision.
+                $Endpoint = $Request.Params.CIPPEndpoint
+                $GrantingRules = @(foreach ($Rule in $ScopeRules) { if (-not $APIRole -or @($Rule.Permissions).Where({ $_ -match $APIRole }, 'First').Count -gt 0) { $Rule } })
+                $AllowingRules = @($GrantingRules.Where({ $_.BlockedEndpoints -notcontains $Endpoint }))
+                $BlockingRules = @($GrantingRules.Where({ $_.BlockedEndpoints -contains $Endpoint }))
+
+                if ($AllowingRules.Count -eq 0 -or $BlockingRules.Where({ $_.Unrestricted }, 'First').Count -gt 0) {
+                    # No role grants this endpoint anywhere it is not blocked: entitled to nothing
                     return @()
                 }
 
                 if ($TenantList.IsPresent) {
                     $swTenantList = [System.Diagnostics.Stopwatch]::StartNew()
-                    $NeedsTenantList = @($ScopeRules | Where-Object { -not $_.Unrestricted -and $_.AllowAllTenants }).Count -gt 0
+                    $AnyUnrestricted = $AllowingRules.Where({ $_.Unrestricted }, 'First').Count -gt 0
+                    if ($AnyUnrestricted -and $BlockingRules.Count -eq 0) {
+                        return @('AllTenants')
+                    }
+                    $NeedsTenantList = $AnyUnrestricted -or $GrantingRules.Where({ -not $_.Unrestricted -and $_.AllowAllTenants }, 'First').Count -gt 0
                     $Tenants = if ($NeedsTenantList) { Get-Tenants -IncludeErrors } else { @() }
 
-                    $LimitedTenantList = foreach ($Rule in $ScopeRules) {
-                        if ($Rule.Unrestricted) {
-                            @('AllTenants')
-                        } else {
-                            $AllowedForRule = if ($Rule.AllowAllTenants) { $Tenants.customerId } else { $Rule.AllowedTenants }
-                            $AllowedForRule | Where-Object { $Rule.BlockedTenants -notcontains $_ }
-                        }
+                    $Reach = {
+                        param($Rule)
+                        if ($Rule.Unrestricted) { return $Tenants.customerId }
+                        $AllowedForRule = if ($Rule.AllowAllTenants) { $Tenants.customerId } else { $Rule.AllowedTenants }
+                        @($AllowedForRule).Where({ $Rule.BlockedTenants -notcontains $_ })
+                    }
+                    $Blocked = @(foreach ($Rule in $BlockingRules) { & $Reach $Rule })
+                    $LimitedTenantList = foreach ($Rule in $AllowingRules) {
+                        @(& $Reach $Rule).Where({ $Blocked -notcontains $_ })
                     }
                     $swTenantList.Stop()
                     $AccessTimings['BuildTenantList'] = $swTenantList.Elapsed.TotalMilliseconds
@@ -307,8 +346,9 @@ function Test-CIPPAccess {
 
                 Write-Information "Getting allowed groups for roles: $($CustomRoles -join ', ')"
                 $swGroupList = [System.Diagnostics.Stopwatch]::StartNew()
-                $LimitedGroupList = foreach ($Rule in $ScopeRules) {
-                    if ($Rule.Unrestricted) { @('AllGroups') } else { $Rule.AllowedGroups }
+                $BlockedGroups = @($BlockingRules.AllowedGroups)
+                $LimitedGroupList = foreach ($Rule in $AllowingRules) {
+                    if ($Rule.Unrestricted -and $BlockingRules.Count -eq 0) { @('AllGroups') } else { @($Rule.AllowedGroups).Where({ $BlockedGroups -notcontains $_ }) }
                 }
                 $swGroupList.Stop()
                 $AccessTimings['BuildGroupList'] = $swGroupList.Elapsed.TotalMilliseconds
@@ -335,59 +375,103 @@ function Test-CIPPAccess {
             if ($PermissionsFound) {
                 # Tenant list and group list requests have already returned above, from the
                 # cached scope rules. Everything from here is the per-endpoint access decision.
-                # Resolve the target from the request only. Do not fall back to $env:TenantID —
-                # that is the partner/home tenant, not a customer. A missing filter means the
-                # endpoint is not tenant-scoped; a filter that resolves to no known tenant is
+                # Every tenant the request names is a target, wherever it is named: an endpoint
+                # may act on the body while the query names another tenant. Do not fall back to
+                # $env:TenantID - that is the partner/home tenant, not a customer. No target means
+                # the endpoint is not tenant-scoped; a target that resolves to no known tenant is
                 # denied on the allow pass and stays in scope for the block pass.
-                $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter ?? $Request.Query.tenantId ?? $Request.Body.tenantId.value ?? $Request.Body.tenantId
-                $TenantAllowed = $false
-                $APIAllowed = $false
-                $swPermissionEval = [System.Diagnostics.Stopwatch]::StartNew()
-
-                # Block pass: deny wins, but only when the blocking role also grants the
-                # permission and its tenant scope covers the target. -TreatUnresolvedAsInScope
-                # keeps unresolved targets in scope so the deny still applies (fail closed).
-                foreach ($Role in $PermissionSet) {
-                    $RoleGrantsPermission = $false
-                    foreach ($Perm in $Role.Permissions) {
-                        if ($Perm -match $APIRole) {
-                            $RoleGrantsPermission = $true
-                            break
+                $Targets = [System.Collections.Generic.List[object]]::new()
+                $ExplicitTargets = $PSBoundParameters.ContainsKey('TenantFilter')
+                $GroupTarget = if ($TenantGroup -and -not $ExplicitTargets) { [PSCustomObject]@{ type = 'Group'; value = $TenantGroup; label = (Get-TenantGroups -GroupId $TenantGroup).Name } }
+                $Sources = if ($ExplicitTargets) { @(, $TenantFilter) } else { @(($GroupTarget ?? $Request.Query.tenantFilter), $Request.Body.tenantFilter, $Request.Query.tenantId, $Request.Body.tenantId) }
+                foreach ($Named in $Sources) {
+                    foreach ($Item in @($Named)) {
+                        if ($null -eq $Item) { continue }
+                        # A selector with no or an empty .value stays a target (unresolvable, so denied) rather than vanishing.
+                        $Id = if ($Item -is [string]) { $Item } elseif (-not [string]::IsNullOrWhiteSpace("$($Item.value)")) { "$($Item.value)" } else { "$Item" }
+                        if ([string]::IsNullOrWhiteSpace($Id)) { continue }
+                        $IsGroup = $Item -isnot [string] -and $Item.type -eq 'Group'
+                        if ($Targets.Where({ $_.Id -eq $Id -and $_.IsGroup -eq $IsGroup }).Count -eq 0) {
+                            # Messages name a tenant by its domain and a group by the label the caller sent.
+                            $Name = if ($IsGroup) { "the tenant group '$(if ($Item.label) { $Item.label } else { $Id })'" } elseif ($Id -eq 'AllTenants') { 'all tenants' } else { $Tenants.Where({ $_.customerId -eq $Id -or $_.defaultDomainName -eq $Id }, 'First')[0].defaultDomainName ?? $Id }
+                            $Targets.Add([PSCustomObject]@{ Id = $Id; IsGroup = $IsGroup; Name = $Name; Selector = [object]::ReferenceEquals($Item, $GroupTarget) })
                         }
                     }
-                    if (-not $RoleGrantsPermission) { continue }
-                    if ($Role.BlockedEndpoints -notcontains $Request.Params.CIPPEndpoint) { continue }
+                }
+                if ($Targets.Count -eq 0) { $Targets.Add([PSCustomObject]@{ Id = $null; IsGroup = $false }) }
+                $swPermissionEval = [System.Diagnostics.Stopwatch]::StartNew()
 
-                    $BlockInScope = Test-CippRoleTenantScope -Role $Role -TenantFilter $TenantFilter -Tenants $Tenants -Request $Request -ApiRole $APIRole -TreatUnresolvedAsInScope
-                    if ($BlockInScope) {
-                        throw "Access to this CIPP API endpoint is not allowed, the custom role '$($Role.Role)' has blocked this endpoint: $($Request.Params.CIPPEndpoint)"
+                # Only a role that grants the endpoint's permission can allow or block it, and it
+                # has to cover the tenant itself: a permission from one role never combines with
+                # another role's tenants, so the order the roles arrive in cannot change the answer.
+                $GrantingRoles = @(foreach ($Role in $PermissionSet) { if (@($Role.Permissions).Where({ $_ -match $APIRole }, 'First').Count -gt 0) { $Role } })
+                if ($GrantingRoles.Count -eq 0) {
+                    throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $APIRole"
+                }
+
+                # Block pass: deny wins wherever a granting role that blocks this endpoint reaches.
+                # -TreatUnresolvedAsInScope keeps unresolved targets in scope (fail closed).
+                foreach ($Role in $GrantingRoles) {
+                    if ($Role.BlockedEndpoints -notcontains $Request.Params.CIPPEndpoint) { continue }
+                    foreach ($Target in $Targets) {
+                        if (Test-CippRoleTenantScope -Role $Role -TenantFilter $Target.Id -IsGroup:$Target.IsGroup -Tenants $Tenants -ApiRole $APIRole -TreatUnresolvedAsInScope) {
+                            throw "Your role '$($Role.Role)' blocks $($Request.Params.CIPPEndpoint)$(if ($Target.Id) { " on $($Target.Name)" })."
+                        }
                     }
                 }
 
-                # Allow pass: sticky $APIAllowed preserved (permission from one role + tenant
-                # from another can still succeed). BlockedEndpoints already handled above.
-                foreach ($Role in $PermissionSet) {
-                    foreach ($Perm in $Role.Permissions) {
-                        if ($Perm -match $APIRole) {
-                            $APIAllowed = $true
+                # Allow pass: every target needs a granting role that covers it.
+                $TenantAllowed = $true
+                $DeniedTarget = $null
+                foreach ($Target in $Targets) {
+                    $Covered = $false
+                    foreach ($Role in $GrantingRoles) {
+                        if (Test-CippRoleTenantScope -Role $Role -TenantFilter $Target.Id -IsGroup:$Target.IsGroup -TenantSelector:$Target.Selector -Tenants $Tenants -ApiRole $APIRole) {
+                            $Covered = $true
                             break
                         }
                     }
-
-                    if ($APIAllowed) {
-                        $TenantAllowed = Test-CippRoleTenantScope -Role $Role -TenantFilter $TenantFilter -Tenants $Tenants -Request $Request -ApiRole $APIRole
-                        if (!$TenantAllowed) { continue }
+                    if (-not $Covered) {
+                        $TenantAllowed = $false
+                        $DeniedTarget = $Target
                         break
                     }
                 }
                 $swPermissionEval.Stop()
                 $AccessTimings['EvaluatePermissions'] = $swPermissionEval.Elapsed.TotalMilliseconds
 
-                if (!$APIAllowed) {
-                    throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $APIRole"
-                }
-                if (!$TenantAllowed -and $Functionality -notmatch 'AnyTenant') {
-                    throw 'Access to this tenant is not allowed'
+                if (!$TenantAllowed -and ($Functionality -notmatch 'AnyTenant' -or $ExplicitTargets -or $GroupTarget)) {
+                    # Say why, naming only the tenant the caller asked for and roles they hold. A tenant that
+                    # does not exist reads the same as one outside every role, so this cannot list tenants.
+                    $Name = $DeniedTarget.Name
+                    $Known = $DeniedTarget.IsGroup -or $Tenants.Where({ $_.customerId -eq $DeniedTarget.Id -or $_.defaultDomainName -eq $DeniedTarget.Id }, 'First').Count -gt 0
+                    $GrantsGroup = { param($Role) @($Role.AllowedTenants).Where({ $_ -is [PSCustomObject] -and $_.type -eq 'Group' -and $_.value -eq $DeniedTarget.Id }, 'First').Count -gt 0 }
+                    $Excluding = if (-not $Known) {
+                        $null
+                    } elseif (-not $DeniedTarget.IsGroup -and $DeniedTarget.Id -ne 'AllTenants') {
+                        $GrantingRoles.Where({ (Test-CippRoleTenantScope -Role ([PSCustomObject]@{ AllowedTenants = $_.AllowedTenants; BlockedTenants = @() }) -TenantFilter $DeniedTarget.Id -Tenants $Tenants -ApiRole $APIRole) }, 'First')[0]
+                    } elseif ($DeniedTarget.IsGroup) {
+                        $GrantingRoles.Where({ & $GrantsGroup $_ }, 'First')[0]
+                    }
+                    $Covering = if ($Known -and $DeniedTarget.Id -ne 'AllTenants') {
+                        @($PermissionSet.Where({ $GrantingRoles -notcontains $_ -and $(if ($DeniedTarget.IsGroup) { & $GrantsGroup $_ } else { Test-CippRoleTenantScope -Role $_ -TenantFilter $DeniedTarget.Id -Tenants $Tenants -ApiRole $APIRole }) }))
+                    }
+                    $ReadPermission = $APIRole -replace '\.ReadWrite$', '.Read'
+                    $CanView = $APIRole -like '*.ReadWrite' -and @($Covering).Where({ @($_.Permissions).Where({ $_ -match $ReadPermission }, 'First').Count -gt 0 }, 'First').Count -gt 0
+                    $Message = if ($DeniedTarget.Selector -and $GrantingRoles.Where({ $_.BlockTenantGroups }, 'First').Count -gt 0) {
+                        "Your roles don't allow viewing a tenant group. Pick a tenant instead, or ask an admin to change your roles."
+                    } elseif ($DeniedTarget.Id -eq 'AllTenants') {
+                        "Your roles don't allow this on all tenants at once. Pick a tenant instead, or ask an admin to change your roles."
+                    } elseif ($Excluding) {
+                        if ($DeniedTarget.IsGroup) { "Your role '$($Excluding.Role)' excludes a tenant in $Name." } else { "Your role '$($Excluding.Role)' excludes $Name." }
+                    } elseif ($CanView) {
+                        "You can view $Name but not change it. This action needs $APIRole, which your roles don't grant for $(if ($DeniedTarget.IsGroup) { 'that group' } else { 'that tenant' })."
+                    } elseif (@($Covering).Count -gt 0) {
+                        "Your roles include $Name, but not the $APIRole permission this action needs there."
+                    } else {
+                        "Your roles don't include $Name. Ask an admin to add it to one of your roles."
+                    }
+                    throw $Message
                 } else {
                     return $true
                 }
@@ -410,15 +494,23 @@ function Test-CIPPAccess {
     if ($TenantList.IsPresent) {
         $AccessTotalSw.Stop()
         $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
-        $AccessTimingsRounded = [ordered]@{}
-        foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
-        Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
+        if ($DebugPreference -ne 'SilentlyContinue') {
+            $AccessTimingsRounded = [ordered]@{}
+            foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
+            Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
+        }
         return @('AllTenants')
+    }
+    # A built-in role with no custom role limiting it sees every group, as it sees every tenant.
+    if ($GroupList.IsPresent) {
+        return @('AllGroups')
     }
     $AccessTotalSw.Stop()
     $AccessTimings['Total'] = $AccessTotalSw.Elapsed.TotalMilliseconds
-    $AccessTimingsRounded = [ordered]@{}
-    foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
-    Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
+    if ($DebugPreference -ne 'SilentlyContinue') {
+        $AccessTimingsRounded = [ordered]@{}
+        foreach ($Key in ($AccessTimings.Keys | Sort-Object)) { $AccessTimingsRounded[$Key] = [math]::Round($AccessTimings[$Key], 2) }
+        Write-Debug "#### Access Timings #### $($AccessTimingsRounded | ConvertTo-Json -Compress)"
+    }
     return $true
 }

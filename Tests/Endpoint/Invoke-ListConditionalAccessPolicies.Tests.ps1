@@ -5,12 +5,6 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
 
-    class HttpResponseContext {
-        [int]$StatusCode
-        [object]$Body
-        [object]$ContentType
-    }
-
     # Rows-exist path returns a raw-JSON string Body; queue/cold paths return an object.
     function ConvertFrom-ResponseBody {
         param($Response)
@@ -33,7 +27,10 @@ BeforeAll {
     function Select-CippAllowedTenantData { param([Parameter(ValueFromPipeline)]$Row, $TenantProperty) process { $Row } }
 
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Tenant/Conditional/Invoke-ListConditionalAccessPolicies.ps1'
-    $EndpointScript = [ScriptBlock]::Create("using namespace System.Net`n" + (Get-Content -LiteralPath $EndpointPath -Raw))
+    # The response stub is declared inside the endpoint script so the type binds at parse time;
+    # looked up at run time it can resolve to another test file's stub that has no ContentType.
+    $ResponseStub = 'class HttpResponseContext { [int]$StatusCode; [object]$Body; [object]$ContentType }'
+    $EndpointScript = [ScriptBlock]::Create("using namespace System.Net`n$ResponseStub`n" + (Get-Content -LiteralPath $EndpointPath -Raw))
     . $EndpointScript
 
     function New-CaRequest {
@@ -150,5 +147,55 @@ Describe 'Invoke-ListConditionalAccessPolicies AllTenants' {
         $body.Metadata.nextLink | Should -BeNullOrEmpty
         Should -Invoke Get-CIPPPagedTableRows -Times 0
         Should -Invoke Get-CIPPAzDataTableEntity -Times 1
+    }
+}
+
+Describe 'Invoke-ListConditionalAccessPolicies single tenant' {
+    BeforeEach {
+        $Request = New-CaRequest -Query @{ tenantFilter = 'contoso.onmicrosoft.com' }
+    }
+
+    It 'returns 500 with the Graph message when the policies read fails' {
+        Mock -CommandName New-GraphBulkRequest -MockWith {
+            @(
+                @{ id = 'policies'; status = 403; body = @{ error = @{ message = 'Insufficient privileges' } } }
+                @{ id = 'users'; status = 200; body = @{ value = @() } }
+            )
+        }
+
+        $response = Invoke-ListConditionalAccessPolicies -Request $Request -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 500
+        $response.Body | Should -Be 'Insufficient privileges'
+    }
+
+    It 'returns 500 when the bulk request throws' {
+        Mock -CommandName New-GraphBulkRequest -MockWith { throw 'Graph batch failed' }
+
+        $response = Invoke-ListConditionalAccessPolicies -Request $Request -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 500
+        $response.Body | Should -Be 'Graph batch failed'
+    }
+
+    It 'returns 500 when the tenant is refused' {
+        $ErrorActionPreference = 'Continue'
+        function New-GraphBulkRequest { [CmdletBinding()] param($Requests, $tenantid, $asapp) Write-Error 'Graph bulk request denied' }
+
+        $response = Invoke-ListConditionalAccessPolicies -Request $Request -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 500
+        $response.Body | Should -Be 'Graph bulk request denied'
+    }
+
+    It 'returns 200 and no rows when the tenant has no policies' {
+        Mock -CommandName New-GraphBulkRequest -MockWith {
+            @(@{ id = 'policies'; status = 200; body = @{ value = @() } })
+        }
+
+        $response = Invoke-ListConditionalAccessPolicies -Request $Request -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 200
+        @($response.Body.Results) | Should -HaveCount 0
     }
 }

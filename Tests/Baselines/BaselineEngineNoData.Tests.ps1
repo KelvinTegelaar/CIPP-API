@@ -27,6 +27,7 @@ BeforeAll {
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Helpers/Get-CIPPBaselineCommand.ps1')
+    . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Helpers/Expand-CIPPBaselineToken.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Helpers/Invoke-CIPPBaselineStandard.ps1')
 
     $script:Definition = Get-Content (Join-Path $script:RepoRoot 'Config/BaselineStandards/SharePoint Standards/OneDriveLicensedQuota.json') -Raw | ConvertFrom-Json
@@ -93,5 +94,61 @@ Describe 'Engine: a prepare hook that cannot grade' {
         $Result = Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare'
 
         $Result.Status | Should -Be 'Compliant'
+    }
+}
+
+Describe 'Engine: capabilities the prepared item needs' {
+    BeforeEach {
+        Mock Get-CIPPBaselineDefinition { $script:Definition }
+        Mock Get-CIPPAzDataTableEntity { @() }
+        Mock Set-CIPPBaselineResult {}
+        Mock Add-CIPPBaselineHistoryEvent {}
+        Mock Send-CIPPBaselineAlert {}
+        Mock Write-LogMessage {}
+        Mock Invoke-CIPPBaselineOneDriveLicensedQuota {}
+        Mock Get-CIPPBaselineOneDriveLicensedQuotaState { @{ Current = [PSCustomObject]@{ offenders = @(); targets = @() }; RequiredCapabilities = @('AAD_PREMIUM_P2') } }
+    }
+
+    It 'skips as unlicensed without grading or remediating when the tenant lacks them' {
+        Mock Get-CIPPTenantCapabilities { [PSCustomObject]@{ SHAREPOINTENTERPRISE = $true; AAD_PREMIUM = $true } }
+
+        $Result = Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'run' -Force
+
+        $Result.Status | Should -Be 'Skipped - No License'
+        $Result.LicenseAvailable | Should -BeFalse
+        Should -Invoke Invoke-CIPPBaselineOneDriveLicensedQuota -Times 0 -Exactly
+        Should -Invoke Set-CIPPBaselineResult -Times 1 -Exactly -ParameterFilter { $Result.Status -eq 'Skipped - No License' }
+    }
+
+    It 'grades normally when the tenant has them' {
+        Mock Get-CIPPTenantCapabilities { [PSCustomObject]@{ SHAREPOINTENTERPRISE = $true; AAD_PREMIUM_P2 = $true } }
+
+        (Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare').Status | Should -Be 'Compliant'
+    }
+
+    It 'reads a flat list as any-of' {
+        Mock Get-CIPPBaselineOneDriveLicensedQuotaState { @{ Current = [PSCustomObject]@{ offenders = @(); targets = @() }; RequiredCapabilities = @('AAD_PREMIUM_P2', 'Entra_Premium_Internet_Access') } }
+        Mock Get-CIPPTenantCapabilities { [PSCustomObject]@{ SHAREPOINTENTERPRISE = $true; Entra_Premium_Internet_Access = $true } }
+
+        (Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare').Status | Should -Be 'Compliant'
+    }
+
+    It 'requires every nested group, as the definition-level check does' {
+        Mock Get-CIPPBaselineOneDriveLicensedQuotaState { @{ Current = [PSCustomObject]@{ offenders = @(); targets = @() }; RequiredCapabilities = @(@('AAD_PREMIUM_P2'), @('Entra_Premium_Internet_Access')) } }
+        Mock Get-CIPPTenantCapabilities { [PSCustomObject]@{ SHAREPOINTENTERPRISE = $true; AAD_PREMIUM_P2 = $true } }
+        (Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare').Status | Should -Be 'Skipped - No License'
+
+        Mock Get-CIPPTenantCapabilities { [PSCustomObject]@{ SHAREPOINTENTERPRISE = $true; AAD_PREMIUM_P2 = $true; Entra_Premium_Internet_Access = $true } }
+        (Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare').Status | Should -Be 'Compliant'
+    }
+
+    It 'reads a group list the prepare hook built as a List' {
+        Mock Get-CIPPBaselineOneDriveLicensedQuotaState {
+            $Groups = [System.Collections.Generic.List[object]]::new()
+            $Groups.Add(@('Entra_Premium_Internet_Access'))
+            @{ Current = [PSCustomObject]@{ offenders = @(); targets = @() }; RequiredCapabilities = $Groups }
+        }
+        Mock Get-CIPPTenantCapabilities { [PSCustomObject]@{ SHAREPOINTENTERPRISE = $true; AAD_PREMIUM_P2 = $true } }
+        (Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare').Status | Should -Be 'Skipped - No License'
     }
 }

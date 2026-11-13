@@ -29,6 +29,17 @@ function Invoke-AddAlert {
                         Body       = @{ error = "Invalid property name: $($condition.Property.label)" }
                     })
             }
+            # Reject now what the condition builder would refuse when the rule fires
+            $HasValue = if ($condition.Input.value -is [array]) { @($condition.Input.value).Count -gt 0 } else { -not [string]::IsNullOrEmpty([string]$condition.Input.value) }
+            if ($HasValue) {
+                $Sanitized = try { Test-CIPPConditionFilter -Condition $condition -WarningAction SilentlyContinue } catch { $null }
+                if ($null -eq $Sanitized) {
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::BadRequest
+                            Body       = @{ error = "Invalid value for condition on property: $($condition.Property.label)" }
+                        })
+                }
+            }
         }
 
         $Tenants = $Request.Body.tenantFilter
@@ -57,7 +68,13 @@ function Invoke-AddAlert {
         $WebhookTable = Get-CippTable -TableName 'WebhookRules'
         if ($Request.Body.RowKey) {
             # Editing replaces the entity, so carry the disabled state over to keep a disabled alert disabled
-            $ExistingAlert = Get-CIPPAzDataTableEntity @WebhookTable -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $RowKey)'" -Property RowKey, Disabled
+            $ExistingAlert = Get-CIPPAzDataTableEntity @WebhookTable -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $RowKey)'" -Property RowKey, Disabled, Tenants
+            if ($ExistingAlert -and -not (Test-CippTenantInScope -Tenant ($ExistingAlert.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue))) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::Forbidden
+                        Body       = @{ Results = 'Access to this alert is not allowed' }
+                    })
+            }
             if ($ExistingAlert.Disabled -eq $true) {
                 $CompleteObject.Disabled = $true
             }

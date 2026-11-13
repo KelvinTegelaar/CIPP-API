@@ -19,6 +19,7 @@ function Invoke-ExecPreviewBrandingReportPdf {
     $ReportNames = @{
         executive = 'Executive Summary'; reportBuilder = 'Quarterly Security Review'; shadowAI = 'Shadow AI Report'
         bec = 'BEC Analysis Report'; becSummary = 'BEC Executive Summary'; sharing = 'Sharing Report'; permissions = 'Permissions Report'; mailFlow = 'Mail Flow Report'
+        storage = 'Storage Report'
         licensing = 'Licensing Report'
         baseline = 'Security Baseline Report'
         domain = 'Domain Security Assessment'
@@ -28,7 +29,7 @@ function Invoke-ExecPreviewBrandingReportPdf {
     $SampleAliases = @{ becSummary = 'bec' }
 
     try {
-        # Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, sharing, permissions, mailFlow, licensing, baseline or domain.
+        # Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, sharing, permissions, mailFlow, storage, licensing, baseline or domain.
         $ReportType = [string]($Request.Body.reportType ?? 'executive')
         if (-not $ReportNames.ContainsKey($ReportType)) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = "Unknown report type '$ReportType'. Use one of: $($ReportNames.Keys -join ', ')." })
@@ -54,6 +55,7 @@ function Invoke-ExecPreviewBrandingReportPdf {
             'sharing' { Build-CippSharingReportTree -Data $Data }
             'permissions' { Build-CippPermissionsReportTree -Data $Data }
             'mailFlow' { Build-CippMailFlowReportTree -Data $Data }
+            'storage' { Build-CippStorageReportTree -Data $Data }
             'licensing' { Build-CippLicenseReportTree -Data $Data }
             'baseline' { Build-CippBaselineWhatIfReportTree -Data $Data }
             'domain' { Build-CippDomainReportTree -Data $Data }

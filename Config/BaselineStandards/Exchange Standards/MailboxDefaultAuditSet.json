@@ -2,7 +2,11 @@
   "name": "MailboxDefaultAuditSet",
   "label": "Reset mailbox audit actions to the Microsoft defaults",
   "cat": "Exchange Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (AU.L2-3.3.1)",
+    "FedRAMP B-D (KSI-MLA-LET)",
+    "NIST SP 800-171 (3.3.1)"
+  ],
   "impact": "Low Impact",
   "helpText": "Resets mailboxes with customised audit actions back to the Microsoft-managed default audit set for the Admin, Delegate and Owner sign-in types.",
   "executiveText": "Ensures every mailbox records the full set of Microsoft-recommended audit events. Attackers and misconfiguration can trim the actions a mailbox audits, hiding activity during a compromise; this restores the defaults so investigations have complete audit trails.",

@@ -39,22 +39,28 @@ function Get-CippReportSankeyData {
             $RegisteredUsers = 0; $NotRegisteredUsers = 0
             $RegCA = 0; $RegSD = 0; $RegPerUser = 0; $RegNone = 0
             $NotCA = 0; $NotSD = 0; $NotNone = 0
+            $RegUnknown = 0; $NotUnknown = 0
             foreach ($User in $Enabled) {
                 $HasRegistered = $User.MFARegistration -eq $true
                 $CoveredByCA = "$($User.CoveredByCA)".StartsWith('Enforced')
                 $CoveredBySD = $User.CoveredBySD -eq $true
                 $PerUser = "$($User.PerUser)"
                 $PerUserOn = $PerUser -eq 'enforced' -or $PerUser -eq 'enabled'
+                # CoveredByCA carries an error text when the policies could not be read, and CoveredBySD
+                # is null when security defaults could not be read. Neither means MFA is not enforced.
+                $EnforcementUnknown = (-not $CoveredByCA -and "$($User.CoveredByCA)" -ne 'Not Enforced') -or $null -eq $User.CoveredBySD
                 if ($HasRegistered -or $PerUserOn) {
                     $RegisteredUsers++
                     if ($PerUserOn) { $RegPerUser++ }
                     elseif ($CoveredByCA) { $RegCA++ }
                     elseif ($CoveredBySD) { $RegSD++ }
+                    elseif ($EnforcementUnknown) { $RegUnknown++ }
                     else { $RegNone++ }
                 } else {
                     $NotRegisteredUsers++
                     if ($CoveredByCA) { $NotCA++ }
                     elseif ($CoveredBySD) { $NotSD++ }
+                    elseif ($EnforcementUnknown) { $NotUnknown++ }
                     else { $NotNone++ }
                 }
             }
@@ -65,15 +71,18 @@ function Get-CippReportSankeyData {
             & $AddNode 'Security defaults' 'Security defaults' 'hsl(140, 70%, 50%)'
             & $AddNode 'Per-user MFA' 'Per-user MFA' 'hsl(200, 70%, 50%)'
             & $AddNode 'No enforcement' 'No enforcement' 'hsl(0, 100%, 50%)'
+            & $AddNode 'Unknown' 'Unknown' 'hsl(0, 0%, 60%)'
             & $AddLink 'Enabled users' 'MFA registered' $RegisteredUsers
             & $AddLink 'Enabled users' 'Not registered' $NotRegisteredUsers
             & $AddLink 'MFA registered' 'CA policy' $RegCA
             & $AddLink 'MFA registered' 'Security defaults' $RegSD
             & $AddLink 'MFA registered' 'Per-user MFA' $RegPerUser
             & $AddLink 'MFA registered' 'No enforcement' $RegNone
+            & $AddLink 'MFA registered' 'Unknown' $RegUnknown
             & $AddLink 'Not registered' 'CA policy' $NotCA
             & $AddLink 'Not registered' 'Security defaults' $NotSD
             & $AddLink 'Not registered' 'No enforcement' $NotNone
+            & $AddLink 'Not registered' 'Unknown' $NotUnknown
         }
         'authMethods' {
             # AuthMethodCard.jsx: users -> single/multi factor, phishable vs phish-resistant, + breakdown.

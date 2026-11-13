@@ -1,21 +1,21 @@
 function Get-CIPPStatsDriftStandardsCount {
     [CmdletBinding()]
-    param()
+    param(
+        # Get-CIPPStandards -TenantFilter allTenants, read once by the caller
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [object[]]$Standards
+    )
 
     try {
-        $Standards = @(Get-CIPPStandards -TenantFilter allTenants)
         $TemplateTable = Get-CippTable -tablename 'templates'
         $TemplateRows = @(Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'StandardsTemplateV2'")
 
         $TemplateTypeByGuid = @{}
         foreach ($TemplateRow in $TemplateRows) {
-            if ([string]::IsNullOrWhiteSpace($TemplateRow.JSON)) { continue }
+            if (-not $TemplateRow.JSON) { continue }
 
-            try {
-                $TemplateData = $TemplateRow.JSON | ConvertFrom-Json -Depth 30 -ErrorAction Stop
-            } catch {
-                continue
-            }
+            $TemplateData = try { [CIPP.CippJson]::ConvertFromJson([string]$TemplateRow.JSON, [string[]]@('GUID', 'type')) } catch { continue }
 
             $TemplateGuid = [string]($TemplateData.GUID ?? $TemplateRow.GUID)
             if ([string]::IsNullOrWhiteSpace($TemplateGuid)) { continue }

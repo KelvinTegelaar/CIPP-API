@@ -11,7 +11,7 @@ function Invoke-CippTestZTNA21782 {
         $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
 
         if ($null -eq $UserRegistrationDetails -or $null -eq $Roles) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21782' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (UserRegistrationDetails or Roles) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Privileged accounts have phishing-resistant methods registered' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21782' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Required cache (UserRegistrationDetails or Roles) not found. Please refresh the cache for this tenant.' -Risk 'High' -Name 'Privileged accounts have phishing-resistant methods registered' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'
             return
         }
 
@@ -20,6 +20,11 @@ function Invoke-CippTestZTNA21782 {
         # RoleAssignmentScheduleInstances.roleDefinitionId is a role template ID, so key the privileged role set by template ID.
         $PrivilegedRoleIds = [System.Collections.Generic.HashSet[string]]::new()
         $RoleNamesById = @{}
+        # Roles holds only activated directory roles; a role with only eligible members is missing from it.
+        foreach ($Role in (Get-CIPPPrivilegedRoleTemplateIds -WithNames)) {
+            [void]$PrivilegedRoleIds.Add($Role.Id)
+            $RoleNamesById[$Role.Id] = $Role.DisplayName
+        }
         foreach ($Role in @($Roles)) {
             $RoleTemplateId = if ($Role.roleTemplateId) { [string]$Role.roleTemplateId } elseif ($Role.RoletemplateId) { [string]$Role.RoletemplateId } else { $null }
             if ($RoleTemplateId) {
@@ -51,6 +56,18 @@ function Invoke-CippTestZTNA21782 {
                     [void]$PrivilegedPrincipalsById[$principalId].Add($roleName)
                 }
             }
+        }
+
+        $Now = [datetimeoffset]::UtcNow
+        foreach ($Eligibility in (Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleEligibilitySchedules')) {
+            if (-not $Eligibility.principalId -or -not $PrivilegedRoleIds.Contains([string]$Eligibility.roleDefinitionId)) { continue }
+            $EndDateTime = $Eligibility.scheduleInfo.expiration.endDateTime
+            if ($EndDateTime -and [datetimeoffset]$EndDateTime -lt $Now) { continue }
+            $principalId = [string]$Eligibility.principalId
+            if (-not $PrivilegedPrincipalsById.ContainsKey($principalId)) {
+                $PrivilegedPrincipalsById[$principalId] = [System.Collections.Generic.HashSet[string]]::new()
+            }
+            [void]$PrivilegedPrincipalsById[$principalId].Add("$($RoleNamesById[[string]$Eligibility.roleDefinitionId]) (Eligible)")
         }
 
         $results = [System.Collections.Generic.List[object]]::new()
@@ -91,12 +108,6 @@ function Invoke-CippTestZTNA21782 {
 
         $mdInfo = "## Privileged users`n`n"
 
-        if ($passed) {
-            $mdInfo = "All privileged users have registered phishing resistant authentication methods.`n`n"
-        } else {
-            $mdInfo = "Found privileged users that have not registered phishing resistant authentication methods.`n`n"
-        }
-
         $mdInfo = $mdInfo + "| User | Role Name | Phishing resistant method registered |`n"
         $mdInfo = $mdInfo + "| :--- | :--- | :---: |`n"
 
@@ -116,11 +127,11 @@ function Invoke-CippTestZTNA21782 {
 
         $testResultMarkdown = $testResultMarkdown -replace '%TestResult%', $mdInfo
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21782' -TestType 'Identity' -Status $(if ($passed) { 'Passed' } else { 'Failed' }) -ResultMarkdown $testResultMarkdown -Risk 'High' -Name 'Privileged accounts have phishing-resistant methods registered' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21782' -TestType 'Identity' -Status $(if ($passed) { 'Passed' } else { 'Failed' }) -ResultMarkdown $testResultMarkdown -Risk 'High' -Name 'Privileged accounts have phishing-resistant methods registered' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21782' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Privileged accounts have phishing-resistant methods registered' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged Access'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21782' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Privileged accounts have phishing-resistant methods registered' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'
     }
 }

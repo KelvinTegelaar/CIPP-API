@@ -30,7 +30,11 @@ function Get-CIPPAlertLicenseAssignmentErrors {
             Description = 'Duplicate license assignment - this license can only be assigned once per user'
         },
         @{
-            ErrorCode   = 'Unknown'
+            ErrorCode   = 'DependencyViolation'
+            Description = 'Missing dependency - this license or one of its service plans requires another license or service plan that is not assigned'
+        },
+        @{
+            ErrorCode   = 'Other'
             Description = 'Unknown license assignment error - an unspecified error occurred during license assignment'
         }
     )
@@ -39,31 +43,10 @@ function Get-CIPPAlertLicenseAssignmentErrors {
         # Get all users with license assignment states from Graph API
         $Users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$select=id,userPrincipalName,displayName,licenseAssignmentStates&`$top=999" -tenantid $TenantFilter
 
-        # Filter users who have license assignment violations
-        $UsersWithViolations = $Users | Where-Object {
-            $_.licenseAssignmentStates -and
-            ($_.licenseAssignmentStates | Where-Object {
-                $_.error -and (
-                    $_.error -like '*CountViolation*' -or
-                    $_.error -like '*MutuallyExclusiveViolation*' -or
-                    $_.error -like '*ProhibitedInUsageLocationViolation*' -or
-                    $_.error -like '*UniquenessViolation*' -or
-                    $_.error -like '*Unknown*'
-                )
-            })
-        }
-
         # Build alert messages for users with violations
-        $LicenseAssignmentErrors = foreach ($User in $UsersWithViolations) {
-            $ViolationErrors = $User.licenseAssignmentStates | Where-Object {
-                $_.error -and (
-                    $_.error -like '*CountViolation*' -or
-                    $_.error -like '*MutuallyExclusiveViolation*' -or
-                    $_.error -like '*ProhibitedInUsageLocationViolation*' -or
-                    $_.error -like '*UniquenessViolation*' -or
-                    $_.error -like '*Unknown*'
-                )
-            }
+        $LicenseAssignmentErrors = foreach ($User in $Users) {
+            # A healthy assignment has error null or 'None'; anything else is a failure, whatever the code.
+            $ViolationErrors = $User.licenseAssignmentStates | Where-Object { $_.error -and $_.error -ne 'None' }
 
             foreach ($Violation in $ViolationErrors) {
                 # Find matching error translation
@@ -74,7 +57,7 @@ function Get-CIPPAlertLicenseAssignmentErrors {
                     "Unknown license assignment error: $($Violation.error)"
                 }
 
-                $PrettyName = Convert-SKUname -SkuID $Violation.skuId
+                $PrettyName = (Get-CIPPLicenseSkuName -SkuIds @($Violation.skuId) -TenantFilter $TenantFilter).displayName ?? $Violation.skuId
 
                 $Message = "$($User.userPrincipalName): $HumanReadableError (License: $PrettyName)"
                 [PSCustomObject]@{

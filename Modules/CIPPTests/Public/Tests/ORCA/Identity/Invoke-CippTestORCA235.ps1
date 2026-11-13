@@ -52,7 +52,9 @@ function Invoke-CippTestORCA235 {
                 $Display = if ([string]::IsNullOrWhiteSpace($Domain.ActualSPFRecord)) { '*(none)*' } else { $Domain.ActualSPFRecord }
                 $null = $Result.Append("| $($Domain.Domain) | $Display |`n")
             }
-            $null = $Result.Append("`n**Remediation:** Publish an SPF TXT record ending in `-all` (hard fail). For Microsoft 365 only: `v=spf1 include:spf.protection.outlook.com -all`. If routing through a third-party gateway, include that provider alongside (e.g. Mimecast, Proofpoint, marketing services), but keep `-all` at the end. Avoid `~all`, `?all`, and especially `+all`.")
+            # Single-quoted: inside a double-quoted string the backtick code spans are PowerShell escapes
+            # (`v=spf1 became a vertical tab the PDF renderer rejects, and the other backticks vanished).
+            $null = $Result.Append("`n").Append('**Remediation:** Publish an SPF TXT record ending in `-all` (hard fail). For Microsoft 365 only: `v=spf1 include:spf.protection.outlook.com -all`. If routing through a third-party gateway, include that provider alongside (e.g. Mimecast, Proofpoint, marketing services), but keep `-all` at the end. Avoid `~all`, `?all`, and especially `+all`.')
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA235' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name 'SPF records setup for custom domains' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Configuration'

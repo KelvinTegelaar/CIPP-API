@@ -28,5 +28,5 @@ function Invoke-NinjaOneRequestBatch {
         $Item.Headers['Authorization'] = "Bearer $($Token.access_token)"
         $Item
     }
-    [CIPP.CIPPRestClient]::SendConcurrent([CIPP.CIPPConcurrentRequest[]]@($Batch), $Concurrency, $MaxRetries)
+    [CIPP.CIPPRestClient]::SendConcurrent([CIPP.CIPPConcurrentRequest[]]@($Batch), $Concurrency, $MaxRetries, ($PSCmdlet.PipelineStopToken ?? $global:CraftPipelineStopToken))
 }

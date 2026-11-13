@@ -50,8 +50,8 @@ Describe 'Invoke-ListBECPhishingSpread' {
 
     It 'requires a sender and traces nothing without one' {
         $Response = Invoke-ListBECPhishingSpread -Request (New-Request @{ tenantFilter = 'contoso.com' }) -TriggerMetadata $null
-        $Response.StatusCode | Should -Be 500
-        $Response.Body.Results | Should -Match '^Failed to trace the spread from .*sender is required'
+        $Response.StatusCode | Should -Be 400
+        $Response.Body.Results | Should -Be 'sender is required'
         Should -Invoke Get-CIPPBecMessageTrace -Times 0
     }
 

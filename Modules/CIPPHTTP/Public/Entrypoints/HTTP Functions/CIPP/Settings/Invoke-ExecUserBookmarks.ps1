@@ -20,7 +20,7 @@ function Invoke-ExecUserBookmarks {
 
         $object = $Bookmarks | ConvertTo-Json -Compress -Depth 10
         $Table = Get-CippTable -tablename 'UserSettings'
-        $User = $Request.Body.user
+        $User = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{
             JSON         = "$object"

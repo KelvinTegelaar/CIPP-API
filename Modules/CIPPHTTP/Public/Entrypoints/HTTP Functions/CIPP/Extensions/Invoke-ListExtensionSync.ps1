@@ -1,7 +1,7 @@
 Function Invoke-ListExtensionSync {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         CIPP.Extension.Read
     .DESCRIPTION

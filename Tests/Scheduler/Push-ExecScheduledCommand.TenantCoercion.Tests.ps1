@@ -29,25 +29,25 @@ BeforeAll {
     # The command under test records exactly which tenant it was invoked against. It declares its own
     # -Tenant (the report-cmdlet shape that is NOT alias-renamed, so the parameter really is 'Tenant'
     # and survives the SUT's unknown-parameter strip).
+    # The executor only runs functions from the CIPP modules, so it lives in a module of that name and
+    # records through a script block bound to this file's scope.
     $script:InvokedWith = $null
-    function Get-CIPPTenantScopedReport {
-        [CmdletBinding()]
-        param([Parameter(Mandatory = $true)]$Tenant, $AuthenticationMethodId, $Enabled)
-        $script:InvokedWith = @{ Tenant = $Tenant; AuthenticationMethodId = $AuthenticationMethodId }
-        return 'ok'
-    }
-
-    # The SUT reads $Command.Module (must be an allowed CIPP module) and $Command.Parameters for the
-    # unknown-parameter strip and the tenant coercion, but invokes the command by name string. Mock
-    # Get-Command so the real in-scope function is what actually runs, while the metadata gate passes.
-    function New-FakeCommand {
-        param([string]$Module = 'CIPPCore', [string[]]$ParamNames)
-        $params = @{}
-        foreach ($p in $ParamNames) { $params[$p] = [pscustomobject]@{ Name = $p } }
-        [pscustomobject]@{ Module = $Module; Parameters = $params }
-    }
+    $Record = { param($Tenant, $AuthenticationMethodId) $script:InvokedWith = @{ Tenant = $Tenant; AuthenticationMethodId = $AuthenticationMethodId } }
+    $null = New-Module -Name CIPPCore -ArgumentList $Record -ScriptBlock {
+        param($Record)
+        function Get-CIPPTenantScopedReport {
+            [CmdletBinding()]
+            param([Parameter(Mandatory = $true)]$Tenant, $AuthenticationMethodId, $Enabled)
+            & $Record $Tenant $AuthenticationMethodId
+            return 'ok'
+        }
+    } | Import-Module -Force -PassThru
 
     . $FunctionPath
+}
+
+AfterAll {
+    Remove-Module -Name CIPPCore -Force -ErrorAction SilentlyContinue
 }
 
 Describe 'Push-ExecScheduledCommand tenant-parameter coercion' {
@@ -65,11 +65,6 @@ Describe 'Push-ExecScheduledCommand tenant-parameter coercion' {
         Mock -CommandName Get-AzDataTableEntity -MockWith {
             [pscustomobject]@{ PartitionKey = 'ScheduledTask'; RowKey = 'task-1'; TaskState = 'Running' }
         }
-        # Metadata for the module gate + parameter strip; the real function runs via & by name.
-        Mock -CommandName Get-Command -MockWith {
-            New-FakeCommand -ParamNames @('Tenant', 'AuthenticationMethodId', 'Enabled')
-        } -ParameterFilter { $Name -eq 'Get-CIPPTenantScopedReport' }
-
         $script:BaseItem = @{
             Command  = 'Get-CIPPTenantScopedReport'
             TaskInfo = [pscustomobject]@{
@@ -125,6 +120,20 @@ Describe 'Push-ExecScheduledCommand tenant-parameter coercion' {
         $script:InvokedWith.Tenant | Should -Be 'authorized.onmicrosoft.com'
         Should -Invoke -CommandName Write-LogMessage -Times 0 -ParameterFilter {
             $sev -eq 'Error' -and $message -match 'does not match the authorized tenant'
+        }
+    }
+
+    It 'blocks a matching function that is not in an allowed CIPP module' {
+        function Get-CIPPOutsideReport { param($Tenant) $script:InvokedWith = @{ Tenant = $Tenant } }
+        $Item = $script:BaseItem.Clone()
+        $Item.Command = 'Get-CIPPOutsideReport'
+        $Item.Parameters = @{}
+
+        Push-ExecScheduledCommand -Item ([pscustomobject]$Item)
+
+        $script:InvokedWith | Should -BeNullOrEmpty
+        Should -Invoke -CommandName Update-AzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+            $Entity.TaskState -eq 'Failed' -and $Entity.Results -like "Task blocked*Get-CIPPOutsideReport*"
         }
     }
 }

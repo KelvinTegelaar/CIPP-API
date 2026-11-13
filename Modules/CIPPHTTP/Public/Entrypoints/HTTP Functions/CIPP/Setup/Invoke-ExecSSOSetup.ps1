@@ -14,6 +14,16 @@ function Invoke-ExecSSOSetup {
     $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'Status'
     $MigrationTable = Get-CIPPTable -tablename 'SSOMigration'
 
+    # Restricted multi-tenant mode: other tenant IDs allowed to sign in when multi-tenant (Update only)
+    $AllowedTenants = @(foreach ($Tenant in @($Request.Body.allowedTenants)) {
+            $Value = [string]($Tenant.value ?? $Tenant)
+            if ($Value) { $Value.Trim().ToLower() }
+        })
+    $InvalidTenant = $AllowedTenants.Where({ -not ($_ -as [guid]) }, 'First')
+    if ($InvalidTenant) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = "'$($InvalidTenant[0])' is not a tenant ID" } })
+    }
+
     # Resolve the redirect URI once for any action that needs it
     $ResolveTargetUrl = {
         param($BodyUrl)
@@ -111,6 +121,7 @@ function Invoke-ExecSSOSetup {
                                 status          = $MigrationStatus
                                 appId           = $ClientId
                                 multiTenant     = $IsMultiTenant
+                                allowedTenants  = @(([Environment]::GetEnvironmentVariable('WEBSITE_AUTH_AAD_ALLOWED_TENANTS') ?? '') -split ',' | Where-Object { $_ -and $_ -ne $env:TenantID })
                                 tenantId        = $IssuerTenantId
                                 issuer          = $Issuer
                                 audiences       = $AllowedAudiences
@@ -552,14 +563,17 @@ function Invoke-ExecSSOSetup {
 
                 # Update EasyAuth ARM config on the App Service (issuer URL + allowed tenants)
                 try {
-                    Set-CIPPSSOEasyAuth -AppId $Existing.AppId -MultiTenant $MultiTenant -TenantId $env:TenantID
+                    # A request without allowedTenants keeps the current restriction
+                    $EasyAuthParams = @{ AppId = $Existing.AppId; MultiTenant = $MultiTenant; TenantId = $env:TenantID }
+                    if ($null -ne $Request.Body.allowedTenants) { $EasyAuthParams.AllowedTenants = $AllowedTenants }
+                    Set-CIPPSSOEasyAuth @EasyAuthParams
                 } catch {
                     Write-Information "[SSO-Update] EasyAuth ARM update skipped (may not be in App Service): $($_.Exception.Message)"
                 }
 
                 $Body = @{
                     Results = @{
-                        message     = "SSO app updated successfully. Sign-in audience is now $SignInAudience."
+                        message     = "SSO app updated successfully. Sign-in audience is now $SignInAudience.$(if ($MultiTenant -and $AllowedTenants.Count -gt 0) { " Sign-in is restricted to this tenant and $($AllowedTenants.Count) other tenant(s)." })"
                         appId       = $Existing.AppId
                         multiTenant = $MultiTenant
                         severity    = 'success'

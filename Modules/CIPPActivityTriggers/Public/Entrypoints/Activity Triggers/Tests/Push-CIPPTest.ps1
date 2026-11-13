@@ -22,8 +22,8 @@ function Push-CIPPTest {
         }
 
         $FunctionName = "Invoke-CippTest$TestId"
-        $TestCommand = Get-Command -Name $FunctionName -Module CIPPTests -ErrorAction SilentlyContinue
-        if (-not $TestCommand) { throw "Test function not found: $FunctionName" }
+        $TestCommand = $ExecutionContext.InvokeCommand.GetCommand($FunctionName, 'Function')
+        if ($TestCommand.ModuleName -ne 'CIPPTests') { throw "Test function not found: $FunctionName" }
 
         Write-Information "Executing $FunctionName for $TenantFilter"
         $TestResult = & $TestCommand -Tenant $TenantFilter

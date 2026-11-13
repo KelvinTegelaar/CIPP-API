@@ -1,7 +1,7 @@
 function Invoke-ListAppProtectionPolicies {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Endpoint.MEM.Read
     .DESCRIPTION

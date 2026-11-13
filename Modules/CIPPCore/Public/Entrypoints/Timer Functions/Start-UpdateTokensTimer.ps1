@@ -193,6 +193,37 @@ function Start-UpdateTokensTimer {
             }
         }
 
+        # Rotate refresh tokens for additional partner tenants (empty when flag is off).
+        $AdditionalPartners = Get-CIPPPartnerTenant | Where-Object { $_.IsPrimary -ne $true }
+        foreach ($Partner in $AdditionalPartners) {
+            try {
+                Write-Information "Updating refresh token for partner tenant $($Partner.displayName) - $($Partner.RowKey)"
+                $Refreshtoken = (Get-GraphToken -ReturnRefresh $true -TenantId $Partner.RowKey).Refresh_token
+                if (!$Refreshtoken) {
+                    Write-LogMessage -API 'Update Tokens' -message "Could not update refresh token for partner tenant $($Partner.displayName) ($($Partner.RowKey)). Will try again in 7 days." -sev 'CRITICAL'
+                    continue
+                }
+                $SecretName = "partner-$($Partner.RowKey)"
+                if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
+                    $Table = Get-CIPPTable -tablename 'DevSecrets'
+                    $Secret = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
+                    if ($Secret) {
+                        $name = $SecretName -replace '-', '_'
+                        $Secret | Add-Member -MemberType NoteProperty -Name $name -Value $Refreshtoken -Force
+                        Add-AzDataTableEntity @Table -Entity $Secret -Force
+                    }
+                } else {
+                    Set-CippKeyVaultSecret -VaultName $KV -Name $SecretName -SecretValue (ConvertTo-SecureString -String $Refreshtoken -AsPlainText -Force)
+                }
+                Set-Item -Path "env:\$SecretName" -Value $Refreshtoken -Force
+                $PartnerTable = Get-CIPPTable -tablename 'PartnerTenants'
+                $Partner | Add-Member -MemberType NoteProperty -Name 'lastTokenRefresh' -Value (Get-Date).ToUniversalTime() -Force
+                $null = Add-CIPPAzDataTableEntity @PartnerTable -Entity ($Partner | Select-Object -Property * -ExcludeProperty IsPrimary) -Force
+            } catch {
+                Write-LogMessage -API 'Update Tokens' -message "Error updating refresh token for partner tenant $($Partner.displayName) ($($Partner.RowKey)), see Log Data for details. Will try again in 7 days." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
+            }
+        }
+
         # Changes this run made still alert, worded as scheduled so they do not read as a compromise.
         try {
             $CredentialsAfter = Get-CIPPSAMCredentials

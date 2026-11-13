@@ -5,7 +5,7 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
 
-    function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
+    function New-GraphGetRequest { param($uri, $tenantid, $AsApp, [switch]$Stream) }
     function Add-CIPPDbItem { param($TenantFilter, $Type, $Data, [switch]$AddCount, [switch]$ClearOnEmpty) }
     function Write-LogMessage { param($API, $tenant, $message, $sev, $LogData) }
 
@@ -106,14 +106,81 @@ Describe 'Set-CIPPDBCacheServicePrincipalRoleChanges' {
         Mock Add-CIPPDbItem { }
     }
 
-    It 'reads 30 days of RoleManagement and group membership events app-only and caches them' {
+    It 'reads 30 days of RoleManagement events app-only and caches them' {
         Mock New-GraphGetRequest { if ($uri -like "*category eq 'RoleManagement'*") { script:New-RoleEvent } }
 
         Set-CIPPDBCacheServicePrincipalRoleChanges -TenantFilter 'contoso.onmicrosoft.com'
 
-        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like "*directoryAudits?`$filter=category eq 'RoleManagement' and activityDateTime ge *" -and $AsApp }
-        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like "*directoryAudits?`$filter=category eq 'GroupManagement' and activityDisplayName eq 'Add member to group' and activityDateTime ge *" -and $AsApp }
+        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like "*directoryAudits?`$filter=category eq 'RoleManagement' and activityDateTime ge *" -and $AsApp -and $Stream }
         Should -Invoke Add-CIPPDbItem -Times 1 -Exactly -ParameterFilter { $Type -eq 'ServicePrincipalRoleChanges' -and @($Data).Count -eq 1 -and -not $ClearOnEmpty }
+    }
+
+    It 'reads group membership events only for role-assignable groups' {
+        Mock New-GraphGetRequest {
+            if ($uri -like '*/groups?*') { [pscustomobject]@{ id = 'grp-a' }; [pscustomobject]@{ id = 'grp-b' } }
+        }
+
+        Set-CIPPDBCacheServicePrincipalRoleChanges -TenantFilter 'contoso.onmicrosoft.com'
+
+        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*/groups?$filter=isAssignableToRole eq true*' }
+        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like "*category eq 'GroupManagement' and activityDisplayName eq 'Add member to group' and activityDateTime ge * and targetResources/any(t:t/id eq 'grp-a' or t/id eq 'grp-b')&*" -and $AsApp -and $Stream }
+        Should -Invoke New-GraphGetRequest -Times 0 -ParameterFilter { $uri -like "*category eq 'GroupManagement'*" -and $uri -notlike '*targetResources/any*' }
+    }
+
+    It 'reads the groups 20 at a time, each group exactly once' {
+        Mock New-GraphGetRequest {
+            if ($uri -like '*/groups?*') { 1..45 | ForEach-Object { [pscustomobject]@{ id = "grp-$_" } } }
+        }
+
+        Set-CIPPDBCacheServicePrincipalRoleChanges -TenantFilter 'contoso.onmicrosoft.com'
+
+        Should -Invoke New-GraphGetRequest -Times 3 -Exactly -ParameterFilter { $uri -like "*category eq 'GroupManagement'*" }
+        foreach ($Size in 20, 20, 5) {
+            Should -Invoke New-GraphGetRequest -ParameterFilter { $uri -like "*category eq 'GroupManagement'*" -and ([regex]::Matches($uri, "t/id eq 'grp-\d+'")).Count -eq $Size }
+        }
+        foreach ($n in 1, 20, 21, 40, 41, 45) {
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like "*t/id eq 'grp-$n'[) ]*" }
+        }
+    }
+
+    It 'skips the group membership read when the tenant has no role-assignable group' {
+        Mock New-GraphGetRequest { }
+
+        Set-CIPPDBCacheServicePrincipalRoleChanges -TenantFilter 'contoso.onmicrosoft.com'
+
+        Should -Invoke New-GraphGetRequest -Times 0 -ParameterFilter { $uri -like "*category eq 'GroupManagement'*" }
+    }
+
+    It 'keeps only events with a service principal target' {
+        $GroupEvent = {
+            param($MemberType)
+            [pscustomobject]@{
+                id = "evt-$MemberType"; activityDateTime = '2026-10-20T10:00:00Z'; activityDisplayName = 'Add member to group'
+                initiatedBy = [pscustomobject]@{ user = [pscustomobject]@{ id = 'u1'; userPrincipalName = 'admin@contoso.com' } }
+                targetResources = @(
+                    [pscustomobject]@{ id = "$MemberType-1"; type = $MemberType; modifiedProperties = @([pscustomobject]@{ displayName = 'Group.ObjectID'; newValue = '"grp-a"' }) }
+                    [pscustomobject]@{ id = 'grp-a'; type = 'Group'; modifiedProperties = @() }
+                )
+            }
+        }
+        Mock New-GraphGetRequest {
+            if ($uri -like '*/groups?*') { [pscustomobject]@{ id = 'grp-a' } }
+            elseif ($uri -like "*category eq 'GroupManagement'*") { & $GroupEvent 'User'; & $GroupEvent 'ServicePrincipal'; & $GroupEvent 'User' }
+        }
+
+        Set-CIPPDBCacheServicePrincipalRoleChanges -TenantFilter 'contoso.onmicrosoft.com'
+
+        Should -Invoke Add-CIPPDbItem -Times 1 -Exactly -ParameterFilter { @($Data).Count -eq 1 -and $Data[0].targetId -eq 'ServicePrincipal-1' -and $Data[0].groupId -eq 'grp-a' }
+    }
+
+    It 'writes nothing and rethrows when a group membership read fails' {
+        Mock New-GraphGetRequest {
+            if ($uri -like '*/groups?*') { [pscustomobject]@{ id = 'grp-a' } }
+            elseif ($uri -like "*category eq 'GroupManagement'*") { throw 'Too many requests' }
+        }
+
+        { Set-CIPPDBCacheServicePrincipalRoleChanges -TenantFilter 'contoso.onmicrosoft.com' } | Should -Throw '*Too many requests*'
+        Should -Invoke Add-CIPPDbItem -Times 0
     }
 
     It 'records an empty set when no role was assigned to an app' {

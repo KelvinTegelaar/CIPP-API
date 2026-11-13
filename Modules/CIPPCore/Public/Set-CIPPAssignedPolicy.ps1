@@ -45,9 +45,9 @@ function Set-CIPPAssignedPolicy {
                 $ResolvedFilterId = $MatchingFilter.id
                 Write-Host "Found assignment filter: $($MatchingFilter.displayName) with ID: $ResolvedFilterId"
             } else {
-                $ErrorMessage = "No assignment filter found matching the name: $AssignmentFilterName. Policy assigned without filter."
+                $ErrorMessage = "No assignment filter found matching the name: $AssignmentFilterName. Policy not assigned."
                 Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -sev 'Warning' -tenant $TenantFilter
-                Write-Host $ErrorMessage
+                throw $ErrorMessage
             }
         }
 
@@ -271,6 +271,8 @@ function Set-CIPPAssignedPolicy {
         }
 
     } catch {
+        # Pending Intune multi-admin approval, already logged and scheduled for completion - not a failure.
+        if ($_.Exception.Data['IntuneApprovalCode']) { throw }
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -message "Failed to assign $GroupName to Policy $PolicyId, using Platform $PlatformType and $Type. The error is:$($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         # Throw rather than return the message. A returned string is indistinguishable from success

@@ -25,6 +25,8 @@ BeforeAll {
     function Set-CIPPSAMCredentialRecord { param($KeyId, $Source, $Label, $Headers) }
     function Add-CIPPSSOAppSecret { param($ObjectId, $AppId) }
     function Set-CIPPSSOStoredCredentials { param($AppSecret) }
+    # Returns nothing: no additional partner tenants configured, so the rotation loop is skipped.
+    function Get-CIPPPartnerTenant { param([string]$PartnerTenantId, [switch]$IncludeDisabled) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Entrypoints/Timer Functions/Start-UpdateTokensTimer.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Update-CIPPSAMSecret.ps1')

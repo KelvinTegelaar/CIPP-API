@@ -221,7 +221,7 @@ function Push-ExecScheduledCommand {
         }
     }
 
-    $Command = Get-Command -Name $Item.Command -ErrorAction SilentlyContinue
+    $Command = $ExecutionContext.InvokeCommand.GetCommand($Item.Command, 'Function')
     if ($null -eq $Command) {
         $Results = "Task Failed: The command $($Item.Command) does not exist."
         $State = 'Failed'
@@ -239,7 +239,7 @@ function Push-ExecScheduledCommand {
         return
     }
 
-    if ($Command.Module -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPBaselines', 'CIPPTests', 'CIPPDB', 'CippExtensions', 'CIPPActivityTriggers')) {
+    if ($Command.ModuleName -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPBaselines', 'CIPPTests', 'CIPPDB', 'CippExtensions', 'CIPPActivityTriggers')) {
         $State = 'Failed'
         Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Blocked attempt to schedule command from unauthorized module: $($Command.ModuleName)\$($Item.Command)" -Sev 'Warning'
         $Results = "Task blocked: The command '$($Item.Command)' is not permitted to run as a scheduled task."
@@ -305,6 +305,40 @@ function Push-ExecScheduledCommand {
         }
     }
 
+    # The same rule applies below the top level: activity functions take the tenant inside an object parameter
+    # (-Item), so a tenant carried anywhere in the stored parameters is forced to the task tenant as well. An
+    # all-tenants task is left alone - its creator already had every tenant.
+    if ($Tenant -and $Tenant -ne 'AllTenants') {
+        $OwnTenantValues = @($Tenant, $TenantInfo.customerId, $TenantInfo.defaultDomainName) | Where-Object { $_ }
+        $ForeignTenants = [System.Collections.Generic.List[string]]::new()
+        $Pending = [System.Collections.Generic.Stack[object]]::new()
+        foreach ($Value in @($commandParameters.Values)) { $Pending.Push($Value) }
+        while ($Pending.Count -gt 0) {
+            $Node = $Pending.Pop()
+            if ($Node -is [System.Collections.IDictionary]) {
+                foreach ($Key in @($Node.Keys)) {
+                    $Child = $Node[$Key]
+                    if ($Key -notin 'TenantFilter', 'Tenant', 'TenantId', 'customerId') {
+                        if ($null -ne $Child -and $Child -isnot [string]) { $Pending.Push($Child) }
+                        continue
+                    }
+                    # A tenant picked in the UI is stored as a selector object; its value is what a command reads.
+                    $Holder, $Name = if ($Child -is [System.Collections.IDictionary] -and $Child.Contains('value')) { $Child, 'value' } else { $Node, $Key }
+                    $Stored = [string]$Holder[$Name]
+                    if ([string]::IsNullOrWhiteSpace($Stored) -or $Stored -in $OwnTenantValues) { continue }
+                    if ($Holder[$Name] -isnot [string]) { $Pending.Push($Child); continue }
+                    $ForeignTenants.Add($Stored)
+                    $Holder[$Name] = if ($Key -in 'TenantId', 'customerId' -and $TenantInfo.customerId) { $TenantInfo.customerId } else { $Tenant }
+                }
+            } elseif ($Node -is [System.Collections.IEnumerable] -and $Node -isnot [string]) {
+                foreach ($Entry in $Node) { if ($null -ne $Entry -and $Entry -isnot [string]) { $Pending.Push($Entry) } }
+            }
+        }
+        if ($ForeignTenants.Count -gt 0) {
+            Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Task $($task.Name): stored parameters named other tenants ($(($ForeignTenants | Sort-Object -Unique) -join ', ')), which do not match the authorized tenant '$Tenant'; the authorized tenant was used." -sev Error
+        }
+    }
+
     if ($IsTriggerTask -eq $true -and $Trigger.ExecutePerResource -ne $true) {
         # iterate through paramters looking for %variables% and replace them with matched data from the delta query
         # examples would be %id% to be the id of the result
@@ -330,7 +364,10 @@ function Push-ExecScheduledCommand {
         }
     } elseif ($IsTriggerTask -eq $true -and $Trigger.ExecutePerResource -eq $true) {
         Write-Information 'This is a trigger task with ExecutePerResource set to true. Iterating through matched data to execute command per resource.'
+        $ResourceRuns = 0
+        $ResourceFailures = 0
         $results = foreach ($dataItem in $DeltaResults.MatchedData) {
+            $ResourceRuns++
             $individualCommandParameters = $commandParameters.Clone()
             try {
                 foreach ($key in $individualCommandParameters.Keys) {
@@ -357,8 +394,16 @@ function Push-ExecScheduledCommand {
                 & $Item.Command @individualCommandParameters
                 Write-CippResultLog -Prefix 'Results for individual execution' -Value $results
             } catch {
+                # Emitted into the results so the failure shows on the task and in its notifications instead of only in the function log.
+                $ResourceFailures++
                 Write-Information "Failed to execute command for individual matched data item: $($_.Exception.Message)"
+                "Task Failed: $($_.Exception.Message)"
             }
+        }
+        # Same rule as the multi-tenant aggregation: the run is failed when every resource failed. Partial failures stay visible in the results.
+        if ($ResourceRuns -gt 0 -and $ResourceFailures -eq $ResourceRuns) {
+            $State = 'Failed'
+            Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): the command failed for all $ResourceRuns matched resource(s). See the task results for details." -sev Error
         }
     }
 
@@ -377,10 +422,18 @@ function Push-ExecScheduledCommand {
                 Write-CippResultLog -Prefix "Starting task: $($Item.Command) for tenant: $Tenant with parameters" -Value $LoggedParameters
                 $results = & $Item.Command @commandParameters
             } catch {
-                $results = "Task Failed: $($_.Exception.Message)"
+                $ExceptionData = Get-CippException -Exception $_
+                $results = "Task Failed: $($ExceptionData.NormalizedError)"
                 $State = 'Failed'
+                Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): $($ExceptionData.NormalizedError)" -sev Error -LogData $ExceptionData
             }
             Write-Information 'Ran the command. Processing results'
+            # A recurring command can end its own recurrence by setting Recurrence to '0' on its row
+            # (Invoke-CIPPIntuneApprovalRetry does, once its approval request is resolved).
+            if ($task.Recurrence -and $task.Recurrence -ne '0') {
+                $LatestRecurrence = (Get-AzDataTableEntity @Table -Filter "PartitionKey eq '$($task.PartitionKey)' and RowKey eq '$($task.RowKey)'" -Property Recurrence).Recurrence
+                if ($null -ne $LatestRecurrence) { $task.Recurrence = $LatestRecurrence }
+            }
         }
 
         # Extract TaskAttachments from structured output before general result processing
@@ -451,8 +504,12 @@ function Push-ExecScheduledCommand {
         $errorMessage = $ExceptionData.NormalizedError
         $nextRunUnixTime = Get-CIPPScheduledTaskNextRun -Recurrence $task.Recurrence -ScheduledTime $task.ScheduledTime
         if ($nextRunUnixTime -eq 0) { $nextRunUnixTime = $task.ScheduledTime }
-        if ($task.Recurrence -ne 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
-        Write-Information "The job is recurring, but failed. It was scheduled for $($task.ScheduledTime). The next runtime should be $nextRunUnixTime"
+        # Failed is terminal. An empty recurrence or a trigger that fires once must not be re-queued, same as the final state write below.
+        $IsRecurring = $task.Recurrence -and $task.Recurrence -ne '0' -and ($Trigger.ExecutionMode.value ?? $Trigger.ExecutionMode) -ne 'once'
+        $State = $IsRecurring ? 'Failed - Planned' : 'Failed'
+        # The final state write stores $StoredResults; carry the error there so partial or empty results do not replace it.
+        $StoredResults = "$errorMessage"
+        Write-Information "The job failed. It was scheduled for $($task.ScheduledTime). The next runtime should be $nextRunUnixTime"
         if (!$IsMultiTenantExecution) {
             Update-AzDataTableEntity -Force @Table -Entity @{
                 PartitionKey  = $task.PartitionKey
@@ -519,12 +576,12 @@ function Push-ExecScheduledCommand {
             # The PostExecution function will aggregate all results and update the parent task
             Write-Information "Multi-tenant execution for tenant $Tenant - parent task state will be updated by PostExecution"
         } elseif ($task.Recurrence -eq '0' -or [string]::IsNullOrEmpty($task.Recurrence) -or $Trigger.ExecutionMode.value -eq 'once' -or $Trigger.ExecutionMode -eq 'once') {
-            Write-Information 'Recurrence empty or 0. Task is not recurring. Setting task state to completed.'
+            Write-Information 'Recurrence empty or 0. Task is not recurring. Setting the final task state.'
             Update-AzDataTableEntity -Force @Table -Entity @{
                 PartitionKey = $task.PartitionKey
                 RowKey       = $task.RowKey
                 Results      = "$StoredResults"
-                TaskState    = 'Completed'
+                TaskState    = $State -like 'Failed*' ? 'Failed' : 'Completed'
             }
         } else {
             $nextRunUnixTime = Get-CIPPScheduledTaskNextRun -Recurrence $task.Recurrence -ScheduledTime $task.ScheduledTime
@@ -534,7 +591,7 @@ function Push-ExecScheduledCommand {
                 PartitionKey  = $task.PartitionKey
                 RowKey        = $task.RowKey
                 Results       = "$StoredResults"
-                TaskState     = 'Planned'
+                TaskState     = $State -like 'Failed*' ? 'Failed - Planned' : 'Planned'
                 ScheduledTime = "$nextRunUnixTime"
             }
         }
@@ -542,9 +599,13 @@ function Push-ExecScheduledCommand {
         Write-Warning "Failed to update task state: $($_.Exception.Message)"
         Write-Information $_.InvocationInfo.PositionMessage
     }
+    Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
+    if ($State -like 'Failed*') {
+        # The failure was logged where it happened. Push-ScheduledTaskPostExecution counts this return as a failed tenant.
+        return 'Task Failed.'
+    }
     if ($TaskType -ne 'Alert') {
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Successfully executed task: $($task.Name)" -sev Info
     }
-    Remove-Variable -Name ScheduledTaskId -Scope Script -ErrorAction SilentlyContinue
     return 'Task Completed Successfully.'
 }

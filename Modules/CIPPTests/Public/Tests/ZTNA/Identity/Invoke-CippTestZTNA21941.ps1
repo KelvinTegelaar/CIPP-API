@@ -57,17 +57,11 @@ function Invoke-CippTestZTNA21941 {
                 }
             }
 
-            # Check if policy has secureSignInSession control
+            # Check if policy has the secureSignInSession (token protection) session control.
+            # Sign-in frequency is not token protection: primaryAndSecondaryAuthentication is the
+            # default authenticationType of every sign-in frequency policy.
             $hasTokenProtection = $false
-            if ($policy.sessionControls -and $policy.sessionControls.signInFrequency) {
-                if ($policy.sessionControls.signInFrequency.isEnabled -eq $true -and
-                    $policy.sessionControls.signInFrequency.authenticationType -eq 'primaryAndSecondaryAuthentication') {
-                    $hasTokenProtection = $true
-                }
-            }
-
-            # Alternative check for newer API format
-            if (-not $hasTokenProtection -and $policy.sessionControls) {
+            if ($policy.sessionControls) {
                 foreach ($prop in $policy.sessionControls.PSObject.Properties) {
                     if ($prop.Name -like '*secureSignIn*' -or $prop.Name -like '*tokenProtection*') {
                         if ($prop.Value.isEnabled -eq $true) {
@@ -80,10 +74,9 @@ function Invoke-CippTestZTNA21941 {
 
             if ($hasWindows -and $hasTokenProtection -and $policy.state -eq 'enabled') {
                 # Check if policy includes users
-                $hasUsers = $false
-                if ($policy.conditions.users.includeUsers -and $policy.conditions.users.includeUsers.Count -gt 0) {
-                    $hasUsers = $true
-                }
+                # 'None' is how an empty user assignment is stored, it targets nobody
+                $Users = $policy.conditions.users
+                $hasUsers = @(@($Users.includeUsers) + @($Users.includeGroups) + @($Users.includeRoles) | Where-Object { $_ -and $_ -ne 'None' }).Count -gt 0
 
                 # Check if policy includes required apps
                 $hasRequiredApps = $false

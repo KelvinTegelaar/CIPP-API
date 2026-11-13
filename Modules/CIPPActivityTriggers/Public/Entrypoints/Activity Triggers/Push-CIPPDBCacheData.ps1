@@ -24,277 +24,29 @@ function Push-CIPPDBCacheData {
     $QueueId = $Item.QueueId
 
     try {
-        # Check tenant capabilities for license-specific features
-        $IntuneCapable = $false
-        try {
-            $IntuneCapable = Test-CIPPStandardLicense -StandardName 'IntuneLicenseCheck' -TenantFilter $TenantFilter -Preset Intune -SkipLog
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Intune license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
-        }
-
-        $ConditionalAccessCapable = $false
-        try {
-            $ConditionalAccessCapable = Test-CIPPStandardLicense -StandardName 'ConditionalAccessLicenseCheck' -TenantFilter $TenantFilter -Preset Entra -SkipLog
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Conditional Access license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
-        }
-
-        $AzureADPremiumP2Capable = $false
-        try {
-            $AzureADPremiumP2Capable = Test-CIPPStandardLicense -StandardName 'AzureADPremiumP2LicenseCheck' -TenantFilter $TenantFilter -Preset EntraP2 -SkipLog
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Azure AD Premium P2 license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
-        }
-
-        $PIMCapable = $false
-        try {
-            $PIMCapable = Test-CIPPStandardLicense -StandardName 'PIMLicenseCheck' -TenantFilter $TenantFilter -Preset PIM -SkipLog
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "PIM license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
-        }
-
-        $ExchangeCapable = $false
-        try {
-            $ExchangeCapable = Test-CIPPStandardLicense -StandardName 'ExchangeLicenseCheck' -TenantFilter $TenantFilter -Preset Exchange -SkipLog
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Exchange license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
-        }
-
-        $ComplianceCapable = $false
-        try {
-            $ComplianceCapable = Test-CIPPStandardLicense -StandardName 'ComplianceLicenseCheck' -TenantFilter $TenantFilter -Preset Compliance -SkipLog
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Compliance license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
-        }
-
-        $DefenderCapable = $false
-        try {
-            $DefenderCapable = Test-CIPPStandardLicense -StandardName 'DefenderLicenseCheck' -TenantFilter $TenantFilter -RequiredCapabilities @('MDE_SMB', 'WIN_DEF_ATP', 'DEFENDER_ENDPOINT_P1') -SkipLog
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Defender license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
-        }
-
-        $MdoCapable = $false
-        try {
-            $MdoCapable = Test-CIPPStandardLicense -StandardName 'DefenderForOffice365LicenseCheck' -TenantFilter $TenantFilter -Preset DefenderForOffice365 -SkipLog
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Defender for Office 365 license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
-        }
-
-        $SharePointCapable = $false
-        try {
-            $SharePointCapable = Test-CIPPStandardLicense -StandardName 'SharePointLicenseCheck' -TenantFilter $TenantFilter -Preset SharePoint -SkipLog
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SharePoint license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
-        }
-
-        $TeamsCapable = $false
-        try {
-            $TeamsCapable = Test-CIPPStandardLicense -StandardName 'TeamsLicenseCheck' -TenantFilter $TenantFilter -Preset Teams -SkipLog
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Teams license check failed: $($_.Exception.Message)" -sev Warning -LogData $ErrorMessage
-        }
-
-        Write-Information "License capabilities for $TenantFilter - Intune: $IntuneCapable, CA: $ConditionalAccessCapable, P2: $AzureADPremiumP2Capable, PIM: $PIMCapable, Exchange: $ExchangeCapable, Compliance: $ComplianceCapable, SharePoint: $SharePointCapable, Teams: $TeamsCapable, MDO: $MdoCapable"
-
-        # Build grouped collection tasks — one activity per license category instead of one per cache type
-        $Tasks = [System.Collections.Generic.List[object]]::new()
-
-        # CopilotUsage always runs — endpoints return empty when no Copilot licenses are in use
-        $Tasks.Add(@{
-                FunctionName   = 'ExecCIPPDBCache'
-                CollectionType = 'CopilotUsage'
-                TenantFilter   = $TenantFilter
-                QueueId        = $QueueId
-                QueueName      = "DB Cache CopilotUsage - $TenantFilter"
-            })
-
-        # Graph collection always runs (no special license needed) — 25 cache types in one activity
-        $Tasks.Add(@{
-                FunctionName   = 'ExecCIPPDBCache'
-                CollectionType = 'Graph'
-                TenantFilter   = $TenantFilter
-                QueueId        = $QueueId
-                QueueName      = "DB Cache Graph - $TenantFilter"
-            })
-
-        # MFAState runs as its own activity — it makes 6+ API calls, bulk group/role member
-        # resolution, and O(users × policies) CPU work that can take minutes on large tenants
-        $Tasks.Add(@{
+        $Licensed = @{}
+        $Tasks = foreach ($Entry in (Get-CIPPDBCacheSchedule).GetEnumerator()) {
+            $License = $Entry.Value.License
+            if ($License) {
+                if (-not $Licensed.ContainsKey($License)) {
+                    $Licensed[$License] = Test-CIPPStandardLicense -StandardName "$($License)LicenseCheck" -TenantFilter $TenantFilter -Preset $License -SkipLog
+                }
+                if (-not $Licensed[$License]) {
+                    Write-Host "Skipping $($Entry.Key) data collection for $TenantFilter - no $License license"
+                    continue
+                }
+            }
+            $Task = @{
                 FunctionName = 'ExecCIPPDBCache'
-                Name         = 'MFAState'
                 TenantFilter = $TenantFilter
                 QueueId      = $QueueId
-                QueueName    = "DB Cache MFAState - $TenantFilter"
-            })
-
-        # Exchange collections — split into config (quick policy calls), data (usage reports), and mailboxes (heavy, spawns permission/rule child orchestrators)
-        if ($ExchangeCapable) {
-            $Tasks.Add(@{
-                    FunctionName   = 'ExecCIPPDBCache'
-                    CollectionType = 'ExchangeConfig'
-                    TenantFilter   = $TenantFilter
-                    QueueId        = $QueueId
-                    QueueName      = "DB Cache ExchangeConfig - $TenantFilter"
-                })
-            $Tasks.Add(@{
-                    FunctionName   = 'ExecCIPPDBCache'
-                    CollectionType = 'ExchangeData'
-                    TenantFilter   = $TenantFilter
-                    QueueId        = $QueueId
-                    QueueName      = "DB Cache ExchangeData - $TenantFilter"
-                })
-            # Mailboxes runs as its own activity — it's heavy (fetches all mailboxes) and spawns
-            # child orchestrators for permission/calendar/rules batching that need their own time
-            $Tasks.Add(@{
-                    FunctionName = 'ExecCIPPDBCache'
-                    Name         = 'Mailboxes'
-                    TenantFilter = $TenantFilter
-                    QueueId      = $QueueId
-                    QueueName    = "DB Cache Mailboxes - $TenantFilter"
-                })
-        } else {
-            Write-Host "Skipping Exchange Online data collection for $TenantFilter - no required license"
-        }
-
-        if ($ConditionalAccessCapable) {
-            $Tasks.Add(@{
-                    FunctionName   = 'ExecCIPPDBCache'
-                    CollectionType = 'ConditionalAccess'
-                    TenantFilter   = $TenantFilter
-                    QueueId        = $QueueId
-                    QueueName      = "DB Cache ConditionalAccess - $TenantFilter"
-                })
-            # Own activity: the sign-in activity report is slow and must not hold up the CA collection.
-            $Tasks.Add(@{
-                    FunctionName = 'ExecCIPPDBCache'
-                    Name         = 'ServicePrincipalSignInActivities'
-                    TenantFilter = $TenantFilter
-                    QueueId      = $QueueId
-                    QueueName    = "DB Cache ServicePrincipalSignInActivities - $TenantFilter"
-                })
-        } else {
-            Write-Host "Skipping Conditional Access data collection for $TenantFilter - no required license"
-        }
-
-        if ($AzureADPremiumP2Capable) {
-            $Tasks.Add(@{
-                    FunctionName   = 'ExecCIPPDBCache'
-                    CollectionType = 'IdentityProtection'
-                    TenantFilter   = $TenantFilter
-                    QueueId        = $QueueId
-                    QueueName      = "DB Cache IdentityProtection - $TenantFilter"
-                })
-        } else {
-            Write-Host "Skipping Azure AD Premium P2 data collection for $TenantFilter - no required license"
-        }
-
-        if ($PIMCapable) {
-            $Tasks.Add(@{
-                    FunctionName   = 'ExecCIPPDBCache'
-                    CollectionType = 'PIM'
-                    TenantFilter   = $TenantFilter
-                    QueueId        = $QueueId
-                    QueueName      = "DB Cache PIM - $TenantFilter"
-                })
-        } else {
-            Write-Host "Skipping PIM data collection for $TenantFilter - no required license"
-        }
-
-        if ($IntuneCapable) {
-            $Tasks.Add(@{
-                    FunctionName   = 'ExecCIPPDBCache'
-                    CollectionType = 'Intune'
-                    TenantFilter   = $TenantFilter
-                    QueueId        = $QueueId
-                    QueueName      = "DB Cache Intune - $TenantFilter"
-                })
-        } else {
-            Write-Host "Skipping Intune data collection for $TenantFilter - no required license"
-        }
-
-        if ($ComplianceCapable) {
-            $Tasks.Add(@{
-                    FunctionName   = 'ExecCIPPDBCache'
-                    CollectionType = 'Compliance'
-                    TenantFilter   = $TenantFilter
-                    QueueId        = $QueueId
-                    QueueName      = "DB Cache Compliance - $TenantFilter"
-                })
-        } else {
-            Write-Host "Skipping Compliance data collection for $TenantFilter - no required license"
-        }
-
-        if ($DefenderCapable) {
-            $Tasks.Add(@{
-                    FunctionName   = 'ExecCIPPDBCache'
-                    CollectionType = 'Defender'
-                    TenantFilter   = $TenantFilter
-                    QueueId        = $QueueId
-                    QueueName      = "DB Cache Defender - $TenantFilter"
-                })
-        } else {
-            Write-Host "Skipping Defender data collection for $TenantFilter - no required license"
-        }
-
-        if ($MdoCapable) {
-            $Tasks.Add(@{
-                    FunctionName   = 'ExecCIPPDBCache'
-                    CollectionType = 'DefenderForOffice365'
-                    TenantFilter   = $TenantFilter
-                    QueueId        = $QueueId
-                    QueueName      = "DB Cache DefenderForOffice365 - $TenantFilter"
-                })
-        } else {
-            Write-Host "Skipping Defender for Office 365 data collection for $TenantFilter - no required license"
-        }
-
-        if ($SharePointCapable) {
-            $Tasks.Add(@{
-                    FunctionName   = 'ExecCIPPDBCache'
-                    CollectionType = 'SharePoint'
-                    TenantFilter   = $TenantFilter
-                    QueueId        = $QueueId
-                    QueueName      = "DB Cache SharePoint - $TenantFilter"
-                })
-            # The per-site collectors scale with site count, so each gets its own task time limit
-            foreach ($Name in 'SPOSites', 'SharePointSiteUsage') {
-                $Tasks.Add(@{
-                        FunctionName = 'ExecCIPPDBCache'
-                        Name         = $Name
-                        TenantFilter = $TenantFilter
-                        QueueId      = $QueueId
-                        QueueName    = "DB Cache $Name - $TenantFilter"
-                    })
+                QueueName    = "DB Cache $($Entry.Key) - $TenantFilter"
             }
-            # SharePointSharingLinks and OneDriveLongPaths run adhoc — full drive walks are too slow for nightly
-        } else {
-            Write-Host "Skipping SharePoint data collection for $TenantFilter - no required license"
+            if ($Entry.Value.Types) { $Task.CollectionType = $Entry.Key } else { $Task.Name = $Entry.Key }
+            $Task
         }
 
-        if ($TeamsCapable) {
-            $Tasks.Add(@{
-                    FunctionName   = 'ExecCIPPDBCache'
-                    CollectionType = 'Teams'
-                    TenantFilter   = $TenantFilter
-                    QueueId        = $QueueId
-                    QueueName      = "DB Cache Teams - $TenantFilter"
-                })
-        } else {
-            Write-Host "Skipping Teams data collection for $TenantFilter - no required license"
-        }
-
-        Write-Information "Built $($Tasks.Count) grouped cache tasks for tenant $TenantFilter (down from individual per-type tasks)"
+        Write-Information "Built $(@($Tasks).Count) grouped cache tasks for tenant $TenantFilter"
 
         # Return the task list — the PostExecution function will aggregate and start a flat orchestrator
         return @($Tasks)

@@ -1,7 +1,7 @@
 function Invoke-ListAlertResults {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         CIPP.Alert.Read
     .DESCRIPTION

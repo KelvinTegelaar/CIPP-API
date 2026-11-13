@@ -13,10 +13,14 @@ function New-GraphBulkRequest {
         $NoPaginateIds = @(),
         [ValidateSet('v1.0', 'beta')]
         $Version = 'beta',
-        $Headers
+        $Headers,
+        # Send up to this many $batch requests at once; 1 sends them one after another
+        [int]$MaxConcurrency = 1
     )
 
-    if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
+    # Each sub-request URL gets the same check as a single request to that URL.
+    $Refused = { -not (Get-AuthorisedRequest -Uri "https://graph.microsoft.com/$Version/$("$($_.url)".TrimStart('/'))" -TenantID $tenantid) }
+    if ($NoAuthCheck -or ((Get-AuthorisedRequest -TenantID $tenantid) -and -not @($Requests).Where($Refused, 'First'))) {
         if ($Headers) {
             $Headers = $Headers
         } else {
@@ -26,6 +30,9 @@ function New-GraphBulkRequest {
         if ($script:XMsThrottlePriority) {
             $headers['x-ms-throttle-priority'] = $script:XMsThrottlePriority
         }
+        # Entra audit logs record the $batch request's own User-Agent for every write inside it
+        if (!$headers['User-Agent']) { $headers['User-Agent'] = Get-CippUserAgent }
+        $UserAgent = $headers['User-Agent']
 
         $URL = "https://graph.microsoft.com/$Version/`$batch"
         # a $batch lands its sub-requests at once, so the rate limiter can only space whole batches: no batch holds more
@@ -62,17 +69,42 @@ function New-GraphBulkRequest {
             }
         }
         try {
-            $ReturnedData = foreach ($Batch in (& $Split $Requests)) {
-                $req = @{}
-                $req['requests'] = $Batch
-                $ReqBody = [CIPP.CippJson]::ToJson($req, 100) ?? (ConvertTo-Json -InputObject $req -Compress -Depth 100)
-                $Return = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $ReqBody
-                if ($Return.headers.'retry-after') {
-                    #Revist this when we are pushing this data into our custom schema instead.
-                    $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
-                    Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $ReqBody
+            $Batches = & $Split $Requests
+            $ReturnedData = if ($MaxConcurrency -gt 1 -and $Batches.Count -gt 1) {
+                $ConcHeaders = [System.Collections.Generic.Dictionary[string, string]]::new()
+                foreach ($Key in $headers.Keys) { $ConcHeaders[$Key] = [string]$headers[$Key] }
+                $ConcRequests = [System.Collections.Generic.List[CIPP.CIPPConcurrentRequest]]::new()
+                foreach ($Batch in $Batches) {
+                    $ConcRequest = [CIPP.CIPPConcurrentRequest]::new()
+                    $ConcRequest.Uri = $URL
+                    $ConcRequest.Method = 'POST'
+                    $ConcRequest.Body = [CIPP.CippJson]::ToJson(@{ requests = $Batch }, 100) ?? (ConvertTo-Json -InputObject @{ requests = $Batch } -Compress -Depth 100)
+                    $ConcRequest.ContentType = 'application/json; charset=utf-8'
+                    $ConcRequest.Headers = $ConcHeaders
+                    $ConcRequests.Add($ConcRequest)
                 }
-                $Return
+                # SendConcurrent retries a throttled or failed batch itself; one that still fails throws, as the sequential path does
+                foreach ($ConcResult in [CIPP.CIPPRestClient]::SendConcurrent($ConcRequests, $MaxConcurrency, 3, ($PSCmdlet.PipelineStopToken ?? $global:CraftPipelineStopToken))) {
+                    if (-not $ConcResult.IsSuccess) {
+                        $Detail = if ($ConcResult.Error) { $ConcResult.Error } elseif ($ConcResult.Result.HasContent) { $ConcResult.Result.Content }
+                        throw "Graph batch request failed (HTTP $($ConcResult.StatusCode)): $Detail"
+                    }
+                    [CIPP.CippJson]::ConvertFromResponse($ConcResult.Result)
+                }
+            } else {
+                foreach ($Batch in $Batches) {
+                    $req = @{}
+                    $req['requests'] = $Batch
+                    $ReqBody = [CIPP.CippJson]::ToJson($req, 100) ?? (ConvertTo-Json -InputObject $req -Compress -Depth 100)
+                    $Return = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $ReqBody
+                    if ($Return.headers.'retry-after') {
+                        #Revist this when we are pushing this data into our custom schema instead.
+                        $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+                        $headers['User-Agent'] = $UserAgent
+                        Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $ReqBody
+                    }
+                    $Return
+                }
             }
             # A throttled or briefly unavailable FIRST page used to come straight back as the item's failure
             # (continuation pages below are retried). Send those items again - twice, waiting the longest
@@ -132,6 +164,7 @@ function New-GraphBulkRequest {
                     $NextReturn = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $NextReqBody
                     if ($NextReturn.headers.'retry-after') {
                         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+                        $headers['User-Agent'] = $UserAgent
                         $NextReturn = Invoke-CIPPRestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $NextReqBody
                     }
 

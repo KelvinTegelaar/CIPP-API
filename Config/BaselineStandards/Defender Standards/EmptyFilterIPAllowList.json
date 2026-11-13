@@ -4,7 +4,9 @@
   "cat": "Defender Standards",
   "tag": [
     "CIS M365 7.0.0 (2.1.12)",
-    "mdo_connectionfilter"
+    "mdo_connectionfilter",
+    "CMMC (SI.L2-3.14.6)",
+    "NIST SP 800-171 (3.14.6)"
   ],
   "impact": "Medium Impact",
   "helpText": "Ensures the connection filter IP allow list is not used. IPs on this list bypass spam, spoof, and authentication checks.",

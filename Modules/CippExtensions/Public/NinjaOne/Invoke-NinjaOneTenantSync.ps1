@@ -487,6 +487,21 @@ function Invoke-NinjaOneTenantSync {
 
         Write-Verbose "$(Get-Date) - Parsing Conditional Access Polcies"
 
+        # CA classes a user as guest/external by userType + #EXT# UPN. The legacy 'GuestsOrExternalUsers'
+        # token in includeUsers/excludeUsers means every category, the guest blocks list categories.
+        # ponytail: an enumerated externalTenants list is treated as all tenants (documentation sync, not
+        # worth a tenant lookup per run); Get-CIPPExternalDomainTenant resolves it if that ever matters
+        $GuestUsers = @(foreach ($User in $Users) {
+                $IsExt = [string]$User.userPrincipalName -like '*#EXT#*'
+                $Category = if ($User.userType -eq 'Guest') { if ($IsExt) { 'b2bCollaborationGuest' } else { 'internalGuest' } } elseif ($IsExt) { 'b2bCollaborationMember' }
+                if ($Category) { [pscustomobject]@{ id = $User.id; Category = $Category } }
+            })
+        $GuestIdsFor = {
+            param($UserRefs, $GuestBlock)
+            $Types = if ($UserRefs -contains 'GuestsOrExternalUsers') { 'internalGuest', 'b2bCollaborationGuest', 'b2bCollaborationMember' } else { @(([string]$GuestBlock.guestOrExternalUserTypes -split ',').Trim()) }
+            foreach ($Guest in $GuestUsers) { if ($Types -contains $Guest.Category) { $Guest.id } }
+        }
+
         $ConditionalAccessMembers = foreach ($CAPolicy in $AllConditionalAccessPolicies) {
             #Setup User Array
             [System.Collections.Generic.List[PSCustomObject]]$CAMembers = @()
@@ -496,8 +511,9 @@ function Invoke-NinjaOneTenantSync {
                 $Users | ForEach-Object { $null = $CAMembers.add($_.id) }
             } else {
                 # Add any specific all users to the array
-                $CAPolicy.conditions.users.includeUsers | ForEach-Object { $null = $CAMembers.add($_) }
+                $CAPolicy.conditions.users.includeUsers | Where-Object { $_ -ne 'GuestsOrExternalUsers' } | ForEach-Object { $null = $CAMembers.add($_) }
             }
+            foreach ($GuestId in (& $GuestIdsFor $CAPolicy.conditions.users.includeUsers $CAPolicy.conditions.users.includeGuestsOrExternalUsers)) { $null = $CAMembers.add($GuestId) }
 
             # Now all members of groups
             foreach ($CAIGroup in $CAPolicy.conditions.users.includeGroups) {
@@ -523,6 +539,7 @@ function Invoke-NinjaOneTenantSync {
             if ($CAMembers) {
                 # Now remove excluded users
                 $CAPolicy.conditions.users.excludeUsers | ForEach-Object { $null = $CAMembers.remove($_) }
+                foreach ($GuestId in (& $GuestIdsFor $CAPolicy.conditions.users.excludeUsers $CAPolicy.conditions.users.excludeGuestsOrExternalUsers)) { $null = $CAMembers.remove($GuestId) }
 
                 # Excluded Groups
                 foreach ($CAEGroup in $CAPolicy.conditions.users.excludeGroups) {
@@ -1514,9 +1531,7 @@ function Invoke-NinjaOneTenantSync {
         ### License Document Details
         if ($Configuration.LicenseDocumentsEnabled -eq $True) {
 
-            # String_Id -> display name, last row wins like convert-skuname's Where-Object | Select-Object -Last 1
-            $SkuDisplayNames = @{}
-            foreach ($Row in [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv) { $SkuDisplayNames[$Row.String_Id] = $Row.Product_Display_Name }
+            $PlanNames = (Get-CIPPConversionTable).PlanNameByPlanId
             $UsersBySku = [CIPP.CippIndex]::Build($Users, @(foreach ($User in $Users) { , ($($User.assignedLicenses.skuId) ?? $null) }))
             $LicenseMapTable = Get-CippTable -tablename 'NinjaOneLicenseMap'
             $LicenseMapBySku = @{}
@@ -1569,7 +1584,7 @@ function Invoke-NinjaOneTenantSync {
                 $SubscriptionCardHTML = Get-NinjaOneCard -Title 'Subscriptions' -Body $SubscriptionsHTML -Icon 'fas fa-file-invoice'
 
 
-                $LicenseItemsTable = $License.servicePlans | Select-Object @{n = 'Plan Name'; e = { $Name = if ($_.servicePlanName) { $SkuDisplayNames[$_.servicePlanName] }; if ($Name) { $Name } else { $_.servicePlanName, $null } } }, @{n = 'Applies To'; e = { $_.appliesTo } }, @{n = 'Provisioning Status'; e = { $_.provisioningStatus } }
+                $LicenseItemsTable = $License.servicePlans | Select-Object @{n = 'Plan Name'; e = { $PlanNames[[string]$_.servicePlanId] ?? $_.servicePlanName } }, @{n = 'Applies To'; e = { $_.appliesTo } }, @{n = 'Provisioning Status'; e = { $_.provisioningStatus } }
                 $LicenseItemsHTML = $LicenseItemsTable | ConvertTo-Html -As Table -Fragment
                 $LicenseItemsHTML = ([System.Web.HttpUtility]::HtmlDecode($LicenseItemsHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
 

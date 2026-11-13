@@ -16,6 +16,9 @@ function Invoke-ListUserTrustedBlockedSenders {
     $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.UserID
     $UserPrincipalName = $Request.Query.userPrincipalName
+    if (-not $UserID) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'UserID is required' } })
+    }
 
     try {
         $Config = New-ExoRequest -Anchor $UserID -tenantid $TenantFilter -cmdlet 'Get-MailboxJunkEmailConfiguration' -cmdParams @{Identity = $UserID }

@@ -11,6 +11,10 @@ function Invoke-ListSharePointExternalUsers {
         Every entry is classified against Entra: 'Entra B2B' (live Entra guest), 'Orphaned B2B'
         (the Entra guest was deleted but SharePoint still references them) or 'SharePoint-only'
         (legacy email-authenticated guest that never had an Entra object).
+
+        Each row also carries SiteAccess: one entry per site with the site user ID and the
+        site-level guest expiration (UserExpiration from the site's User Information List),
+        for use with ExecSPOGuestAccess (Extend / Expire on a single site).
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -37,6 +41,15 @@ function Invoke-ListSharePointExternalUsers {
         $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
         $Scope = "$($SharePointInfo.SharePointUrl)/.default"
         $JsonAccept = @{ Accept = 'application/json;odata=nometadata' }
+        $VerboseHeaders = @{ Accept = 'application/json;odata=verbose' }
+        # Site guest expiration is stored on the User Information List (UserExpiration);
+        # list item ID == site user ID.
+        $CamlBody = @{
+            query = @{
+                __metadata = @{ type = 'SP.CamlQuery' }
+                ViewXml    = "<View><ViewFields><FieldRef Name='ID'/><FieldRef Name='UserExpiration'/></ViewFields><RowLimit>5000</RowLimit></View>"
+            }
+        } | ConvertTo-Json -Depth 5 -Compress
         $SiteGuests = @{}
         try {
             # NB: getAllSites returns an empty set when $select is combined with this $filter.
@@ -45,25 +58,49 @@ function Invoke-ListSharePointExternalUsers {
             $Sites = @()
             Write-Information "Site enumeration failed; external users report is store-only: $($_.Exception.Message)"
         }
+
         foreach ($SiteUrl in $Sites) {
             try {
-                $Users = New-GraphGetRequest -uri "$($SiteUrl.TrimEnd('/'))/_api/web/siteusers?`$select=Title,Email,LoginName,IsShareByEmailGuestUser,IsEmailAuthenticationGuestUser" -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true
+                $Users = New-GraphGetRequest -uri "$($SiteUrl.TrimEnd('/'))/_api/web/siteusers?`$select=Id,Title,Email,LoginName,IsShareByEmailGuestUser,IsEmailAuthenticationGuestUser" -tenantid $TenantFilter -scope $Scope -extraHeaders $JsonAccept -UseCertificate -AsApp $true
             } catch {
                 continue # sites the app cannot reach (locked etc.) are skipped
             }
-            foreach ($User in $Users) {
-                $IsGuest = [bool]$User.IsShareByEmailGuestUser -or [bool]$User.IsEmailAuthenticationGuestUser -or $User.LoginName -match '(?i)#ext#|urn%3aspo%3aguest'
-                if (-not $IsGuest) { continue }
+
+            $SiteGuestUsers = @($Users | Where-Object { [bool]$_.IsShareByEmailGuestUser -or [bool]$_.IsEmailAuthenticationGuestUser -or $_.LoginName -match '(?i)#ext#|urn%3aspo%3aguest' })
+            if ($SiteGuestUsers.Count -eq 0) { continue }
+
+            # Per-site guest expiration, only fetched for sites that actually have guests.
+            $ExpiryById = @{}
+            try {
+                # NOTE: SharePoint REST app-only POSTs need the certificate-based token; see
+                # Remove-CIPPSPOSiteUser for the POST mechanism used for SharePoint REST writes.
+                $Resp = New-GraphPOSTRequest -uri "$($SiteUrl.TrimEnd('/'))/_api/web/SiteUserInfoList/GetItems" -tenantid $TenantFilter -scope $Scope -AsApp $true -UseCertificate -type 'POST' -body $CamlBody -contentType 'application/json;odata=verbose' -AddedHeaders $VerboseHeaders
+                $Items = if ($Resp.d.results) { $Resp.d.results } elseif ($Resp.value) { $Resp.value } else { @($Resp) }
+                foreach ($Item in $Items) {
+                    if ($Item.ID) { $ExpiryById[[int]$Item.ID] = $Item.UserExpiration }
+                }
+            } catch {
+                Write-Information "Could not read guest expiration for $($SiteUrl): $($_.Exception.Message)"
+            }
+
+            foreach ($User in $SiteGuestUsers) {
                 $Key = ($User.LoginName -split '\|')[-1].ToLower()
                 if (-not $SiteGuests.ContainsKey($Key)) {
                     $SiteGuests[$Key] = [PSCustomObject]@{
-                        Title     = $User.Title
-                        Email     = $User.Email
-                        LoginName = $User.LoginName
-                        Sites     = [System.Collections.Generic.List[string]]::new()
+                        Title      = $User.Title
+                        Email      = $User.Email
+                        LoginName  = $User.LoginName
+                        Sites      = [System.Collections.Generic.List[string]]::new()
+                        SiteAccess = [System.Collections.Generic.List[object]]::new()
                     }
                 }
                 [void]$SiteGuests[$Key].Sites.Add($SiteUrl)
+                $Expiry = $ExpiryById[[int]$User.Id]
+                $SiteGuests[$Key].SiteAccess.Add([PSCustomObject]@{
+                        SiteUrl    = $SiteUrl
+                        SiteUserId = [int]$User.Id
+                        Expiration = if ($Expiry) { $Expiry } else { $null } # null = no expiry set
+                    })
             }
         }
 
@@ -95,6 +132,14 @@ function Invoke-ListSharePointExternalUsers {
             return @('Orphaned B2B (not in Entra)', $null)
         }
 
+        # Soonest site-level expiry across a guest's sites (null when none set), so the
+        # list can be sorted by it.
+        function Get-NextExpiration($SiteAccess) {
+            $Dates = @($SiteAccess | Where-Object { $_.Expiration } | ForEach-Object { [datetime]$_.Expiration })
+            if ($Dates.Count -eq 0) { return $null }
+            return ($Dates | Sort-Object | Select-Object -First 1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        }
+
         $Rows = [System.Collections.Generic.List[object]]::new()
         $SeenKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
@@ -110,7 +155,11 @@ function Invoke-ListSharePointExternalUsers {
             # Direct assignment keeps the List intact; an if-expression would pipeline-unwrap
             # a single-element list to a scalar and the API would emit a string, not an array.
             $RowSites = [System.Collections.Generic.List[string]]::new()
-            if ($MatchKey) { $RowSites = $SiteGuests[$MatchKey].Sites }
+            $RowSiteAccess = [System.Collections.Generic.List[object]]::new()
+            if ($MatchKey) {
+                $RowSites = $SiteGuests[$MatchKey].Sites
+                $RowSiteAccess = $SiteGuests[$MatchKey].SiteAccess
+            }
             $Rows.Add([PSCustomObject]@{
                     DisplayName = $User.DisplayName
                     InvitedAs   = $User.InvitedAs
@@ -124,7 +173,9 @@ function Invoke-ListSharePointExternalUsers {
                     InEntra     = [bool]$EntraUser
                     EntraUserId = $EntraUser.id
                     Source      = 'External users store'
-                    Sites       = $RowSites
+                    Sites          = $RowSites
+                    SiteAccess     = $RowSiteAccess
+                    NextExpiration = Get-NextExpiration $RowSiteAccess
                 })
         }
 
@@ -145,7 +196,9 @@ function Invoke-ListSharePointExternalUsers {
                     InEntra     = [bool]$EntraUser
                     EntraUserId = $EntraUser.id
                     Source      = 'Site membership'
-                    Sites       = $SG.Sites
+                    Sites          = $SG.Sites
+                    SiteAccess     = $SG.SiteAccess
+                    NextExpiration = Get-NextExpiration $SG.SiteAccess
                 })
         }
 

@@ -2,7 +2,11 @@
   "name": "EnrollmentWindowsHelloForBusinessConfiguration",
   "label": "Enrollment Windows Hello for Business configuration",
   "cat": "Intune Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (IA.L2-3.5.3)",
+    "FedRAMP A-D (KSI-IAM-APM)",
+    "NIST SP 800-171 (3.5.3)"
+  ],
   "impact": "Medium Impact",
   "helpText": "Configures the default Windows Hello for Business enrollment settings, including PIN complexity and biometric unlock.",
   "executiveText": "Sets how employees sign in to Windows devices with a PIN or biometrics instead of a password, which is both faster for them and harder for an attacker to steal.",

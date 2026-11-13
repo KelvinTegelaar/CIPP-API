@@ -35,6 +35,8 @@ function Resolve-CIPPSharePointRestContext {
 
     $NormalizedSiteUrl = $SiteUrl.TrimEnd('/')
     $Scope = "$($SharePointInfo.SharePointUrl)/.default"
+    # Fail here rather than at the first request, so callers never build on a foreign site URL.
+    Assert-CIPPSharePointHost -Uri $NormalizedSiteUrl -Scope $Scope
     $Headers = @{ Accept = 'application/json;odata=nometadata' }
     $BaseUri = "$NormalizedSiteUrl/_api"
 

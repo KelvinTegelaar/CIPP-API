@@ -25,6 +25,7 @@ function Test-CIPPGDAPGroupMappings {
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
+        [string]$PartnerTenantId,
         [Parameter(Mandatory = $true)]
         $RoleMappings,
         $PartnerGroups,
@@ -57,7 +58,8 @@ function Test-CIPPGDAPGroupMappings {
 
     # Fetch partner tenant security groups once if the caller did not already hand them to us
     if (-not $PartnerGroups) {
-        $PartnerGroups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
+        if (!$PartnerTenantId) { $PartnerTenantId = $env:TenantID }
+        $PartnerGroups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$filter=securityEnabled eq true&$select=id,displayName&$top=999' -tenantid $PartnerTenantId -NoAuthCheck $true -AsApp $true
     }
 
     $Results = [System.Collections.Generic.List[object]]::new()
@@ -65,9 +67,27 @@ function Test-CIPPGDAPGroupMappings {
     $Corrections = [System.Collections.Generic.List[object]]::new()
     $CreateRequests = [System.Collections.Generic.List[object]]::new()
     $CreateLookup = @{}
+    $ReservedNames = Get-CIPPGDAPReservedGroupName
+    $ReservedMappings = [System.Collections.Generic.List[object]]::new()
 
     foreach ($Mapping in $Mappings) {
         $ExpectedName = if ($Mapping.GroupName) { $Mapping.GroupName } else { "M365 GDAP $($Mapping.RoleName)" }
+
+        # Reserved partner groups are dropped whichever way the mapping would resolve to them
+        $ResolvedGroup = @($PartnerGroups).Where({ $Mapping.GroupId -and $_.id -eq $Mapping.GroupId }, 'First')[0] ?? @($PartnerGroups).Where({ $_.displayName -eq $ExpectedName }, 'First')[0]
+        $ResolvedName = if ($ResolvedGroup) { $ResolvedGroup.displayName } else { $ExpectedName }
+        if ($ResolvedName -in $ReservedNames) {
+            $Results.Add([PSCustomObject]@{
+                    RoleName   = $Mapping.RoleName
+                    GroupName  = $ResolvedName
+                    GroupId    = $Mapping.GroupId
+                    Status     = 'Reserved'
+                    Message    = "Group '$ResolvedName' is a reserved partner group and cannot be mapped to a GDAP role"
+                    OldGroupId = $null
+                })
+            $ReservedMappings.Add($Mapping)
+            continue
+        }
 
         # 1. GroupId still valid in the partner tenant
         if ($Mapping.GroupId -and $PartnerGroups.id -contains $Mapping.GroupId) {
@@ -103,7 +123,8 @@ function Test-CIPPGDAPGroupMappings {
         # 3. Neither the id nor a matching group exists - recreate or report as missing
         if ($CreateMissing) {
             $MailNickname = 'M365GDAP{0}' -f (($ExpectedName -replace '^M365 GDAP ', '') -replace '[^a-zA-Z0-9]', '')
-            $RequestId = "create-$($Mapping.roleDefinitionId)"
+            # Unique per mapping: two missing groups can share a role.
+            $RequestId = "create-$($CreateRequests.Count)"
             $CreateLookup[$RequestId] = $Mapping
             $CreateRequests.Add(@{
                     id      = $RequestId
@@ -133,7 +154,8 @@ function Test-CIPPGDAPGroupMappings {
 
     # Execute any group recreations and fold the new ids back into the mappings
     if ($CreateRequests.Count -gt 0 -and $PSCmdlet.ShouldProcess('Partner tenant', "Recreate $($CreateRequests.Count) missing GDAP group(s)")) {
-        $CreateResults = New-GraphBulkRequest -Requests @($CreateRequests) -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
+        if (!$PartnerTenantId) { $PartnerTenantId = $env:TenantID }
+    $CreateResults = New-GraphBulkRequest -Requests @($CreateRequests) -tenantid $PartnerTenantId -NoAuthCheck $true -AsApp $true
         foreach ($Result in $CreateResults) {
             $Mapping = $CreateLookup[$Result.id]
             if (-not $Mapping) { continue }
@@ -172,13 +194,14 @@ function Test-CIPPGDAPGroupMappings {
             foreach ($Correction in $Corrections) {
                 $Mapping = $Correction.Mapping
                 if ($Correction.OldGroupId -and $Correction.OldGroupId -ne $Mapping.GroupId) {
-                    $OldEntity = Get-CIPPAzDataTableEntity @RolesTable -Filter "PartitionKey eq 'Roles' and RowKey eq '$($Correction.OldGroupId)'"
+                    $OldEntity = Get-CIPPAzDataTableEntity @RolesTable -Filter "PartitionKey eq 'Roles' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Correction.OldGroupId)'"
                     if ($OldEntity) {
                         Remove-CIPPAzDataTableEntity -Force @RolesTable -Entity $OldEntity
                     }
                 }
                 Add-CIPPAzDataTableEntity @RolesTable -Entity @{
                     PartitionKey     = 'Roles'
+                    partnerTenantId  = "$PartnerTenantId"
                     RowKey           = [string]$Mapping.GroupId
                     RoleName         = [string]$Mapping.RoleName
                     GroupName        = [string]$Mapping.GroupName
@@ -221,7 +244,7 @@ function Test-CIPPGDAPGroupMappings {
     }
 
     return [PSCustomObject]@{
-        RoleMappings  = @($Mappings)
+        RoleMappings  = @($Mappings.Where({ $ReservedMappings -notcontains $_ }))
         Results       = @($Results)
         Valid         = (($MissingGroups | Measure-Object).Count -eq 0)
         MissingGroups = @($MissingGroups)

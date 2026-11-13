@@ -9,18 +9,48 @@ function Invoke-ExecListBackup {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $Type = $Request.Query.Type
+    $Type = $Request.Query.Type ? [string]$Request.Query.Type : 'CIPP'
+    if ($Type -notin @('CIPP', 'Scheduled')) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'Type must be CIPP or Scheduled.' }
+            })
+    }
+
+    if ($Type -eq 'CIPP') {
+        # A CIPP backup holds the whole configuration, so reading one needs the same access as restoring one.
+        $CanManage = $false
+        try {
+            $RestoreRequest = [pscustomobject]@{ Params = @{ CIPPEndpoint = 'ExecRestoreBackup' }; Headers = $Request.Headers; Query = [pscustomobject]@{}; Body = [pscustomobject]@{} }
+            $CanManage = [bool](Test-CIPPAccess -Request $RestoreRequest) -and @(Test-CIPPAccess -Request $Request -TenantList) -contains 'AllTenants'
+        } catch {
+            $CanManage = $false
+        }
+        if (-not $CanManage) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ Results = 'CIPP backups can only be read by a user who can restore them.' }
+                })
+        }
+    }
+
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $NameOnly = $Request.Query.NameOnly -eq $true
     $BackupName = $Request.Query.BackupName
 
     $CippBackupParams = @{}
-    if ($Type) { $CippBackupParams.Type = $Type }
+    $CippBackupParams.Type = $Type
     if ($TenantFilter) { $CippBackupParams.TenantFilter = $TenantFilter }
     if ($BackupName) { $CippBackupParams.Name = $BackupName }
     if ($NameOnly) { $CippBackupParams.NameOnly = $NameOnly }
 
     $Result = Get-CIPPBackup @CippBackupParams
+
+    if ($Type -eq 'Scheduled') {
+        # Tenant backups are keyed '<tenant>_<date>'; keep only the tenants the caller may see.
+        $Result = $Result | ForEach-Object { [pscustomobject]@{ Tenant = ($_.RowKey -split '_')[0]; Row = $_ } } |
+            Select-CippAllowedTenantData -TenantProperty 'Tenant' | ForEach-Object { $_.Row }
+    }
 
     if ($NameOnly) {
         try {

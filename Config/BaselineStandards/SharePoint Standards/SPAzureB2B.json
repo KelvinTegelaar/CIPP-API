@@ -3,7 +3,13 @@
   "label": "Enable SharePoint and OneDrive integration with Azure AD B2B",
   "cat": "SharePoint Standards",
   "tag": [
-    "CIS M365 7.0.0 (7.2.2)"
+    "CIS M365 7.0.0 (7.2.2)",
+    "CMMC (IA.L1-b.1.v)",
+    "CMMC (IA.L1-b.1.vi)",
+    "CMMC (IA.L2-3.5.1)",
+    "CMMC (IA.L2-3.5.2)",
+    "NIST SP 800-171 (3.5.1)",
+    "NIST SP 800-171 (3.5.2)"
   ],
   "impact": "Low Impact",
   "helpText": "Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled",

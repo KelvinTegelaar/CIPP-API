@@ -2,7 +2,10 @@
   "name": "SharePointMassDeletionAlert",
   "label": "SharePoint Mass Deletion Alert",
   "cat": "Defender Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (SI.L2-3.14.6)",
+    "NIST SP 800-171 (3.14.6)"
+  ],
   "impact": "Low Impact",
   "helpText": "Sets a e-mail address to alert when a User deletes more than 20 SharePoint files within 60 minutes. NB: Requires a Office 365 E5 subscription, Office 365 E3 with Threat Intelligence or Office 365 EquivioAnalytics add-on.",
   "executiveText": "Alerts administrators when employees delete large numbers of SharePoint files in a short time period, helping detect potential data destruction attacks, ransomware, or accidental mass deletions. This early warning system enables rapid response to protect critical business documents and data.",

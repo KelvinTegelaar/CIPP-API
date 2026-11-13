@@ -1,7 +1,7 @@
 function Search-CIPPBecSignIn {
     <#
     .SYNOPSIS
-        Reads the sign-ins matching a filter over a period, as 7-day slices in one Graph batch.
+        Reads the sign-ins matching a filter over a period, as slices (7 days by default) in one Graph batch.
     .DESCRIPTION
         A sign-in search costs Graph the time range it covers, not the rows it returns: five 7-day slices
         in one batch come back about three times faster than one 30-day search for the same rows, and a
@@ -10,7 +10,9 @@ function Search-CIPPBecSignIn {
         Returns { Rows, Incomplete }: Incomplete when Graph stopped paging a slice part-way.
         -Stream instead emits the rows (still newest first) as each page arrives, one slice at a time, for
         a caller that folds them: a busy user's sign-ins are then never all in memory. A page that still
-        fails after the retries throws, after the rows before it were emitted.
+        fails after the retries throws, after the rows before it were emitted. A slice that times out before
+        returning a row is split in half and read again, down to an hour: a busy app's sign-ins can take Graph
+        longer than the request timeout for even a day.
     .PARAMETER TenantFilter
         Tenant default domain name.
     .PARAMETER Filter
@@ -23,6 +25,8 @@ function Search-CIPPBecSignIn {
         Optional $select list.
     .PARAMETER AsApp
         Read with the application token (the default) or the delegated one.
+    .PARAMETER SliceHours
+        Length of each slice, 168 (7 days) by default.
     .FUNCTIONALITY
         Internal
     #>
@@ -34,23 +38,37 @@ function Search-CIPPBecSignIn {
         [datetime]$EndDate = [datetime]::UtcNow,
         [string]$Select,
         [bool]$AsApp = $true,
+        [ValidateRange(1, 168)][int]$SliceHours = 168,
         [switch]$Stream
     )
 
     $End = $EndDate.ToUniversalTime()
-    $Requests = [System.Collections.Generic.List[object]]::new()
-    for ($From = $StartDate.ToUniversalTime(); $From -lt $End; $From = $From.AddDays(7)) {
-        $To = if ($From.AddDays(7) -lt $End) { $From.AddDays(7) } else { $End }
-        $Url = "auditLogs/signIns?`$filter=$Filter and createdDateTime ge $($From.ToString('yyyy-MM-ddTHH:mm:ssZ')) and createdDateTime lt $($To.ToString('yyyy-MM-ddTHH:mm:ssZ'))&`$top=999"
-        if ($Select) { $Url = "$Url&`$select=$Select" }
-        $Requests.Add(@{ id = "s$($Requests.Count)"; method = 'GET'; url = $Url })
+    $Slices = [System.Collections.Generic.Stack[object]]::new()
+    for ($From = $StartDate.ToUniversalTime(); $From -lt $End; $From = $From.AddHours($SliceHours)) {
+        $Slices.Push(@{ From = $From; To = $(if ($From.AddHours($SliceHours) -lt $End) { $From.AddHours($SliceHours) } else { $End }) })
     }
+    $Url = { param($Slice) "auditLogs/signIns?`$filter=$Filter and createdDateTime ge $($Slice.From.ToString('yyyy-MM-ddTHH:mm:ssZ')) and createdDateTime lt $($Slice.To.ToString('yyyy-MM-ddTHH:mm:ssZ'))&`$top=999$(if ($Select) { "&`$select=$Select" })" }
     if ($Stream) {
-        for ($i = $Requests.Count - 1; $i -ge 0; $i--) {
-            New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Requests[$i].url)" -tenantid $TenantFilter -AsApp $AsApp -Stream
+        # newest slice first: the stack pops in reverse of the order pushed
+        while ($Slices.Count -gt 0) {
+            $Slice = $Slices.Pop()
+            $Emitted = 0
+            try {
+                New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$(& $Url $Slice)" -tenantid $TenantFilter -AsApp $AsApp -Stream | ForEach-Object { $Emitted++; $_ }
+            } catch {
+                $Half = [timespan]::FromTicks(($Slice.To - $Slice.From).Ticks / 2)
+                if ($Emitted -gt 0 -or $Half.TotalMinutes -lt 30 -or "$_" -notmatch '(?i)timed out') { throw }
+                $Slices.Push(@{ From = $Slice.From; To = $Slice.From + $Half })
+                $Slices.Push(@{ From = $Slice.From + $Half; To = $Slice.To })
+            }
         }
         return
     }
+    $Requests = [System.Collections.Generic.List[object]]::new()
+    # the stack enumerates newest first; ids count oldest first
+    $Oldest = $Slices.ToArray()
+    [array]::Reverse($Oldest)
+    foreach ($Slice in $Oldest) { $Requests.Add(@{ id = "s$($Requests.Count)"; method = 'GET'; url = (& $Url $Slice) }) }
     if ($Requests.Count -eq 0) { return [pscustomobject]@{ Rows = @(); Incomplete = $false } }
 
     $Responses = @(New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter -asapp $AsApp -Version 'beta')

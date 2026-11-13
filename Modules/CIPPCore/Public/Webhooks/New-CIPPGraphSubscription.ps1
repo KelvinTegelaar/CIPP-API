@@ -10,16 +10,18 @@ function New-CIPPGraphSubscription {
         $APIName = 'Create Webhook',
         $Headers,
         [Switch]$Recreate,
-        [switch]$PartnerCenter
+        [switch]$PartnerCenter,
+        [string]$PartnerTenantId
     )
     $CIPPID = (New-Guid).GUID
     $WebhookTable = Get-CIPPTable -TableName 'webhookTable'
 
     try {
         if ($PartnerCenter.IsPresent) {
-            $WebhookFilter = "PartitionKey eq '$($env:TenantID)'"
+            if (!$PartnerTenantId) { $PartnerTenantId = $env:TenantID }
+            $WebhookFilter = "PartitionKey eq '$($PartnerTenantId)'"
             $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter
-            $CIPPID = $env:TenantID
+            $CIPPID = $PartnerTenantId
             $MatchedWebhook = $ExistingWebhooks | Where-Object { $_.Resource -eq 'PartnerCenter' -and $_.RowKey -eq $CIPPID }
 
             # Required event types
@@ -51,7 +53,7 @@ function New-CIPPGraphSubscription {
             try {
                 $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration'
                 try {
-                    $Existing = New-GraphGetRequest -NoAuthCheck $true -uri $Uri -tenantid $env:TenantID -scope 'https://api.partnercenter.microsoft.com/.default'
+                    $Existing = New-GraphGetRequest -NoAuthCheck $true -uri $Uri -tenantid $PartnerTenantId -scope 'https://api.partnercenter.microsoft.com/.default'
                 } catch { $Existing = $false }
                 # Compare against the URL we want registered, not against our own stored copy - otherwise a
                 # change of CIPP hostname is never detected because both sides still hold the old URL.
@@ -65,7 +67,7 @@ function New-CIPPGraphSubscription {
                     }
 
                     $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration'
-                    $GraphRequest = New-GraphPOSTRequest -uri $Uri -type $Method -tenantid $env:TenantID -scope 'https://api.partnercenter.microsoft.com/.default' -body ($Body | ConvertTo-Json) -NoAuthCheck $true
+                    $GraphRequest = New-GraphPOSTRequest -uri $Uri -type $Method -tenantid $PartnerTenantId -scope 'https://api.partnercenter.microsoft.com/.default' -body ($Body | ConvertTo-Json) -NoAuthCheck $true
 
                     $WebhookRow = @{
                         PartitionKey           = [string]$CIPPID

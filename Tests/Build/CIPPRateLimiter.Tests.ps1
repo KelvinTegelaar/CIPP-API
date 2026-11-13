@@ -180,6 +180,23 @@ Describe 'CIPPRateLimiter' {
         }
     }
 
+    It 'remembers the tenant of a bearer token without keeping the token' {
+        $Headers = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $Padding = 'x' * 4000
+        [GC]::Collect()
+        $Before = [GC]::GetTotalMemory($true)
+        foreach ($i in 1..2000) {
+            $Payload = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("{`"tid`":`"tenant-a`",`"n`":$i,`"p`":`"$Padding`"}")).TrimEnd('=')
+            $Headers['Authorization'] = "Bearer eyJhbGciOiJub25lIn0.$Payload.sig"
+            $null = [CIPP.CIPPRateLimiter]::Acquire($Evaluate, 'POST', '{}', $Headers)
+        }
+        ([GC]::GetTotalMemory($true) - $Before) | Should -BeLessThan 4MB
+        $Claim = [CIPP.CIPPRateLimiter]::Acquire($Evaluate, 'POST', '{}', $Headers)
+        [CIPP.CIPPRateLimiter]::Observe($Claim, 429, (Get-ResponseHeader 30), '')
+        [CIPP.CIPPRateLimiter]::Acquire($Evaluate, 'POST', '{}', (Get-AuthHeader 'tenant-a')).Wait.TotalSeconds | Should -BeGreaterThan 25
+        [CIPP.CIPPRateLimiter]::Acquire($Evaluate, 'POST', '{}', (Get-AuthHeader 'tenant-b')).Wait | Should -Be ([timespan]::Zero)
+    }
+
     It 'counts every EXO batch sub-request against the tenant budget, after a burst of 90% of the minute' {
         $A = Get-AuthHeader 'tenant-a'
         $Sub = 'https://outlook.office365.com/adminapi/beta/tenant-a/InvokeCommand'

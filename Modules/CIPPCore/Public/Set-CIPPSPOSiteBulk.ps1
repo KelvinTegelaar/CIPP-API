@@ -103,7 +103,7 @@ function Set-CIPPSPOSiteBulk {
 
     if (-not $PSCmdlet.ShouldProcess("$($Requests.Count) sites", 'Set Site Properties (bulk)')) { return @() }
 
-    $Results = [CIPP.CIPPRestClient]::SendConcurrent($Requests, $MaxConcurrency, $MaxRetries)
+    $Results = [CIPP.CIPPRestClient]::SendConcurrent($Requests, $MaxConcurrency, $MaxRetries, ($PSCmdlet.PipelineStopToken ?? $global:CraftPipelineStopToken))
 
     @(foreach ($Result in $Results) {
             $Site = $RequestSites[$Result.Index]

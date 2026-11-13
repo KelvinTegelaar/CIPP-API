@@ -2,7 +2,13 @@
   "name": "FIDO2PasskeyProfiles",
   "label": "Configure FIDO2 Passkey Profiles",
   "cat": "Entra (AAD) Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (IA.L2-3.5.3)",
+    "CMMC (IA.L2-3.5.4)",
+    "FedRAMP A-D (KSI-IAM-APM)",
+    "NIST SP 800-171 (3.5.3)",
+    "NIST SP 800-171 (3.5.4)"
+  ],
   "impact": "Medium Impact",
   "helpText": "Configures the default passkey profile. Most tenants should leave AAGUID restrictions off. When you restrict to an allow list, Windows Hello and Microsoft Authenticator passkeys stay allowed by default; turning \"Always allow Microsoft passkeys\" off rejects them as not meeting the profile's criteria. Other profiles are never touched.",
   "executiveText": "Controls which passkey authenticators the organization accepts - device-bound versus synced, and optionally an explicit allow or block list of authenticator models.",

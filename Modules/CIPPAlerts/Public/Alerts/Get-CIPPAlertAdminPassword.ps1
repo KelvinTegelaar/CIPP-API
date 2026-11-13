@@ -22,7 +22,7 @@ function Get-CIPPAlertAdminPassword {
             [PSCustomObject]@{
                 id     = $_.principalId
                 method = 'GET'
-                url    = "users/$($_.principalId)?`$select=id,UserPrincipalName,lastPasswordChangeDateTime"
+                url    = "users/$($_.principalId)?`$select=id,UserPrincipalName,lastPasswordChangeDateTime,createdDateTime"
             }
         }
 
@@ -30,10 +30,15 @@ function Get-CIPPAlertAdminPassword {
         if ($UserRequests) {
             $BulkResults = New-GraphBulkRequest -Requests @($UserRequests) -tenantid $TenantFilter
 
-            # Filter users with recent password changes and sort to prevent duplicate alerts
-            $AlertData = $BulkResults | Where-Object { $_.status -eq 200 -and $_.body.lastPasswordChangeDateTime -gt (Get-Date).AddDays(-1) } | ForEach-Object {
-                $_.body | Select-Object -Property UserPrincipalName, lastPasswordChangeDateTime
-            } | Sort-Object UserPrincipalName
+            $Cutoff = (Get-Date).AddDays(-1)
+            $AlertData = @(foreach ($Result in $BulkResults) {
+                    if ($Result.status -ne 200 -or -not $Result.body.lastPasswordChangeDateTime) { continue }
+                    $Changed = [datetime]$Result.body.lastPasswordChangeDateTime
+                    if ($Changed -le $Cutoff) { continue }
+                    # Graph sets the password timestamp when an account is created, which is not a change
+                    if ($Result.body.createdDateTime -and ($Changed - [datetime]$Result.body.createdDateTime).TotalMinutes -lt 5) { continue }
+                    $Result.body | Select-Object -Property UserPrincipalName, lastPasswordChangeDateTime
+                }) | Sort-Object UserPrincipalName
         } else {
             $AlertData = @()
         }

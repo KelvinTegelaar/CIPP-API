@@ -10,7 +10,10 @@
     "EIDSCA.AM07",
     "EIDSCA.AM09",
     "EIDSCA.AM10",
-    "NIST CSF 2.0 (PR.AA-03)"
+    "NIST CSF 2.0 (PR.AA-03)",
+    "CMMC (IA.L2-3.5.3)",
+    "FedRAMP A-D (KSI-IAM-APM)",
+    "NIST SP 800-171 (3.5.3)"
   ],
   "impact": "Low Impact",
   "helpText": "Enables the MS authenticator app to display information about the app that is requesting authentication. This displays the application name.",
@@ -56,25 +59,11 @@
     "MicrosoftAuthenticator.featureSettings.displayAppInformationRequiredState.state": "enabled"
   },
   "remediate": {
-    "executor": "GraphRequest",
-    "requests": [
-      {
-        "method": "PATCH",
-        "uri": "policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator",
-        "body": {
-          "@odata.type": "#microsoft.graph.microsoftAuthenticatorAuthenticationMethodConfiguration",
-          "state": "enabled",
-          "featureSettings": {
-            "displayAppInformationRequiredState": {
-              "state": "enabled",
-              "includeTarget": {
-                "targetType": "group",
-                "id": "all_users"
-              }
-            }
-          }
-        }
-      }
-    ]
+    "executor": "AuthenticationPolicy",
+    "params": {
+      "AuthenticationMethodId": "MicrosoftAuthenticator",
+      "Enabled": true,
+      "MicrosoftAuthenticatorDisplayAppInfo": "enabled"
+    }
   }
 }

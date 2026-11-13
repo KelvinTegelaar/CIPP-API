@@ -618,6 +618,37 @@ function New-CIPPCAPolicy {
             }
         }
     }
+    $GsaControl = $JSONobj.sessionControls.globalSecureAccessFilteringProfile
+    if ($GsaControl) {
+        # Graph mirrors the profile into networkAccessSecurity; sending a stale copy back would contradict it
+        $JSONobj.sessionControls.PSObject.Properties.Remove('networkAccessSecurity')
+        $ProfileName = if (-not $GsaControl.profileId.value -and -not (Test-IsGuid -String ([string]$GsaControl.profileId))) { [string]$GsaControl.profileId }
+        if ($GsaControl.profileId.value -or $ProfileName) {
+            $ProfileLabel = $GsaControl.profileId.label ?? $GsaControl.profileId.value ?? $ProfileName
+            if (-not (Get-CIPPTenantCapabilities -TenantFilter $TenantFilter).Entra_Premium_Internet_Access) {
+                throw [System.ArgumentException]::new("Policy '$displayName' applies the web content filtering profile '$ProfileLabel', which needs a Microsoft Entra Internet Access licence (included in Microsoft Entra Suite) in $TenantFilter")
+            }
+        }
+        if ($ProfileName) {
+            $NamedProfiles = @(New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/networkAccess/filteringProfiles' -tenantid $TenantFilter -asApp $true).Where({ $_.name -eq $ProfileName })
+            if ($NamedProfiles.Count -eq 0) { throw [System.Management.Automation.ItemNotFoundException]::new("Security profile '$ProfileName' used by policy '$displayName' was not found in $TenantFilter. Create it there, or link a security profile template in the CA template.") }
+            if ($NamedProfiles.Count -gt 1) { throw [System.ArgumentException]::new("$($NamedProfiles.Count) security profiles are named '$ProfileName' in $TenantFilter, so CIPP cannot tell which one policy '$displayName' should use") }
+            $GsaControl.profileId = $NamedProfiles[0].id
+        } elseif ($GsaControl.profileId.value) {
+            $TemplatesTable = Get-CIPPTable -tablename 'templates'
+            $ProfileRow = Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq 'GSASecurityProfileTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value ([string]$GsaControl.profileId.value) -Type String)'"
+            if (-not $ProfileRow) { throw [System.Management.Automation.ItemNotFoundException]::new("Policy '$displayName' links the security profile template '$ProfileLabel', which no longer exists") }
+            $PolicyTemplates = @{}
+            foreach ($PolicyRow in @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq 'GSAFilteringPolicyTemplate'")) { $PolicyTemplates[$PolicyRow.RowKey] = $PolicyRow.JSON | ConvertFrom-Json -Depth 20 }
+            $Sync = Sync-CIPPGSAFilteringProfile -ProfileTemplate ($ProfileRow.JSON | ConvertFrom-Json -Depth 20) -PolicyTemplates $PolicyTemplates -TenantFilter $TenantFilter
+            foreach ($Item in $Sync.Results) { Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Item.resultText -Sev ($Item.state -eq 'error' ? 'Error' : 'Info') }
+            $SyncErrors = @($Sync.Results).Where({ $_.state -eq 'error' })
+            if ($SyncErrors.Count -or -not $Sync.ProfileId) {
+                throw "Policy '$displayName' was not deployed because its security profile '$ProfileLabel' did not deploy fully: $(@($SyncErrors.resultText) -join '; ')"
+            }
+            $GsaControl.profileId = $Sync.ProfileId
+        }
+    }
     $JSONobj.PSObject.Properties.Remove('LocationInfo')
     $JSONobj.PSObject.Properties.Remove('AuthContextInfo')
     if ($DisableSD -eq $true) {

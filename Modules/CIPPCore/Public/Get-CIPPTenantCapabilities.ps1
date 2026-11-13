@@ -14,6 +14,13 @@ function Get-CIPPTenantCapabilities {
         if ($Cached.Error) { throw $Cached.Error }
         return $Cached.Value
     }
+    $Now = [datetime]::UtcNow
+    if ($script:CIPPTenantCapabilitiesSweep -lt $Now) {
+        foreach ($Key in @($script:CIPPTenantCapabilitiesCache.PSBase.Keys)) {
+            if ($script:CIPPTenantCapabilitiesCache[$Key].Expires -le $Now) { $script:CIPPTenantCapabilitiesCache.Remove($Key) }
+        }
+        $script:CIPPTenantCapabilitiesSweep = $Now.AddMinutes(1)
+    }
 
     $ConfigTable = Get-CIPPTable -TableName 'CacheCapabilities'
     $datetime = (Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
@@ -25,7 +32,7 @@ function Get-CIPPTenantCapabilities {
             $Org = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter
         } catch {
             # A tenant without a token fails the same way for every caller in a run; don't re-request it per call.
-            $script:CIPPTenantCapabilitiesCache[$CacheKey] = @{ Error = $_; Expires = [datetime]::UtcNow.AddMinutes(2) }
+            $script:CIPPTenantCapabilitiesCache[$CacheKey] = @{ Error = $_.Exception.Message; Expires = [datetime]::UtcNow.AddMinutes(2) }
             throw
         }
         # Save the capabilities to the cache table

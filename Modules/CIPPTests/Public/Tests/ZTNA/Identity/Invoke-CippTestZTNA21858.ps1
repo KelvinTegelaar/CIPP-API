@@ -6,6 +6,17 @@ function Invoke-CippTestZTNA21858 {
     param($Tenant)
     #Tested
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName 'ZTNA21858' -TenantFilter $Tenant -Preset Entra -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21858' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Microsoft Entra ID P1, which guest sign-in activity requires. Required capabilities: AAD_PREMIUM, AAD_PREMIUM_P2.' -Risk 'Medium' -Name 'Inactive guest identities are disabled or removed from the tenant' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
+            return
+        }
+
+        $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
+        if ($Users -and -not $Users.Where({ $_.userType -eq 'Guest' }, 'First')) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21858' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'No guest accounts found in the tenant' -Risk 'Medium' -Name 'Inactive guest identities are disabled or removed from the tenant' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
+            return
+        }
+
         $Guests = Get-CIPPTestData -TenantFilter $Tenant -Type 'Guests'
         if (-not $Guests) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21858' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Inactive guest identities are disabled or removed from the tenant' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'

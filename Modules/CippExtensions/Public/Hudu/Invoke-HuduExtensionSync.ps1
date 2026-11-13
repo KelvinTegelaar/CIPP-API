@@ -501,14 +501,30 @@ function Invoke-HuduExtensionSync {
 
         $AllConditionalAccessPolicies = $ExtensionCache.ConditionalAccess
 
+        # CA classes a user as guest/external by userType + #EXT# UPN. The legacy 'GuestsOrExternalUsers'
+        # token in includeUsers/excludeUsers means every category, the guest blocks list categories.
+        # ponytail: an enumerated externalTenants list is treated as all tenants (documentation sync, not
+        # worth a tenant lookup per run); Get-CIPPExternalDomainTenant resolves it if that ever matters
+        $GuestUsers = @(foreach ($User in $Users) {
+                $IsExt = [string]$User.userPrincipalName -like '*#EXT#*'
+                $Category = if ($User.userType -eq 'Guest') { if ($IsExt) { 'b2bCollaborationGuest' } else { 'internalGuest' } } elseif ($IsExt) { 'b2bCollaborationMember' }
+                if ($Category) { [pscustomobject]@{ id = $User.id; Category = $Category } }
+            })
+        $GuestIdsFor = {
+            param($UserRefs, $GuestBlock)
+            $Types = if ($UserRefs -contains 'GuestsOrExternalUsers') { 'internalGuest', 'b2bCollaborationGuest', 'b2bCollaborationMember' } else { @(([string]$GuestBlock.guestOrExternalUserTypes -split ',').Trim()) }
+            foreach ($Guest in $GuestUsers) { if ($Types -contains $Guest.Category) { $Guest.id } }
+        }
+
         $ConditionalAccessMembers = foreach ($CAPolicy in $AllConditionalAccessPolicies) {
             [System.Collections.Generic.List[PSCustomObject]]$CAMembers = @()
 
             if ($CAPolicy.conditions.users.includeUsers -contains 'All') {
                 $Users | ForEach-Object { $null = $CAMembers.add($_.id) }
             } else {
-                $CAPolicy.conditions.users.includeUsers | ForEach-Object { $null = $CAMembers.add($_) }
+                $CAPolicy.conditions.users.includeUsers | Where-Object { $_ -ne 'GuestsOrExternalUsers' } | ForEach-Object { $null = $CAMembers.add($_) }
             }
+            foreach ($GuestId in (& $GuestIdsFor $CAPolicy.conditions.users.includeUsers $CAPolicy.conditions.users.includeGuestsOrExternalUsers)) { $null = $CAMembers.add($GuestId) }
 
             foreach ($CAIGroup in $CAPolicy.conditions.users.includeGroups) {
                 foreach ($Member in $GroupById.Find($CAIGroup).Members) {
@@ -533,6 +549,7 @@ function Invoke-HuduExtensionSync {
 
             if ($CAMembers) {
                 $CAPolicy.conditions.users.excludeUsers | ForEach-Object { $null = $CAMembers.remove($_) }
+                foreach ($GuestId in (& $GuestIdsFor $CAPolicy.conditions.users.excludeUsers $CAPolicy.conditions.users.excludeGuestsOrExternalUsers)) { $null = $CAMembers.remove($GuestId) }
 
                 foreach ($CAEGroup in $CAPolicy.conditions.users.excludeGroups) {
                     foreach ($Member in $GroupById.Find($CAEGroup).Members) {
@@ -1247,6 +1264,8 @@ function Invoke-HuduExtensionSync {
             Roles    = $Roles
             Users    = $OutputUsers
             Culture  = $Culture
+            HideLicenseFull     = [bool]$Configuration.HideLicenseFullWarning
+            HideLicenseNearFull = [bool]$Configuration.HideLicenseNearFullWarning
         }
         $DashTitle = "Microsoft 365 - $($Tenant.displayName)"
         $DashSet = $false

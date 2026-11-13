@@ -7,9 +7,17 @@ BeforeAll {
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPLicenseSkuName.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPConversionTable.ps1')
+    $script:SavedRoot = $env:CIPPRootPath
+    $env:CIPPRootPath = $RepoRoot
+    $script:CsvSku = '4b74a65c-8b4a-4fc8-9f6b-5177ed11ddfa'
 
     $script:Known = '11111111-1111-1111-1111-111111111111'
     $script:Unknown = '22222222-2222-2222-2222-222222222222'
+}
+
+AfterAll {
+    $env:CIPPRootPath = $script:SavedRoot
 }
 
 Describe 'Get-CIPPLicenseSkuName' {
@@ -27,6 +35,20 @@ Describe 'Get-CIPPLicenseSkuName' {
         }
         Mock Add-CIPPAzDataTableEntity { $script:Written = @($Entity) }
         Mock Get-Tenants { [PSCustomObject]@{ defaultDomainName = 'contoso.com' } }
+    }
+
+    It 'names a SKU the shipped CSV lists without reading any table, using its current name' {
+        $Result = @(Get-CIPPLicenseSkuName -SkuIds $script:CsvSku.ToUpper(), $script:Known -TenantFilter 'contoso.com')
+
+        $Result.skuId | Should -Be @($script:CsvSku, $script:Known)
+        $Result[0].displayName | Should -Be 'Microsoft Copilot Studio User License'
+        $script:Reads.Count | Should -Be 1
+        $script:Reads[0].Filter | Should -Not -Match $script:CsvSku
+    }
+
+    It 'reads no table when the CSV names every SKU' {
+        @(Get-CIPPLicenseSkuName -SkuIds $script:CsvSku -TenantFilter 'contoso.com').Count | Should -Be 1
+        $script:Reads.Count | Should -Be 0
     }
 
     It 'returns a table hit without reading the reporting cache' {
@@ -59,14 +81,11 @@ Describe 'Get-CIPPLicenseSkuName' {
         $script:Written | Should -BeNullOrEmpty
     }
 
-    It 'keeps each name table query within 15 comparisons' {
-        $Many = @(1..30 | ForEach-Object { '{0:x8}-0000-0000-0000-000000000000' -f $_ })
+    It 'reads the name table with one point query per SKU' {
+        $Many = @(1..3 | ForEach-Object { '{0:x8}-0000-0000-0000-000000000000' -f $_ })
         $null = Get-CIPPLicenseSkuName -SkuIds $Many
 
-        $Queries = @($script:Reads | Where-Object Table -EQ 'LicenseSkuNames')
-        $Queries.Count | Should -Be 3
-        foreach ($Query in $Queries) { ([regex]::Matches($Query.Filter, ' eq ')).Count | Should -BeLessOrEqual 15 }
-        (@($Queries.Filter | ForEach-Object { [regex]::Matches($_, "RowKey eq '([^']+)'") | ForEach-Object { $_.Groups[1].Value } }) | Sort-Object) -join ',' | Should -Be (($Many | Sort-Object) -join ',')
+        @($script:Reads | Where-Object Table -EQ 'LicenseSkuNames').Filter | Should -Be @(foreach ($SkuId in $Many) { "PartitionKey eq 'Sku' and RowKey eq '$SkuId'" })
     }
 
     It 'drops values that are not SKU ids before building the filter' {

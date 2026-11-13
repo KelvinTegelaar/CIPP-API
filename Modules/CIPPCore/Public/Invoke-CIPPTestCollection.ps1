@@ -156,19 +156,14 @@ function Invoke-CIPPTestCollection {
         }
     }
 
-    # Standard suites: discover functions by name pattern via Get-Command.
-    # Get-Command copies the session function table and misses trigger module-path searches, so resolve each suite once per runspace.
-    $script:CippTestSuiteCommands ??= @{}
-    $SuiteCommands = $script:CippTestSuiteCommands[$SuiteName]
-    if (-not $SuiteCommands) {
-        $SuiteCommands = @{
-            Tests = @(Get-Command -Name $SuitePatterns[$SuiteName] -Module CIPPTests -ErrorAction SilentlyContinue)
-            Setup = Get-Command -Name "Initialize-CippTestSuite$SuiteName" -Module CIPPTests -ErrorAction SilentlyContinue
-            Clear = Get-Command -Name "Clear-CippTestSuite$SuiteName" -Module CIPPTests -ErrorAction SilentlyContinue
-        }
-        if ($SuiteCommands.Tests.Count -gt 0) { $script:CippTestSuiteCommands[$SuiteName] = $SuiteCommands }
-    }
+    # Standard suites: match the suite's name pattern against CIPPTests' exports (Get-Command -Module walks PSModulePath).
     $Pattern = $SuitePatterns[$SuiteName]
+    $Exported = ((Get-Module -Name CIPPTests) ?? (Import-Module -Name CIPPTests -PassThru)).ExportedFunctions
+    $SuiteCommands = @{
+        Tests = @(foreach ($Function in $Exported.Values) { if ($Function.Name -like $Pattern) { $Function } })
+        Setup = $Exported["Initialize-CippTestSuite$SuiteName"]
+        Clear = $Exported["Clear-CippTestSuite$SuiteName"]
+    }
     $TestFunctions = $SuiteCommands.Tests
     if ($TestFunctions.Count -eq 0) {
         Write-Information "No test functions found for suite $SuiteName (pattern: $Pattern) — skipping"

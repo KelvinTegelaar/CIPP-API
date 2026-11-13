@@ -1,34 +1,41 @@
 # Bulk "Add/Deploy" endpoints take their targets from selectedTenants in the body. A tenant-scoped role must
 # not be able to reach tenants outside its scope that way, so each handler must narrow selectedTenants to the
 # caller's allowed tenants (Test-CippAccess -TenantList). One handler is exercised behaviourally; the rest are
-# guarded by source so the filter cannot be dropped and new bulk endpoints are caught in review.
+# guarded by source so the filter cannot be dropped and a new bulk endpoint fails here until it has one.
 
+$script:EntrypointRoot = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions'
+
+# Hands selectedTenants to the app handlers below instead of filtering it itself.
+$script:DelegatingHandler = 'Invoke-ExecDeployAppTemplate.ps1'
+
+# Every handler that reads a selectedTenants property, found by scan so the list cannot go stale.
 $script:ScopedHandlers = @(
-    'Email-Exchange/Transport/Invoke-AddConnectionFilter.ps1'
-    'Security/Compliance-SIT/Invoke-AddSensitiveInfoType.ps1'
-    'Endpoint/Autopilot/Invoke-AddEnrollment.ps1'
-    'Endpoint/Autopilot/Invoke-AddAutopilotConfig.ps1'
-    'Security/Compliance-SensitivityLabel/Invoke-AddSensitivityLabel.ps1'
-    'Security/Compliance-Retention/Invoke-AddRetentionCompliancePolicy.ps1'
-    'Security/Compliance-DLP/Invoke-AddDlpCompliancePolicy.ps1'
-    'Endpoint/MEM/Invoke-AddDefenderDeployment.ps1'
-    'Email-Exchange/Spamfilter/Invoke-AddQuarantinePolicy.ps1'
-    'Security/Safe-Links-Policy/Invoke-AddSafeLinksPolicyFromTemplate.ps1'
-    'Email-Exchange/Administration/Contacts/Invoke-DeployContactTemplates.ps1'
-    'Endpoint/Applications/Invoke-AddChocoApp.ps1'
-    'Endpoint/Applications/Invoke-AddEdgeApp.ps1'
-    'Endpoint/Applications/Invoke-AddOfficeApp.ps1'
-    'Endpoint/Applications/Invoke-AddStoreApp.ps1'
-    'Endpoint/Applications/Invoke-AddWin32ScriptApp.ps1'
-    'Endpoint/Applications/Invoke-AddMSPApp.ps1'
+    Get-ChildItem -Path $script:EntrypointRoot -Recurse -Filter '*.ps1' |
+        Where-Object { $_.Name -ne $script:DelegatingHandler -and (Get-Content $_.FullName -Raw) -match '\.selectedTenants\b' } |
+        ForEach-Object { @{ Name = $_.Name; Path = $_.FullName } }
 )
 
 Describe 'Bulk endpoint tenant-scope source guard' {
-    It 'narrows selectedTenants to the caller scope: <_>' -ForEach $script:ScopedHandlers {
-        $Root = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions'
-        $Path = Join-Path $Root $_
+    It 'finds the bulk handlers' -ForEach @(@{ Count = $script:ScopedHandlers.Count }) {
+        # An empty scan would pass every case below vacuously.
+        $Count | Should -BeGreaterThan 20
+    }
+
+    It 'narrows selectedTenants to the caller scope: <Name>' -ForEach $script:ScopedHandlers {
         (Get-Content $Path -Raw) | Should -Match 'Test-CippAccess -Request \$Request -TenantList|Resolve-CippBulkSelectedTenant -Request \$Request -SelectedTenants \$Request\.Body\.selectedTenants' `
-            -Because "$_ exposes selectedTenants and must filter it against the caller's allowed tenants"
+            -Because "$Name exposes selectedTenants and must filter it against the caller's allowed tenants"
+    }
+
+    It 'the app template deploy only reaches handlers that resolve the caller scope, as the caller' -ForEach @(@{ Root = $script:EntrypointRoot; File = $script:DelegatingHandler }) {
+        $Source = Get-Content (Get-ChildItem -Path $Root -Recurse -Filter $File).FullName -Raw
+        # The handlers resolve scope from the request they are given, so it must carry the caller's headers.
+        $Source | Should -Match 'Headers\s*=\s*\$Headers'
+        $Called = [regex]::Matches($Source, 'Invoke-Add\w+(?= -Request \$MockRequest)').Value | Sort-Object -Unique
+        $Called | Should -Not -BeNullOrEmpty
+        foreach ($Handler in $Called) {
+            $HandlerSource = Get-Content (Get-ChildItem -Path $Root -Recurse -Filter "$Handler.ps1").FullName -Raw
+            $HandlerSource | Should -Match 'Resolve-CippBulkSelectedTenant -Request \$Request' -Because "$Handler is reachable from the app template deploy"
+        }
     }
 
     It 'Resolve-CippBulkSelectedTenant filters against the caller scope' {
@@ -104,6 +111,7 @@ Describe '<Name> resolves selectedTenants against the tenant cache' -ForEach @(
             $null, @('HttpStatusCode', [System.Net.HttpStatusCode]))
         class HttpResponseContext { [int]$StatusCode; [object]$Body }
         function Test-CippAccess { param($Request, [switch]$TenantList) }
+        function Test-CippAllTenantsBlocked { $false }
         function Get-Tenants { param([switch]$IncludeErrors) }
         function New-GraphGetRequest { param($Uri, $tenantid) }
         function New-GraphPostRequest { param($Uri, $tenantid, $Body, $Type) }
@@ -217,5 +225,23 @@ Describe '<Name> resolves selectedTenants against the tenant cache' -ForEach @(
             Assert-Written -Tenant 'AllTenants' -Times 1
             Assert-WriteCount -Times 1
         }
+    }
+
+    It 'refuses an AllTenants entry when the caller''s roles block AllTenants (<Caller>)' -ForEach @(
+        @{ Caller = 'unrestricted'; Allowed = @('AllTenants') }
+        @{ Caller = 'scoped'; Allowed = @('aaaaaaaa-0000-0000-0000-000000000000') }
+    ) {
+        Mock Test-CippAccess { $Allowed }
+        Mock Test-CippAllTenantsBlocked { $true }
+        { Invoke-Handler @([pscustomobject]@{ customerId = 'AllTenants'; defaultDomainName = 'AllTenants' }) } |
+            Should -Throw -ExceptionType ([System.UnauthorizedAccessException])
+        Assert-WriteCount -Times 0
+    }
+
+    It 'still deploys individually selected tenants when the caller''s roles block AllTenants' {
+        Mock Test-CippAccess { 'AllTenants' }
+        Mock Test-CippAllTenantsBlocked { $true }
+        Invoke-Handler @([pscustomobject]@{ customerId = $script:IdA; defaultDomainName = 'a.onmicrosoft.com' })
+        Assert-Written -Tenant 'a.onmicrosoft.com' -Times 1
     }
 }

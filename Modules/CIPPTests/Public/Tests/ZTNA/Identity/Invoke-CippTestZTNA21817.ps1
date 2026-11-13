@@ -6,10 +6,15 @@ function Invoke-CippTestZTNA21817 {
     param($Tenant)
 
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName 'ZTNA21817' -TenantFilter $Tenant -Preset PIM -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21817' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Privileged Identity Management. Required capabilities: AAD_PREMIUM_P2, Entra_Identity_Governance.' -Risk 'High' -Name 'Global Administrator role activation triggers an approval workflow' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'
+            return
+        }
+
         $RoleManagementPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleManagementPolicies'
 
         if (-not $RoleManagementPolicies) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21817' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Global Administrator role activation triggers an approval workflow' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21817' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Global Administrator role activation triggers an approval workflow' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'
             return
         }
 
@@ -70,11 +75,11 @@ function Invoke-CippTestZTNA21817 {
         $mdInfo = $formatTemplate -f $reportTitle, $tableRows
         $testResultMarkdown = $testResultMarkdown -replace '%TestResult%', $mdInfo
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21817' -TestType 'Identity' -Status $(if ($passed) { 'Passed' } else { 'Failed' }) -ResultMarkdown $testResultMarkdown -Risk 'High' -Name 'Global Administrator role activation triggers an approval workflow' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21817' -TestType 'Identity' -Status $(if ($passed) { 'Passed' } else { 'Failed' }) -ResultMarkdown $testResultMarkdown -Risk 'High' -Name 'Global Administrator role activation triggers an approval workflow' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21817' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Global Administrator role activation triggers an approval workflow' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application Management'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21817' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Global Administrator role activation triggers an approval workflow' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'
     }
 }

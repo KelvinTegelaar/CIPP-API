@@ -13,12 +13,14 @@ function Write-LogMessage {
         $sev,
         $LogData = ''
     )
+    if ($sev -eq 'Debug' -and [System.Environment]::GetEnvironmentVariable('DebugMode') -ne $true) {
+        return
+    }
     if ($Headers.'x-ms-client-principal-idp' -eq 'azureStaticWebApps' -or !$Headers.'x-ms-client-principal-idp') {
         $user = $headers.'x-ms-client-principal'
         $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
     } elseif ($Headers.'x-ms-client-principal-idp' -eq 'aad') {
-        $Table = Get-CIPPTable -TableName 'ApiClients'
-        $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($headers.'x-ms-client-principal-name')'"
+        $Client = Get-CippApiClient -AppId $headers.'x-ms-client-principal-name'
         $username = $Client.AppName ?? 'CIPP-API'
         $AppId = $headers.'x-ms-client-principal-name'
     } else {
@@ -41,9 +43,6 @@ function Write-LogMessage {
 
     if (!$tenant) { $tenant = 'None' }
     if (!$username) { $username = 'CIPP' }
-    if ($sev -eq 'Debug' -and [System.Environment]::GetEnvironmentVariable('DebugMode') -ne $true) {
-        return
-    }
     $TzId = if ($env:CIPP_TIMEZONE) { $env:CIPP_TIMEZONE } else { 'UTC' }
     $LocalNow = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId)
     $PartitionKey = $LocalNow.ToString('yyyyMMdd')

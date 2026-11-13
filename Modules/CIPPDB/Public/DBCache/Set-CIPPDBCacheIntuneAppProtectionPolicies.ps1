@@ -3,7 +3,8 @@ function Set-CIPPDBCacheIntuneAppProtectionPolicies {
     param(
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
-        [string]$QueueId
+        [string]$QueueId,
+        [switch]$SkipGroupSnapshot
     )
 
     try {
@@ -12,20 +13,15 @@ function Set-CIPPDBCacheIntuneAppProtectionPolicies {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Tenant does not have Intune license, skipping app protection policies cache' -sev Debug
             # A license skip is still a completed collection: record authoritative empty sets for
             # every type this collector writes so collect-on-miss does not re-run it forever.
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionPolicyGroups' -Data @() -AddCount -ClearOnEmpty
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionManagedAppPolicies' -Data @() -AddCount -ClearOnEmpty
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionMobileAppConfigurations' -Data @() -AddCount -ClearOnEmpty
             return
         }
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Intune app protection and app configuration policies' -sev Debug
+        if (-not $SkipGroupSnapshot) { Set-CIPPDBCacheIntunePolicyGroups -TenantFilter $TenantFilter }
 
         $BulkRequests = @(
-            @{
-                id     = 'Groups'
-                method = 'GET'
-                url    = '/groups?$top=999&$select=id,displayName'
-            }
             @{
                 id     = 'ManagedAppPolicies'
                 method = 'GET'
@@ -51,7 +47,6 @@ function Set-CIPPDBCacheIntuneAppProtectionPolicies {
             }
             @($Result.body.value)
         }
-        $Groups = & $GetChecked $BulkResults 'Groups'
         $ManagedAppPolicies = & $GetChecked $BulkResults 'ManagedAppPolicies'
         $MobileAppConfigs = & $GetChecked $BulkResults 'MobileAppConfigurations'
 
@@ -91,7 +86,6 @@ function Set-CIPPDBCacheIntuneAppProtectionPolicies {
             }
         }
 
-        Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionPolicyGroups' -Data @($Groups) -AddCount -ClearOnEmpty
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionManagedAppPolicies' -Data @($ManagedAppPoliciesWithAssignments) -AddCount -ClearOnEmpty
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneAppProtectionMobileAppConfigurations' -Data @($MobileAppConfigs) -AddCount -ClearOnEmpty
 

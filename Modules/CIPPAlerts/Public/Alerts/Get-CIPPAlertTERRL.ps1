@@ -11,6 +11,12 @@ function Get-CIPPAlertTERRL {
         $TenantFilter
     )
 
+    $HasLicense = Test-CIPPStandardLicense -StandardName 'TERRL' -TenantFilter $TenantFilter -Preset Exchange -SkipLog
+
+    if (-not $HasLicense) {
+        return
+    }
+
     try {
         # Set threshold with fallback to 80%
         $Threshold = if ([string]::IsNullOrWhiteSpace($InputValue)) { 80 } else { [int]$InputValue }

@@ -33,7 +33,21 @@ Describe 'Baseline stage conditions without a type' {
 
         $null = New-CIPPBaseline -Baseline $Payload -User 'tester'
 
-        $script:RolloutWritten.Stages | Should -Be '[{"name":"S1","logic":"and","conditions":[]},{"name":"S2","logic":"and","conditions":[{"type":"manual","unit":"days"}]}]'
+        $script:RolloutWritten.Stages | Should -Be '[{"name":"S1","logic":"and","conditions":[],"conditionGroups":[]},{"name":"S2","logic":"and","conditions":[{"type":"manual","unit":"days"}],"conditionGroups":[]}]'
+    }
+
+    It 'keeps condition groups and drops the ones left empty' {
+        $script:RolloutWritten = $null
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { @() }
+        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith {
+            param($Context, $Entity)
+            if ($Entity.PartitionKey -eq 'rollout') { $script:RolloutWritten = $Entity }
+        }
+        $Payload = '{"templateName":"MFA","assignedTenants":[],"stages":[{"name":"S1","conditions":[],"standards":[]},{"name":"S2","conditions":[{"type":"success"}],"conditionGroups":[{"logic":"and","conditions":[{"type":"manual"}]},{"logic":"or","conditions":[{}]}],"standards":[]}]}' | ConvertFrom-Json
+
+        $null = New-CIPPBaseline -Baseline $Payload -User 'tester'
+
+        ConvertTo-Json -InputObject @(($script:RolloutWritten.Stages | ConvertFrom-Json)[1].conditionGroups) -Compress -Depth 5 | Should -Be '[{"logic":"and","conditions":[{"type":"manual"}]}]'
     }
 
     It 'drops them from an already-stored baseline when it is read' {

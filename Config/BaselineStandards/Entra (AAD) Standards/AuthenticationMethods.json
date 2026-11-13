@@ -2,7 +2,11 @@
   "name": "AuthenticationMethods",
   "label": "Configure Authentication Methods",
   "cat": "Entra (AAD) Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (IA.L2-3.5.3)",
+    "FedRAMP A-D (KSI-IAM-APM)",
+    "NIST SP 800-171 (3.5.3)"
+  ],
   "impact": "High Impact",
   "helpText": "Manages the enabled state, group targeting and per-method settings of every authentication method the baseline configures. Methods left unconfigured are never touched.",
   "executiveText": "Standardizes which sign-in methods are available and to whom - enabling phishing-resistant methods and retiring weak ones consistently across the fleet.",

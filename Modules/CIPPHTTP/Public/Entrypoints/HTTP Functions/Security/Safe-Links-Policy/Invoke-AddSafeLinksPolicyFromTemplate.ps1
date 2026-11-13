@@ -25,7 +25,7 @@ Function Invoke-AddSafeLinksPolicyFromTemplate {
 
         # Tenant scope: a scoped role must not reach tenants outside its allowed set through selectedTenants/AllTenants.
         $AllowedTenants = Test-CippAccess -Request $Request -TenantList
-        if ($AllowedTenants -ne 'AllTenants') {
+        if ('AllTenants' -notin $AllowedTenants) {
             $AllowedTenantList = (Get-Tenants -IncludeErrors) | Where-Object { $_.customerId -in $AllowedTenants }
             $SelectedTenants = $SelectedTenants | Where-Object { $_ -in $AllowedTenantList.defaultDomainName }
         }

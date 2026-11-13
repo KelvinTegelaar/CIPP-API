@@ -43,6 +43,14 @@ function Set-CIPPDBCacheConditionalAccessPolicies {
             # tenant whose last policy was removed must not keep reporting yesterday's.
             Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' -Data @($CAPolicies) -AddCount -ClearOnEmpty
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $(@($CAPolicies).Count) CA policies" -sev Debug
+            # The CA template baseline grades a security profile session control by name, read from this cache
+            if (@($CAPolicies).Where({ $_.sessionControls.globalSecureAccessFilteringProfile.profileId }).Count -gt 0) {
+                try {
+                    Set-CIPPDBCacheNetworkAccessFiltering -TenantFilter $TenantFilter
+                } catch {
+                    Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache Global Secure Access filtering for CA policies: $($_.Exception.Message)" -sev Warning
+                }
+            }
             $CAPolicies = $null
         } catch {
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Failed to cache CA policies: $($_.Exception.Message)" -sev Warning

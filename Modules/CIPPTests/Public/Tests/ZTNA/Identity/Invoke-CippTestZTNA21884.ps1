@@ -6,10 +6,16 @@ function Invoke-CippTestZTNA21884 {
     param($Tenant)
 
     try {
+        if (-not (Test-CIPPStandardLicense -StandardName 'ZTNA21884' -TenantFilter $Tenant -Preset Entra -SkipLog) -or
+            -not (Test-CIPPStandardLicense -StandardName 'ZTNA21884' -TenantFilter $Tenant -RequiredCapabilities 'AAD_WRKLDID_P1', 'AAD_WRKLDID_P2' -SkipLog)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21884' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Conditional Access for workload identities. Required capabilities: AAD_PREMIUM or AAD_PREMIUM_P2, and AAD_WRKLDID_P1 or AAD_WRKLDID_P2.' -Risk 'High' -Name 'Conditional Access policies for workload identities based on known networks are configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
+            return
+        }
+
         $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
         if (-not $CAPolicies) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21884' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Workload identities based on known networks are configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21884' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'High' -Name 'Conditional Access policies for workload identities based on known networks are configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
             return
         }
 
@@ -46,11 +52,11 @@ function Invoke-CippTestZTNA21884 {
             $Lines.Add('**Remediation:** Create a Conditional Access policy targeting service principals (`clientApplications.includeServicePrincipals`) with a trusted named-location condition. Requires Microsoft Entra Workload Identities license.')
         }
 
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21884' -TestType 'Identity' -Status $Status -ResultMarkdown ($Lines -join "`n") -Risk 'High' -Name 'Workload identities based on known networks are configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21884' -TestType 'Identity' -Status $Status -ResultMarkdown ($Lines -join "`n") -Risk 'High' -Name 'Conditional Access policies for workload identities based on known networks are configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Tests' -tenant $Tenant -message "Failed to run test: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21884' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Workload identities based on known networks are configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
+        Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21884' -TestType 'Identity' -Status 'Failed' -ResultMarkdown "Test failed: $($ErrorMessage.NormalizedError)" -Risk 'High' -Name 'Conditional Access policies for workload identities based on known networks are configured' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'External collaboration'
     }
 }

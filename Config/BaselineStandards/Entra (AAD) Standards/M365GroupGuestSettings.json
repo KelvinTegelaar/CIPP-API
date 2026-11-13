@@ -4,7 +4,10 @@
   "cat": "Entra (AAD) Standards",
   "tag": [
     "EIDSCA.ST08",
-    "EIDSCA.ST09"
+    "EIDSCA.ST09",
+    "CMMC (AC.L2-3.1.5)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.5)"
   ],
   "impact": "Low Impact",
   "helpText": "Sets whether guests can become owners of Microsoft 365 groups and whether guests can access group content, on the tenant-wide Group.Unified directory setting. The EIDSCA recommendation is no guest owners, guest access allowed.",

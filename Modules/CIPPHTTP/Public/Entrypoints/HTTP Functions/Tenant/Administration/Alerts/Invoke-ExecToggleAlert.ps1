@@ -27,7 +27,15 @@ Function Invoke-ExecToggleAlert {
     $Table = Get-CIPPTable -TableName $Table
     try {
         $Filter = "RowKey eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $ID)
-        $Alert = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
+        $Alert = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, Tenant, Tenants
+        # Audit log alerts store a selector list in Tenants; scheduled tasks store one tenant (or AllTenants) in Tenant
+        $AlertTenants = $EventType -eq 'Audit log Alert' ? ($Alert.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue) : $Alert.Tenant
+        if ($Alert -and -not (Test-CippTenantInScope -Tenant $AlertTenants)) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ Results = 'Access to this alert is not allowed' }
+                })
+        }
         if (!$Alert) {
             throw "No alert found with ID $ID"
         }

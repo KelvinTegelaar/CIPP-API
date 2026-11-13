@@ -231,9 +231,9 @@ function Invoke-ListCustomVariables {
         # in it resolves against whichever tenant it lands on. So a caller editing one needs every
         # variable *name* that exists anywhere, not the set belonging to whichever tenant happens to
         # be selected. Values are deliberately not returned here: they differ per tenant, so there is
-        # no single correct one to show.
+        # no single correct one to show. Only names from tenants the caller's roles cover are listed.
         if ($Request.Query.allTenants -eq $true) {
-            $EveryCustomVariable = Get-CIPPAzDataTableEntity @ReplaceTable
+            $EveryCustomVariable = Get-CIPPAzDataTableEntity @ReplaceTable | Select-CippAllowedTenantData -TenantProperty 'PartitionKey'
             foreach ($Variable in $EveryCustomVariable) {
                 if (-not $Variable.RowKey -or -not $Variable.Value) { continue }
                 # Names already added as reserved or global keep their own description and value.

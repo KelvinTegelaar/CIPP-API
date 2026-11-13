@@ -75,10 +75,19 @@ function Get-SharePointAdminLink {
         if ($KnownLink -and $KnownLink.Expires -gt [datetime]::UtcNow) { return $KnownLink.Link }
         $KnownFailure = $script:CIPPSharePointRootSiteFailures["$TenantFilter"]
         if ($KnownFailure -and $KnownFailure.Expires -gt [datetime]::UtcNow) { throw $KnownFailure.Error }
+        $Now = [datetime]::UtcNow
+        if ($script:CIPPSharePointAdminLinkSweep -lt $Now) {
+            foreach ($Cache in $script:CIPPSharePointAdminLinks, $script:CIPPSharePointRootSiteFailures) {
+                foreach ($Key in @($Cache.PSBase.Keys)) {
+                    if ($Cache[$Key].Expires -le $Now) { $Cache.Remove($Key) }
+                }
+            }
+            $script:CIPPSharePointAdminLinkSweep = $Now.AddMinutes(1)
+        }
         try {
             $RootSite = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter
         } catch {
-            $script:CIPPSharePointRootSiteFailures["$TenantFilter"] = @{ Error = $_; Expires = [datetime]::UtcNow.AddMinutes(2) }
+            $script:CIPPSharePointRootSiteFailures["$TenantFilter"] = @{ Error = $_.Exception.Message; Expires = [datetime]::UtcNow.AddMinutes(2) }
             throw
         }
         $SharePointHost = $RootSite.siteCollection.hostname

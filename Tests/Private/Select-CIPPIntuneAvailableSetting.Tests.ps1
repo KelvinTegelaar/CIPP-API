@@ -163,3 +163,19 @@ Describe 'Select-CIPPIntuneAvailableSetting -ThrowOnMissingRequired' {
         }
     }
 }
+
+Describe 'Select-CIPPIntuneAvailableSetting template cache' {
+    BeforeEach {
+        $script:CIPPIntuneSettingTemplateCache = @{}
+        $script:CIPPIntuneSettingTemplateSweep = $null
+        Mock -CommandName New-GraphGETRequest -MockWith { $script:AdeSettingTemplates }
+    }
+
+    It 'removes expired template lookups when it caches a new one' {
+        foreach ($i in 1..300) { $script:CIPPIntuneSettingTemplateCache["tenant$i|ade-template_1"] = @{ Settings = $script:AdeSettingTemplates; Expires = [datetime]::UtcNow.AddMinutes(-1) } }
+
+        $null = Select-CIPPIntuneAvailableSetting -Policy (New-AdePolicy -IncludeInstanceIds @('inst-affinity')) -TenantFilter $script:Tenant
+
+        @($script:CIPPIntuneSettingTemplateCache.Keys) | Should -Be @("$($script:Tenant)|ade-template_1")
+    }
+}

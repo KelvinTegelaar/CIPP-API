@@ -1,0 +1,194 @@
+{
+  "window": {
+    "days": 7
+  },
+  "baseline": {
+    "days": 23,
+    "minSignIns": 10
+  },
+  "caps": {
+    "signInRows": 100000,
+    "auditLogPages": 10,
+    "directoryActions": 5000,
+    "rawSignIns": 500,
+    "signInSliceHours": 24
+  },
+  "score": {
+    "thresholds": {
+      "high": 7,
+      "medium": 4
+    },
+    "consentBurstUsers": 3,
+    "massMailboxes": 25,
+    "massFiles": 100,
+    "volumeSpikeFactor": 5,
+    "volumeMinimum": 50,
+    "weights": {
+      "RogueAppMatch": 5,
+      "DisabledByMicrosoft": 5,
+      "ConfirmedCompromised": 5,
+      "RiskyHigh": 4,
+      "RiskyMedium": 2,
+      "RiskyLow": 1,
+      "RiskDetections": 2,
+      "CredentialOnMicrosoftApp": 5,
+      "CredentialAdded": 2,
+      "CredentialAddedByApp": 3,
+      "CredentialBackdated": 3,
+      "UntrustedFederatedCredential": 3,
+      "FederatedCredentialChanged": 2,
+      "OwnerAdded": 2,
+      "RedirectUriChanged": 2,
+      "AudienceChanged": 3,
+      "AccessGranted": 2,
+      "AccessGrantedByApp": 3,
+      "NameImpersonation": 2,
+      "NewApp": 1,
+      "NewAppByApp": 4,
+      "DormantAwakened": 3,
+      "AttackerIPs": 4,
+      "SuspiciousIPs": 2,
+      "FlaggedCredentialUsed": 4,
+      "NewCredentialInUse": 2,
+      "FailedCredentialAttempts": 1,
+      "NewResourceAccess": 1,
+      "NewAttachedResource": 3,
+      "ConsentBurst": 3,
+      "CriticalDirectoryActions": 5,
+      "LateralCredentialAdds": 4,
+      "AppsCreated": 4,
+      "SelfElevation": 5,
+      "AppElevation": 4,
+      "UserElevation": 4,
+      "ElevationChain": 3,
+      "FlaggedDirectoryActions": 2,
+      "InboxRulesByApp": 3,
+      "MassMailboxAccess": 3,
+      "MassFileAccess": 3,
+      "NewMailSending": 2,
+      "NewAnonymousLinks": 3,
+      "SignInVolumeSpike": 2,
+      "WorkloadVolumeSpike": 2,
+      "AttackerWorkload": 3
+    }
+  },
+  "impactMatrix": {
+    "Low": { "Low": "Low", "Medium": "Low", "High": "Low", "Critical": "Medium" },
+    "Medium": { "Low": "Low", "Medium": "Medium", "High": "Medium", "Critical": "High" },
+    "High": { "Low": "Medium", "Medium": "High", "High": "Critical", "Critical": "Critical" }
+  },
+  "ipVerdict": {
+    "thresholds": {
+      "likelyAttacker": 6,
+      "suspicious": 3,
+      "expected": -3
+    },
+    "concentratedAsnShare": 0.8,
+    "stableAddressCount": 5,
+    "credentialFailureCodes": ["7000215", "7000222", "700027", "700024", "7000112", "700016"],
+    "weights": {
+      "FlaggedCredential": 4,
+      "NewCredential": 2,
+      "CredentialTypeSwitch": 2,
+      "BaselineAddress": -4,
+      "BaselineNetwork": -2,
+      "NewToApp": 2,
+      "NewToStableApp": 4,
+      "NewNetwork": 2,
+      "NewNetworkConcentrated": 3,
+      "NewCountry": 1,
+      "Proxy": 3,
+      "NotHosting": 1,
+      "NewResource": 1,
+      "NewAttachedResource": 3,
+      "CredentialFailures": 2,
+      "OnlyFailed": -2,
+      "TechnicianAddress": -4,
+      "AllowHint": -1,
+      "BlockHint": 2
+    }
+  },
+  "changes": {
+    "credentialActivityRegex": "(?i)(service principal credentials|certificates and secrets|key ?credential|password ?credential)",
+    "federatedRegex": "(?i)federated",
+    "redirectRegex": "(?i)(replyurl|redirecturi|appaddress|publicclient)",
+    "audienceRegex": "(?i)(availabletoothertenants|signinaudience)",
+    "lockRegex": "(?i)servicePrincipalLockConfiguration",
+    "ownerActivityRegex": "(?i)^Add owner to (application|service principal)",
+    "grantActivities": [
+      "Add app role assignment to service principal",
+      "Add delegated permission grant",
+      "Consent to application",
+      "Add OAuth2PermissionGrant",
+      "Add member to role",
+      "Add eligible member to role",
+      "Add member to group"
+    ],
+    "enabledRegex": "(?i)^AccountEnabled$"
+  },
+  "directoryActions": {
+    "appCreationActivities": [
+      "Add application",
+      "Add service principal"
+    ],
+    "criticalActivities": [
+      "Set domain authentication",
+      "Set federation settings on domain",
+      "Add unverified domain",
+      "Verify domain",
+      "Add member to role",
+      "Add eligible member to role",
+      "Add conditional access policy",
+      "Update conditional access policy",
+      "Delete conditional access policy",
+      "Add service principal credentials",
+      "Update application – Certificates and secrets management ",
+      "Add owner to application",
+      "Add owner to service principal",
+      "Update authorization policy",
+      "Set Company Information",
+      "Update policy"
+    ],
+    "flaggedActivities": [
+      "Add user",
+      "Reset user password",
+      "Reset password (by admin)",
+      "Change user password",
+      "Update user",
+      "Delete user",
+      "Add member to group",
+      "Invite external user",
+      "Add app role assignment to service principal",
+      "Add delegated permission grant",
+      "Consent to application",
+      "User registered security info",
+      "Admin registered security info",
+      "Add registered owner to device"
+    ]
+  },
+  "workload": {
+    "operations": [
+      "MailItemsAccessed",
+      "Send",
+      "SendAs",
+      "SendOnBehalf",
+      "New-InboxRule",
+      "Set-InboxRule",
+      "UpdateInboxRules",
+      "HardDelete",
+      "SoftDelete",
+      "MoveToDeletedItems",
+      "FileDownloaded",
+      "FileAccessed",
+      "FileSyncDownloadedFull",
+      "FileUploaded",
+      "FileDeleted",
+      "AnonymousLinkCreated",
+      "CompanyLinkCreated",
+      "SharingSet"
+    ],
+    "ruleOperations": ["New-InboxRule", "Set-InboxRule", "UpdateInboxRules"],
+    "mailOperations": ["MailItemsAccessed", "Send", "SendAs", "SendOnBehalf", "HardDelete", "SoftDelete", "MoveToDeletedItems"],
+    "fileOperations": ["FileDownloaded", "FileAccessed", "FileSyncDownloadedFull", "FileUploaded", "FileDeleted", "AnonymousLinkCreated", "CompanyLinkCreated", "SharingSet"]
+  }
+}

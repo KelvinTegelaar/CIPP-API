@@ -1,7 +1,7 @@
 function Invoke-ListLogs {
     <#
     .FUNCTIONALITY
-        Entrypoint,AnyTenant
+        Entrypoint,AnyTenant,TenantGroup
     .ROLE
         CIPP.Logs.Read
     .DESCRIPTION
@@ -216,17 +216,27 @@ function Invoke-ListLogs {
         }
         foreach ($Clause in $ServerSideFilter) { $Filter = "$Filter and $Clause" }
 
-        $Matching = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { & $RowFilter $_ })
-        $ByApi = @($Matching | Group-Object -Property API | Sort-Object -Property Count -Descending | ForEach-Object {
-                [PSCustomObject]@{ API = $_.Name; Count = $_.Count }
+        $Total = 0
+        $ApiCounts = @{}
+        $SeverityCounts = @{}
+        # The split markers keep large rows reassembled, so a row whose Severity landed on a part row still counts once.
+        Get-CIPPAzDataTableEntity @Table -Filter $Filter -Stream -Property PartitionKey, RowKey, OriginalEntityId, PartIndex, Severity, Username, Tenant, TenantID, API, IP, AppId, Message | ForEach-Object {
+            if (& $RowFilter $_) {
+                $Total++
+                $ApiCounts["$($_.API)"]++
+                $SeverityCounts["$($_.Severity)"]++
+            }
+        }
+        $ByApi = @($ApiCounts.GetEnumerator() | Sort-Object -Property Value -Descending | ForEach-Object {
+                [PSCustomObject]@{ API = $_.Key; Count = $_.Value }
             })
-        $BySeverity = @($Matching | Group-Object -Property Severity | Sort-Object -Property Count -Descending | ForEach-Object {
-                [PSCustomObject]@{ Severity = $_.Name; Count = $_.Count }
+        $BySeverity = @($SeverityCounts.GetEnumerator() | Sort-Object -Property Value -Descending | ForEach-Object {
+                [PSCustomObject]@{ Severity = $_.Key; Count = $_.Value }
             })
         return [HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = [PSCustomObject]@{
-                Total      = $Matching.Count
+                Total      = $Total
                 ByAPI      = $ByApi
                 BySeverity = $BySeverity
             }

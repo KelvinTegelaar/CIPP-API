@@ -47,11 +47,18 @@ function Invoke-ListStorageCleanupScan {
             $LibrariesBySiteUrl[$Key] = [System.Collections.Generic.List[object]]::new()
         }
         $LibrariesBySiteUrl[$Key].Add([PSCustomObject]@{
-                id                   = $Lib.libraryId
-                name                 = $Lib.libraryName
-                displayName          = $Lib.libraryDisplayName
-                storageUsedInBytes   = $Lib.storageUsedInBytes
-                versionEstimateBytes = $Lib.versionEstimateBytes
+                id                    = $Lib.libraryId
+                name                  = $Lib.libraryName
+                displayName           = $Lib.libraryDisplayName
+                siteUrl               = $Key
+                webUrl                = $Lib.webUrl
+                storageUsedInBytes    = $Lib.storageUsedInBytes
+                fileStreamSizeInBytes = $Lib.fileStreamSizeInBytes
+                versionEstimateBytes  = $Lib.versionEstimateBytes
+                fileCount             = $Lib.fileCount
+                versionPolicy         = $Lib.versionPolicy
+                versionTrimMode       = $Lib.versionTrimMode
+                majorVersionLimit     = $Lib.majorVersionLimit
             })
     }
 

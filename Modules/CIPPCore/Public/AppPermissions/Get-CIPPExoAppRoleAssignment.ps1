@@ -5,21 +5,28 @@ function Get-CIPPExoAppRoleAssignment {
     .DESCRIPTION
         Exchange can give an app mailbox access through its own role assignments (RBAC for Applications), which
         Entra does not show as a permission or consent. Reads the service principals registered in Exchange and,
-        when there are any, the assignments of the 'Application *' roles. Returns one row per assignment with the
+        when there are any, the assignments of the 'Application *' roles, less the delegating ones Exchange gives
+        Organization Management by default. Returns one row per assignment with the
         app's Entra appId and service principal object id, the scope (a management scope with its recipient
         filter, or an administrative unit) and when it was created. Errors reading the service principals or
         assignments are thrown; a scope filter that cannot be read is left out.
     .PARAMETER TenantFilter
         The tenant to read
+    .PARAMETER ServicePrincipals
+        Get-ServicePrincipal output the caller already read; read from Exchange when not given
+    .PARAMETER ManagementScopes
+        Get-ManagementScope output the caller already read; read from Exchange when needed and not given
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$TenantFilter
+        [string]$TenantFilter,
+        [object[]]$ServicePrincipals,
+        [object[]]$ManagementScopes
     )
 
     # No service principal registered in Exchange means no app can hold an Exchange application role.
-    $ExoServicePrincipals = @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ServicePrincipal')
+    $ExoServicePrincipals = if ($PSBoundParameters.ContainsKey('ServicePrincipals')) { @($ServicePrincipals | Where-Object { $_ }) } else { @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ServicePrincipal') }
     if ($ExoServicePrincipals.Count -eq 0) { return @() }
 
     # An assignment names the app by its Exchange identity: index every name it may use.
@@ -31,13 +38,22 @@ function Get-CIPPExoAppRoleAssignment {
         }
     }
 
-    $Assignments = @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ManagementRoleAssignment' | Where-Object { [string]$_.Role -like 'Application *' })
+    # A delegating assignment grants no access, it lets its holder assign the role to apps. Exchange gives one to
+    # Organization Management for every role, so those defaults are left out; any other holder was added by
+    # someone and is kept.
+    $Assignments = @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ManagementRoleAssignment' | Where-Object {
+            [string]$_.Role -like 'Application *' -and -not (
+                [string]$_.RoleAssignmentDelegationType -like 'Delegating*' -and
+                'Organization Management' -in @([string]$_.RoleAssigneeName, [string]$_.RoleAssignee)
+            )
+        })
     if ($Assignments.Count -eq 0) { return @() }
 
     $ScopeFilters = @{}
     if (@($Assignments | Where-Object { $_.CustomResourceScope }).Count -gt 0) {
         try {
-            foreach ($Scope in @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ManagementScope')) {
+            $Scopes = if ($PSBoundParameters.ContainsKey('ManagementScopes')) { @($ManagementScopes) } else { @(New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-ManagementScope') }
+            foreach ($Scope in $Scopes) {
                 if ($Scope.Name) { $ScopeFilters[[string]$Scope.Name] = [string]$Scope.RecipientFilter }
             }
         } catch {
@@ -57,7 +73,9 @@ function Get-CIPPExoAppRoleAssignment {
             role                             = [string]$Assignment.Role
             roleAssignee                     = if ($Assignment.RoleAssigneeName) { [string]$Assignment.RoleAssigneeName } else { [string]$Assignment.RoleAssignee }
             appId                            = [string]$ExoSp.AppId
+            appDisplayName                   = [string]$ExoSp.DisplayName
             servicePrincipalId               = [string]$ExoSp.ObjectId
+            delegating                       = [string]$Assignment.RoleAssignmentDelegationType -like 'Delegating*'
             enabled                          = $Assignment.Enabled
             customResourceScope              = $ResourceScope
             customResourceScopeFilter        = if ($ResourceScope) { $ScopeFilters[$ResourceScope] } else { $null }

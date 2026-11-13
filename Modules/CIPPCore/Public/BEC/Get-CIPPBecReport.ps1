@@ -16,6 +16,10 @@ function Get-CIPPBecReport {
         Narrow the list to one user's runs.
     .PARAMETER IncludeResults
         Fetch and attach the results payload (single run only).
+    .PARAMETER ServicePrincipalId
+        Narrow the list to one service principal's runs (NHI).
+    .PARAMETER Kind
+        BEC (BecReports, BecResults) or NHI, a non-human identity investigation (NhiReports, NhiResults).
     .FUNCTIONALITY
         Internal
     #>
@@ -24,10 +28,13 @@ function Get-CIPPBecReport {
         [Parameter(Mandatory = $true)][string]$TenantFilter,
         [string]$CaseId,
         [string]$UserId,
-        [switch]$IncludeResults
+        [switch]$IncludeResults,
+        [string]$ServicePrincipalId,
+        [ValidateSet('BEC', 'NHI')][string]$Kind = 'BEC'
     )
 
-    $Table = Get-CIPPTable -TableName 'BecReports'
+    $TablePrefix = if ($Kind -eq 'NHI') { 'Nhi' } else { 'Bec' }
+    $Table = Get-CIPPTable -TableName "$($TablePrefix)Reports"
     $Clauses = [System.Collections.Generic.List[string]]::new()
     if ($TenantFilter -ne 'AllTenants') {
         $Clauses.Add("PartitionKey eq '$($TenantFilter -replace "'", "''")'")
@@ -37,6 +44,9 @@ function Get-CIPPBecReport {
     }
     if ($UserId) {
         $Clauses.Add("UserId eq '$($UserId -replace "'", "''")'")
+    }
+    if ($ServicePrincipalId) {
+        $Clauses.Add("ServicePrincipalId eq '$($ServicePrincipalId -replace "'", "''")'")
     }
     $Rows = if ($Clauses.Count -gt 0) {
         Get-CIPPAzDataTableEntity @Table -Filter ($Clauses -join ' and ')
@@ -59,12 +69,12 @@ function Get-CIPPBecReport {
         # Only a completed run has a results payload; a queued, running or failed run has nothing
         # to attach and must not be treated as broken.
         if ($Row -and $IncludeResults -and $Row.Status -eq 'Completed') {
-            $ResultsTable = Get-CIPPTable -TableName 'BecResults'
+            $ResultsTable = Get-CIPPTable -TableName "$($TablePrefix)Results"
             $ResultsRow = Get-CIPPAzDataTableEntity @ResultsTable -Filter "PartitionKey eq '$($Row.PartitionKey -replace "'", "''")' and RowKey eq '$($Row.RowKey -replace "'", "''")'" | Select-Object -First 1
             if ($ResultsRow -and $ResultsRow.Results) {
                 $Row | Add-Member -NotePropertyName 'Results' -NotePropertyValue ([string]$ResultsRow.Results | ConvertFrom-Json -Depth 20) -Force
             } else {
-                throw "The results payload for case $CaseId was not found in the BecResults table"
+                throw "The results payload for case $CaseId was not found in the $($TablePrefix)Results table"
             }
         }
         return $Row

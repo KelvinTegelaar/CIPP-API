@@ -23,14 +23,14 @@ function Invoke-RemoveQueuedApp {
     try {
         $Table = Get-CippTable -tablename 'apps'
         $Filter = "PartitionKey eq 'apps' and RowKey eq '$SafeID'"
-        $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        if (-not $ClearRow) {
+        $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, JSON
+        if (-not $ClearRow -or -not (Test-CippTenantInScope -Tenant ($ClearRow.JSON | ConvertFrom-Json).tenant)) {
             return [HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::NotFound
                 Body       = [pscustomobject]@{'Results' = "Failed to remove application queue for $ID. Queued application not found." }
             }
         }
-        Remove-CIPPAzDataTableEntity -Force @Table -Entity $ClearRow
+        Remove-CIPPAzDataTableEntity -Force @Table -Entity @{ PartitionKey = $ClearRow.PartitionKey; RowKey = $ClearRow.RowKey }
         $Message = "Removed application queue for $ID."
         Write-LogMessage -Headers $Request.Headers -API $APIName -message $Message -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK

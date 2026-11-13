@@ -41,6 +41,32 @@ Describe 'Search-CIPPBecSignIn' {
         Should -Invoke New-GraphGetRequest -Times 5 -Exactly -ParameterFilter { $Stream -and $AsApp -eq $false -and $tenantid -eq 'contoso.com' -and $uri -like "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=userId eq 'u1' and *&`$top=999&`$select=ipAddress" }
     }
 
+    It 'takes a shorter slice length' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = [regex]::Match($uri, 'createdDateTime ge ([0-9T:-]+)Z').Groups[1].Value } }
+        $Rows = @(Search-CIPPBecSignIn -TenantFilter 'contoso.com' -Filter "servicePrincipalId eq 's1'" -StartDate $script:Start -EndDate $script:Start.AddHours(60) -SliceHours 24 -Stream)
+        (@($Rows.id) -join ',') | Should -Be '2026-09-03T00:00:00,2026-09-02T00:00:00,2026-09-01T00:00:00'
+        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -match 'ge 2026-09-03T00:00:00Z and createdDateTime lt 2026-09-03T12:00:00Z' }
+    }
+
+    It 'splits a streamed slice that times out before returning a row, newest half first' {
+        Mock New-GraphGetRequest {
+            if ($uri -match 'ge 2026-09-01T00:00:00Z and createdDateTime lt 2026-09-02T00:00:00Z') { throw "The request to '$uri' timed out after 100s." }
+            [pscustomobject]@{ id = [regex]::Match($uri, 'createdDateTime ge ([0-9T:-]+)Z').Groups[1].Value }
+        }
+        $Rows = @(Search-CIPPBecSignIn -TenantFilter 'contoso.com' -Filter "servicePrincipalId eq 's1'" -StartDate $script:Start -EndDate $script:Start.AddDays(1) -SliceHours 24 -Stream)
+        (@($Rows.id) -join ',') | Should -Be '2026-09-01T12:00:00,2026-09-01T00:00:00'
+    }
+
+    It 'does not split a slice that failed after returning rows, or for another reason' {
+        Mock New-GraphGetRequest { [pscustomobject]@{ id = 'first page' }; throw "The request to '$uri' timed out after 100s." }
+        { @(Search-CIPPBecSignIn -TenantFilter 'contoso.com' -Filter "servicePrincipalId eq 's1'" -StartDate $script:Start -EndDate $script:Start.AddDays(1) -SliceHours 24 -Stream) } | Should -Throw -ExpectedMessage '*timed out*'
+        Should -Invoke New-GraphGetRequest -Times 1 -Exactly
+        Mock New-GraphGetRequest { throw 'Unsupported Query.' }
+        { @(Search-CIPPBecSignIn -TenantFilter 'contoso.com' -Filter "servicePrincipalId eq 's1'" -StartDate $script:Start -EndDate $script:Start.AddDays(1) -SliceHours 24 -Stream) } | Should -Throw -ExpectedMessage 'Unsupported Query.'
+        # one call for each search: neither was split
+        Should -Invoke New-GraphGetRequest -Times 2 -Exactly -Scope It
+    }
+
     It 'throws when a slice fails, as a single search would' {
         Mock New-GraphBulkRequest { @([pscustomobject]@{ id = 's0'; status = 403; body = [pscustomobject]@{ error = [pscustomobject]@{ message = 'Tenant does not have a premium licence' } } }) }
         { Search-CIPPBecSignIn -TenantFilter 'contoso.com' -Filter "userId eq 'u1'" -StartDate $script:Start -EndDate $script:End } | Should -Throw -ExpectedMessage '*premium licence*'

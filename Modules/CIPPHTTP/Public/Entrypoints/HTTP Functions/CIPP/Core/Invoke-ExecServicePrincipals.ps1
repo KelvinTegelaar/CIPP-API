@@ -15,6 +15,18 @@ function Invoke-ExecServicePrincipals {
     $StatusCode = [HttpStatusCode]::OK
 
     $Action = $Request.Query.Action ?? 'Default'
+
+    # These values are placed in the Graph URL, so only a GUID or a plain field list is accepted.
+    $Invalid = if ($Request.Query.AppId -and -not (Test-IsGuid -String $Request.Query.AppId)) { 'AppId' }
+    elseif ($Request.Query.Id -and -not (Test-IsGuid -String $Request.Query.Id)) { 'Id' }
+    elseif ($Request.Query.Select -and $Request.Query.Select -notmatch '^[A-Za-z0-9_,.]+\z') { 'Select' }
+    if ($Invalid) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = "Invalid $Invalid"; Metadata = @{ Action = $Action; Success = $false } } | ConvertTo-Json -Compress
+            })
+    }
+
     try {
         switch ($Request.Query.Action) {
             'Create' {
@@ -61,10 +73,10 @@ function Invoke-ExecServicePrincipals {
             default {
                 if ($Request.Query.AppId) {
                     $Action = 'Get'
-                    $Results = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($Request.Query.AppId)')" -tenantid $TenantFilter -NoAuthCheck $true
+                    $Results = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$([guid]$Request.Query.AppId)')" -tenantid $TenantFilter -NoAuthCheck $true
                 } elseif ($Request.Query.Id) {
                     $Action = 'Get'
-                    $Results = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/servicePrincipals/$($Request.Query.Id)" -tenantid $TenantFilter -NoAuthCheck $true
+                    $Results = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/servicePrincipals/$([guid]$Request.Query.Id)" -tenantid $TenantFilter -NoAuthCheck $true
                 } else {
                     $Action = 'List'
                     $Uri = 'https://graph.microsoft.com/beta/servicePrincipals?$top=999&$orderby=displayName&$count=true'

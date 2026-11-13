@@ -90,3 +90,38 @@ Describe 'Invoke-AddBaseline LocalChanges' {
         $Response.Body.Results | Should -BeLike '*Failed to push*'
     }
 }
+
+Describe 'Invoke-AddBaseline stage conditions' {
+    BeforeEach {
+        Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { $null }
+        Mock -CommandName New-CIPPBaseline -MockWith { @{ GUID = 'baseline-1'; DeltaCount = 0 } }
+    }
+
+    It 'rejects a later stage with no graduation condition' {
+        $Request = New-Request -Guid 'baseline-1'
+        $Request.Body.stages = @(
+            [pscustomobject]@{ name = 'Report'; standards = @() }
+            [pscustomobject]@{ name = 'Enable'; standards = @(); conditions = @(); conditionGroups = @([pscustomobject]@{ conditions = @([pscustomobject]@{ type = $null }) }) }
+        )
+
+        $Response = Invoke-AddBaseline -Request $Request
+
+        $Response.StatusCode | Should -Be 400
+        $Response.Body.Results | Should -BeLike '*Stage 2 (Enable)*'
+        Should -Invoke New-CIPPBaseline -Times 0
+    }
+
+    It 'accepts a later stage whose only condition is in a condition group' {
+        $Request = New-Request -Guid 'baseline-1'
+        $Request.Body.stages = @(
+            [pscustomobject]@{ name = 'Report'; standards = @() }
+            [pscustomobject]@{ name = 'Enable'; standards = @(); conditions = @(); conditionGroups = @([pscustomobject]@{ conditions = @([pscustomobject]@{ type = 'manual' }) }) }
+        )
+
+        $Response = Invoke-AddBaseline -Request $Request
+
+        $Response.StatusCode | Should -Be 200
+        Should -Invoke New-CIPPBaseline -Times 1
+    }
+}

@@ -24,6 +24,7 @@ function Start-IntuneReportExportSweep {
             $Name = switch ($Row.RowKey) {
                 'AppInvRawData' { 'DetectedApps' }
                 'AppInstallStatusAggregate' { 'IntuneAppInstallStatus' }
+                'NoncompliantDevicesAndSettingsV3' { 'IntuneNonCompliantSettings' }
             }
             if (-not $Name) { continue }
             [PSCustomObject]@{

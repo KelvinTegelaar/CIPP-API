@@ -18,6 +18,9 @@ function Invoke-ListSafeLinksPolicyDetails {
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $PolicyName = $Request.Query.PolicyName ?? $Request.Body.PolicyName
     $RuleName = $Request.Query.RuleName ?? $Request.Body.RuleName
+    if (-not $PolicyName -and -not $RuleName) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'PolicyName or RuleName is required' } })
+    }
 
     $Result = @{}
     $LogMessages = [System.Collections.ArrayList]@()

@@ -2,7 +2,12 @@
   "name": "CollaborationDomainRestriction",
   "label": "Restrict B2B Collaboration to Allowed Domains",
   "cat": "Entra (AAD) Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (AC.L1-b.1.i)",
+    "CMMC (AC.L2-3.1.1)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.1)"
+  ],
   "impact": "High Impact",
   "helpText": "Restricts B2B guest invitations to an allow-list of domains. Setting an allow-list clears any block-list, matching portal behaviour.",
   "executiveText": "Limits which external organizations employees can invite as guests, reducing data exposure to unsanctioned partners while keeping approved collaboration frictionless.",

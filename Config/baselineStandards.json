@@ -8,7 +8,9 @@
     "tag": [
       "CIS M365 7.0.0 (1.3.2)",
       "spo_idle_session_timeout",
-      "NIST CSF 2.0 (PR.AA-03)"
+      "NIST CSF 2.0 (PR.AA-03)",
+      "CMMC (AC.L2-3.1.11)",
+      "NIST SP 800-171 (3.1.11)"
     ],
     "helpText": "Enables and sets Idle session timeout for Microsoft 365 to 1 hour. This policy affects most M365 web apps",
     "executiveText": "Automatically logs out inactive users from Microsoft 365 applications after a specified time period to prevent unauthorized access to company data on unattended devices. This security measure protects against data breaches when employees leave workstations unlocked.",
@@ -170,7 +172,9 @@
       "mdo_targeteddomainprotectionaction",
       "mdo_similaruserssafetytips",
       "mdo_similardomainssafetytips",
-      "mdo_unusualcharacterssafetytips"
+      "mdo_unusualcharacterssafetytips",
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
     ],
     "helpText": "This creates an Anti-Phishing policy. On tenants without Defender for Office 365 only the settings that exist there are graded; impersonation and mailbox-intelligence protection are skipped.",
     "docsDescription": "Creates or updates the Anti-Phishing policy and the rule that scopes it to every accepted domain. The graded property set depends on tenant licensing.",
@@ -442,7 +446,9 @@
     "name": "standards.AntiSpamSafeList",
     "cat": "Defender Standards",
     "tag": [
-      "CIS M365 7.0.0 (2.1.13)"
+      "CIS M365 7.0.0 (2.1.13)",
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
     ],
     "helpText": "Sets the anti-spam connection filter policy option 'safe list' in Defender.",
     "docsDescription": "Sets [Microsoft's built-in 'safe list'](https://learn.microsoft.com/en-us/powershell/module/exchange/set-hostedconnectionfilterpolicy?view=exchange-ps#-enablesafelist) in the anti-spam connection filter policy, rather than setting a custom safe/block list of IPs.",
@@ -530,7 +536,10 @@
   {
     "name": "standards.AppManagementPolicy",
     "cat": "Entra (AAD) Standards",
-    "tag": [],
+    "tag": [
+      "FedRAMP B-D (KSI-IAM-SNU)",
+      "FedRAMP B-D (KSI-SVC-ASM)"
+    ],
     "helpText": "Restricts how credentials can be added to applications and service principals: block password secrets, block custom passwords, and cap credential lifetimes.",
     "docsDescription": "Grades and sets the tenant default app management policy. Configured settings build the restriction set the classic standard built - password addition mirrors onto symmetric key addition, day counts become ISO durations, and application restrictions mirror onto service principal restrictions. Settings left empty are not enforced.",
     "executiveText": "Enforces modern credential hygiene on application registrations - blocking long-lived or user-chosen application passwords limits the blast radius of leaked app secrets, a common attack path.",
@@ -724,7 +733,13 @@
       "CIS M365 7.0.0 (2.1.5)",
       "NIST CSF 2.0 (DE.CM-09)",
       "mdo_atpprotection",
-      "mdo_safedocuments"
+      "mdo_safedocuments",
+      "CMMC (SI.L1-b.1.xiii)",
+      "CMMC (SI.L1-b.1.xv)",
+      "CMMC (SI.L2-3.14.2)",
+      "CMMC (SI.L2-3.14.5)",
+      "NIST SP 800-171 (3.14.2)",
+      "NIST SP 800-171 (3.14.5)"
     ],
     "helpText": "This creates a Atp policy that enables Defender for Office 365 for SharePoint, OneDrive and Microsoft Teams.",
     "executiveText": "Extends Defender for Office 365 malware protection to files stored in SharePoint, OneDrive and Microsoft Teams, and enables Safe Documents so files are verified before users can open them.",
@@ -769,7 +784,12 @@
     "tag": [
       "CIS M365 7.0.0 (3.1.1)",
       "mip_search_auditlog",
-      "NIST CSF 2.0 (DE.CM-09)"
+      "NIST CSF 2.0 (DE.CM-09)",
+      "CMMC (AU.L2-3.3.1)",
+      "CMMC (AU.L2-3.3.2)",
+      "FedRAMP B-D (KSI-MLA-LET)",
+      "NIST SP 800-171 (3.3.1)",
+      "NIST SP 800-171 (3.3.2)"
     ],
     "helpText": "Enables the Unified Audit Log for tracking and auditing activities. Also runs Enable-OrganizationCustomization if necessary.",
     "executiveText": "Activates comprehensive activity logging across Microsoft 365 services to track user actions, system changes, and security events. This provides essential audit trails for compliance requirements, security investigations, and regulatory reporting.",
@@ -840,7 +860,10 @@
       "EIDSCA.AG01",
       "EIDSCA.AG02",
       "EIDSCA.AG03",
-      "SMB1001 (2.8)"
+      "SMB1001 (2.8)",
+      "CMMC (IA.L2-3.5.3)",
+      "FedRAMP B-D (KSI-IAM-SUS)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "Configures the report suspicious activity settings and system credential preferences in the authentication methods policy.",
     "docsDescription": "Controls the authentication methods policy settings for reporting suspicious activity and system credential preferences. These settings help enhance the security of authentication in your organization.",
@@ -900,7 +923,11 @@
   {
     "name": "standards.AuthenticationMethods",
     "cat": "Entra (AAD) Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (IA.L2-3.5.3)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.3)"
+    ],
     "helpText": "Manages the enabled state, group targeting and per-method settings of every authentication method the baseline configures. Methods left unconfigured are never touched.",
     "docsDescription": "Grades each configured method: enabled state, include targeting (a named group or all users), an optional exclude group, and method-specific settings - Microsoft Authenticator feature states, Temporary Access Pass lifetimes, QR code settings and Email OTP external access. The graded value is one list naming every drift. Remediation writes only the drifted methods through the shared authentication policy helper.",
     "executiveText": "Standardizes which sign-in methods are available and to whom - enabling phishing-resistant methods and retiring weak ones consistently across the fleet.",
@@ -1733,7 +1760,9 @@
     "name": "standards.BitLockerKeysForOwnedDevice",
     "cat": "Entra (AAD) Standards",
     "tag": [
-      "CIS M365 7.0.0 (5.1.4.6)"
+      "CIS M365 7.0.0 (5.1.4.6)",
+      "CMMC (SC.L2-3.13.10)",
+      "NIST SP 800-171 (3.13.10)"
     ],
     "helpText": "Controls whether standard users can recover BitLocker keys for devices they own.",
     "docsDescription": "Updates the Microsoft Entra authorization policy that controls whether standard users can read BitLocker recovery keys for devices they own. Choose to restrict access for tighter security or allow self-service recovery when operational needs require it.",
@@ -1889,7 +1918,12 @@
   {
     "name": "standards.CollaborationDomainRestriction",
     "cat": "Entra (AAD) Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L1-b.1.i)",
+      "CMMC (AC.L2-3.1.1)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.1)"
+    ],
     "helpText": "Restricts B2B guest invitations to an allow-list of domains. Setting an allow-list clears any block-list, matching portal behaviour.",
     "docsDescription": "Grades the sorted allowed-domains list on the B2B management policy. Remediation rebuilds the domain policy on top of the existing definition so sibling settings such as AutoRedeemPolicy survive.",
     "executiveText": "Limits which external organizations employees can invite as guests, reducing data exposure to unsanctioned partners while keeping approved collaboration frictionless.",
@@ -1979,7 +2013,23 @@
       "SMB1001 (2.5)",
       "SMB1001 (2.6)",
       "SMB1001 (2.8)",
-      "SMB1001 (2.9)"
+      "SMB1001 (2.9)",
+      "CMMC (AC.L1-b.1.i)",
+      "CMMC (AC.L2-3.1.1)",
+      "CMMC (AC.L2-3.1.11)",
+      "CMMC (AC.L2-3.1.12)",
+      "CMMC (AC.L2-3.1.18)",
+      "CMMC (IA.L2-3.5.3)",
+      "CMMC (AC.L3-3.1.2e)",
+      "CMMC (IA.L3-3.5.3e)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "FedRAMP B-D (KSI-IAM-SUS)",
+      "NIST SP 800-171 (3.1.1)",
+      "NIST SP 800-171 (3.1.11)",
+      "NIST SP 800-171 (3.1.12)",
+      "NIST SP 800-171 (3.1.18)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "Manage conditional access policies for better security.",
     "executiveText": "Deploys standardized conditional access policies that automatically enforce security requirements based on user location, device compliance, and risk factors. These templates ensure consistent security controls across the organization while enabling secure access to business resources.",
@@ -2056,7 +2106,23 @@
     "name": "standards.ConditionalAccessTemplatePackage",
     "cat": "Templates",
     "tag": [
-      "HighImpact"
+      "HighImpact",
+      "CMMC (AC.L1-b.1.i)",
+      "CMMC (AC.L2-3.1.1)",
+      "CMMC (AC.L2-3.1.11)",
+      "CMMC (AC.L2-3.1.12)",
+      "CMMC (AC.L2-3.1.18)",
+      "CMMC (IA.L2-3.5.3)",
+      "CMMC (AC.L3-3.1.2e)",
+      "CMMC (IA.L3-3.5.3e)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "FedRAMP B-D (KSI-IAM-SUS)",
+      "NIST SP 800-171 (3.1.1)",
+      "NIST SP 800-171 (3.1.11)",
+      "NIST SP 800-171 (3.1.12)",
+      "NIST SP 800-171 (3.1.18)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "Deploys and drift-checks EVERY Conditional Access template tagged with the selected package. Membership is resolved fresh on every run: tag a new template with the package and it joins this baseline automatically, untag it and it leaves. All templates in the package share the deployment state configured here - add a template individually instead when it needs a different state.",
     "executiveText": "Deploys a complete, named bundle of sign-in security policies in one step - for example a full zero-trust Conditional Access set - and keeps every policy in the bundle enforced as the bundle evolves.",
@@ -2128,7 +2194,13 @@
     "cat": "Entra (AAD) Standards",
     "tag": [
       "EIDSCA.CP03",
-      "EIDSCA.CP04"
+      "EIDSCA.CP04",
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (CM.L2-3.4.9)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.4.9)"
     ],
     "helpText": "Sets the two values on the Consent Policy Settings directory setting: block user consent when Microsoft detects a risky request, and let users request admin consent for apps they cannot consent to themselves. The EIDSCA recommendation is on for both.",
     "docsDescription": "Grades BlockUserConsentForRiskyApps and EnableAdminConsentRequests on the Consent Policy Settings directory setting (template dffd5d46-495d-40a9-8e21-954ff55e198a). Directory setting values are strings on the wire, so both sides grade as strings; a tenant without the setting object grades as drift and remediation instantiates it from the template. Maps to EIDSCA CP03 and CP04. The admin consent workflow itself (reviewers, notifications, request duration) is managed by Enable App Consent Admin Requests. Group owner consent (EIDSCA CP01) is no longer a value on this template; it is governed by the permission grant policies on the authorization policy, which the OAuth consent standards replace.",
@@ -2335,7 +2407,10 @@
     "name": "standards.CustomBannedPasswordList",
     "cat": "Entra (AAD) Standards",
     "tag": [
-      "aad_custom_banned_passwords"
+      "aad_custom_banned_passwords",
+      "CMMC (IA.L2-3.5.7)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.7)"
     ],
     "helpText": "Adds the configured words (4-16 characters) to the tenant banned password list and enables the check. Words already on the tenant list are kept.",
     "docsDescription": "Grades whether the banned password check is enabled and which configured words are missing from the tenant list; words on the list that the baseline never mentioned are left alone. Remediation merges additively, deduplicated and capped at 1000.",
@@ -2362,7 +2437,10 @@
   {
     "name": "standards.DefaultPlatformRestrictions",
     "cat": "Intune Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L2-3.1.18)",
+      "NIST SP 800-171 (3.1.18)"
+    ],
     "helpText": "Sets the default enrollment platform restrictions, controlling which device platforms may enroll, whether personally-owned devices of each platform are allowed, and the minimum/maximum OS version each platform may enroll with.",
     "docsDescription": "Sets the default device enrollment platform restrictions for Android, Android for Work, iOS, macOS and Windows, including optional minimum and maximum OS version limits per platform.",
     "executiveText": "Controls which kinds of device can enrol into management, whether employees may enrol personal devices, and how up to date a device's operating system must be to enrol. This keeps unmanaged, unsupported or out-of-date platforms off corporate resources.",
@@ -2560,7 +2638,10 @@
     "tag": [
       "CIS M365 7.0.0 (7.2.7)",
       "CIS M365 7.0.0 (7.2.11)",
-      "CISA (MS.SPO.1.4v1)"
+      "CISA (MS.SPO.1.4v1)",
+      "CMMC (AC.L2-3.1.3)",
+      "FedRAMP A-D (KSI-SVC-SIN)",
+      "NIST SP 800-171 (3.1.3)"
     ],
     "helpText": "Configure the SharePoint default sharing link type and permission. This setting controls both the type of sharing link created by default and the permission level assigned to those links.",
     "docsDescription": "Sets the default sharing link type (Direct or Internal) and permission (View) in SharePoint and OneDrive. Direct sharing means links only work for specific people, while Internal sharing means links work for anyone in the organization. Setting the view permission as the default ensures that users must deliberately select the edit permission when sharing a link, reducing the risk of unintentionally granting edit privileges.",
@@ -2608,7 +2689,13 @@
       "EIDSCA.AP05",
       "EIDSCA.AP06",
       "EIDSCA.AP09",
-      "EIDSCA.AP14"
+      "EIDSCA.AP14",
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.1.5)"
     ],
     "helpText": "Sets four switches on the Microsoft Entra authorization policy: whether users can sign up for email-based subscriptions, whether users with a verified email can join the tenant on their own, whether users may consent to apps that Microsoft flags as risky, and whether members can read other users in the directory. The EIDSCA recommendation is off, off, off and on.",
     "docsDescription": "Writes allowedToSignUpEmailBasedSubscriptions, allowEmailVerifiedUsersToJoinOrganization, allowUserConsentForRiskyApps and defaultUserRolePermissions.allowedToReadOtherUsers on the authorization policy (Graph beta). Maps to EIDSCA AP05, AP06, AP09 and AP14. The write is delegated because the authorization policy rejects app-only tokens. Disable Self Service Licensing also writes the email-based subscription switch; use one or the other in a baseline.",
@@ -2674,7 +2761,12 @@
       "scid_2514",
       "scid_2515",
       "scid_2516",
-      "scid_2517"
+      "scid_2517",
+      "CMMC (SI.L1-b.1.xiii)",
+      "CMMC (SC.L2-3.13.13)",
+      "CMMC (SI.L2-3.14.2)",
+      "NIST SP 800-171 (3.13.13)",
+      "NIST SP 800-171 (3.14.2)"
     ],
     "helpText": "Deploys and enforces Microsoft Defender Attack Surface Reduction (ASR) rules via Intune. Controls 20 individual ASR rules that protect against common attack vectors.",
     "docsDescription": "Grades the fixed-name 'ASR Default rules' policy: the mode plus each rule's presence in the rules group, exactly the classic's semantics - a rule present counts as enabled, a rule the baseline turns off must be absent. Remediation deletes and recreates through Set-CIPPDefenderASRPolicy.",
@@ -2877,7 +2969,16 @@
       "scid_91",
       "scid_92",
       "scid_89",
-      "scid_2011"
+      "scid_2011",
+      "CMMC (SI.L1-b.1.xiii)",
+      "CMMC (SI.L1-b.1.xiv)",
+      "CMMC (SI.L1-b.1.xv)",
+      "CMMC (SI.L2-3.14.2)",
+      "CMMC (SI.L2-3.14.4)",
+      "CMMC (SI.L2-3.14.5)",
+      "NIST SP 800-171 (3.14.2)",
+      "NIST SP 800-171 (3.14.4)",
+      "NIST SP 800-171 (3.14.5)"
     ],
     "helpText": "Deploys and enforces a Microsoft Defender Antivirus configuration policy via Intune. Controls scanning behaviour, real-time protection, cloud protection, network protection, signature updates, CPU priority, and threat remediation actions.",
     "docsDescription": "Grades the fixed-name 'Default AV Policy' settings catalog policy field by field from the cached settingInstance tree. The four threat remediation actions and the four choice settings (network protection, cloud block level, on-access protection, sample consent) grade only when configured, because the recreate omits blank ones; blank integer fields grade the write-side defaults (50/8/0). Remediation deletes the drifted policy and recreates it through the Set-CIPPDefenderAVPolicy helper - settings catalog policies replace whole, never patch.",
@@ -3279,7 +3380,7 @@
     "cat": "Defender Standards",
     "tag": [],
     "helpText": "Configures the Microsoft Defender for Endpoint connector with Intune, enabling compliance evaluation for mobile and desktop platforms and controlling partner-data blocking per platform.",
-    "docsDescription": "Reads the MDE mobile threat defense connector live (one small singleton, no cache) and grades every platform toggle. Three rules hold: connecting Windows forces the Windows partner-data block on, connecting macOS forces the macOS partner-data block on (Microsoft enforces both), and the MDE attach flag always grades true. Remediation enables the connector first, then writes the FULL settings object.",
+    "docsDescription": "Reads the MDE mobile threat defense connector live (one small singleton, no cache) and grades every platform toggle. Two rules hold: connecting Windows forces the Windows partner-data block on and connecting macOS forces the macOS partner-data block on (Microsoft enforces both). Remediation enables the connector first, then writes the FULL settings object.",
     "executiveText": "Establishes the link between Microsoft Defender for Endpoint and Intune so device risk data feeds compliance policies - a foundational Zero Trust control.",
     "label": "Defender for Endpoint - Intune Compliance Connector",
     "impact": "High Impact",
@@ -3411,7 +3512,7 @@
       {
         "name": "standards.DefenderCompliancePolicy.AllowMEMEnforceCompliance",
         "type": "switch",
-        "label": "Allow MEM enforcement of compliance",
+        "label": "Allow Microsoft Defender for Endpoint to enforce Endpoint Security Configurations",
         "omitWhenBlank": true,
         "default": false
       }
@@ -3421,7 +3522,9 @@
     "name": "standards.DefenderEDRPolicy",
     "cat": "Defender Standards",
     "tag": [
-      "scid_20000"
+      "scid_20000",
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
     ],
     "helpText": "Deploys and enforces a Microsoft Defender for Endpoint EDR configuration policy via Intune. Controls auto-configuration from the MDE connector and sample sharing.",
     "docsDescription": "Grades the fixed-name 'EDR Configuration' policy: sample sharing and whether the configuration type is auto-from-connector. Remediation deletes and recreates through Set-CIPPDefenderEDRPolicy.",
@@ -3650,7 +3753,10 @@
   {
     "name": "standards.DeployCheckChromeExtension",
     "cat": "Intune Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
+    ],
     "helpText": "Deploys the Check by CyberDrain browser extension via a Win32 script app in Intune for both Chrome and Edge with configurable settings.",
     "docsDescription": "Grades presence of the 'Check by CyberDrain - Browser Extension' Win32 app, the classic's check. Settings drift is handled by the EXECUTOR: the app description carries a config fingerprint and every remediation run rebuilds the scripts, redeploying only when the fingerprint changed - which is why this standard runs checkBeforeRun false.",
     "executiveText": "Automatically protects staff browsers against phishing with the Check extension, consistently configured and force-installed fleet-wide.",
@@ -3941,9 +4047,14 @@
     "name": "standards.DetectConditionalAccessDrift",
     "cat": "Templates",
     "tag": [
-      "HighImpact"
+      "HighImpact",
+      "CMMC (CM.L2-3.4.3)",
+      "CMMC (CA.L2-3.12.3)",
+      "FedRAMP B-D (KSI-SVC-ACM)",
+      "NIST SP 800-171 (3.4.3)",
+      "NIST SP 800-171 (3.12.3)"
     ],
-    "helpText": "Flags every Conditional Access policy in the tenant that is not covered by a CA template from a baseline applying to it (matched by display name across ALL baselines). Each unmanaged policy is its own deviation: accept it to tolerate a tenant-specific policy, or deny it to queue it for deletion. Report-only - nothing is ever changed automatically.",
+    "helpText": "Flags every Conditional Access policy in the tenant that is not covered by a CA template from a baseline applying to it, nor deployed by another standard in those baselines such as the compliant network policy (matched by display name across ALL baselines). Each unmanaged policy is its own deviation: accept it to tolerate a tenant-specific policy, or deny it to queue it for deletion. Report-only - nothing is ever changed automatically.",
     "executiveText": "Watches for sign-in security policies created outside the agreed baseline - for example by a local admin - and raises each one for review, so unauthorized changes to account protection never go unnoticed.",
     "label": "Detect Conditional Access Drift",
     "impact": "Low Impact",
@@ -3960,7 +4071,12 @@
     "name": "standards.DetectIntuneDrift",
     "cat": "Templates",
     "tag": [
-      "HighImpact"
+      "HighImpact",
+      "CMMC (CM.L2-3.4.3)",
+      "CMMC (CA.L2-3.12.3)",
+      "FedRAMP B-D (KSI-SVC-ACM)",
+      "NIST SP 800-171 (3.4.3)",
+      "NIST SP 800-171 (3.12.3)"
     ],
     "helpText": "Flags every Intune policy in the tenant that is not covered by a baseline template applying to it (matched by display name across ALL baselines). Each unmanaged policy is its own deviation: accept it to tolerate a tenant-specific policy, or deny it to queue it for deletion. Report-only - nothing is ever changed automatically.",
     "executiveText": "Watches for device management policies created outside the agreed baseline - for example by a local admin - and raises each one for review, so unauthorized or forgotten configuration never accumulates unnoticed.",
@@ -4155,7 +4271,10 @@
     "cat": "Exchange Standards",
     "tag": [
       "CIS M365 7.0.0 (6.5.3)",
-      "exo_storageproviderrestricted"
+      "exo_storageproviderrestricted",
+      "CMMC (AC.L1-b.1.iii)",
+      "CMMC (AC.L2-3.1.20)",
+      "NIST SP 800-171 (3.1.20)"
     ],
     "helpText": "Disables the ability for users to open files in Outlook on the Web, from other providers such as Box, Dropbox, Facebook, Google Drive, OneDrive Personal, etc.",
     "docsDescription": "Disables additional storage providers in OWA. This is to prevent users from using personal storage providers like Dropbox, Google Drive, etc. Usually this has little user impact.",
@@ -4188,7 +4307,14 @@
   {
     "name": "standards.DisableAgentBlueprintCreation",
     "cat": "Entra (AAD) Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.1.5)"
+    ],
     "helpText": "Disables the ability for users to register agent identity blueprints in the tenant. This is a separate setting from 'Users can register applications'; disabling app registrations does not stop users from creating agent identity blueprints.",
     "docsDescription": "Sets the Entra default user role permission 'Users can register agent identity blueprints' (defaultUserRolePermissions.allowedToCreateAgentIdentityBlueprints on the Graph beta authorization policy) to No. Microsoft enables this for all users by default, and the creator of a blueprint becomes its owner and can manage its credentials. This setting is independent of 'Users can register applications', so apply both standards to keep application and agent identity creation limited to the Agent ID Developer and Agent ID Administrator roles.",
     "executiveText": "Prevents regular employees from creating AI agent identity blueprints, which are the templates that agent identities are issued from. Restricting this to designated roles keeps agent identities and their credentials under IT governance and avoids a sprawl of unmanaged agent registrations.",
@@ -4221,7 +4347,13 @@
       "Essential 8 (1175)",
       "NIST CSF 2.0 (PR.AA-05)",
       "SMB1001 (2.8)",
-      "aad_third_party_apps"
+      "aad_third_party_apps",
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.1.5)"
     ],
     "helpText": "Disables the ability for users to create App registrations in the tenant.",
     "docsDescription": "Disables the ability for users to create applications in Entra. Done to prevent breached accounts from creating an app to maintain access to the tenant, even after the breached account has been secured.",
@@ -4252,7 +4384,10 @@
     "cat": "Exchange Standards",
     "tag": [
       "CIS M365 7.0.0 (6.5.4)",
-      "NIST CSF 2.0 (PR.IR-01)"
+      "NIST CSF 2.0 (PR.IR-01)",
+      "CMMC (CM.L2-3.4.7)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.4.7)"
     ],
     "helpText": "Disables SMTP AUTH organization-wide, impacting POP and IMAP clients that rely on SMTP for sending emails. Default for new tenants. For more information, see the [Microsoft documentation](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission)",
     "docsDescription": "Disables tenant-wide SMTP basic authentication, including for all explicitly enabled users, impacting POP and IMAP clients that rely on SMTP for sending emails. For more information, see the [Microsoft documentation](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission).",
@@ -4286,7 +4421,10 @@
   {
     "name": "standards.DisableEWS",
     "cat": "Exchange Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (CM.L2-3.4.7)",
+      "NIST SP 800-171 (3.4.7)"
+    ],
     "helpText": "Disables Exchange Web Services (EWS) organization-wide. This reduces the attack surface by blocking legacy API access to mailbox data. Warning: This may break Office web add-ins on builds older than 16.0.19127. Conflicts with the \"Configure EWS allowed applications\" standard, which sets EwsEnabled to true: do not apply both to a tenant.",
     "docsDescription": "Disables Exchange Web Services (EWS) at the organization level to reduce attack surface. EWS provides cross-platform API access to sensitive Exchange Online data such as emails, meetings, and contacts. If compromised, attackers can access confidential data, send phishing emails, or spoof identities. Disabling EWS also reduces legacy app usage and minimizes exploitable endpoints. Note that this may break first-party features including web add-ins for Word, Excel, PowerPoint, and Outlook on builds older than 16.0.19127.",
     "executiveText": "Disables Exchange Web Services (EWS) across the organization to reduce attack surface and prevent legacy API access to sensitive mailbox data. This aligns with Microsoft's Baseline Security Mode recommendation to minimize exploitable endpoints while requiring updates to applications that depend on EWS.",
@@ -4323,7 +4461,10 @@
       "NIST CSF 2.0 (PR.AA-03)",
       "SMB1001 (2.5)",
       "SMB1001 (2.6)",
-      "SMB1001 (2.9)"
+      "SMB1001 (2.9)",
+      "CMMC (IA.L2-3.5.3)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "This blocks users from using email as an MFA method. This disables the email OTP option for guest users, and instead prompts them to create a Microsoft account.",
     "executiveText": "Disables email-based authentication codes due to security concerns with email interception and account compromise. This forces users to adopt more secure authentication methods, particularly affecting guest users who must use stronger verification methods.",
@@ -4359,7 +4500,13 @@
     "cat": "Exchange Standards",
     "tag": [
       "Security",
-      "NIST CSF 2.0 (PR.AA-05)"
+      "NIST CSF 2.0 (PR.AA-05)",
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.1.5)"
     ],
     "helpText": "Disables Exchange Online PowerShell access for non-admin users by setting the RemotePowerShellEnabled property to false for each user. Users holding a directory role, directly or through a group, are automatically excluded.",
     "docsDescription": "Disables Exchange Online PowerShell access for non-admin users by setting the RemotePowerShellEnabled property to false for each user. This security measure follows a least privileged access approach. Users holding a directory role - directly or through a group - are automatically excluded so administrators retain PowerShell access.",
@@ -4387,7 +4534,9 @@
     "cat": "Exchange Standards",
     "tag": [
       "CIS M365 7.0.0 (1.3.3)",
-      "exo_individualsharing"
+      "exo_individualsharing",
+      "CMMC (AC.L2-3.1.3)",
+      "NIST SP 800-171 (3.1.3)"
     ],
     "helpText": "Disables the ability for users to share their calendar with external users. Only for the default policy, so exclusions can be made if needed.",
     "docsDescription": "Disables external calendar sharing for the entire tenant. This is not a widely used feature, and it's therefore unlikely that this will impact users. Only for the default policy, so exclusions can be made if needed by making a new policy and assigning it to users.",
@@ -4427,7 +4576,10 @@
       "EIDSCA.ST08",
       "EIDSCA.ST09",
       "NIST CSF 2.0 (PR.AA-05)",
-      "SMB1001 (2.8)"
+      "SMB1001 (2.8)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.5)"
     ],
     "helpText": "Disables Guest access to enumerate directory objects. This prevents guest users from seeing other users or guests in the directory.",
     "docsDescription": "Sets it so guests can view only their own user profile. Permission to view other users isn't allowed. Also restricts guest users from seeing the membership of groups they're in. See exactly what get locked down in the [Microsoft documentation.](https://learn.microsoft.com/en-us/entra/fundamentals/users-default-permissions)",
@@ -4469,7 +4621,10 @@
     "name": "standards.DisableGuests",
     "cat": "Entra (AAD) Standards",
     "tag": [
-      "SMB1001 (2.8)"
+      "SMB1001 (2.8)",
+      "CMMC (IA.L2-3.5.6)",
+      "FedRAMP A-D (KSI-IAM-AAM)",
+      "NIST SP 800-171 (3.5.6)"
     ],
     "helpText": "Blocks login for guest users whose most recent sign-in attempt, interactive or non-interactive, is older than the number of days. Optionally soft-deletes already-disabled guests after a configurable grace period past that threshold (0 = never delete). Guests that have never signed in are only included when 'Disable accounts that have not yet signed in' is enabled. Accounts an administrator re-enabled in the last 7 days are left alone. Deleted guests remain recoverable from Deleted Items for about 30 days.",
     "docsDescription": "Blocks login for guest users whose most recent sign-in attempt, interactive or non-interactive, is older than the number of days. Remediation first disables stale enabled guests, and later soft-deletes guests that are already disabled once they have been inactive for the disable threshold plus the configured grace delta (deletion age = days + deleteGraceDays). The disable-before-delete grace is further guaranteed by never deleting a guest in the same pass it was disabled. Guests that have never signed in are only included when 'Disable accounts that have not yet signed in' is enabled. Accounts an administrator re-enabled in the last 7 days are left alone. Graph user DELETE is a soft-delete (recoverable from Deleted Items for about 30 days).",
@@ -4518,7 +4673,11 @@
   {
     "name": "standards.DisableInactiveApps",
     "cat": "Entra (AAD) Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (IA.L2-3.5.6)",
+      "FedRAMP A-D (KSI-IAM-AAM)",
+      "NIST SP 800-171 (3.5.6)"
+    ],
     "helpText": "Finds enterprise apps with no sign-in for a set number of days (minimum 30), including apps never used since they were added. Microsoft apps and CIPP are skipped. Exclude external MFA (e.g. Cisco Duo) and GSA traffic forwarding apps. Use in Report mode only; auto-remediation is not recommended. Requires Entra ID P1.",
     "docsDescription": "Reports enterprise apps with no sign-in for the configured number of days (minimum 30), from the Entra sign-in activity report (Entra ID P1); remediate mode disables them. Apps never signed in count once older than the same window. Microsoft-owned apps, managed identities, CIPP's own app and apps re-enabled in the last 7 days are skipped. Exclusions match display name, app ID or object ID and accept custom variables. Exclude external MFA apps (e.g. Cisco Duo) and GSA traffic forwarding apps (GSA-...), which can show no sign-ins while in use. Recommended in Report mode only, not auto-remediate.",
     "executiveText": "Identifies third-party and custom apps that are no longer used, so dormant apps with broad permissions can be reviewed and removed before they are abused.",
@@ -4562,6 +4721,7 @@
     "cat": "Entra (AAD) Standards",
     "tag": [
       "CMMC (IA.L2-3.5.6)",
+      "FedRAMP A-D (KSI-IAM-AAM)",
       "NIST SP 800-171 (3.5.6)"
     ],
     "helpText": "Blocks login for cloud-only member users that have not signed in for a configurable number of days (minimum 30). Hybrid (on-premises synced) users are skipped. Users without sign-in activity data are not disabled.",
@@ -4607,7 +4767,14 @@
   {
     "name": "standards.DisableM365GroupUsers",
     "cat": "Entra (AAD) Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.1.5)"
+    ],
     "helpText": "Prevents standard users from creating Microsoft 365 groups, optionally exempting members of a named group.",
     "docsDescription": "Grades EnableGroupCreation on the Group.Unified directory setting and, when an exempt group is configured, that GroupCreationAllowedGroupId points at it (resolved by display name per tenant). Remediation can create the exempt group and instantiates the directory setting from its template when the tenant has none.",
     "executiveText": "Stops group sprawl by routing Microsoft 365 group creation through IT or a designated team, keeping ownership, naming and lifecycle under control.",
@@ -4637,7 +4804,10 @@
     "name": "standards.DisableOWAPersonalAccounts",
     "cat": "Exchange Standards",
     "tag": [
-      "CIS M365 7.0.0 (6.3.2)"
+      "CIS M365 7.0.0 (6.3.2)",
+      "CMMC (AC.L1-b.1.iii)",
+      "CMMC (AC.L2-3.1.20)",
+      "NIST SP 800-171 (3.1.20)"
     ],
     "helpText": "Prevents users from adding personal email accounts (Outlook.com, Gmail, Yahoo) in the new Outlook for Windows and from connecting personal Outlook.com or Google calendars in Outlook on the web. Applies to the default OWA mailbox policy only, so exceptions can be made with a separate policy. Changes can take up to 60 minutes to apply and personal accounts already added are disabled.",
     "docsDescription": "Sets PersonalAccountsEnabled and PersonalAccountCalendarsEnabled on the default OWA mailbox policy (OwaMailboxPolicy-Default). Neither setting applies to classic Outlook for Windows, Outlook for Mac or Outlook mobile.",
@@ -4678,7 +4848,9 @@
     "name": "standards.DisableOutlookAddins",
     "cat": "Exchange Standards",
     "tag": [
-      "exo_outlookaddins"
+      "exo_outlookaddins",
+      "CMMC (CM.L2-3.4.9)",
+      "NIST SP 800-171 (3.4.9)"
     ],
     "helpText": "Disables the ability for users to install add-ins in Outlook. This is to prevent users from installing malicious add-ins.",
     "docsDescription": "Grades whether any of the three app-install roles (My Custom Apps, My Marketplace Apps, My ReadWriteMailbox Apps) remain on the default role assignment policy - the policy reads live, one small object. Remediation removes each role's management role assignments by GUID, continuing past per-role failures. NOTE: removal is one-way through CIPP, as in the classic - re-enabling requires recreating the assignments in Exchange.",
@@ -4701,7 +4873,11 @@
   {
     "name": "standards.DisableQRCodePin",
     "cat": "Entra (AAD) Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (IA.L2-3.5.3)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.3)"
+    ],
     "helpText": "This blocks users from using QR Code Pin as an MFA method. If a user only has QR Code Pin as a MFA method, they will be unable to log in.",
     "docsDescription": "Disables QR Code Pin as an MFA method for the tenant. If a user only has QR Code Pin as a MFA method, they will be unable to sign in.",
     "executiveText": "Disables QR Code Pin authentication method due to security concerns, forcing users to adopt more secure authentication alternatives. This helps standardize authentication methods and reduces potential security vulnerabilities while ensuring employees use more robust multi-factor authentication options.",
@@ -4739,7 +4915,10 @@
       "CIS M365 7.0.0 (7.2.5)",
       "CISA (MS.AAD.14.2v1)",
       "CISA (MS.SPO.1.2v1)",
-      "spo_external_users_sharing"
+      "spo_external_users_sharing",
+      "CMMC (AC.L2-3.1.3)",
+      "FedRAMP A-D (KSI-SVC-SIN)",
+      "NIST SP 800-171 (3.1.3)"
     ],
     "helpText": "Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access",
     "docsDescription": "Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access. This is a tenant wide setting and overrules any settings set on the site level",
@@ -4769,7 +4948,11 @@
     "cat": "Exchange Standards",
     "tag": [
       "NIST CSF 2.0 (PR.AA-01)",
-      "SMB1001 (2.3)"
+      "SMB1001 (2.3)",
+      "CMMC (AC.L1-b.1.i)",
+      "CMMC (AC.L2-3.1.1)",
+      "FedRAMP A-D (KSI-IAM-AAM)",
+      "NIST SP 800-171 (3.1.1)"
     ],
     "helpText": "Blocks login for all accounts that are marked as a resource mailbox and does not have a license assigned. Accounts that are synced from on-premises AD are excluded, as account state is managed in the on-premises AD.",
     "docsDescription": "Resource mailboxes can be directly logged into if the password is reset, this presents a security risk as do all shared login credentials. Microsoft's recommendation is to disable the user account for resource mailboxes. Accounts that are synced from on-premises AD are excluded, as account state is managed in the on-premises AD.",
@@ -4801,7 +4984,10 @@
       "NIST CSF 2.0 (PR.AA-03)",
       "SMB1001 (2.5)",
       "SMB1001 (2.6)",
-      "SMB1001 (2.9)"
+      "SMB1001 (2.9)",
+      "CMMC (IA.L2-3.5.3)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "This blocks users from using SMS as an MFA method. If a user only has SMS as a MFA method, they will be unable to log in.",
     "docsDescription": "Disables SMS as an MFA method for the tenant. If a user only has SMS as a MFA method, they will be unable to sign in.",
@@ -4842,7 +5028,13 @@
       "CIS M365 7.0.0 (5.1.3.1)",
       "CISA (MS.AAD.20.1v1)",
       "NIST CSF 2.0 (PR.AA-05)",
-      "SMB1001 (2.8)"
+      "SMB1001 (2.8)",
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.1.5)"
     ],
     "helpText": "Completely disables the creation of security groups by users. This also breaks the ability to manage groups themselves, or create Teams",
     "executiveText": "Restricts the creation of security groups to IT administrators only, preventing employees from creating unauthorized access groups that could bypass security controls. This ensures proper governance of access permissions and maintains centralized control over who can access what resources.",
@@ -4899,7 +5091,10 @@
       "CIS M365 7.0.0 (7.2.1)",
       "spo_legacy_auth",
       "CISA (MS.AAD.3.1v1)",
-      "NIST CSF 2.0 (PR.IR-01)"
+      "NIST CSF 2.0 (PR.IR-01)",
+      "CMMC (CM.L2-3.4.7)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.4.7)"
     ],
     "helpText": "Disables the ability to authenticate with SharePoint using legacy authentication methods. Any applications that use legacy authentication will need to be updated to use modern authentication.",
     "docsDescription": "Disables the ability for users and applications to access SharePoint via legacy basic authentication. This will likely not have any user impact, but will block systems/applications depending on basic auth or the SharePointOnlineCredentials class.",
@@ -4939,7 +5134,13 @@
       "CIS M365 7.0.0 (1.2.2)",
       "CISA (MS.AAD.10.1v1)",
       "NIST CSF 2.0 (PR.AA-01)",
-      "SMB1001 (2.3)"
+      "SMB1001 (2.3)",
+      "CMMC (AC.L1-b.1.i)",
+      "CMMC (AC.L2-3.1.1)",
+      "CMMC (AU.L2-3.3.2)",
+      "FedRAMP A-D (KSI-IAM-AAM)",
+      "NIST SP 800-171 (3.1.1)",
+      "NIST SP 800-171 (3.3.2)"
     ],
     "helpText": "Blocks login for all accounts that are marked as a shared mailbox. This is Microsoft best practice to prevent direct logons to shared mailboxes. Directory-synced accounts are excluded.",
     "docsDescription": "Shared mailboxes can be directly logged into if the password is reset, this presents a security risk as do all shared login credentials. Microsoft's recommendation is to disable the user account for shared mailboxes. It would be a good idea to review the sign-in reports to establish potential impact.",
@@ -4994,7 +5195,13 @@
     "tag": [
       "CIS M365 7.0.0 (5.1.2.3)",
       "CISA (MS.AAD.6.1v1)",
-      "SMB1001 (2.8)"
+      "SMB1001 (2.8)",
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.1.5)"
     ],
     "helpText": "Restricts creation of M365 tenants to the Global Administrator or Tenant Creator roles.",
     "docsDescription": "Users by default are allowed to create M365 tenants. This disables that so only admins can create new M365 tenants.",
@@ -5023,7 +5230,13 @@
     "name": "standards.DisableUserSiteCreate",
     "cat": "SharePoint Standards",
     "tag": [
-      "SMB1001 (2.8)"
+      "SMB1001 (2.8)",
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.1.5)"
     ],
     "helpText": "Disables users from creating new SharePoint sites",
     "docsDescription": "Disables standard users from creating SharePoint sites, also disables the ability to fully create teams",
@@ -5069,7 +5282,10 @@
       "NIST CSF 2.0 (PR.AA-03)",
       "SMB1001 (2.5)",
       "SMB1001 (2.6)",
-      "SMB1001 (2.9)"
+      "SMB1001 (2.9)",
+      "CMMC (IA.L2-3.5.3)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "This blocks users from using Voice call as an MFA method. If a user only has Voice as a MFA method, they will be unable to log in.",
     "docsDescription": "Disables Voice call as an MFA method for the tenant. If a user only has Voice call as a MFA method, they will be unable to sign in.",
@@ -5140,7 +5356,11 @@
   {
     "name": "standards.DlpCompliancePolicyTemplate",
     "cat": "Templates",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L2-3.1.3)",
+      "FedRAMP A-D (KSI-SVC-SIN)",
+      "NIST SP 800-171 (3.1.3)"
+    ],
     "helpText": "Deploy Microsoft Purview DLP compliance policies from CIPP templates. Existing policies are overwritten in place.",
     "docsDescription": "One instance per selected template. Each template is diffed field by field against the live policy and its rules through the same normalization the deploy path uses, so a policy deployed from the template grades InSync. Missing and drifted policies are remediated in place by name; a PendingDeletion policy cannot be modified and is surfaced as non-compliant without a doomed deploy attempt.",
     "executiveText": "Deploys Data Loss Prevention policies from a standardized template library, ensuring consistent DLP coverage across tenants for sensitive financial, identity, and regulated content.",
@@ -5291,7 +5511,10 @@
     "name": "standards.EXODirectSend",
     "cat": "Exchange Standards",
     "tag": [
-      "CIS M365 7.0.0 (6.5.5)"
+      "CIS M365 7.0.0 (6.5.5)",
+      "CMMC (IA.L1-b.1.vi)",
+      "CMMC (IA.L2-3.5.2)",
+      "NIST SP 800-171 (3.5.2)"
     ],
     "helpText": "Sets the state of Direct Send in Exchange Online. Direct Send allows applications to send emails directly to Exchange Online mailboxes as the tenants domains, without requiring authentication.",
     "docsDescription": "Controls whether applications can use Direct Send to send emails directly to Exchange Online mailboxes as the tenants domains, without requiring authentication. A detailed explanation from Microsoft can be found [here.](https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365)",
@@ -5321,7 +5544,10 @@
       "mdo_autoforwardingmode",
       "mdo_blockmailforward",
       "CISA (MS.EXO.4.1v1)",
-      "NIST CSF 2.0 (PR.DS-02)"
+      "NIST CSF 2.0 (PR.DS-02)",
+      "CMMC (AC.L2-3.1.3)",
+      "FedRAMP A-D (KSI-SVC-SIN)",
+      "NIST SP 800-171 (3.1.3)"
     ],
     "helpText": "Disables the ability for users to automatically forward e-mails to external recipients.",
     "docsDescription": "Disables the ability for users to automatically forward e-mails to external recipients. This is to prevent data exfiltration. Please check if there are any legitimate use cases for this feature before implementing, like forwarding invoices and such.",
@@ -5374,7 +5600,9 @@
       "mdo_recipientexternallimitperhour",
       "mdo_recipientinternallimitperhour",
       "mdo_recipientlimitperday",
-      "mdo_thresholdreachedaction"
+      "mdo_thresholdreachedaction",
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
     ],
     "helpText": "Configures the outbound spam recipient limits (external per hour, internal per hour, per day) and the action to take when a limit is reached. The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one. ",
     "docsDescription": "Configures the Exchange Online outbound spam recipient limits for external per hour, internal per hour, and per day, along with the action to take (e.g., BlockUser, Alert) when these limits are exceeded. This helps prevent abuse and manage email flow. Microsoft's recommendations can be found [here.](https://learn.microsoft.com/en-us/defender-office-365/recommended-settings-for-eop-and-office365#eop-outbound-spam-policy-settings) The 'Set Outbound Spam Alert e-mail' standard is recommended to configure together with this one.",
@@ -5468,7 +5696,9 @@
     "cat": "Defender Standards",
     "tag": [
       "CIS M365 7.0.0 (2.1.12)",
-      "mdo_connectionfilter"
+      "mdo_connectionfilter",
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
     ],
     "helpText": "Ensures the connection filter IP allow list is not used. IPs on this list bypass spam, spoof, and authentication checks.",
     "docsDescription": "IPs on the connection filter allow list bypass spam, spoof, and authentication checks. CIS recommends keeping this list empty to ensure all inbound email is properly scanned. This standard checks that the IPAllowList on the Default hosted connection filter policy is empty and can remediate by clearing it.",
@@ -5499,7 +5729,9 @@
     "cat": "Entra (AAD) Standards",
     "tag": [
       "CIS M365 7.0.0 (5.3.4)",
-      "aad_admin_consent_workflow"
+      "aad_admin_consent_workflow",
+      "CMMC (CM.L2-3.4.9)",
+      "NIST SP 800-171 (3.4.9)"
     ],
     "helpText": "Enables the admin consent workflow so users can request admin approval for applications instead of being blocked outright. The selected reviewer role receives the requests, and specific users and groups (matched by display name) can be added as reviewers alongside it.",
     "docsDescription": "Grades whether the admin consent request policy is enabled and whether the configured roles, users and groups are present among the reviewers. Reviewer users and groups are matched by display name, so a central MSP support account that exists as a guest in each tenant, or one shared 'consent reviewers' group created in every tenant, can receive per-request notifications regardless of how it was created. Group reviewers are the members of the group, including nested groups, matching the Groups option in the Entra admin center. Remediation enables the workflow with 30-day requests and reviewer notifications, and MERGES the configured reviewers into the existing list - reviewers added by hand are preserved. No role selected defaults to Global Administrator.",
@@ -5629,7 +5861,12 @@
       "NIST CSF 2.0 (PR.AA-03)",
       "SMB1001 (2.5)",
       "SMB1001 (2.6)",
-      "SMB1001 (2.9)"
+      "SMB1001 (2.9)",
+      "CMMC (IA.L2-3.5.3)",
+      "CMMC (IA.L2-3.5.4)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.3)",
+      "NIST SP 800-171 (3.5.4)"
     ],
     "helpText": "Enables the FIDO2 authenticationMethod for the tenant",
     "docsDescription": "Enables FIDO2 capabilities for the tenant. This allows users to use FIDO2 keys like a Yubikey for authentication.",
@@ -5651,7 +5888,9 @@
     "tag": [
       "SMB1001 (2.5)",
       "SMB1001 (2.6)",
-      "SMB1001 (2.9)"
+      "SMB1001 (2.9)",
+      "CMMC (IA.L2-3.5.3)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "Enables the HardwareOath authenticationMethod for the tenant. This allows you to use hardware tokens for generating 6 digit MFA codes.",
     "docsDescription": "Enables Hardware OAuth tokens for the tenant. This allows users to use hardware tokens like a Yubikey for authentication.",
@@ -5768,7 +6007,12 @@
       "exo_mailboxaudit",
       "Essential 8 (1509)",
       "Essential 8 (1683)",
-      "NIST CSF 2.0 (DE.CM-09)"
+      "NIST CSF 2.0 (DE.CM-09)",
+      "CMMC (AU.L2-3.3.1)",
+      "CMMC (AU.L2-3.3.2)",
+      "FedRAMP B-D (KSI-MLA-LET)",
+      "NIST SP 800-171 (3.3.1)",
+      "NIST SP 800-171 (3.3.2)"
     ],
     "helpText": "Enables Mailbox auditing for all mailboxes and on tenant level. Disables audit bypass on all mailboxes. Unified Audit Log needs to be enabled for this standard to function.",
     "docsDescription": "Enables mailbox auditing on tenant level and for all mailboxes. Disables audit bypass on all mailboxes. By default Microsoft does not enable mailbox auditing for Resource Mailboxes, Public Folder Mailboxes and DiscoverySearch Mailboxes. Unified Audit Log needs to be enabled for this standard to function.",
@@ -5862,7 +6106,10 @@
     "cat": "Entra (AAD) Standards",
     "tag": [
       "CIS M365 7.0.0 (1.2.1)",
-      "aad_managed_approved_public_groups_only"
+      "aad_managed_approved_public_groups_only",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.5)"
     ],
     "helpText": "Sets all public Microsoft 365 groups to private automatically. Groups can be excluded by display name keyword.",
     "docsDescription": "Ensures only organisation-managed or approved public groups exist by automatically switching public Microsoft 365 (Unified) groups to private visibility. Groups whose display name matches any of the configured exclusion keywords are left unchanged. This aligns with CIS M365 7.0.0 benchmark control 1.2.1.",
@@ -5899,7 +6146,10 @@
   {
     "name": "standards.EnrollmentRestrictionTemplate",
     "cat": "Templates",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L2-3.1.18)",
+      "NIST SP 800-171 (3.1.18)"
+    ],
     "helpText": "Deploy enrollment (device type) restrictions for specific groups from CIPP templates, with their platform settings and group assignment. An existing restriction with the same name and platform is updated.",
     "docsDescription": "Deploy an enrollment (device type) restriction from a CIPP template. Grades whether every object the platform needs exists (two for Android), the platform settings, and the assignment as all users or the set of groups matching the template's group names. Priority is applied when the restriction is created and is not graded afterwards. Remediation creates or patches the restriction through Set-CIPPEnrollmentRestriction.",
     "executiveText": "Applies the same rules about which devices staff can enrol, such as allowing personal Android phones only through a work profile or blocking personal iPhones, to the right groups in every tenant.",
@@ -5936,7 +6186,11 @@
   {
     "name": "standards.EnrollmentWindowsHelloForBusinessConfiguration",
     "cat": "Intune Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (IA.L2-3.5.3)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.3)"
+    ],
     "helpText": "Configures the default Windows Hello for Business enrollment settings, including PIN complexity and biometric unlock.",
     "docsDescription": "Sets the default Windows Hello for Business device enrollment configuration.",
     "executiveText": "Sets how employees sign in to Windows devices with a PIN or biometrics instead of a password, which is both faster for them and harder for an attacker to steal.",
@@ -6265,7 +6519,13 @@
   {
     "name": "standards.FIDO2PasskeyProfiles",
     "cat": "Entra (AAD) Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (IA.L2-3.5.3)",
+      "CMMC (IA.L2-3.5.4)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.3)",
+      "NIST SP 800-171 (3.5.4)"
+    ],
     "helpText": "Configures the default passkey profile. Most tenants should leave AAGUID restrictions off. When you restrict to an allow list, Windows Hello and Microsoft Authenticator passkeys stay allowed by default; turning \"Always allow Microsoft passkeys\" off rejects them as not meeting the profile's criteria. Other profiles are never touched.",
     "docsDescription": "Grades the default passkey profile's passkey types, attestation enforcement, key restriction enforcement, restriction type and sorted AAGUID set. Remediation rewrites the default profile in place, resending every other profile untouched.\n\nAn AAGUID identifies an authenticator model (a YubiKey series, Windows Hello, Microsoft Authenticator). Entering any AAGUIDs turns key restrictions on. In allow mode, every authenticator not on the list is refused at registration and sign-in, including Windows Hello and Authenticator passkeys, unless \"Always allow Microsoft passkeys\" stays on (the default). That switch adds the Windows Hello (08987058-cadc-4b81-b6e1-30de50dcbe96, 9ddd1817-af5a-4672-a2b9-3e3dd95000a9, 6028b017-b1d4-4c02-b4b3-afcdafc96bb2) and Authenticator (Android de1e552d-db1d-4423-a619-566b625cdc84, iOS 90a3ccdf-635c-4729-a248-9b709135078f) AAGUIDs to the allow list, and on its own with restrictions enforced allows only those. It has no effect in block mode or while restrictions are off.\n\nCommon setups: allowing synced passkeys (Apple, Google, password managers) - attestation Disabled and no AAGUID restrictions, as Microsoft recommends. Device-bound only with approved hardware keys - allow mode, and the keys' AAGUIDs. Blocking a specific model - block mode with its AAGUID. Windows Hello passkeys and Authenticator cross-device registration need attestation Disabled.",
     "executiveText": "Controls which passkey authenticators the organization accepts - device-bound versus synced, and optionally an explicit allow or block list of authenticator models.",
@@ -6832,7 +7092,9 @@
       "CIS M365 7.0.0 (1.3.5)",
       "Security",
       "PhishingProtection",
-      "forms_phishing_protection"
+      "forms_phishing_protection",
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
     ],
     "helpText": "Enables internal phishing protection for Microsoft Forms to help prevent malicious forms from being created and shared within the organization. This feature scans forms created by internal users for potential phishing content and suspicious patterns.",
     "docsDescription": "Enables internal phishing protection for Microsoft Forms by setting the isInOrgFormsPhishingScanEnabled property to true. This security feature helps protect organizations from internal phishing attacks through Microsoft Forms by automatically scanning forms created by internal users for potential malicious content, suspicious links, and phishing patterns. When enabled, Forms will analyze form content and block or flag potentially dangerous forms before they can be shared within the organization.",
@@ -6950,9 +7212,15 @@
     "name": "standards.GlobalSecureAccessCompliantNetwork",
     "cat": "Global Secure Access",
     "tag": [
-      "HighImpact"
+      "HighImpact",
+      "CMMC (AC.L2-3.1.12)",
+      "CMMC (AC.L2-3.1.14)",
+      "CMMC (AC.L3-3.1.2e)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.12)",
+      "NIST SP 800-171 (3.1.14)"
     ],
-    "helpText": "Makes stolen sign-in tokens useless off company devices using Entra ID P1: onboards the tenant to Global Secure Access, enables the Microsoft 365 traffic profile for all users, deploys the client through Intune (Windows and macOS) and creates a Conditional Access policy that blocks every sign-in not coming from the compliant network. The policy is created in report-only mode until 'Enforce the policy' is switched on. Admin roles, your break-glass accounts, Intune and Explicit Forward Proxy are excluded.",
+    "helpText": "Makes stolen sign-in tokens useless off company devices using Entra ID P1: onboards the tenant to Global Secure Access, enables the Microsoft 365 traffic profile for all users, deploys the client through Intune (Windows and macOS) and creates a Conditional Access policy that blocks every sign-in not coming from the compliant network. The policy is created in report-only mode until 'Enforce the policy' is switched on and its name can be changed to match your naming convention. Admin roles, your break-glass accounts, Intune and Explicit Forward Proxy are excluded.",
     "docsDescription": "Grades the tenant setup (onboarded, Microsoft 365 profile enabled and assigned to all users, signaling on, compliant network location present), the Intune objects for the selected platforms and the policy (present, state, excluded roles and accounts). The client objects carry a configuration fingerprint and are redeployed only when it changes, so the standard runs checkBeforeRun false. It never disables signaling and refuses to enable the policy when no break-glass exclusion resolves.",
     "executiveText": "Routes staff sign-ins through Microsoft's secure edge, installs Microsoft's network client on company Windows and Mac computers, and blocks every sign-in that does not come from one of those computers, so a stolen password or sign-in token cannot be used from an attacker's machine. Starts in a monitoring mode.",
     "label": "Require a compliant network (Global Secure Access)",
@@ -7046,6 +7314,12 @@
         "recommended": true
       },
       {
+        "name": "standards.GlobalSecureAccessCompliantNetwork.policyName",
+        "type": "textField",
+        "label": "Name of the Conditional Access policy (changing it after deployment creates a new policy; Detect Conditional Access Drift then lists the old one for removal)",
+        "default": "CIPP: Require compliant network (Global Secure Access)"
+      },
+      {
         "name": "standards.GlobalSecureAccessCompliantNetwork.excludeAdminRoles",
         "type": "AdminRolesMultiSelect",
         "multiple": true,
@@ -7078,6 +7352,309 @@
         "type": "switch",
         "label": "Also exclude the break-glass account CIPP detects from your existing policies",
         "default": true
+      }
+    ]
+  },
+  {
+    "name": "standards.GlobalSecureAccessInternetAccess",
+    "cat": "Global Secure Access",
+    "tag": [
+      "CMMC (SC.L1-b.1.x)",
+      "CMMC (SC.L2-3.13.1)",
+      "FedRAMP A-D (KSI-CNA-RNT)",
+      "NIST SP 800-171 (3.13.1)"
+    ],
+    "helpText": "Enables or disables the Global Secure Access Internet traffic forwarding profile, keeps its traffic policies enabled, sets who and which remote networks it is assigned to, and optionally manages its custom bypass and acquire rules and the custom block page. Uses Microsoft Entra Internet Access. The tenant must be onboarded, which the Set up Global Secure Access standard does.",
+    "docsDescription": "Grades the Internet traffic forwarding profile the same way the Microsoft 365 profile standard grades its profile: state, enabled traffic policies and assignment, where assigning to groups adds them to what is already assigned and Do not assign leaves the assignment alone. Remote networks matched by name get the profile added to the profiles they already use, while the profile is set to enabled; none is removed. With Manage the custom bypass and acquire rules on, the Custom bypass and Custom Acquire policies hold exactly the listed destinations on TCP and UDP: missing ones are added and any other custom rule is removed. The custom block page is graded only for what is configured: its state when chosen and its message when not blank. The message is markdown and may contain links.",
+    "executiveText": "Routes internet traffic from managed devices through Microsoft's Security Service Edge so web content filtering and threat protection apply, and sets the message users see when a site is blocked.",
+    "label": "Manage Microsoft Entra Internet Access",
+    "impact": "Medium Impact",
+    "impactColour": "warning",
+    "addedDate": "2026-11-11",
+    "powershellEquivalent": "Update-MgBetaNetworkAccessForwardingProfile; New-MgServicePrincipalAppRoleAssignedTo; Update-MgBetaNetworkAccessSettingCustomBlockPage",
+    "recommendedBy": [
+      "CIPP"
+    ],
+    "requiredCapabilities": [
+      [
+        "Entra_Premium_Internet_Access"
+      ]
+    ],
+    "addedComponent": [
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.profileState",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Profile state",
+        "options": [
+          {
+            "value": "enabled",
+            "label": "Enabled"
+          },
+          {
+            "value": "disabled",
+            "label": "Disabled"
+          }
+        ],
+        "default": "enabled",
+        "recommended": "enabled"
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.assignTo",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Who should the profile be assigned to?",
+        "options": [
+          {
+            "value": "DoNotAssign",
+            "label": "Do not assign"
+          },
+          {
+            "value": "AllDevicesAndUsers",
+            "label": "Assign to all users"
+          },
+          {
+            "value": "customGroup",
+            "label": "Assign to Custom Group"
+          }
+        ],
+        "default": "AllDevicesAndUsers"
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.customGroup",
+        "type": "textField",
+        "label": "Custom group names, comma separated (when assigning to a custom group; wildcards allowed)",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.remoteNetworks",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "label": "Remote networks to assign the profile to (names, wildcards allowed)",
+        "omitWhenBlank": true,
+        "default": ""
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.manageCustomRules",
+        "type": "switch",
+        "label": "Manage the custom bypass and acquire rules (rules not listed here are removed)",
+        "default": false
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.customBypass",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "label": "Custom bypass destinations (FQDN with optional *. wildcard, IPv4 address, subnet or range begin-end)",
+        "omitWhenBlank": true,
+        "default": ""
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.customBypassPorts",
+        "type": "textField",
+        "label": "Custom bypass ports (comma separated, ranges allowed; blank for all ports)",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.customAcquire",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "label": "Custom acquire destinations (FQDN with optional *. wildcard, IPv4 address, subnet or range begin-end)",
+        "omitWhenBlank": true,
+        "default": ""
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.customAcquirePorts",
+        "type": "textField",
+        "label": "Custom acquire ports (comma separated, ranges allowed; blank for all ports)",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.blockPageState",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Custom block page (leave empty to not manage it)",
+        "options": [
+          {
+            "value": "enabled",
+            "label": "Enabled"
+          },
+          {
+            "value": "disabled",
+            "label": "Disabled"
+          }
+        ],
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.GlobalSecureAccessInternetAccess.blockMessage",
+        "type": "textField",
+        "label": "Block page message (markdown, links like [Help](https://example.com) allowed; leave empty to keep the current message)",
+        "omitWhenBlank": true
+      }
+    ]
+  },
+  {
+    "name": "standards.GlobalSecureAccessM365Profile",
+    "cat": "Global Secure Access",
+    "tag": [
+      "CMMC (AC.L2-3.1.14)",
+      "NIST SP 800-171 (3.1.14)"
+    ],
+    "helpText": "Enables or disables the Global Secure Access Microsoft 365 traffic forwarding profile, keeps its traffic policies enabled and sets who and which remote networks it is assigned to. Uses Entra ID P1. The tenant must be onboarded, which the Set up Global Secure Access standard does.",
+    "docsDescription": "Grades the Microsoft 365 traffic forwarding profile's state and, when it should be enabled, that every traffic policy in it is enabled and who it is assigned to. Assigning to groups adds them to whatever is already assigned; assignments made by hand are kept, and choosing Do not assign never removes them, which is done in the portal. Group names may use wildcards and resolve from the Groups cache. A profile is assigned through its enterprise app, as the portal does: all users turns off the app's assignment requirement, and groups become app assignments. Assigning to groups on a profile assigned to all users limits it to those groups. Remote networks matched by name get the profile added to the profiles they already use, while the profile is set to enabled; none is removed.",
+    "executiveText": "Routes Microsoft 365 traffic from managed devices through Microsoft's Security Service Edge, the base for compliant network checks and for seeing users' real source IP addresses in sign-in logs.",
+    "label": "Manage the Microsoft 365 traffic forwarding profile",
+    "impact": "Medium Impact",
+    "impactColour": "warning",
+    "addedDate": "2026-11-11",
+    "powershellEquivalent": "Update-MgBetaNetworkAccessForwardingProfile; New-MgServicePrincipalAppRoleAssignedTo",
+    "recommendedBy": [
+      "CIPP"
+    ],
+    "requiredCapabilities": [
+      [
+        "AAD_PREMIUM",
+        "AAD_PREMIUM_P2"
+      ]
+    ],
+    "addedComponent": [
+      {
+        "name": "standards.GlobalSecureAccessM365Profile.profileState",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Profile state",
+        "options": [
+          {
+            "value": "enabled",
+            "label": "Enabled"
+          },
+          {
+            "value": "disabled",
+            "label": "Disabled"
+          }
+        ],
+        "default": "enabled",
+        "recommended": "enabled"
+      },
+      {
+        "name": "standards.GlobalSecureAccessM365Profile.assignTo",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Who should the profile be assigned to?",
+        "options": [
+          {
+            "value": "DoNotAssign",
+            "label": "Do not assign"
+          },
+          {
+            "value": "AllDevicesAndUsers",
+            "label": "Assign to all users"
+          },
+          {
+            "value": "customGroup",
+            "label": "Assign to Custom Group"
+          }
+        ],
+        "default": "AllDevicesAndUsers"
+      },
+      {
+        "name": "standards.GlobalSecureAccessM365Profile.customGroup",
+        "type": "textField",
+        "label": "Custom group names, comma separated (when assigning to a custom group; wildcards allowed)",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.GlobalSecureAccessM365Profile.remoteNetworks",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "label": "Remote networks to assign the profile to (names, wildcards allowed)",
+        "omitWhenBlank": true,
+        "default": ""
+      }
+    ]
+  },
+  {
+    "name": "standards.GlobalSecureAccessProfileTemplate",
+    "cat": "Global Secure Access",
+    "tag": [
+      "CMMC (SC.L1-b.1.x)",
+      "CMMC (SC.L2-3.13.1)",
+      "FedRAMP A-D (KSI-CNA-RNT)",
+      "NIST SP 800-171 (3.13.1)"
+    ],
+    "helpText": "Deploys a Global Secure Access security profile template, with the web content filtering policy templates it links, and keeps the tenant matching it. Uses Microsoft Entra Internet Access. Apply the profile to users with a Conditional Access template that links it.",
+    "docsDescription": "Compares the tenant's security profile, filtering policies and links with the selected security profile template and deploys any difference: missing policies and the profile are created, drifted rules and links are corrected, and links the template does not have are removed. A conflict, such as another profile holding the template's priority, is reported and never overwritten. The tenant must be onboarded to Global Secure Access.",
+    "executiveText": "Applies the same web content filtering rules, such as blocking risky site categories, to every tenant from one centrally managed template.",
+    "label": "Global Secure Access Security Profile Template",
+    "impact": "Medium Impact",
+    "impactColour": "warning",
+    "addedDate": "2026-11-11",
+    "powershellEquivalent": "New-MgBetaNetworkAccessFilteringPolicy; New-MgBetaNetworkAccessFilteringProfile",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      [
+        "Entra_Premium_Internet_Access"
+      ]
+    ],
+    "multiple": true,
+    "addedComponent": [
+      {
+        "name": "standards.GlobalSecureAccessProfileTemplate.profileTemplate",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Select Security Profile Template",
+        "required": true,
+        "api": {
+          "url": "/api/ListGSASecurityProfileTemplates",
+          "labelField": "name",
+          "valueField": "GUID",
+          "queryKey": "ListGSASecurityProfileTemplates"
+        }
+      }
+    ]
+  },
+  {
+    "name": "standards.GlobalSecureAccessSetup",
+    "cat": "Global Secure Access",
+    "helpText": "Onboards the tenant to Global Secure Access and sets the Conditional Access signalling that restores users' source IP addresses and enables compliant network checks. Uses Entra ID P1. Onboarding cannot be undone.",
+    "docsDescription": "Starts Global Secure Access onboarding when the tenant is not onboarded (a running onboarding counts as compliant, so it is never started twice) and sets the signalingStatus of the Global Secure Access Conditional Access settings. Signalling is needed for compliant network conditions and for Conditional Access and sign-in logs to show users' original source IP addresses. Onboarding is one way: there is no offboarding through this standard.",
+    "executiveText": "Turns on Microsoft's Security Service Edge for the tenant so its network security features can be used, and lets Conditional Access see where sign-ins really come from when traffic flows through Global Secure Access.",
+    "label": "Set up Global Secure Access",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-11-11",
+    "powershellEquivalent": "Invoke-MgBetaOnboardNetworkAccess; Update-MgBetaNetworkAccessSettingConditionalAccess",
+    "recommendedBy": [
+      "CIPP"
+    ],
+    "requiredCapabilities": [
+      [
+        "AAD_PREMIUM",
+        "AAD_PREMIUM_P2"
+      ]
+    ],
+    "addedComponent": [
+      {
+        "name": "standards.GlobalSecureAccessSetup.signalingStatus",
+        "type": "autoComplete",
+        "creatable": false,
+        "label": "Conditional Access signalling",
+        "options": [
+          {
+            "value": "enabled",
+            "label": "Enabled"
+          },
+          {
+            "value": "disabled",
+            "label": "Disabled"
+          }
+        ],
+        "default": "enabled",
+        "recommended": "enabled"
       }
     ]
   },
@@ -7120,7 +7697,13 @@
       "CISA (MS.AAD.18.1v1)",
       "EIDSCA.AP04",
       "EIDSCA.AP07",
-      "SMB1001 (2.8)"
+      "SMB1001 (2.8)",
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.1.5)"
     ],
     "helpText": "This setting controls who can invite guests to your directory to collaborate on resources secured by your company, such as SharePoint sites or Azure resources.",
     "executiveText": "Controls who within the organization can invite external partners and vendors to access company resources, ensuring proper oversight of external access while enabling necessary business collaboration. This helps maintain security while supporting partnership and vendor relationships.",
@@ -7203,7 +7786,9 @@
     "name": "standards.IntuneComplianceSettings",
     "cat": "Intune Standards",
     "tag": [
-      "CIS M365 7.0.0 (4.1)"
+      "CIS M365 7.0.0 (4.1)",
+      "CMMC (CM.L2-3.4.2)",
+      "NIST SP 800-171 (3.4.2)"
     ],
     "helpText": "Sets the mark devices with no compliance policy assigned as compliance/non compliant and Compliance status validity period.",
     "executiveText": "Configures how the system treats devices that don't have specific compliance policies and sets how often devices must check in to maintain their compliance status. This ensures proper security oversight of all corporate devices and maintains current compliance information.",
@@ -7258,7 +7843,12 @@
       "SMB1001 (1.10)",
       "SMB1001 (1.12)",
       "SMB1001 (2.2)",
-      "SMB1001 (4.7)"
+      "SMB1001 (4.7)",
+      "CMMC (CM.L2-3.4.1)",
+      "CMMC (CM.L2-3.4.2)",
+      "FedRAMP B-D (KSI-SVC-ACM)",
+      "NIST SP 800-171 (3.4.1)",
+      "NIST SP 800-171 (3.4.2)"
     ],
     "helpText": "Deploy and manage Intune templates across devices.",
     "executiveText": "Deploys standardized device management configurations across all corporate devices, ensuring consistent security policies, application settings, and compliance requirements. This template-based approach streamlines device management while maintaining uniform security standards across the organization.",
@@ -7375,7 +7965,12 @@
     "name": "standards.IntuneTemplatePackage",
     "cat": "Templates",
     "tag": [
-      "HighImpact"
+      "HighImpact",
+      "CMMC (CM.L2-3.4.1)",
+      "CMMC (CM.L2-3.4.2)",
+      "FedRAMP B-D (KSI-SVC-ACM)",
+      "NIST SP 800-171 (3.4.1)",
+      "NIST SP 800-171 (3.4.2)"
     ],
     "helpText": "Deploys and drift-checks EVERY Intune template tagged with the selected package. Membership is resolved fresh on every run: tag a new template with the package and it joins this baseline automatically, untag it and it leaves. All templates in the package share the assignment options configured here - add a template individually instead when it needs different options.",
     "executiveText": "Deploys a complete, named bundle of device management configurations in one step - for example an entire Windows security baseline - and keeps every policy in the bundle enforced as the bundle evolves.",
@@ -7540,7 +8135,10 @@
     "cat": "Entra (AAD) Standards",
     "tag": [
       "EIDSCA.ST08",
-      "EIDSCA.ST09"
+      "EIDSCA.ST09",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.5)"
     ],
     "helpText": "Sets whether guests can become owners of Microsoft 365 groups and whether guests can access group content, on the tenant-wide Group.Unified directory setting. The EIDSCA recommendation is no guest owners, guest access allowed.",
     "docsDescription": "Grades AllowGuestsToBeGroupOwner and AllowGuestsToAccessGroups on the Group.Unified directory setting (template 62375ab9-6b52-47ed-826b-58e47e0e304b). Values are strings on the wire and grade as strings; a tenant without the setting object grades as drift and remediation instantiates it from the template with Microsoft's defaults before writing. Every other Group.Unified value is resent from the live object, so group creation and naming settings managed by other standards are untouched. Maps to EIDSCA ST08 and ST09.",
@@ -7717,7 +8315,11 @@
   {
     "name": "standards.MailboxDefaultAuditSet",
     "cat": "Exchange Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (AU.L2-3.3.1)",
+      "FedRAMP B-D (KSI-MLA-LET)",
+      "NIST SP 800-171 (3.3.1)"
+    ],
     "helpText": "Resets mailboxes with customised audit actions back to the Microsoft-managed default audit set for the Admin, Delegate and Owner sign-in types.",
     "docsDescription": "Finds user, shared and resource mailboxes whose DefaultAuditSet no longer contains Admin, Delegate and Owner - meaning the audited actions for that sign-in type were customised - and runs Set-Mailbox -DefaultAuditSet Admin,Delegate,Owner on them. Microsoft then manages the audited actions, including new actions it adds over time.",
     "executiveText": "Ensures every mailbox records the full set of Microsoft-recommended audit events. Attackers and misconfiguration can trim the actions a mailbox audits, hiding activity during a compromise; this restores the defaults so investigations have complete audit trails.",
@@ -7785,7 +8387,13 @@
       "CIS M365 7.0.0 (2.1.2)",
       "mdo_commonattachmentsfilter",
       "mdo_zapmalware",
-      "NIST CSF 2.0 (DE.CM-09)"
+      "NIST CSF 2.0 (DE.CM-09)",
+      "CMMC (SI.L1-b.1.xiii)",
+      "CMMC (SI.L1-b.1.xv)",
+      "CMMC (SI.L2-3.14.2)",
+      "CMMC (SI.L2-3.14.5)",
+      "NIST SP 800-171 (3.14.2)",
+      "NIST SP 800-171 (3.14.5)"
     ],
     "helpText": "This creates a Malware filter policy. A custom policy name is taken literally; only the CIPP default name adopts an existing Microsoft default policy.",
     "docsDescription": "Creates or updates the Malware filter policy and the rule that scopes it to every accepted domain.",
@@ -7953,7 +8561,11 @@
   {
     "name": "standards.MessageEncryption",
     "cat": "Exchange Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (SC.L2-3.13.8)",
+      "FedRAMP A-D (KSI-SVC-SIN)",
+      "NIST SP 800-171 (3.13.8)"
+    ],
     "helpText": "Requires Azure Rights Management (Business Premium, E3/E5, A1-A5, G3/G5 or an Azure Information Protection P1 add-on); tenants without it are skipped as unlicensed. Enables Microsoft Purview Message Encryption by turning on Azure RMS licensing for Exchange Online, and turns on simplified client access so the Encrypt button appears in Outlook on the web and the new Outlook. The optional settings default to \"Do not change\", which leaves the tenant's current value alone and out of the drift check. Branding is configured in the Set Encrypted Message Branding (OME) standard.",
     "docsDescription": "Grades AzureRMSLicensingEnabled and SimplifiedClientAccessEnabled as true, plus EnablePdfEncryption, DecryptAttachmentForEncryptOnly, SimplifiedClientAccessDoNotForwardDisabled, SimplifiedClientAccessEncryptOnlyDisabled and TransportDecryptionSetting when the baseline picks a value. Remediation sends the graded values in one Set-IRMConfiguration call.",
     "executiveText": "Turns on the built-in encryption that lets staff send protected email to anyone, including recipients outside the organization. Uses licensing the organization already owns, removing the need for a separate secure-email product.",
@@ -8163,7 +8775,10 @@
   {
     "name": "standards.NudgeMFA",
     "cat": "Entra (AAD) Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (IA.L2-3.5.3)",
+      "NIST SP 800-171 (3.5.3)"
+    ],
     "helpText": "Configures the registration campaign that nudges users to set up the Authenticator app at sign-in, including snooze behaviour and optional group targeting.",
     "docsDescription": "Grades the registration campaign state, snooze duration, post-snooze enforcement, targeted method and the include/exclude target sets. Blank targeting fields keep the tenant's current targets - the literal AllUsers entry targets everyone explicitly. Remediation goes through the shared registration campaign helper.",
     "executiveText": "Drives MFA registration to completion by prompting unregistered users at sign-in, with controlled snoozing so adoption happens without hard-blocking work.",
@@ -8384,7 +8999,11 @@
     "cat": "Exchange Standards",
     "tag": [
       "Security",
-      "NIST CSF 2.0 (PR.AA-05)"
+      "NIST CSF 2.0 (PR.AA-05)",
+      "CMMC (AC.L1-b.1.iii)",
+      "CMMC (AC.L2-3.1.20)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.20)"
     ],
     "helpText": "Restricts how users on unmanaged devices can interact with email attachments in Outlook on the web and new Outlook for Windows. Prevents downloading attachments or blocks viewing them entirely.",
     "docsDescription": "This standard configures the OWA mailbox policy to restrict access to email attachments on unmanaged devices. Users can be prevented from downloading attachments (but can view/edit via Office Online) or blocked from seeing attachments entirely. This helps prevent data exfiltration through email attachments on devices not managed by the organization.",
@@ -8428,7 +9047,14 @@
   {
     "name": "standards.OauthConsent",
     "cat": "Entra (AAD) Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (CM.L2-3.4.9)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.4.9)"
+    ],
     "helpText": "Routes user application consent through the CIPP consent policy so only allow-listed applications can be consented to without admin review.",
     "docsDescription": "Grades that the default user role's permission grant policy is the CIPP consent policy and that every expected include exists - the fixed Office 365 Management delegated include plus delegated and application includes per allowed app. Includes added by hand are not graded; remediation only ever adds. All writes are delegated - the authorization policy rejects app-only tokens.",
     "executiveText": "Blocks the most common OAuth phishing path by requiring admin review before applications gain access to company data, while allow-listed business apps keep working frictionlessly.",
@@ -8452,7 +9078,13 @@
     "name": "standards.OauthConsentLowSec",
     "cat": "Entra (AAD) Standards",
     "tag": [
-      "IntegratedApps"
+      "IntegratedApps",
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (CM.L2-3.4.9)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.4.9)"
     ],
     "helpText": "Sets the default oauth consent level so users can consent to applications that have low risks. This standard conflicts with the \"Require admin consent for applications\" standard; only one of the two should be assigned per tenant.",
     "docsDescription": "Allows users to consent to applications with low assigned risk. This standard conflicts with the \"Require admin consent for applications (Prevent OAuth phishing)\" (OauthConsent) standard. Enabling both on the same tenant causes a remediation conflict, so only assign one.",
@@ -8491,7 +9123,13 @@
     "name": "standards.OneDriveSharingCapability",
     "cat": "SharePoint Standards",
     "tag": [
-      "CIS M365 7.0.0 (7.2.4)"
+      "CIS M365 7.0.0 (7.2.4)",
+      "CMMC (AC.L1-b.1.iv)",
+      "CMMC (AC.L2-3.1.3)",
+      "CMMC (AC.L2-3.1.22)",
+      "FedRAMP A-D (KSI-SVC-SIN)",
+      "NIST SP 800-171 (3.1.3)",
+      "NIST SP 800-171 (3.1.22)"
     ],
     "helpText": "Sets the external sharing level for OneDrive independently of SharePoint. OneDrive can be more restrictive than SharePoint but never more permissive, so set the SharePoint level (the 'Set Sharing Level for OneDrive and SharePoint' standard) at least as open as this one. CIS recommends 'Only people in your organization'.",
     "docsDescription": "Sets the tenant OneDrive sharing capability (Set-SPOTenant -OneDriveSharingCapability), which SharePoint CSOM exposes as ODBSharingCapability. Numeric CSOM values: 0 Disabled, 1 ExternalUserSharingOnly, 2 ExternalUserAndGuestSharing, 3 ExistingExternalUserSharingOnly.",
@@ -8546,7 +9184,9 @@
     "cat": "Exchange Standards",
     "tag": [
       "CIS M365 7.0.0 (2.1.6)",
-      "mdo_spam_notifications_only_for_admins"
+      "mdo_spam_notifications_only_for_admins",
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
     ],
     "helpText": "Set the Outbound Spam Alert e-mail address",
     "docsDescription": "Sets the e-mail address to which outbound spam alerts are sent.",
@@ -8597,7 +9237,11 @@
   {
     "name": "standards.PIMRoleSettings",
     "cat": "Templates",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-JIT)",
+      "NIST SP 800-171 (3.1.5)"
+    ],
     "helpText": "Deploys a Privileged Identity Management role settings template to the tenant: activation limits, MFA or authentication context, justification, approval, eligibility and active-assignment expiry and notification rules for the roles the template covers. Templates cannot weaken settings below CIPP's secure floor.",
     "docsDescription": "Deploys a Privileged Identity Management role settings template to the tenant. The template defines, for a set of roles, the maximum activation duration, whether activation requires MFA or an authentication context, justification, ticket and approval requirements, the maximum lifetime of eligible and active assignments, and additional notification recipients. Each covered role grades separately against the template, and remediation patches only the policy rules that differ. Templates are validated against CIPP's secure floor (activation within 24 hours with MFA or an authentication context and a justification; eligible and active assignments must expire within a year; active assignments require a justification) and a template below it reports an error rather than being applied. Requires Entra ID P2.",
     "executiveText": "Enforces consistent Privileged Identity Management settings so that administrator roles can only be used for a limited time, after strong authentication and with a recorded reason. This keeps standing administrative access to a minimum and makes every use of privilege visible and accountable.",
@@ -8638,7 +9282,9 @@
     "cat": "Entra (AAD) Standards",
     "tag": [
       "CIS M365 7.0.0 (5.2.3.10)",
-      "EIDSCA.AM01"
+      "EIDSCA.AM01",
+      "CMMC (IA.L2-3.5.3)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "Sets the state of Authenticator Lite, Authenticator lite is a companion app for passwordless authentication.",
     "docsDescription": "Sets the Authenticator Lite state to enabled. This allows users to use the Authenticator Lite built into the Outlook app instead of the full Authenticator app.",
@@ -8685,7 +9331,10 @@
       "EIDSCA.AM07",
       "EIDSCA.AM09",
       "EIDSCA.AM10",
-      "NIST CSF 2.0 (PR.AA-03)"
+      "NIST CSF 2.0 (PR.AA-03)",
+      "CMMC (IA.L2-3.5.3)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "Enables the MS authenticator app to display information about the app that is requesting authentication. This displays the application name.",
     "docsDescription": "Allows users to use Passwordless with Number Matching and adds location information from the last request",
@@ -8737,7 +9386,10 @@
       "SMB1001 (2.6)",
       "SMB1001 (2.9)",
       "MFARegistrationV2",
-      "AdminMFAV2"
+      "AdminMFAV2",
+      "CMMC (IA.L2-3.5.3)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "Enables per user MFA for all users. The directory synchronisation service account is excluded - it cannot complete MFA and enforcing it breaks sync.",
     "docsDescription": "Enables per user MFA for all enabled member accounts.",
@@ -8754,7 +9406,10 @@
   {
     "name": "standards.PhishProtection",
     "cat": "Global Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
+    ],
     "helpText": "Adds branding to the logon page that only appears if the url is not login.microsoftonline.com. This potentially prevents AITM attacks via EvilNginx, and automatically generates alerts if a clone of your login page is found.",
     "docsDescription": "Grades whether the default branding localization's custom CSS contains the tenant's clone-detection canary (the clone.cipp.app background-image URL carrying this instance's CIPPURL from the Config table). The branding singleton reads live. Remediation strips a known malformed variant, creates the default localization when missing (Accept-Language 0, tolerating already-exists), and APPENDS the canary to the existing CSS - operator customizations are never overwritten. Report and warn are disabled as in the classic: this standard acts through remediation only.",
     "executiveText": "Adds a hidden canary to the company sign-in page that exposes cloned phishing pages and alerts when one is found, protecting staff credentials from adversary-in-the-middle attacks.",
@@ -9084,7 +9739,11 @@
   {
     "name": "standards.RestrictThirdPartyStorageServices",
     "cat": "Global Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L1-b.1.iii)",
+      "CMMC (AC.L2-3.1.20)",
+      "NIST SP 800-171 (3.1.20)"
+    ],
     "helpText": "Restricts third-party storage services in Microsoft 365 on the web by managing the Microsoft 365 on the web service principal. This disables integrations with services like Dropbox, Google Drive, and Box.",
     "docsDescription": "Grades one fact from the ServicePrincipals cache: the Microsoft 365 on the web service principal (appId c1f33bc0-bdb4-4248-ba9b-096807ddb43e) exists AND is disabled; a missing principal grades unrestricted, the platform default. Remediation PATCHes the appId-addressed upsert endpoint with Prefer: create-if-missing - the plain path does not resolve this principal, and the upsert creates-then-disables it where it never existed.",
     "executiveText": "Prevents employees from using external cloud storage services within Microsoft 365, keeping company data inside controlled corporate systems.",
@@ -9211,7 +9870,11 @@
   {
     "name": "standards.RotateDKIM",
     "cat": "Exchange Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (SC.L2-3.13.10)",
+      "FedRAMP B-D (KSI-SVC-ASM)",
+      "NIST SP 800-171 (3.13.10)"
+    ],
     "helpText": "Rotates enabled DKIM configurations still using 1024-bit keys to 2048-bit.",
     "docsDescription": "Grades enabled DKIM configurations whose selector keys are still 1024-bit. Remediation rotates each to 2048-bit; rotation is asynchronous in Exchange, so the row stays at drift until the new key publishes.",
     "executiveText": "Upgrades weak email signing keys to current cryptographic strength, keeping the organization's email authentication resistant to forgery.",
@@ -9235,7 +9898,13 @@
     "cat": "SharePoint Standards",
     "tag": [
       "CISA (MS.SPO.3.1v1)",
-      "CISA (MS.SPO.3.2v1)"
+      "CISA (MS.SPO.3.2v1)",
+      "CMMC (AC.L1-b.1.iv)",
+      "CMMC (AC.L2-3.1.3)",
+      "CMMC (AC.L2-3.1.22)",
+      "FedRAMP A-D (KSI-SVC-SIN)",
+      "NIST SP 800-171 (3.1.3)",
+      "NIST SP 800-171 (3.1.22)"
     ],
     "helpText": "Requires every Anyone sharing link in SharePoint and OneDrive to expire after the configured number of days. Optionally restricts the permission Anyone links can grant on files and folders (View only, or View and edit). By default Anyone links never expire.",
     "docsDescription": "Sets the tenant-wide expiration for Anyone (anonymous) sharing links in SharePoint and OneDrive (SharePoint admin center > Policies > Sharing > Choose expiration and permissions options for Anyone links). Links created after the policy is applied expire at the end of the configured period. A tenant that does not require expiration reads -1 for this property (the SharePoint default), which this standard grades as drift. The optional permission variable additionally grades and sets the maximum permission Anyone links may grant on files and folders (View, or View and edit); leave it blank to grade expiration only. These settings only take effect for tenants whose sharing level permits Anyone links (see the sharingCapability standard).",
@@ -9295,7 +9964,13 @@
     "name": "standards.SPAzureB2B",
     "cat": "SharePoint Standards",
     "tag": [
-      "CIS M365 7.0.0 (7.2.2)"
+      "CIS M365 7.0.0 (7.2.2)",
+      "CMMC (IA.L1-b.1.v)",
+      "CMMC (IA.L1-b.1.vi)",
+      "CMMC (IA.L2-3.5.1)",
+      "CMMC (IA.L2-3.5.2)",
+      "NIST SP 800-171 (3.5.1)",
+      "NIST SP 800-171 (3.5.2)"
     ],
     "helpText": "Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled",
     "executiveText": "Enables secure collaboration with external partners through SharePoint and OneDrive by integrating with Azure B2B guest access. This allows controlled sharing with external organizations while maintaining security oversight and proper access management.",
@@ -9320,7 +9995,11 @@
   {
     "name": "standards.SPDirectSharing",
     "cat": "SharePoint Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L2-3.1.3)",
+      "FedRAMP A-D (KSI-SVC-SIN)",
+      "NIST SP 800-171 (3.1.3)"
+    ],
     "helpText": "Sets the default SharePoint sharing link type to Direct (specific people).",
     "docsDescription": "Grades whether the tenant default sharing link type is Direct. Remediation reads the SPO tenant live for a fresh CSOM identity and sets the link type through the shared SPO helper.",
     "executiveText": "Makes sharing default to named recipients instead of anyone-with-the-link, so files are not one forward away from public.",
@@ -9343,7 +10022,10 @@
   {
     "name": "standards.SPDisableCustomScripts",
     "cat": "SharePoint Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (SC.L2-3.13.13)",
+      "NIST SP 800-171 (3.13.13)"
+    ],
     "helpText": "Prevents users from running custom scripts on SharePoint and OneDrive sites. Custom scripts can modify site behaviors and bypass governance controls.",
     "docsDescription": "Disables the ability to add and run custom scripts on SharePoint and OneDrive sites at the tenant level. When custom scripts are allowed, governance cannot be enforced, and the capabilities of inserted code cannot be scoped or blocked. Microsoft recommends using the SharePoint Framework instead of custom scripts.",
     "executiveText": "Blocks custom scripts from being added to SharePoint and OneDrive sites, enforcing governance controls and preventing unscoped code execution. This aligns with Microsoft's Baseline Security Mode recommendation to permanently remove the ability to add new custom scripts, directing organizations to use the SharePoint Framework instead.",
@@ -9368,7 +10050,10 @@
   {
     "name": "standards.SPDisableLegacyWorkflows",
     "cat": "SharePoint Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (CM.L2-3.4.7)",
+      "NIST SP 800-171 (3.4.7)"
+    ],
     "helpText": "Disables the creation of new SharePoint 2010 and 2013 classic workflows and removes the 'Return to classic SharePoint' link on modern SharePoint list and library pages.",
     "executiveText": "Disables outdated SharePoint workflow features and classic interface options, encouraging use of modern, more secure and efficient collaboration tools. This helps maintain security standards while guiding users toward current, supported functionality.",
     "label": "Disable Legacy Workflows",
@@ -9390,7 +10075,10 @@
   {
     "name": "standards.SPDisableStoreAccess",
     "cat": "SharePoint Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (CM.L2-3.4.9)",
+      "NIST SP 800-171 (3.4.9)"
+    ],
     "helpText": "Disables end users from installing applications from the Microsoft Store into SharePoint sites.",
     "docsDescription": "Removes the ability for end users to install applications directly from the Microsoft Store into SharePoint. This prevents uncontrolled app installations that can increase governance costs and go against organizational policies.",
     "executiveText": "Prevents end users from installing applications from the Microsoft Store into SharePoint sites, ensuring that only approved applications are available. This reduces governance overhead and aligns with Microsoft's Baseline Security Mode recommendations.",
@@ -9418,7 +10106,10 @@
     "tag": [
       "CIS M365 7.0.0 (7.3.1)",
       "CISA (MS.SPO.3.1v1)",
-      "NIST CSF 2.0 (DE.CM-09)"
+      "NIST CSF 2.0 (DE.CM-09)",
+      "CMMC (SI.L1-b.1.xiii)",
+      "CMMC (SI.L2-3.14.2)",
+      "NIST SP 800-171 (3.14.2)"
     ],
     "helpText": "Ensure Office 365 SharePoint infected files are disallowed for download",
     "executiveText": "Prevents employees from downloading files that have been identified as containing malware or viruses from SharePoint and OneDrive. This security measure protects against malware distribution through file sharing while maintaining access to clean, safe documents.",
@@ -9481,7 +10172,11 @@
     "cat": "SharePoint Standards",
     "tag": [
       "CIS M365 7.0.0 (7.2.9)",
-      "CISA (MS.SPO.1.5v1)"
+      "CISA (MS.SPO.1.5v1)",
+      "CMMC (AC.L1-b.1.i)",
+      "CMMC (AC.L2-3.1.1)",
+      "FedRAMP A-D (KSI-IAM-AAM)",
+      "NIST SP 800-171 (3.1.1)"
     ],
     "helpText": "Ensure guest access to a site or OneDrive will expire automatically",
     "executiveText": "Automatically expires external user access to SharePoint sites and OneDrive after a specified period, reducing security risks from forgotten or unnecessary guest accounts. This ensures external access is regularly reviewed and maintained only when actively needed.",
@@ -9574,8 +10269,8 @@
     "name": "standards.SPGuestPeoplePicker",
     "cat": "SharePoint Standards",
     "tag": [],
-    "helpText": "Controls whether guest (external) users already in the tenant appear as suggestions in the SharePoint and OneDrive People Picker. Enforces the wanted state on BOTH the tenant default and every existing site collection - the two are set independently, so changing the tenant default does not update existing sites. Which sites differ is read from the daily SharePoint cache, and the write sweep runs at most once per 24h per tenant so it never re-runs against a stale cache.",
-    "docsDescription": "Enforces ShowPeoplePickerSuggestionsForGuestUsers at both levels it is set independently: the tenant default and each site collection. Which sites differ is read from the SPOSites reporting cache (populated by the daily SharePoint cache run); the tenant default is read from the cached SharePoint tenant configuration. It reports the tenant default and every differing site as offenders and remediates the tenant default (Set-SPOTenant) and each offending site (Set-SPOSite), sweeping the sites concurrently. The sweep is guarded to once per 24h per tenant (shared with the classic standard) so it is not repeated before the next daily cache run reflects the change and the standard re-evaluates. Guests are not shown by default even when they exist in the tenant, and changing the tenant default does not retroactively change existing sites - which is why both are covered here.",
+    "helpText": "Controls whether existing guest users appear as suggestions in the SharePoint and OneDrive People Picker. Applies to the tenant default and all existing sites, since changing the tenant setting alone does not update existing sites.",
+    "docsDescription": "Sets ShowPeoplePickerSuggestionsForGuestUsers on the tenant default and on each existing site collection. These are separate settings, so changing the tenant default does not change sites that already exist. Showing guests makes it easier to share with known external collaborators. Hiding them lowers the risk of sharing with the wrong person by accident. Site-level changes show up in reports after the next daily SharePoint data refresh.",
     "executiveText": "Makes existing external collaborators discoverable (or hidden) when sharing SharePoint and OneDrive content, consistently across the whole tenant - the default for new sites and every existing site. This keeps the sharing experience predictable and prevents individual sites from drifting away from the agreed collaboration posture.",
     "label": "Show guest users in the SharePoint People Picker",
     "impact": "Low Impact",
@@ -9686,7 +10381,13 @@
       "CIS M365 7.0.0 (2.1.4)",
       "mdo_safeattachmentpolicy",
       "NIST CSF 2.0 (DE.CM-09)",
-      "mdo_safeattachments"
+      "mdo_safeattachments",
+      "CMMC (SI.L1-b.1.xiii)",
+      "CMMC (SI.L1-b.1.xv)",
+      "CMMC (SI.L2-3.14.2)",
+      "CMMC (SI.L2-3.14.5)",
+      "NIST SP 800-171 (3.14.2)",
+      "NIST SP 800-171 (3.14.5)"
     ],
     "helpText": "This creates a Safe Attachment policy. An existing policy carrying a legacy CIPP or Microsoft default name is adopted and updated rather than duplicated.",
     "docsDescription": "Creates or updates the Safe Attachment policy and the rule that scopes it to every accepted domain.",
@@ -9795,7 +10496,9 @@
       "CIS M365 7.0.0 (2.1.1)",
       "mdo_safelinksforemail",
       "mdo_safelinksforOfficeApps",
-      "NIST CSF 2.0 (DE.CM-09)"
+      "NIST CSF 2.0 (DE.CM-09)",
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
     ],
     "helpText": "This creates a SafeLinks policy. An existing policy carrying a legacy CIPP or Microsoft default name is adopted and updated rather than duplicated.",
     "docsDescription": "Creates or updates the SafeLinks policy and the rule that scopes it to every accepted domain.",
@@ -9865,7 +10568,10 @@
   {
     "name": "standards.SafeLinksTemplatePolicy",
     "cat": "Templates",
-    "tag": [],
+    "tag": [
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
+    ],
     "helpText": "Deploy SafeLinks policies and rules from CIPP templates. Existing policies and rules are rewritten from the template on every remediation run.",
     "docsDescription": "Deploy a SafeLinks policy and its rule from a CIPP template. The standard grades whether the policy and the rule each exist by name - it does not diff their settings - and rewrites both from the template on each remediation run, matching the classic standard. The rule's enabled state is applied when the template expresses one.",
     "executiveText": "Deploys standardized SafeLinks policies that protect users from malicious links in email, Teams and Office documents. Template-driven deployment keeps link protection settings uniform across tenants.",
@@ -9910,7 +10616,10 @@
   {
     "name": "standards.SafeSendersDisable",
     "cat": "Exchange Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
+    ],
     "helpText": "Loops through all users and removes the Safe Senders list. This is to prevent SPF bypass attacks, as the Safe Senders list is not checked by SPF. This is a remediate only standard: the per-mailbox Safe Senders list is not readable at scale, so the standard always reports compliant and applies the change on every run.",
     "docsDescription": "Loops through all users and removes the Safe Senders list. This is to prevent SPF bypass attacks, as the Safe Senders list is not checked by SPF. Remediate only - there is no readable state to compare, so the row always reports compliant and the sweep runs on every pass.",
     "executiveText": "Removes user-defined safe sender lists to prevent security bypasses where malicious emails could avoid spam filtering. This ensures all emails go through proper security screening, even if users have previously marked senders as 'safe', improving overall email security.",
@@ -10008,7 +10717,10 @@
       "SMB1001 (2.5)",
       "SMB1001 (2.6)",
       "SMB1001 (2.9)",
-      "BlockLegacyAuthentication"
+      "BlockLegacyAuthentication",
+      "CMMC (IA.L2-3.5.3)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "Enables security defaults for the tenant, for newer tenants this is enabled by default. Do not enable this feature if you use Conditional Access. Microsoft refuses to enable security defaults while any Conditional Access policy exists ('Conditional access policies are enabled. Please disable and try again.'), so remediation always fails on tenants that have CA policies.",
     "docsDescription": "Enables SD for the tenant, which disables all forms of basic authentication and enforces users to configure MFA. Users are only prompted for MFA when a logon is considered 'suspect' by Microsoft.",
@@ -10123,7 +10835,13 @@
   {
     "name": "standards.SensitivityLabelTemplate",
     "cat": "Templates",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L2-3.1.3)",
+      "CMMC (MP.L2-3.8.4)",
+      "FedRAMP A-D (KSI-SVC-SIN)",
+      "NIST SP 800-171 (3.1.3)",
+      "NIST SP 800-171 (3.8.4)"
+    ],
     "helpText": "Deploy Microsoft Purview sensitivity labels from CIPP templates. Existing labels and label policies are overwritten in place.",
     "docsDescription": "Deploy Microsoft Purview sensitivity labels from CIPP templates. If a label or label policy with the same name already exists, it is updated in place; otherwise it is created. The standard grades whether each selected label exists by name - it does not diff label settings - and rewrites every selected label on each remediation run, matching the classic standard.",
     "executiveText": "Deploys sensitivity labels for classification and protection of files, emails, and Microsoft 365 group content. Ensures consistent classification taxonomy and encryption settings across tenants.",
@@ -10265,7 +10983,10 @@
   {
     "name": "standards.SharePointMassDeletionAlert",
     "cat": "Defender Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
+    ],
     "helpText": "Sets a e-mail address to alert when a User deletes more than 20 SharePoint files within 60 minutes. NB: Requires a Office 365 E5 subscription, Office 365 E3 with Threat Intelligence or Office 365 EquivioAnalytics add-on.",
     "docsDescription": "Sets a e-mail address to alert when a User deletes more than 20 SharePoint files within 60 minutes. This is useful for monitoring and ensuring that the correct SharePoint files are deleted. NB: Requires a Office 365 E5 subscription, Office 365 E3 with Threat Intelligence or Office 365 EquivioAnalytics add-on.",
     "executiveText": "Alerts administrators when employees delete large numbers of SharePoint files in a short time period, helping detect potential data destruction attacks, ransomware, or accidental mass deletions. This early warning system enables rapid response to protect critical business documents and data.",
@@ -10363,7 +11084,12 @@
       "EIDSCA.PR02",
       "EIDSCA.PR03",
       "EIDSCA.PR05",
-      "EIDSCA.PR06"
+      "EIDSCA.PR06",
+      "CMMC (AC.L2-3.1.8)",
+      "CMMC (IA.L2-3.5.7)",
+      "FedRAMP B-D (KSI-IAM-SUS)",
+      "NIST SP 800-171 (3.1.8)",
+      "NIST SP 800-171 (3.5.7)"
     ],
     "helpText": "Sets the smart lockout threshold and duration, optionally on-premises password protection mode, and optionally enforces that the Microsoft global banned password check stays on.",
     "docsDescription": "Grades the four lockout values on the password-rule directory setting and, when 'Enforce the global banned password check' is on, that EnableBannedPasswordCheck is True (EIDSCA PR03). Remediation creates the setting with defaults when absent or patches only the values this standard manages, leaving the custom banned-password list to its own standard.",
@@ -10455,7 +11181,9 @@
       "mdo_highconfidencephishaction",
       "mdo_quarantineretentionperiod",
       "mdo_zapspam",
-      "mdo_zapphish"
+      "mdo_zapphish",
+      "CMMC (SI.L2-3.14.6)",
+      "NIST SP 800-171 (3.14.6)"
     ],
     "helpText": "This creates a Spam filter policy. When the adopted policy is the built-in \"Default\", Exchange owns its scoping and no rule is graded or written.",
     "docsDescription": "Creates or updates the Hosted Content Filter policy and the rule that scopes it to every accepted domain.",
@@ -10917,7 +11645,9 @@
     "tag": [
       "Essential 8 (1501)",
       "NIST CSF 2.0 (ID.AM-08)",
-      "NIST CSF 2.0 (PR.PS-03)"
+      "NIST CSF 2.0 (PR.PS-03)",
+      "CMMC (IA.L2-3.5.6)",
+      "NIST SP 800-171 (3.5.6)"
     ],
     "helpText": "Cleans up Entra devices that have not connected/signed in for the specified number of days. Remediation first disables stale enabled devices and, on a later run, deletes stale devices that are already disabled. Hybrid-joined, Intune-managed and Autopilot devices are skipped. Deleting a device permanently removes any BitLocker recovery keys stored on it.",
     "docsDescription": "Cleans up Entra devices that have not connected/signed in for the specified number of days. Remediation first disables stale enabled devices once they pass the disable threshold, and later deletes devices that are already disabled once they have been inactive for the disable threshold plus the configured grace delta (deletion age = disable threshold + grace days). The disable-before-delete grace period is further guaranteed by never deleting a device in the same pass it was disabled. Hybrid-joined (on-premises synced), Intune-managed/compliant, and system-managed Autopilot devices are excluded. **Warning:** deleting a device permanently removes any BitLocker recovery keys stored on that device object.",
@@ -11067,7 +11797,11 @@
     "name": "standards.TeamsAppPermissionPolicy",
     "cat": "Teams Standards",
     "tag": [
-      "CIS M365 7.0.0 (8.4.1)"
+      "CIS M365 7.0.0 (8.4.1)",
+      "CMMC (CM.L2-3.4.8)",
+      "CMMC (CM.L2-3.4.9)",
+      "NIST SP 800-171 (3.4.8)",
+      "NIST SP 800-171 (3.4.9)"
     ],
     "helpText": "Sets which class of apps users may install through the Global (Org-wide default) app permission policy: Microsoft apps, third-party apps and custom apps are each either allowed except a block list, or blocked except an allow list. Only the mode is written; the policy's existing allow and block lists are kept. CIS recommends blocking third-party and custom apps by default and approving the apps the organization needs.",
     "docsDescription": "Writes DefaultCatalogAppsType (Microsoft apps), GlobalCatalogAppsType (third-party apps) and PrivateCatalogAppsType (custom apps) on the Global Teams app permission policy. 'AllowedAppList' with no listed apps blocks the whole class, matching 'Let users install and use available apps by default: Off' in the Teams admin center. Tenants that moved to app centric management manage the same outcome under Teams apps > Manage apps > Org-wide app settings.",
@@ -11145,7 +11879,10 @@
     "name": "standards.TeamsBlockTrialTenants",
     "cat": "Teams Standards",
     "tag": [
-      "CIS M365 7.0.0 (8.2.4)"
+      "CIS M365 7.0.0 (8.2.4)",
+      "CMMC (AC.L1-b.1.iii)",
+      "CMMC (AC.L2-3.1.20)",
+      "NIST SP 800-171 (3.1.20)"
     ],
     "helpText": "Controls whether users can chat, call and meet with accounts in Teams tenants that have no purchased seats (trial-only tenants). Microsoft blocks this by default since July 2024 because threat actors abuse trial tenants; this standard keeps it blocked. When blocked, users from trial-only tenants are removed from existing chats.",
     "docsDescription": "Sets ExternalAccessWithTrialTenants on the tenant federation configuration (Teams admin center > External access > Organization settings > 'People in my organization can communicate with accounts in trial Teams tenant').",
@@ -11188,7 +11925,11 @@
   {
     "name": "standards.TeamsChatProtection",
     "cat": "Teams Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (SI.L1-b.1.xiii)",
+      "CMMC (SI.L2-3.14.2)",
+      "NIST SP 800-171 (3.14.2)"
+    ],
     "helpText": "Configures Teams chat protection settings including weaponizable file protection and malicious URL protection.",
     "docsDescription": "Configures Teams messaging safety features to protect users from weaponizable files and malicious URLs in chats and channels. Weaponizable File Protection automatically blocks messages containing potentially dangerous file types (like .exe, .dll, .bat, etc.). Malicious URL Protection scans URLs in messages and displays warnings when potentially harmful links are detected. These protections work across internal and external collaboration scenarios.",
     "executiveText": "Enables automated security protections in Microsoft Teams to block dangerous files and warn users about malicious links in chat messages. This helps protect employees from file-based attacks and phishing attempts. These safeguards work seamlessly in the background, providing essential protection without disrupting normal business communication.",
@@ -11248,7 +11989,11 @@
     "name": "standards.TeamsDisableResourceAccounts",
     "cat": "Teams Standards",
     "tag": [
-      "NIST CSF 2.0 (PR.AA-01)"
+      "NIST CSF 2.0 (PR.AA-01)",
+      "CMMC (AC.L1-b.1.i)",
+      "CMMC (AC.L2-3.1.1)",
+      "FedRAMP A-D (KSI-IAM-AAM)",
+      "NIST SP 800-171 (3.1.1)"
     ],
     "helpText": "Blocks sign-in for all Teams resource accounts used by Auto Attendants and Call Queues. Microsoft's guidance is to block sign-in for resource accounts as they do not require an interactive login to function.",
     "docsDescription": "Teams resource accounts (the accounts backing Auto Attendants and Call Queues) do not require interactive sign-in to function. If sign-in is enabled and the password is reset, the account can be logged into directly, which presents a security risk. Microsoft's guidance is to block sign-in for these accounts. Accounts that are synced from on-premises AD are excluded, as account state is managed in the on-premises AD.",
@@ -11349,7 +12094,11 @@
     "cat": "Teams Standards",
     "tag": [
       "CIS M365 7.0.0 (8.2.1)",
-      "CIS M365 7.0.0 (8.2.2)"
+      "CIS M365 7.0.0 (8.2.2)",
+      "CIS M365 7.0.0 (8.2.3)",
+      "CMMC (AC.L1-b.1.iii)",
+      "CMMC (AC.L2-3.1.20)",
+      "NIST SP 800-171 (3.1.20)"
     ],
     "helpText": "Sets the properties of the Global external access policy.",
     "docsDescription": "Sets the properties of the Global external access policy. External access policies determine whether or not your users can: 1) communicate with users who have Session Initiation Protocol (SIP) accounts with a federated organization; 2) communicate with users who are using custom applications built with Azure Communication Services; 3) access Skype for Business Server over the Internet, without having to log on to your internal network; 4) communicate with users who have SIP accounts with a public instant messaging (IM) provider such as Skype; and, 5) communicate with people who are using Teams with an account that's not managed by an organization.",
@@ -11398,7 +12147,9 @@
     "name": "standards.TeamsExternalChatWithAnyone",
     "cat": "Teams Standards",
     "tag": [
-      "CIS M365 7.0.0 (8.2.3)"
+      "CMMC (AC.L1-b.1.iii)",
+      "CMMC (AC.L2-3.1.20)",
+      "NIST SP 800-171 (3.1.20)"
     ],
     "helpText": "Controls whether users can start Teams chats with any email address, inviting external recipients as guests via email.",
     "docsDescription": "Manages the Teams messaging policy setting UseB2BInvitesToAddExternalUsers. When enabled, users can start chats with any email address and recipients receive an invitation to join the chat as guests. Disabling the setting prevents these external email chats from being created, keeping conversations limited to internal users and approved guests.",
@@ -11432,7 +12183,10 @@
     "name": "standards.TeamsExternalFileSharing",
     "cat": "Teams Standards",
     "tag": [
-      "CIS M365 7.0.0 (8.1.1)"
+      "CIS M365 7.0.0 (8.1.1)",
+      "CMMC (AC.L1-b.1.iii)",
+      "CMMC (AC.L2-3.1.20)",
+      "NIST SP 800-171 (3.1.20)"
     ],
     "helpText": "Ensure external file sharing in Teams is enabled for only approved cloud storage services.",
     "executiveText": "Controls which external cloud storage services (like Google Drive, Dropbox, Box) employees can access through Teams, ensuring file sharing occurs only through approved and secure platforms. This helps maintain data governance while supporting necessary business integrations.",
@@ -11492,7 +12246,11 @@
   {
     "name": "standards.TeamsFederationConfiguration",
     "cat": "Teams Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L1-b.1.iii)",
+      "CMMC (AC.L2-3.1.20)",
+      "NIST SP 800-171 (3.1.20)"
+    ],
     "helpText": "Controls external Teams communication: allow or block all external domains, allow or block a specific list, and whether unmanaged consumer Teams users can communicate with the organization.",
     "docsDescription": "Grades the tenant federation configuration - federation on/off, consumer access, and the allow/block domain lists - against the selected communication mode. An allow-all posture reads as AllowAllKnownDomains. Remediation writes the full federation posture through the Teams ConfigAPI in one call.",
     "executiveText": "Governs who employees can reach over Teams outside the organization. Restricting federation to trusted partners reduces phishing and impersonation exposure through external chat.",
@@ -12143,7 +12901,10 @@
     "name": "standards.TeamsZAP",
     "cat": "Defender Standards",
     "tag": [
-      "CIS M365 7.0.0 (2.4.4)"
+      "CIS M365 7.0.0 (2.4.4)",
+      "CMMC (SI.L1-b.1.xiii)",
+      "CMMC (SI.L2-3.14.2)",
+      "NIST SP 800-171 (3.14.2)"
     ],
     "helpText": "Ensures Zero-hour auto purge (ZAP) is enabled for Microsoft Teams, automatically removing malicious messages after delivery.",
     "docsDescription": "Zero-hour auto purge (ZAP) for Microsoft Teams retroactively detects and neutralises malicious messages that have already been delivered in Teams chats. Enabling ZAP ensures that phishing, malware, and high confidence phishing messages are automatically purged even after initial delivery, aligning with CIS M365 7.0.0 benchmark control 2.4.4.",
@@ -12962,7 +13723,9 @@
     "cat": "Entra (AAD) Standards",
     "tag": [
       "EIDSCA.AT01",
-      "EIDSCA.AT02"
+      "EIDSCA.AT02",
+      "CMMC (IA.L2-3.5.3)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "Allows you to use any software OAuth token generator",
     "docsDescription": "Enables OTP Software OAuth tokens for the tenant. This allows users to use OTP codes generated via software, like a password manager to be used as an authentication method.",
@@ -12998,7 +13761,9 @@
     "name": "standards.allowOTPTokens",
     "cat": "Entra (AAD) Standards",
     "tag": [
-      "EIDSCA.AM02"
+      "EIDSCA.AM02",
+      "CMMC (IA.L2-3.5.3)",
+      "NIST SP 800-171 (3.5.3)"
     ],
     "helpText": "Allows you to use MS authenticator OTP token generator",
     "docsDescription": "Allows you to use Microsoft Authenticator OTP token generator. Useful for using the NPS extension as MFA on VPN clients.",
@@ -13326,7 +14091,10 @@
     "tag": [
       "CIS M365 7.0.0 (5.1.4.3)",
       "CIS M365 7.0.0 (5.1.4.4)",
-      "SMB1001 (2.2)"
+      "SMB1001 (2.2)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.5)"
     ],
     "helpText": "Controls whether users who register Microsoft Entra joined devices are granted local administrator rights on those devices and if Global Administrators are added as local admins.",
     "docsDescription": "Configures the Device Registration Policy local administrator behavior for registering users. When enabled, users who register devices are not granted local administrator rights, you can also configure if Global Administrators are added as local admins.",
@@ -13409,7 +14177,11 @@
   {
     "name": "standards.intuneRequireMFA",
     "cat": "Intune Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (IA.L2-3.5.3)",
+      "FedRAMP A-D (KSI-IAM-APM)",
+      "NIST SP 800-171 (3.5.3)"
+    ],
     "helpText": "Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.",
     "docsDescription": "Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.",
     "executiveText": "Requires employees to use multi-factor authentication when registering devices for corporate access, adding an extra security layer to prevent unauthorized device enrollment. This helps ensure only legitimate users can connect their devices to company systems.",
@@ -13427,10 +14199,16 @@
     "cat": "Entra (AAD) Standards",
     "tag": [
       "CIS M365 7.0.0 (5.1.4.1)",
-      "SMB1001 (2.8)"
+      "SMB1001 (2.8)",
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.1.5)"
     ],
-    "helpText": "Controls whether users can join devices to Entra. Tenants where Entra reports this setting as not admin-configurable are reported but not written to.",
-    "docsDescription": "Configures whether users can join devices to Entra. When disabled, users are unable to Entra-join devices, which prevents them from creating new Entra-joined (cloud-managed) device identities.",
+    "helpText": "Controls whether users can join devices to Entra: no users, all users, or only members of selected groups. Tenants where Entra reports this setting as not admin-configurable are reported but not written to.",
+    "docsDescription": "Configures whether users can join devices to Entra. With selected groups, only members of the listed groups (comma-separated names or IDs, custom variables including list variables allowed) can join, and the group list is graded against the tenant by ID. When disabled, users are unable to Entra-join devices, which prevents them from creating new Entra-joined (cloud-managed) device identities.",
     "executiveText": "Controls whether employees can join their devices to the corporate Entra directory. Disabling user device join prevents unauthorized or unmanaged devices from becoming corporate-managed identities, enhancing overall security posture.",
     "label": "Configure user restriction for Entra device join",
     "impact": "High Impact",
@@ -13454,17 +14232,41 @@
           {
             "label": "All users",
             "value": "#microsoft.graph.allDeviceRegistrationMembership"
+          },
+          {
+            "label": "Selected groups",
+            "value": "#microsoft.graph.enumeratedDeviceRegistrationMembership"
           }
         ],
         "default": "#microsoft.graph.noDeviceRegistrationMembership",
         "recommended": "#microsoft.graph.noDeviceRegistrationMembership"
+      },
+      {
+        "name": "standards.intuneRestrictUserDeviceJoin.allowedToJoinGroups",
+        "type": "textField",
+        "label": "Groups allowed to join devices",
+        "helperText": "Comma-separated group names or IDs. Custom variables work too, including list variables such as %DeviceJoinGroups%.",
+        "omitWhenBlank": true,
+        "default": "",
+        "condition": {
+          "field": "allowedToJoin",
+          "compareType": "contains",
+          "compareValue": "enumerated"
+        }
       }
     ]
   },
   {
     "name": "standards.intuneRestrictUserDeviceRegistration",
     "cat": "Entra (AAD) Standards",
-    "tag": [],
+    "tag": [
+      "CMMC (AC.L1-b.1.ii)",
+      "CMMC (AC.L2-3.1.2)",
+      "CMMC (AC.L2-3.1.5)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.2)",
+      "NIST SP 800-171 (3.1.5)"
+    ],
     "helpText": "Controls whether users can register devices with Entra. Tenants where Entra reports this setting as not admin-configurable (commonly because Intune is enabled) are reported but not written to.",
     "docsDescription": "Configures whether users can register devices with Entra. When disabled, users are unable to register devices with Entra.",
     "executiveText": "Controls whether employees can register their devices for corporate access. Disabling user device registration prevents unauthorized or unmanaged devices from connecting to company resources, enhancing overall security posture.",
@@ -13502,7 +14304,8 @@
     "cat": "Entra (AAD) Standards",
     "tag": [
       "CIS M365 7.0.0 (5.1.4.5)",
-      "SMB1001 (2.2)"
+      "SMB1001 (2.2)",
+      "FedRAMP B-D (KSI-SVC-ASM)"
     ],
     "helpText": "Enables the tenant to use LAPS. You must still create a policy for LAPS to be active on all devices. Use the template standards to deploy this by default.",
     "docsDescription": "Enables the LAPS functionality on the tenant. Prerequisite for using Windows LAPS via Azure AD.",
@@ -13525,7 +14328,13 @@
       "CIS M365 7.0.0 (7.2.3)",
       "CIS M365 7.0.0 (7.2.4)",
       "CISA (MS.AAD.14.1v1)",
-      "CISA (MS.SPO.1.1v1)"
+      "CISA (MS.SPO.1.1v1)",
+      "CMMC (AC.L1-b.1.iv)",
+      "CMMC (AC.L2-3.1.3)",
+      "CMMC (AC.L2-3.1.22)",
+      "FedRAMP A-D (KSI-SVC-SIN)",
+      "NIST SP 800-171 (3.1.3)",
+      "NIST SP 800-171 (3.1.22)"
     ],
     "helpText": "Sets the default sharing level for OneDrive and SharePoint. This is a tenant wide setting and overrules any settings set on the site level",
     "executiveText": "Defines the organization's default policy for sharing files and folders in SharePoint and OneDrive, balancing collaboration needs with security requirements. This fundamental setting determines whether employees can share with external users, anonymous links, or only internal colleagues.",
@@ -13578,7 +14387,10 @@
     "name": "standards.sharingDomainRestriction",
     "cat": "SharePoint Standards",
     "tag": [
-      "spo_external_sharing_managed"
+      "spo_external_sharing_managed",
+      "CMMC (AC.L2-3.1.3)",
+      "FedRAMP A-D (KSI-SVC-SIN)",
+      "NIST SP 800-171 (3.1.3)"
     ],
     "helpText": "Restricts SharePoint external sharing to an allow-list or block-list of domains, or removes the restriction.",
     "docsDescription": "Grades the sharing domain restriction mode and - for the list modes - the sorted domain list on the matching side. Remediation writes the mode and list in one call.",
@@ -13632,7 +14444,12 @@
     "cat": "SharePoint Standards",
     "tag": [
       "CISA (MS.SPO.2.1v1)",
-      "NIST CSF 2.0 (PR.AA-05)"
+      "NIST CSF 2.0 (PR.AA-05)",
+      "CMMC (AC.L1-b.1.iii)",
+      "CMMC (AC.L2-3.1.20)",
+      "CMMC (AC.L3-3.1.2e)",
+      "FedRAMP B-D (KSI-IAM-ELP)",
+      "NIST SP 800-171 (3.1.20)"
     ],
     "helpText": "Entra P1 required. Block or limit access to SharePoint and OneDrive content from unmanaged devices (those not hybrid AD joined or compliant in Intune). These controls rely on Microsoft Entra Conditional Access policies and can take up to 24 hours to take effect.",
     "docsDescription": "Entra P1 required. Block or limit access to SharePoint and OneDrive content from unmanaged devices (those not hybrid AD joined or compliant in Intune). These controls rely on Microsoft Entra Conditional Access policies and can take up to 24 hours to take effect. 0 = Allow Access, 1 = Allow limited, web-only access, 2 = Block access. All information about this can be found in Microsofts documentation [here.](https://learn.microsoft.com/en-us/sharepoint/control-access-from-unmanaged-devices)",

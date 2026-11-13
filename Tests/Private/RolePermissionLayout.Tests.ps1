@@ -180,8 +180,8 @@ Describe 'Tenant-scoped custom roles mixed with a built-in role' {
         $Reason = Get-DeniedReason (New-UserRequest -Roles $Roles -Permission 'Identity.User.Read' -Tenant $Tenant)
         switch ($Expected) {
             'allowed' { $Reason | Should -Be 'allowed' }
-            'blocked' { $Reason | Should -BeLike "*custom role 't1-blocks' has blocked this endpoint*" }
-            'tenant not allowed' { $Reason | Should -Be 'Access to this tenant is not allowed' }
+            'blocked' { $Reason | Should -BeLike "Your role 't1-blocks' blocks *" }
+            'tenant not allowed' { $Reason | Should -BeLike "Your roles don't include $Tenant.*" }
         }
     }
 

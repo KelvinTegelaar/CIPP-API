@@ -3,6 +3,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -67,7 +69,7 @@ namespace CIPP
         public static readonly TimeSpan MaxWait = TimeSpan.FromSeconds(MaxRetryAfterSeconds + 5);
 
         private static readonly ConcurrentDictionary<string, Bucket> _buckets = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly ConcurrentDictionary<string, string> _tenantByToken = new(StringComparer.Ordinal);
+        private static readonly ConcurrentDictionary<Guid, string> _tenantByToken = new();
 
         private static Regex Pattern(string p) => new(p, RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
@@ -434,10 +436,14 @@ namespace CIPP
             foreach (var (k, v) in headers)
                 if (k.Equals("Authorization", StringComparison.OrdinalIgnoreCase)) { auth = v; break; }
             if (auth is null || !auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) return null;
-            var token = auth[7..].Trim();
-            if (_tenantByToken.TryGetValue(token, out var cached)) return cached;
+            // Keyed by a hash: a bearer token is several KB and thousands of them are live at once.
+            var token = auth.AsSpan(7).Trim();
+            Span<byte> hash = stackalloc byte[32];
+            SHA256.HashData(MemoryMarshal.AsBytes(token), hash);
+            var key = new Guid(hash[..16]);
+            if (_tenantByToken.TryGetValue(key, out var cached)) return cached;
 
-            var parts = token.Split('.');
+            var parts = token.ToString().Split('.');
             if (parts.Length < 2) return null;
             try
             {
@@ -446,7 +452,7 @@ namespace CIPP
                 using var doc = JsonDocument.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(payload)));
                 if (!doc.RootElement.TryGetProperty("tid", out var tid) || tid.ValueKind != JsonValueKind.String) return null;
                 if (_tenantByToken.Count > 5000) _tenantByToken.Clear();
-                return _tenantByToken[token] = tid.GetString()!;
+                return _tenantByToken[key] = tid.GetString()!;
             }
             catch (Exception ex) when (ex is FormatException || ex is JsonException) { return null; }
         }

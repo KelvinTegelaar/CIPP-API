@@ -25,6 +25,7 @@ BeforeAll {
 
     . (Join-Path $Baselines 'Helpers/Get-CIPPBaselineCommand.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineGraphRequest.ps1')
+    . (Join-Path $Baselines 'Helpers/Expand-CIPPBaselineToken.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineExoRequest.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineDeviceRegistrationPolicy.ps1')
     . (Join-Path $Baselines 'Executors/Invoke-CIPPBaselineGraphBulkSweep.ps1')
@@ -267,6 +268,16 @@ Describe 'Invoke-CIPPBaselineDeviceRegistrationPolicy' {
         { Invoke-CIPPBaselineDeviceRegistrationPolicy -Remediate $Spec -TenantFilter $script:Tenant -Current $null } | Should -Throw '*nothing configured*'
         Should -Invoke New-GraphPostRequest -Times 0
     }
+
+    It 'writes the join groups the prepare hook resolved' {
+        $Spec = @{ set = @{ 'azureADJoin.allowedToJoin' = @{ '@odata.type' = '#microsoft.graph.enumeratedDeviceRegistrationMembership'; users = $null; groups = $null } } } | ConvertTo-Spec
+        $Current = [PSCustomObject]@{ allowedToJoinGroupIds = @('aaaa-1', 'bbbb-2') }
+        Invoke-CIPPBaselineDeviceRegistrationPolicy -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-GraphPostRequest -Times 1 -ParameterFilter {
+            $Join = ($Body | ConvertFrom-Json).azureADJoin.allowedToJoin
+            ($Join.groups -join ',') -eq 'aaaa-1,bbbb-2' -and @($Join.users).Count -eq 0
+        }
+    }
 }
 
 Describe 'Invoke-CIPPBaselineGraphBulkSweep' {
@@ -285,6 +296,16 @@ Describe 'Invoke-CIPPBaselineGraphBulkSweep' {
             @($Requests)[0].url -eq '/users/a-1' -and @($Requests)[1].url -eq '/users/b-2' -and
             @($Requests)[0].body.accountEnabled -eq $false
         }
+    }
+
+    It 'sends a sequential group one request per batch, in order' {
+        # Global Secure Access loses concurrent rule writes to one forwarding policy.
+        $Current = @{ targets = @(@{ id = 'a-1' }, @{ id = 'b-2' }, @{ id = 'c-3' }) } | ConvertTo-Spec
+        $Spec = @{ writes = @(@{ method = 'DELETE'; uri = 'rules/%id%'; sequential = $true }) } | ConvertTo-Spec
+        $script:Batches = [System.Collections.Generic.List[string]]::new()
+        Mock New-GraphBulkRequest { $script:Batches.Add((@($Requests).ForEach({ $_.url }) -join ',')); New-BulkSuccess -Requests $Requests }
+        Invoke-CIPPBaselineGraphBulkSweep -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        @($script:Batches) | Should -Be @('/rules/a-1', '/rules/b-2', '/rules/c-3')
     }
 
     It 'keeps a per-object token its JSON type' {

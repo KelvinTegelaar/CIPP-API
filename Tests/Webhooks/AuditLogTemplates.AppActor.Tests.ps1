@@ -4,6 +4,7 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/ConvertTo-CIPPScriptBlockValue.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/Test-CIPPConditionFilter.ps1')
     $TemplatePath = Join-Path (Split-Path -Parent $RepoRoot) 'frontend/src/data/AuditLogTemplates.json'
     $script:Templates = Get-Content -Path $TemplatePath -Raw | ConvertFrom-Json
@@ -78,6 +79,22 @@ Describe 'App-initiated audit log presets' {
     It 'does not match owners added to groups' {
         $Filter = Get-PresetFilter -Preset 'AppAddedOwnerToApp'
         @(@(New-Record -Operation 'Add owner to group.' -UserId $script:AppActor).Where($Filter)).Count | Should -Be 0
+    }
+
+    It '<Preset> stays quiet when a Microsoft app acts on a Microsoft app' -ForEach @(
+        @{ Preset = 'AppAddedSecretToServicePrincipal'; Operation = 'Add service principal credentials.'; Key = 'Password' }
+        @{ Preset = 'AppAddedCertificateToServicePrincipal'; Operation = 'Add service principal credentials.'; Key = 'AsymmetricX509Cert' }
+        @{ Preset = 'AppGrantedApplicationPermission'; Operation = 'Add app role assignment to service principal.' }
+        @{ Preset = 'AppGrantedDelegatedPermission'; Operation = 'Add delegated permission grant.' }
+        @{ Preset = 'AppAddedOwnerToApp'; Operation = 'Add owner to service principal.' }
+        @{ Preset = 'AppAddedDirectoryRoleMember'; Operation = 'Add member to role.' }
+    ) {
+        $Filter = Get-PresetFilter -Preset $Preset
+        $Quiet = New-Record -Operation $Operation -UserId $script:AppActor -AddedKeyTypes $Key
+        $Quiet.PSObject.Properties.Add([psnoteproperty]::new('CIPPMicrosoftAppToMicrosoftApp', 'true'))
+
+        @(@($Quiet).Where($Filter)).Count | Should -Be 0
+        @(@(New-Record -Operation $Operation -UserId $script:AppActor -AddedKeyTypes $Key).Where($Filter)).Count | Should -Be 1
     }
 }
 

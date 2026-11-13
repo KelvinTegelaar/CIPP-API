@@ -1,0 +1,53 @@
+{
+  "name": "GlobalSecureAccessProfileTemplate",
+  "label": "Global Secure Access Security Profile Template",
+  "cat": "Global Secure Access",
+  "tag": [
+    "CMMC (SC.L1-b.1.x)",
+    "CMMC (SC.L2-3.13.1)",
+    "FedRAMP A-D (KSI-CNA-RNT)",
+    "NIST SP 800-171 (3.13.1)"
+  ],
+  "impact": "Medium Impact",
+  "helpText": "Deploys a Global Secure Access security profile template, with the web content filtering policy templates it links, and keeps the tenant matching it. Uses Microsoft Entra Internet Access. Apply the profile to users with a Conditional Access template that links it.",
+  "executiveText": "Applies the same web content filtering rules, such as blocking risky site categories, to every tenant from one centrally managed template.",
+  "docsDescription": "Compares the tenant's security profile, filtering policies and links with the selected security profile template and deploys any difference: missing policies and the profile are created, drifted rules and links are corrected, and links the template does not have are removed. A conflict, such as another profile holding the template's priority, is reported and never overwritten. The tenant must be onboarded to Global Secure Access.",
+  "impactColour": "warning",
+  "addedDate": "2026-11-11",
+  "powershellEquivalent": "New-MgBetaNetworkAccessFilteringPolicy; New-MgBetaNetworkAccessFilteringProfile",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    [
+      "Entra_Premium_Internet_Access"
+    ]
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "profileTemplate",
+  "identity": {
+    "partition": "GSASecurityProfileTemplate",
+    "nameField": "name"
+  },
+  "variables": {
+    "profileTemplate": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Select Security Profile Template",
+      "required": true,
+      "api": {
+        "url": "/api/ListGSASecurityProfileTemplates",
+        "labelField": "name",
+        "valueField": "GUID",
+        "queryKey": "ListGSASecurityProfileTemplates"
+      }
+    }
+  },
+  "read": {
+    "cacheType": "NetworkAccessFiltering"
+  },
+  "prepare": "Get-CIPPBaselineGlobalSecureAccessProfileTemplateState",
+  "remediate": {
+    "executor": "GlobalSecureAccessProfileTemplate"
+  }
+}

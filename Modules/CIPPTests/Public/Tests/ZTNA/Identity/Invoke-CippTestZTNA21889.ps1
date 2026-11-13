@@ -31,7 +31,7 @@ function Invoke-CippTestZTNA21889 {
                 Name = 'Reduce the user-visible password surface area'
                 UserImpact = 'Medium'
                 ImplementationEffort = 'Medium'
-                Category = 'Access control'
+                Category = 'Authentication'
             }
             Add-CippTestResult @TestParams
             return
@@ -124,7 +124,7 @@ function Invoke-CippTestZTNA21889 {
             Name = 'Reduce the user-visible password surface area'
             UserImpact = 'Medium'
             ImplementationEffort = 'Medium'
-            Category = 'Access control'
+            Category = 'Authentication'
         }
         Add-CippTestResult @TestParams
 
@@ -139,7 +139,7 @@ function Invoke-CippTestZTNA21889 {
             Name = 'Reduce the user-visible password surface area'
             UserImpact = 'Medium'
             ImplementationEffort = 'Medium'
-            Category = 'Access control'
+            Category = 'Authentication'
         }
         Add-CippTestResult @TestParams
         Write-LogMessage -API 'ZeroTrustNetworkAccess' -tenant $Tenant -message "Test ZTNA21889 failed: $($_.Exception.Message)" -sev Error

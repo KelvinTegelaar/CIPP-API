@@ -1,7 +1,7 @@
 function Invoke-ListMailQuarantine {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Exchange.SpamFilter.Read
     .DESCRIPTION

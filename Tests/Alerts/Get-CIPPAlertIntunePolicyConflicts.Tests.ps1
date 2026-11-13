@@ -12,7 +12,7 @@ BeforeAll {
     function Write-AlertTrace { param($cmdletName, $tenantFilter, $data) }
     function Write-LogMessage { param($API, $tenant, $message, $sev, $LogData) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = "$Exception" } }
-    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset) }
+    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) }
 
     # Build a cache row the way Add-CIPPDbItem stores it: RowKey "<Type>-<id>", Data = compressed JSON.
     function New-DbItem {

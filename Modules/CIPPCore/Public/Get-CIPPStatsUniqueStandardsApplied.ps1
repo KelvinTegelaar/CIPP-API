@@ -1,9 +1,13 @@
 function Get-CIPPStatsUniqueStandardsApplied {
     [CmdletBinding()]
-    param()
+    param(
+        # Get-CIPPStandards -TenantFilter allTenants, read once by the caller
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [object[]]$Standards
+    )
 
     try {
-        $Standards = @(Get-CIPPStandards -TenantFilter allTenants)
         $DistinctStandards = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
         foreach ($Standard in $Standards) {

@@ -11,7 +11,12 @@
     "SMB1001 (1.10)",
     "SMB1001 (1.12)",
     "SMB1001 (2.2)",
-    "SMB1001 (4.7)"
+    "SMB1001 (4.7)",
+    "CMMC (CM.L2-3.4.1)",
+    "CMMC (CM.L2-3.4.2)",
+    "FedRAMP B-D (KSI-SVC-ACM)",
+    "NIST SP 800-171 (3.4.1)",
+    "NIST SP 800-171 (3.4.2)"
   ],
   "impact": "High Impact",
   "helpText": "Deploy and manage Intune templates across devices.",

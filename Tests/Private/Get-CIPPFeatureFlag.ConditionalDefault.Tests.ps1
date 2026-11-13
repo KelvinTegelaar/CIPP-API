@@ -26,6 +26,7 @@ BeforeAll {
 
 Describe 'Get-CIPPFeatureFlag conditional defaults' {
     BeforeEach {
+        foreach ($Name in @([System.Environment]::GetEnvironmentVariables().Keys).Where({ "$_" -like 'CIPP_FEATUREFLAG_*' })) { [System.Environment]::SetEnvironmentVariable($Name, [NullString]::Value) }
         Mock Add-CIPPAzDataTableEntity {}
     }
 

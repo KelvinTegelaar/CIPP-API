@@ -58,7 +58,7 @@ function New-GraphMultiTenantBulkRequest {
     }
 
     if ($Requests.Count -gt 0) {
-        foreach ($Sent in [CIPP.CIPPRestClient]::SendConcurrent($Requests, $MaxConcurrency, $MaxRetries)) {
+        foreach ($Sent in [CIPP.CIPPRestClient]::SendConcurrent($Requests, $MaxConcurrency, $MaxRetries, ($PSCmdlet.PipelineStopToken ?? $global:CraftPipelineStopToken))) {
             $Owner = $Owners[$Sent.Index]
             if ($Sent.Error) {
                 $Owner.Error = $Sent.Error

@@ -1,7 +1,7 @@
 Function Invoke-ListUsers {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Identity.User.Read
     .DESCRIPTION
@@ -25,11 +25,6 @@ Function Invoke-ListUsers {
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = @{ Results = 'A specific tenant is required when requesting a single user.' }
             })
-    }
-    # GUID -> display name, first row wins
-    $SkuNames = @{}
-    foreach ($Row in [System.IO.File]::ReadAllText((Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv')) | ConvertFrom-Csv) {
-        if (-not $SkuNames.ContainsKey($Row.GUID)) { $SkuNames[$Row.GUID] = $Row.Product_Display_Name }
     }
 
     # When fetching a single user, use an explicit $select so directory/schema extension properties are
@@ -120,6 +115,11 @@ Function Invoke-ListUsers {
             $User
         }
     }
+
+    $UsedSkuIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($User in $UserData) { foreach ($Sku in $User.assignedLicenses.skuId) { if ($Sku) { [void]$UsedSkuIds.Add($Sku) } } }
+    $SkuNames = @{}
+    foreach ($Sku in Get-CIPPLicenseSkuName -SkuIds @($UsedSkuIds)) { $SkuNames[$Sku.skuId] = $Sku.displayName }
 
     $GraphRequest = foreach ($User in $UserData) {
         $SkuID = $User.AssignedLicenses.skuid

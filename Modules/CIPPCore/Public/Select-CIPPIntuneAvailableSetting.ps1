@@ -54,6 +54,13 @@ function Select-CIPPIntuneAvailableSetting {
     if ($Cached -and $Cached.Expires -gt [datetime]::UtcNow) {
         $AvailableSettings = $Cached.Settings
     } else {
+        $Now = [datetime]::UtcNow
+        if ($script:CIPPIntuneSettingTemplateSweep -lt $Now) {
+            foreach ($Key in @($script:CIPPIntuneSettingTemplateCache.PSBase.Keys)) {
+                if ($script:CIPPIntuneSettingTemplateCache[$Key].Expires -le $Now) { $script:CIPPIntuneSettingTemplateCache.Remove($Key) }
+            }
+            $script:CIPPIntuneSettingTemplateSweep = $Now.AddMinutes(1)
+        }
         Write-Information "Checking configuration policy template $TemplateId for $($Policy.name)"
         $AvailableSettings = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicyTemplates('$TemplateId')/settingTemplates?`$expand=settingDefinitions&`$top=1000" -tenantid $TenantFilter
         $script:CIPPIntuneSettingTemplateCache[$CacheKey] = @{

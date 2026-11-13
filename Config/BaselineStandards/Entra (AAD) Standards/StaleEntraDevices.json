@@ -5,7 +5,9 @@
   "tag": [
     "Essential 8 (1501)",
     "NIST CSF 2.0 (ID.AM-08)",
-    "NIST CSF 2.0 (PR.PS-03)"
+    "NIST CSF 2.0 (PR.PS-03)",
+    "CMMC (IA.L2-3.5.6)",
+    "NIST SP 800-171 (3.5.6)"
   ],
   "impact": "High Impact",
   "helpText": "Cleans up Entra devices that have not connected/signed in for the specified number of days. Remediation first disables stale enabled devices and, on a later run, deletes stale devices that are already disabled. Hybrid-joined, Intune-managed and Autopilot devices are skipped. Deleting a device permanently removes any BitLocker recovery keys stored on it.",

@@ -229,6 +229,8 @@ function Get-GraphRequestList {
             $Table = Get-CIPPTable -TableName $TableName
             $Filter = "QueueId eq '{0}'" -f $QueueId
             $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+            # A queue's rows span every tenant in the run; serve only the caller's
+            $AllowedTenantNames = [System.Collections.Generic.HashSet[string]]::new([string[]]@((Get-Tenants -IncludeErrors).defaultDomainName), [StringComparer]::OrdinalIgnoreCase)
             $Type = 'Queue'
             Write-Information "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
             $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
@@ -517,6 +519,8 @@ function Get-GraphRequestList {
                                     if ($null -eq $ResultProperties['Tenant']) { $ResultProperties.Add([psnoteproperty]::new('Tenant', $TenantFilter)) }
                                     if ($null -eq $ResultProperties['CippStatus']) { $ResultProperties.Add([psnoteproperty]::new('CippStatus', 'Good')) }
                                     $Result
+                                } elseif ($Result -is [string] -or $Result -is [System.ValueType]) {
+                                    [PSCustomObject]@{ value = $Result.PSObject.BaseObject; Tenant = $TenantFilter; CippStatus = 'Good' }
                                 } else {
                                     $Result | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
                                 }

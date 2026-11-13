@@ -23,8 +23,8 @@ function Get-CIPPBaselineOutOfScopeAssignment {
     foreach ($Assignment in @($Assignments)) {
         if ($null -eq $Assignment) { continue }
         $Value = if ($Assignment -is [string]) { $Assignment } else { "$($Assignment.value)" }
-        # 'Exported Template' is the community-export placeholder, never a runnable tenant.
-        if (-not $Value -or $Value -eq 'Exported Template') { continue }
+        # 'Exported Template' (baselines) and 'Template Tenant' (standards) are the community-export placeholders, never runnable tenants.
+        if (-not $Value -or $Value -in @('Exported Template', 'Template Tenant')) { continue }
         $Group = $Groups.Where({ $_.Id -eq $Value -or $_.Name -eq $Value }, 'First')[0]
         $InScope = if ($Value -eq 'AllTenants') {
             $null -eq $AllowedTenants

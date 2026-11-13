@@ -4,7 +4,9 @@
   "cat": "Exchange Standards",
   "tag": [
     "CIS M365 7.0.0 (1.3.3)",
-    "exo_individualsharing"
+    "exo_individualsharing",
+    "CMMC (AC.L2-3.1.3)",
+    "NIST SP 800-171 (3.1.3)"
   ],
   "impact": "Low Impact",
   "helpText": "Disables the ability for users to share their calendar with external users. Only for the default policy, so exclusions can be made if needed.",
@@ -55,7 +57,7 @@
       {
         "cmdlet": "Set-SharingPolicy",
         "params": {
-          "Identity": "Default Sharing Policy",
+          "Identity": "%Id%",
           "Enabled": "%externalCalendarSharingEnabled%"
         }
       }

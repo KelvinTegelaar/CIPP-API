@@ -6,6 +6,7 @@ BeforeAll {
         [object]$ContentType
     }
     function Get-CippTable { param($tablename) @{} }
+    function Test-CippTemplateWriteAccess { param($Permission, $PartitionKey, $RowKey) $true }
     function Add-CIPPAzDataTableEntity { param([switch]$Force, $Entity) $script:LastEntity = $Entity }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = "$Exception" } }

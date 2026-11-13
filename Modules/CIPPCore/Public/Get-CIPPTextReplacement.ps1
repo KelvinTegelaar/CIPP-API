@@ -183,37 +183,41 @@ function Get-CIPPTextReplacement {
             }
         }
     }
-    # Replace custom variables
-    foreach ($Replace in $Vars.GetEnumerator()) {
-        $String = '%{0}%' -f $Replace.Key
-        if ($string -notin $ReservedVariables) {
-            if ("$($VarTypes[$Replace.Key])" -eq 'list') {
-                $Expanded = Expand-CIPPListToken -Text $Text -Token $String -Value $Replace.Value -Escape $EscapeForJson.IsPresent
-                if ($null -ne $Expanded) {
-                    $Text = $Expanded
-                    continue
+    # Replace custom variables. A second pass lets one variable reference another whatever order they enumerate in; nesting stops there.
+    for ($Pass = 0; $Pass -lt 2; $Pass++) {
+        $Before = $Text
+        foreach ($Replace in $Vars.GetEnumerator()) {
+            $String = '%{0}%' -f $Replace.Key
+            if ($string -notin $ReservedVariables) {
+                if ("$($VarTypes[$Replace.Key])" -eq 'list') {
+                    $Expanded = Expand-CIPPListToken -Text $Text -Token $String -Value $Replace.Value -Escape $EscapeForJson.IsPresent
+                    if ($null -ne $Expanded) {
+                        $Text = $Expanded
+                        continue
+                    }
                 }
+                # A variable declared as integer, boolean or json is written as a JSON literal when it
+                # fills an entire string slot, so a numeric setting receives 300 rather than "300" and
+                # behaves exactly like a value typed into the template by hand.
+                #
+                # The declared type drives this, not the caller's -EscapeForJson switch: a type is
+                # something an operator opts into on a single variable, so it can be honoured everywhere
+                # without changing what any existing variable does. Untyped variables - which is every
+                # variable that predates this - return $null here and fall through to the substitution
+                # they have always had.
+                #
+                # Only the whole-slot form is unquoted; a variable embedded in a longer string is still
+                # part of that string. A value that does not parse as its declared type also falls
+                # through, so a mistyped variable degrades to the old behaviour instead of emitting
+                # invalid JSON.
+                $Literal = ConvertTo-CIPPJsonLiteral -Value $Vars[$Replace.Key] -VariableType $VarTypes[$Replace.Key]
+                if ($null -ne $Literal) {
+                    $Text = $Text -replace ('"{0}"' -f [regex]::Escape($String)), (ConvertTo-CIPPLiteralReplacement -Value $Literal)
+                }
+                $Text = Set-CIPPReplacementToken -Text $Text -Token $String -Value $Replace.Value -Escape $EscapeForJson.IsPresent
             }
-            # A variable declared as integer, boolean or json is written as a JSON literal when it
-            # fills an entire string slot, so a numeric setting receives 300 rather than "300" and
-            # behaves exactly like a value typed into the template by hand.
-            #
-            # The declared type drives this, not the caller's -EscapeForJson switch: a type is
-            # something an operator opts into on a single variable, so it can be honoured everywhere
-            # without changing what any existing variable does. Untyped variables - which is every
-            # variable that predates this - return $null here and fall through to the substitution
-            # they have always had.
-            #
-            # Only the whole-slot form is unquoted; a variable embedded in a longer string is still
-            # part of that string. A value that does not parse as its declared type also falls
-            # through, so a mistyped variable degrades to the old behaviour instead of emitting
-            # invalid JSON.
-            $Literal = ConvertTo-CIPPJsonLiteral -Value $Vars[$Replace.Key] -VariableType $VarTypes[$Replace.Key]
-            if ($null -ne $Literal) {
-                $Text = $Text -replace ('"{0}"' -f [regex]::Escape($String)), (ConvertTo-CIPPLiteralReplacement -Value $Literal)
-            }
-            $Text = Set-CIPPReplacementToken -Text $Text -Token $String -Value $Replace.Value -Escape $EscapeForJson.IsPresent
         }
+        if ($Text -ceq $Before -or -not $Text.Contains('%')) { break }
     }
     #default replacements for all tenants: %tenantid% becomes $tenant.customerId, %tenantfilter% becomes $tenant.defaultDomainName, %tenantname% becomes $tenant.displayName
     $BuiltInVars = [ordered]@{

@@ -20,7 +20,7 @@ function Set-CIPPDBCacheGroups {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching groups' -sev Debug
 
         $MemberBatchSize = 50
-        $GroupSelect = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,assignedLicenses,licenseProcessingState,membershipRuleProcessingState'
+        $GroupSelect = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,assignedLicenses,licenseProcessingState,membershipRuleProcessingState,isAssignableToRole'
         $GroupUri = "https://graph.microsoft.com/beta/groups?`$top=999&`$select=$GroupSelect&`$expand=owners(`$select=id,displayName,userPrincipalName)"
 
         # Stream groups in batches of $MemberBatchSize so peak memory is one batch of rows
@@ -55,7 +55,8 @@ function Set-CIPPDBCacheGroups {
             $MembersByGroupId = @{}
             if ($MemberRequests) {
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Fetching group members for batch of $($Batch.Count)" -sev Debug
-                $MemberResults = New-GraphBulkRequest -Requests @($MemberRequests) -tenantid $TenantFilter
+                # A batch of 50 groups is three $batch calls; sent together they take a third of the time
+                $MemberResults = New-GraphBulkRequest -Requests @($MemberRequests) -tenantid $TenantFilter -MaxConcurrency 3
                 foreach ($Result in $MemberResults) {
                     if ($Result.id) { $MembersByGroupId[$Result.id] = $Result.body.value }
                 }
@@ -106,7 +107,9 @@ function Set-CIPPDBCacheGroups {
         }
 
         try {
-            New-GraphGetRequest -uri $GroupUri -tenantid $TenantFilter -Stream | ForEach-Object {
+            # -ErrorAction Stop: an unauthorised tenant only writes an error and returns nothing,
+            # which would otherwise be recorded below as a tenant with no groups.
+            New-GraphGetRequest -uri $GroupUri -tenantid $TenantFilter -Stream -ErrorAction Stop | ForEach-Object {
                 $PendingBatch.Add($_)
                 if ($PendingBatch.Count -ge $MemberBatchSize) {
                     Write-GroupBatch -Batch $PendingBatch -PipelineWriter $Writer -Count ([ref]$CachedCount)
@@ -115,10 +118,10 @@ function Set-CIPPDBCacheGroups {
 
             Write-GroupBatch -Batch $PendingBatch -PipelineWriter $Writer -Count ([ref]$CachedCount)
 
-            if ($CachedCount -gt 0) {
-                $Writer.End()
-                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $CachedCount groups with members and owners successfully" -sev Debug
-            }
+            # Ended on an empty result too: the count row is what tells a tenant with no groups
+            # apart from one that was never collected. Existing rows are only replaced when rows were written.
+            $Writer.End()
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $CachedCount groups with members and owners successfully" -sev Debug
         } finally {
             $Writer.Dispose()
         }

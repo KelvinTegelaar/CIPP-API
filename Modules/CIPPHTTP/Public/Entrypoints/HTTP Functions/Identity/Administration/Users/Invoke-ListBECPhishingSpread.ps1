@@ -18,8 +18,10 @@ function Invoke-ListBECPhishingSpread {
     # optional subject fragment to narrow the trace (case-insensitive contains)
     $Subject = [string]$Request.Query.subject
 
+    if (-not $SenderAddress) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'sender is required' } })
+    }
     try {
-        if (-not $SenderAddress) { throw 'sender is required' }
         # look-back in days (1-90)
         $Days = [Math]::Min([Math]::Max([int]($Request.Query.days ?? 7), 1), 90)
         $End = (Get-Date).ToUniversalTime()

@@ -5,7 +5,10 @@
   "tag": [
     "CIS M365 7.0.0 (7.2.7)",
     "CIS M365 7.0.0 (7.2.11)",
-    "CISA (MS.SPO.1.4v1)"
+    "CISA (MS.SPO.1.4v1)",
+    "CMMC (AC.L2-3.1.3)",
+    "FedRAMP A-D (KSI-SVC-SIN)",
+    "NIST SP 800-171 (3.1.3)"
   ],
   "impact": "Low Impact",
   "helpText": "Configure the SharePoint default sharing link type and permission. This setting controls both the type of sharing link created by default and the permission level assigned to those links.",

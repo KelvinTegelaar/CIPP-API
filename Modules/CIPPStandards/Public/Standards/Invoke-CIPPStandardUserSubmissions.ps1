@@ -75,6 +75,7 @@ function Invoke-CIPPStandardUserSubmissions {
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the UserSubmissions state for $Tenant. Error: $ErrorMessage" -Sev Error
+        return
     }
 
     if ($state -eq 'enable') {
@@ -90,13 +91,14 @@ function Invoke-CIPPStandardUserSubmissions {
         } else {
             $PolicyIsCorrect = ($PolicyState.EnableReportToMicrosoft -eq $ReportToMicrosoft) -and
             ($PolicyState.ReportJunkToCustomizedAddress -eq $true) -and
-            ($PolicyState.ReportJunkAddresses -eq $Email) -and
+            # The address fields are lists: join them so an extra address does not pass
+            ((@($PolicyState.ReportJunkAddresses) -join ',') -eq $Email) -and
             ($PolicyState.ReportNotJunkToCustomizedAddress -eq $true) -and
-            ($PolicyState.ReportNotJunkAddresses -eq $Email) -and
+            ((@($PolicyState.ReportNotJunkAddresses) -join ',') -eq $Email) -and
             ($PolicyState.ReportPhishToCustomizedAddress -eq $true) -and
-            ($PolicyState.ReportPhishAddresses -eq $Email)
+            ((@($PolicyState.ReportPhishAddresses) -join ',') -eq $Email)
             $RuleIsCorrect = ($RuleState.State -eq 'Enabled') -and
-            ($RuleState.SentTo -eq $Email)
+            ((@($RuleState.SentTo) -join ',') -eq $Email)
         }
     } else {
         if ($PolicyState.length -eq 0) {

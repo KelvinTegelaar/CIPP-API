@@ -2,7 +2,11 @@
   "name": "RotateDKIM",
   "label": "Rotate DKIM keys that are 1024 bit to 2048 bit",
   "cat": "Exchange Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (SC.L2-3.13.10)",
+    "FedRAMP B-D (KSI-SVC-ASM)",
+    "NIST SP 800-171 (3.13.10)"
+  ],
   "impact": "Low Impact",
   "helpText": "Rotates enabled DKIM configurations still using 1024-bit keys to 2048-bit.",
   "executiveText": "Upgrades weak email signing keys to current cryptographic strength, keeping the organization's email authentication resistant to forgery.",

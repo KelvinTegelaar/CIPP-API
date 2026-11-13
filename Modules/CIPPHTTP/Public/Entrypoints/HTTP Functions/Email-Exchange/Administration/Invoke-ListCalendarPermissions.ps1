@@ -1,7 +1,7 @@
 function Invoke-ListCalendarPermissions {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Exchange.Mailbox.Read
     .DESCRIPTION
@@ -16,6 +16,9 @@ function Invoke-ListCalendarPermissions {
     # Serve from the reporting database cache instead of live Graph. Much faster, especially for AllTenants.
     $UseReportDB = $Request.Query.UseReportDB -eq $true
     $ByUser = $Request.Query.ByUser
+    if (-not $UserID -and -not $UseReportDB) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'UserID is required unless UseReportDB is set' } })
+    }
 
     try {
         # If UseReportDB is specified and no specific UserID, retrieve from report database

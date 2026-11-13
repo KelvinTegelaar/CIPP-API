@@ -39,7 +39,7 @@
   ],
   "phishingResistant": {
     "builtInStrengthId": "00000000-0000-0000-0000-000000000004",
-    "methodTokens": ["fido2", "windowshelloforbusiness", "x509certificatemultifactor", "x509certificatesinglefactor", "deviceboundpasskey", "hardwareoath"],
+    "methodTokens": ["fido2", "windowshelloforbusiness", "x509certificatemultifactor", "x509certificatesinglefactor", "deviceboundpasskey"],
     "nameRegex": "phishing.?resistant|fido2|windows hello|certificate.?based",
     "policyNameRegex": "phishing.?resistant"
   },

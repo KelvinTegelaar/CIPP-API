@@ -131,6 +131,18 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
+                Title      = 'Remove all admin roles'
+                Condition  = { $Options.RemoveRoles -eq $true }
+                Cmdlet     = 'Remove-CIPPUserRoles'
+                Parameters = @{
+                    UserID       = $UserID
+                    Username     = $Username
+                    TenantFilter = $TenantFilter
+                    APIName      = $APIName
+                    Headers      = $Headers
+                }
+            }
+            @{
                 Title      = 'Remove all rules'
                 Condition  = { $Options.RemoveRules -eq $true }
                 Cmdlet     = 'Remove-CIPPMailboxRule'
@@ -189,7 +201,7 @@ function Invoke-CIPPOffboardingJob {
                     userid       = $UserID
                     username     = $Username
                     tenantFilter = $TenantFilter
-                    Forward      = $Options.forward.value
+                    Forward      = [string]($Options.forward.value ?? $Options.forward)
                     KeepCopy     = [bool]$Options.KeepCopy
                     APIName      = $APIName
                     Headers      = $Headers

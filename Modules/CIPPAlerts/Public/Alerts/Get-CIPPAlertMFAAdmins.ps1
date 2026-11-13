@@ -13,7 +13,7 @@ function Get-CIPPAlertMFAAdmins {
     try {
         $CAPolicies = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies?$top=999' -tenantid $TenantFilter -ErrorAction Stop)
         foreach ($Policy in $CAPolicies) {
-            if ($policy.grantControls.customAuthenticationFactors -eq 'RequireDuoMfa') {
+            if ($Policy.state -eq 'enabled' -and $policy.grantControls.customAuthenticationFactors -eq 'RequireDuoMfa') {
                 $DuoActive = $true
             }
         }

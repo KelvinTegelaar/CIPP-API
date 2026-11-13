@@ -1,7 +1,7 @@
 function Invoke-ListRoleAssignments {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Identity.Role.Read
     .SYNOPSIS

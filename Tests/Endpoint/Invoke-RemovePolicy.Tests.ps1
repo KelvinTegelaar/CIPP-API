@@ -86,4 +86,51 @@ Describe 'Invoke-RemovePolicy Graph URL' {
 
         $script:deleteUri | Should -Be "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations('policy-2')"
     }
+
+    It 'reports a raised multi-admin approval as pending, not failed' {
+        Mock -CommandName New-GraphPostRequest -MockWith {
+            $Exception = [System.Exception]::new('Approval request abc has been raised')
+            $Exception.Data['IntuneApprovalCode'] = 'abc'
+            throw $Exception
+        }
+        $request = [pscustomobject]@{
+            Params  = @{ CIPPEndpoint = 'RemovePolicy' }
+            Headers = @{}
+            Query   = [pscustomobject]@{
+                tenantFilter = 'contoso.onmicrosoft.com'
+                ID           = 'policy-3'
+                URLName      = 'configurationPolicies'
+            }
+            Body    = [pscustomobject]@{}
+        }
+
+        $response = Invoke-RemovePolicy -Request $request -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::Accepted)
+        $response.Body.Results.state | Should -Be 'warning'
+        $response.Body.Results.copyField | Should -Be 'abc'
+        $response.Body.Results.resultText | Should -Match 'not deleted yet. Approval request abc has been raised'
+    }
+
+    It 'reports a delete whose approval request is already open as pending' {
+        Mock -CommandName New-GraphPostRequest -MockWith {
+            throw '{"Message": "An active Approval Request already exists for this entity"}'
+        }
+        $request = [pscustomobject]@{
+            Params  = @{ CIPPEndpoint = 'RemovePolicy' }
+            Headers = @{}
+            Query   = [pscustomobject]@{
+                tenantFilter = 'contoso.onmicrosoft.com'
+                ID           = 'policy-4'
+                URLName      = 'configurationPolicies'
+            }
+            Body    = [pscustomobject]@{}
+        }
+
+        $response = Invoke-RemovePolicy -Request $request -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::Accepted)
+        $response.Body.Results.state | Should -Be 'warning'
+        $response.Body.Results.resultText | Should -Match 'already waiting'
+    }
 }

@@ -3,7 +3,13 @@
   "label": "Allow users to consent to applications with low security risk (Prevent OAuth phishing. Lower impact, less secure)",
   "cat": "Entra (AAD) Standards",
   "tag": [
-    "IntegratedApps"
+    "IntegratedApps",
+    "CMMC (AC.L1-b.1.ii)",
+    "CMMC (AC.L2-3.1.2)",
+    "CMMC (CM.L2-3.4.9)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.2)",
+    "NIST SP 800-171 (3.4.9)"
   ],
   "impact": "Medium Impact",
   "helpText": "Sets the default oauth consent level so users can consent to applications that have low risks. This standard conflicts with the \"Require admin consent for applications\" standard; only one of the two should be assigned per tenant.",

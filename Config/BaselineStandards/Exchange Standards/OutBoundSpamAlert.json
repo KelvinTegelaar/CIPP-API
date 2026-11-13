@@ -4,7 +4,9 @@
   "cat": "Exchange Standards",
   "tag": [
     "CIS M365 7.0.0 (2.1.6)",
-    "mdo_spam_notifications_only_for_admins"
+    "mdo_spam_notifications_only_for_admins",
+    "CMMC (SI.L2-3.14.6)",
+    "NIST SP 800-171 (3.14.6)"
   ],
   "impact": "Low Impact",
   "helpText": "Set the Outbound Spam Alert e-mail address",

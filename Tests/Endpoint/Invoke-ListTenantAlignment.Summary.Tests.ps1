@@ -32,6 +32,7 @@ BeforeAll {
 
     . $FunctionPath
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
+    . (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules/CIPPCore') -Recurse -Filter 'Select-CippAllowedTenantData.ps1' -File)[0].FullName
 
     $script:Tenants = @(
         [pscustomobject]@{ defaultDomainName = 'alpha.onmicrosoft.com'; displayName = 'Alpha'; customerId = 'aaaa-1111' }
@@ -143,6 +144,21 @@ Describe 'Invoke-ListTenantAlignment summary mode' {
             $Body.Lowest[0].Name | Should -BeExactly 'Beta'
             $Body.PendingDeviations | Should -Be 7
             $Body.PendingTenantCount | Should -Be 2
+        }
+
+        It 'scores only the tenants in the caller''s scope' {
+            # The request scope holds alpha; Get-Tenants is narrowed to it, as it is under the router
+            $script:CippAllowedTenantsStorage = [pscustomobject]@{ Value = @('aaaa-1111') }
+            Mock -CommandName Get-Tenants -MockWith { $script:Tenants[0] }
+            try {
+                $Body = (Invoke-ListTenantAlignment -Request (script:New-AlignmentRequest @{ summary = $true }) -TriggerMetadata @{}).Body
+            } finally {
+                $script:CippAllowedTenantsStorage = $null
+            }
+
+            $Body.ScoredTenantCount | Should -Be 1
+            $Body.Lowest[0].Tenant | Should -BeExactly 'alpha.onmicrosoft.com'
+            $Body.PendingDeviations | Should -Be 1
         }
 
         It 'keeps the classic row list for the non-summary call' {

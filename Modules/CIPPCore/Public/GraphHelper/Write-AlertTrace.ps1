@@ -128,8 +128,8 @@ function Write-AlertTrace {
 
     # One-time seed: the first reconcile for a cmdlet/tenant pair after the upgrade treats the
     # items of its last AlertLastRun row as already open, so nothing that was already known
-    # is announced as new.
-    if ($Existing.Count -eq 0 -and $PurgeStats.Dropped -eq 0) {
+    # is announced as new. Seeds only matter for items this run found.
+    if ($Hashed.Count -gt 0 -and $Existing.Count -eq 0 -and $PurgeStats.Dropped -eq 0) {
         try {
             $LastRunTable = Get-CIPPTable -tablename 'AlertLastRun'
             $SafeLastRunKey = ConvertTo-CIPPODataFilterValue -Value "$($TenantFilter)-$($CmdletName)" -Type String
@@ -172,7 +172,8 @@ function Write-AlertTrace {
         }
     }
 
-    $Snoozes = Get-CIPPActiveAlertSnoozes -CmdletName $CmdletName -TenantFilter $TenantFilter
+    # Snoozes are only matched against found items; resolving stored rows below does not need them.
+    $Snoozes = if ($Hashed.Count -gt 0) { Get-CIPPActiveAlertSnoozes -CmdletName $CmdletName -TenantFilter $TenantFilter } else { @{} }
 
     $Writes = [System.Collections.Generic.List[object]]::new()
     $Notify = [System.Collections.Generic.List[object]]::new()

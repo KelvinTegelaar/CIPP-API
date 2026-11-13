@@ -8,7 +8,16 @@
     "scid_91",
     "scid_92",
     "scid_89",
-    "scid_2011"
+    "scid_2011",
+    "CMMC (SI.L1-b.1.xiii)",
+    "CMMC (SI.L1-b.1.xiv)",
+    "CMMC (SI.L1-b.1.xv)",
+    "CMMC (SI.L2-3.14.2)",
+    "CMMC (SI.L2-3.14.4)",
+    "CMMC (SI.L2-3.14.5)",
+    "NIST SP 800-171 (3.14.2)",
+    "NIST SP 800-171 (3.14.4)",
+    "NIST SP 800-171 (3.14.5)"
   ],
   "impact": "High Impact",
   "helpText": "Deploys and enforces a Microsoft Defender Antivirus configuration policy via Intune. Controls scanning behaviour, real-time protection, cloud protection, network protection, signature updates, CPU priority, and threat remediation actions.",

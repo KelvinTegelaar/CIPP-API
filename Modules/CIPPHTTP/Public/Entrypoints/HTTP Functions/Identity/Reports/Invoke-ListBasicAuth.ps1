@@ -1,7 +1,7 @@
 Function Invoke-ListBasicAuth {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Identity.AuditLog.Read
     .DESCRIPTION
@@ -19,9 +19,9 @@ Function Invoke-ListBasicAuth {
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
-    $currentTime = Get-Date -Format 'yyyy-MM-ddTHH:MM:ss'
-    $ts = (Get-Date).AddDays(-30)
-    $endTime = $ts.ToString('yyyy-MM-ddTHH:MM:ss')
+    $currentTime = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
+    $ts = (Get-Date).ToUniversalTime().AddDays(-30)
+    $endTime = $ts.ToString('yyyy-MM-ddTHH:mm:ss')
     ##Create Filter for basic auth sign-ins
     $filters = "createdDateTime ge $($endTime)Z and createdDateTime lt $($currentTime)Z and (clientAppUsed eq 'AutoDiscover' or clientAppUsed eq 'Exchange ActiveSync' or clientAppUsed eq 'Exchange Online PowerShell' or clientAppUsed eq 'Exchange Web Services' or clientAppUsed eq 'IMAP4' or clientAppUsed eq 'MAPI Over HTTP' or clientAppUsed eq 'Offline Address Book' or clientAppUsed eq 'Outlook Anywhere (RPC over HTTP)' or clientAppUsed eq 'Other clients' or clientAppUsed eq 'POP3' or clientAppUsed eq 'Reporting Web Services' or clientAppUsed eq 'Authenticated SMTP' or clientAppUsed eq 'Outlook Service')"
     if ($TenantFilter -ne 'AllTenants') {

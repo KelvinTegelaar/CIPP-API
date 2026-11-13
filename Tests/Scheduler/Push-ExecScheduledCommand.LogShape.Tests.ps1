@@ -25,9 +25,12 @@ BeforeAll {
     function Get-CippException { param($Exception) @{ NormalizedError = "$Exception" } }
 
     # Each command declares Headers, so the unknown-parameter strip does not remove it before logging.
-    function Push-ExecGenerateReportBuilderReport { param($TenantFilter, $TemplateName, $Blocks, $Headers) 'Successfully generated report' }
-    function Invoke-CIPPOffboardingJob { param($TenantFilter, $Username, $Options, $Headers, $TaskInfo) 'Offboarding queued' }
-    function Add-CIPPGroupMember { param($TenantFilter, $GroupType, $Member, $GroupId, $Headers) 'Added member' }
+    # The executor only runs functions from the CIPP modules, so the command lives in a module of that name.
+    $null = New-Module -Name CIPPCore -ScriptBlock {
+        function Push-ExecGenerateReportBuilderReport { param($TenantFilter, $TemplateName, $Blocks, $Headers) 'Successfully generated report' }
+        function Invoke-CIPPOffboardingJob { param($TenantFilter, $Username, $Options, $Headers, $TaskInfo) 'Offboarding queued' }
+        function Add-CIPPGroupMember { param($TenantFilter, $GroupType, $Member, $GroupId, $Headers) 'Added member' }
+    } | Import-Module -Force -PassThru
 
     $script:PrincipalMarker = 'eyJpZGVudGl0eVByb3ZpZGVyIjoiYWFkIn0-principal-marker'
 
@@ -55,6 +58,10 @@ BeforeAll {
     . $FunctionPath
 }
 
+AfterAll {
+    Remove-Module -Name CIPPCore -Force -ErrorAction SilentlyContinue
+}
+
 Describe 'Push-ExecScheduledCommand log shape' {
     BeforeEach {
         Mock Set-CippScheduledTaskContext {}
@@ -66,12 +73,6 @@ Describe 'Push-ExecScheduledCommand log shape' {
         Mock Write-LogMessage {}
         Mock Send-CIPPScheduledTaskAlert {}
         Mock Get-AzDataTableEntity { [pscustomobject]@{ PartitionKey = 'ScheduledTask'; RowKey = 'task-shape-1'; TaskState = 'Pending' } }
-        # The SUT reads the module gate and parameter names from Get-Command, then invokes the command by name.
-        Mock Get-Command {
-            $Params = @{}
-            foreach ($P in 'TenantFilter', 'TemplateName', 'Blocks', 'Username', 'Options', 'TaskInfo', 'GroupType', 'Member', 'GroupId', 'Headers') { $Params[$P] = [pscustomobject]@{ Name = $P } }
-            [pscustomobject]@{ Module = 'CIPPCore'; Parameters = $Params }
-        }
 
         $script:Shapes = @(
             New-ShapeItem -Command 'Push-ExecGenerateReportBuilderReport' -Name 'Scheduled tenUsers365 - AllTenants' -Tenant 'contoso.onmicrosoft.com' -Parameters @{

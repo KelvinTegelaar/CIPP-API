@@ -22,6 +22,9 @@ function Invoke-ExecCPVPermissions {
             $CPVConsentParams.ResetSP = $true
         }
 
+        # Any configured partner tenant gets partner treatment, not just the primary
+        $IsPartnerTenant = $TenantFilter -in @('PartnerTenant', $env:TenantID) -or $Tenant.isPartnerTenantRow -eq $true
+
         $CpvKey = "$($Tenant.customerId)"
         $CpvTable = Get-CIPPTable -TableName cpvtenants
         $ExistingCpvRow = $null
@@ -29,9 +32,9 @@ function Invoke-ExecCPVPermissions {
         $FailureMessage = $null
         $GraphRequest = try {
             $ExistingCpvRow = Get-CIPPAzDataTableEntity @CpvTable -Filter "PartitionKey eq 'Tenant' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $CpvKey)'"
-            if ($TenantFilter -notin @('PartnerTenant', $env:TenantID)) {
+            if (-not $IsPartnerTenant) {
                 Set-CIPPCPVConsent @CPVConsentParams
-            } else {
+            } elseif ($TenantFilter -eq 'PartnerTenant') {
                 $TenantFilter = $env:TenantID
                 $Tenant = [PSCustomObject]@{
                     displayName       = '*Partner Tenant'
@@ -41,7 +44,7 @@ function Invoke-ExecCPVPermissions {
             $PermissionResults = @(Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $TenantFilter) +
             @(Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $TenantFilter)
             $PermissionResults
-            if ($TenantFilter -notin @('PartnerTenant', $env:TenantID)) {
+            if (-not $IsPartnerTenant) {
                 Set-CIPPSAMAdminRoles -TenantFilter $TenantFilter
             }
         } catch {

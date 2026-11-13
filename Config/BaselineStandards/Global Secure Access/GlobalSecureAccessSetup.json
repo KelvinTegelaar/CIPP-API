@@ -1,0 +1,73 @@
+{
+  "name": "GlobalSecureAccessSetup",
+  "label": "Set up Global Secure Access",
+  "cat": "Global Secure Access",
+  "impact": "Low Impact",
+  "helpText": "Onboards the tenant to Global Secure Access and sets the Conditional Access signalling that restores users' source IP addresses and enables compliant network checks. Uses Entra ID P1. Onboarding cannot be undone.",
+  "executiveText": "Turns on Microsoft's Security Service Edge for the tenant so its network security features can be used, and lets Conditional Access see where sign-ins really come from when traffic flows through Global Secure Access.",
+  "docsDescription": "Starts Global Secure Access onboarding when the tenant is not onboarded (a running onboarding counts as compliant, so it is never started twice) and sets the signalingStatus of the Global Secure Access Conditional Access settings. Signalling is needed for compliant network conditions and for Conditional Access and sign-in logs to show users' original source IP addresses. Onboarding is one way: there is no offboarding through this standard.",
+  "impactColour": "info",
+  "addedDate": "2026-11-11",
+  "powershellEquivalent": "Invoke-MgBetaOnboardNetworkAccess; Update-MgBetaNetworkAccessSettingConditionalAccess",
+  "recommendedBy": [
+    "CIPP"
+  ],
+  "requiredCapabilities": [
+    [
+      "AAD_PREMIUM",
+      "AAD_PREMIUM_P2"
+    ]
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "signalingStatus": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Conditional Access signalling",
+      "options": [
+        {
+          "value": "enabled",
+          "label": "Enabled"
+        },
+        {
+          "value": "disabled",
+          "label": "Disabled"
+        }
+      ],
+      "default": "enabled",
+      "recommended": "enabled"
+    }
+  },
+  "expected": {
+    "onboardingStatus": {
+      "$anyOf": [
+        "onboarded",
+        "onboardingInProgress"
+      ]
+    },
+    "signalingStatus": "%signalingStatus%"
+  },
+  "read": {
+    "cacheType": "NetworkAccess"
+  },
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "POST",
+        "uri": "networkAccess/microsoft.graph.networkaccess.onboard",
+        "body": {},
+        "continueOnError": true
+      },
+      {
+        "method": "PATCH",
+        "uri": "networkAccess/settings/conditionalAccess",
+        "body": {
+          "signalingStatus": "%signalingStatus%"
+        },
+        "continueOnError": true
+      }
+    ]
+  }
+}

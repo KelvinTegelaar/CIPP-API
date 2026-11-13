@@ -11,7 +11,7 @@ function Get-CIPPIntuneReportExportJob {
         [string]$TenantFilter,
 
         [Parameter(Mandatory = $true)]
-        [ValidateSet('AppInvRawData', 'AppInstallStatusAggregate')]
+        [ValidateSet('AppInvRawData', 'AppInstallStatusAggregate', 'NoncompliantDevicesAndSettingsV3')]
         [string]$ReportName
     )
 

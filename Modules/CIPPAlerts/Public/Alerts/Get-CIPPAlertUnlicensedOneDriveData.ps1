@@ -11,7 +11,7 @@ function Get-CIPPAlertUnlicensedOneDriveData {
         $TenantFilter
     )
 
-    $HasSharePoint = Test-CIPPStandardLicense -StandardName 'UnlicensedOneDriveData' -TenantFilter $TenantFilter -Preset SharePoint
+    $HasSharePoint = Test-CIPPStandardLicense -StandardName 'UnlicensedOneDriveData' -TenantFilter $TenantFilter -Preset SharePoint -SkipLog
     if (-not $HasSharePoint) {
         return
     }

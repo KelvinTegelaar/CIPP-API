@@ -17,7 +17,10 @@ function Export-CIPPBaselineTemplate {
         The Package column still rides along on each template entity, so tags
         reconstitute on the importing instance as a bonus.
         Related templates are separate files, not embedded - a baseline referencing
-        dozens of policies would otherwise produce one enormous blob.
+        dozens of policies would otherwise produce one enormous blob. Templates a bundled
+        template links by GUID travel too (a CA template's Global Secure Access security
+        profile template, a security profile template's filtering policy templates), so
+        the links resolve on the importing instance.
     .OUTPUTS
         $null when the baseline does not exist, else
         @{ Baseline = <baseline file object>; Templates = @(<templates-table entities>) }
@@ -66,6 +69,11 @@ function Export-CIPPBaselineTemplate {
                 displayName = $DisplayName
                 path        = ('{0}/{1}.json' -f $Partition, $Basename)
             })
+        foreach ($Link in @(Get-CIPPTemplateLink -PartitionKey $Partition -Template $TemplateJson)) {
+            if (-not (& $CollectTemplate $Link.Partition $Link.Ref)) {
+                Write-Information "Export-CIPPBaselineTemplate: $Partition '$DisplayName' links $($Link.Partition) '$($Link.Ref)', which no longer exists - not bundled."
+            }
+        }
         $true
     }
 
@@ -118,10 +126,11 @@ function Export-CIPPBaselineTemplate {
                 })
         }
         [PSCustomObject]@{
-            name       = $Stage.name
-            logic      = $Stage.logic ?? 'and'
-            conditions = @($Stage.conditions)
-            standards  = @($ExportStandards)
+            name            = $Stage.name
+            logic           = $Stage.logic ?? 'and'
+            conditions      = @($Stage.conditions)
+            conditionGroups = @($Stage.conditionGroups)
+            standards       = @($ExportStandards)
         }
     }
 

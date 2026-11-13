@@ -159,3 +159,40 @@ Describe 'Resolve-CippReportDataToken' {
         $Blocks[1].title | Should -Be '4 devices'
     }
 }
+
+Describe 'Resolve-CippReportDataToken Security Simulations collections' {
+    BeforeAll {
+        function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) $script:Licensed }
+        function Get-CIPPCAGapAnalysis {
+            param($TenantFilter)
+            $script:Analyses++
+            [PSCustomObject]@{
+                policyCount = 12; enabledCount = 9; reportOnlyCount = 2; disabledCount = 1
+                findings    = @(
+                    [PSCustomObject]@{ title = 'No MFA for guests'; severity = 'High'; category = 'MFA' }
+                    [PSCustomObject]@{ title = 'Legacy auth allowed'; severity = 'Critical'; category = 'Legacy' }
+                    [PSCustomObject]@{ title = 'Break glass missing'; severity = 'High'; category = 'Resilience' }
+                )
+                personaMatrix = [PSCustomObject]@{ cells = @(
+                        [PSCustomObject]@{ persona = 'Admins'; control = 'Require MFA'; state = 'Covered' }
+                        [PSCustomObject]@{ persona = 'Guests'; control = 'Require MFA'; state = 'Gap' }
+                    ) }
+                score       = [PSCustomObject]@{ score = 6; scoreMax = 10; enforcedControls = 14; applicableControls = 20; criticalFindings = 1; highFindings = 2 }
+            }
+        }
+    }
+    BeforeEach { $script:Analyses = 0; $script:Licensed = $true }
+
+    It 'reads findings, persona coverage and the posture score from one gap analysis' {
+        $Blocks = Resolve-Blocks @(@{ type = 'note'; content = 'High: &CAGapFindings.severity=High&, gaps: &CAPersonaCoverage.state=Gap&, score &CAPosture.score:max&/&CAPosture.scoreMax:max&, policies &CAPosture.policyCount:max&' })
+        $Blocks[0].content | Should -Be 'High: 2, gaps: 1, score 6/10, policies 12'
+        $script:Analyses | Should -Be 1
+    }
+
+    It 'leaves the tokens as written when the tenant is not licensed for Conditional Access' {
+        $script:Licensed = $false
+        $Blocks = Resolve-Blocks @(@{ type = 'note'; content = 'Findings: &CAGapFindings&' })
+        $Blocks[0].content | Should -Be 'Findings: &CAGapFindings&'
+        $script:Analyses | Should -Be 0
+    }
+}

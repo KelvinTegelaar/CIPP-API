@@ -3,7 +3,8 @@ function Get-CippApiClient {
     .SYNOPSIS
         Get the API client details
     .DESCRIPTION
-        This function retrieves the API client details
+        This function retrieves the API client details. A lookup by AppId is read once per invocation: the access
+        checks and log lines of one API request all ask for the same client.
     .PARAMETER AppId
         The AppId of the API client
     .EXAMPLE
@@ -13,6 +14,10 @@ function Get-CippApiClient {
     param (
         $AppId
     )
+
+    if ($AppId -and $script:CippApiClientMemo -and $script:CippApiClientMemo.ContainsKey("$AppId")) {
+        return $script:CippApiClientMemo["$AppId"]
+    }
 
     $Table = Get-CIPPTable -TableName 'ApiClients'
     if ($AppId) {
@@ -41,6 +46,10 @@ function Get-CippApiClient {
             $Client.IPRange = @('Any')
         }
         $Client
+    }
+    if ($AppId) {
+        $script:CippApiClientMemo ??= @{}
+        $script:CippApiClientMemo["$AppId"] = $Apps
     }
     return $Apps
 }

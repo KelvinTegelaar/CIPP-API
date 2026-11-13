@@ -2,7 +2,7 @@
 Function Invoke-ListDomainAnalyser {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Tenant.DomainAnalyser.Read
     .DESCRIPTION

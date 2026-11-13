@@ -101,11 +101,12 @@ Describe 'Start-IntuneReportExportSweep' {
             [pscustomobject]@{ PartitionKey = 'a.com'; RowKey = 'AppInvRawData'; SubmittedAt = (& $script:Ago 3) }
             [pscustomobject]@{ PartitionKey = 'a.com'; RowKey = 'AppInstallStatusAggregate'; SubmittedAt = (& $script:Ago 5) }
             [pscustomobject]@{ PartitionKey = 'b.com'; RowKey = 'AppInvRawData'; SubmittedAt = (& $script:Ago 0.5) }
+            [pscustomobject]@{ PartitionKey = 'b.com'; RowKey = 'NoncompliantDevicesAndSettingsV3'; SubmittedAt = (& $script:Ago 4) }
         }
         Start-IntuneReportExportSweep
         $script:Started.Count | Should -Be 1
         $Batch = @($script:Started[0].Batch)
-        ($Batch | ForEach-Object { "$($_.TenantFilter)/$($_.Name)/$($_.FunctionName)" }) | Should -Be @('a.com/DetectedApps/ExecCIPPDBCache', 'a.com/IntuneAppInstallStatus/ExecCIPPDBCache')
+        ($Batch | ForEach-Object { "$($_.TenantFilter)/$($_.Name)/$($_.FunctionName)" }) | Should -Be @('a.com/DetectedApps/ExecCIPPDBCache', 'a.com/IntuneAppInstallStatus/ExecCIPPDBCache', 'b.com/IntuneNonCompliantSettings/ExecCIPPDBCache')
     }
 
     It 'starts nothing when no export is waiting' {

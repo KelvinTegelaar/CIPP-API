@@ -58,9 +58,10 @@ function Send-CIPPBaselineAlert {
 
         $RunId = Get-CippBaselineRunContext
         $Table = Get-CippTable -tablename 'BaselineAlertQueue'
-        Add-CIPPAzDataTableEntity @Table -Entity @{
+        # One row per (standard, event): overlapping runs that both see the transition overwrite each other instead of queuing twice.
+        Add-CIPPAzDataTableEntity @Table -Force -Entity @{
             PartitionKey    = "$($Item.TenantFilter)"
-            RowKey          = [string](New-Guid).Guid
+            RowKey          = ('{0}-{1}' -f ($Item.Standard -replace '#', '~'), $Result.AlertEvent)
             Event           = "$($Result.AlertEvent)"
             Standard        = "$($Item.Standard)"
             Label           = "$Label"

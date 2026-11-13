@@ -2,7 +2,11 @@
   "name": "TeamsFederationConfiguration",
   "label": "Federation Configuration for Microsoft Teams",
   "cat": "Teams Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (AC.L1-b.1.iii)",
+    "CMMC (AC.L2-3.1.20)",
+    "NIST SP 800-171 (3.1.20)"
+  ],
   "impact": "Medium Impact",
   "helpText": "Controls external Teams communication: allow or block all external domains, allow or block a specific list, and whether unmanaged consumer Teams users can communicate with the organization.",
   "executiveText": "Governs who employees can reach over Teams outside the organization. Restricting federation to trusted partners reduces phishing and impersonation exposure through external chat.",

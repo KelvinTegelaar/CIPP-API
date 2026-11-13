@@ -17,7 +17,7 @@ function Set-CIPPSponsor {
     $Requests = foreach ($User in $Users) {
         @{
             id      = ($RequestId++).ToString()
-            method  = 'PUT'
+            method  = 'POST'
             url     = "users/$User/sponsors/`$ref"
             body    = @{ '@odata.id' = "https://graph.microsoft.com/beta/users/$Sponsor" }
             headers = @{ 'Content-Type' = 'application/json' }

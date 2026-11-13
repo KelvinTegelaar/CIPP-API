@@ -533,8 +533,9 @@ function Invoke-EditGroup {
         }
     }
 
-    # Only process licenses for Security groups
-    if ($GroupType -eq 'Security') {
+    # Group-based licensing works on any security-enabled group: security, mail-enabled security, or a
+    # Microsoft 365 group with securityEnabled. Synced groups too, licenses are cloud-only and not overwritten by sync
+    if ($OrgGroup.securityEnabled -or $GroupType -in @('Security', 'Mail-Enabled Security')) {
         $AddLicenses = @($UserObj.AddLicenses | Where-Object { $_ } | ForEach-Object { $_.value ?? $_ })
         $RemoveLicenses = @($UserObj.RemoveLicenses | Where-Object { $_ } | ForEach-Object { $_.value ?? $_ })
 

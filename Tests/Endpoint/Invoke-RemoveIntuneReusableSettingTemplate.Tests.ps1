@@ -14,6 +14,7 @@ BeforeAll {
     }
 
     function Get-CippTable { param($tablename) @{} }
+    function Test-CippTemplateWriteAccess { param($Permission, $PartitionKey, $RowKey) $true }
     function Get-CIPPAzDataTableEntity { param($Filter, $Property) return [pscustomobject]@{ PartitionKey = 'IntuneReusableSettingTemplate'; RowKey = 'template-x' } }
     function Remove-CIPPAzDataTableEntity { param([switch]$Force, $Entity) $script:lastRemoved = $Entity; $script:lastForce = $Force }
     function Write-LogMessage { param($Headers, $API, $message, $sev, $LogData) $script:logs += $message }

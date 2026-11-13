@@ -2,7 +2,10 @@
   "name": "NudgeMFA",
   "label": "Sets the state for the request to setup Authenticator",
   "cat": "Entra (AAD) Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (IA.L2-3.5.3)",
+    "NIST SP 800-171 (3.5.3)"
+  ],
   "impact": "Low Impact",
   "helpText": "Configures the registration campaign that nudges users to set up the Authenticator app at sign-in, including snooze behaviour and optional group targeting.",
   "executiveText": "Drives MFA registration to completion by prompting unregistered users at sign-in, with controlled snoozing so adoption happens without hard-blocking work.",

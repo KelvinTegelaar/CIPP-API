@@ -69,6 +69,19 @@ Describe 'ConvertTo-CippReportPdf' {
             $branding = @{ colour = '#0E4C92'; secondaryColour = '#F77F00'; watermarkText = 'DRAFT'; watermarkEnabled = $true; footerText = '%tenantname% report' }
             Test-IsPdf (ConvertTo-CippReportPdf -Blocks $b -Branding $branding -TenantName 'Contoso') | Should -BeTrue
         }
+        It 'renders text carrying control characters instead of failing the encoding preflight' {
+            # A `v escape in a double-quoted PowerShell string left a vertical tab (U+000B) in a stored ORCA
+            # result and the whole report failed to render (CyberDrain/CIPP#1180). Stored results are not
+            # regenerated on fix, so the sanitizer has to absorb the character.
+            $md = "**Remediation:** Publish an SPF TXT record. For Microsoft 365 only: $([char]0x0B)=spf1 include:spf.protection.outlook.com -all.`tTabbed$([char]0x0C)form feed$([char]0x00)nul"
+            $b = @(@{ type = 'test'; title = 'SPF'; status = 'Failed'; static = $false; content = $md })
+            Test-IsPdf (ConvertTo-CippReportPdf -Blocks $b) | Should -BeTrue
+            # Whitespace-like controls collapse to one space, other controls (NUL, C1) are dropped.
+            [CIPP.Reporting.ReportMarkdown]::Sanitize("a$([char]0x0B)$([char]0x0C)b$([char]0x00)c$([char]0x80)d") | Should -Be 'a bcd'
+            # A line feed is the kit's line break (a stat card's figure over its label), so it survives.
+            [CIPP.Reporting.ReportMarkdown]::Sanitize("`n") | Should -Be "`n"
+            [CIPP.Reporting.ReportMarkdown]::Sanitize("a`n$([char]0x0B)b") | Should -Be "a`n b"
+        }
         It 'still renders when the branding logo cannot be embedded (skips it gracefully)' {
             $b = @(@{ type = 'blank'; content = '<p>x</p>' })
             # An unusable logo (here a PNG OfficeIMO rejects) must not sink the whole report.
@@ -100,7 +113,7 @@ Describe 'ConvertTo-CippReportPdf' {
             $Rows = @(1..20 | ForEach-Object { @{ name = "Filler $_"; value = 'x'; target = 'y' } }) +
                 @(@{ name = 'Tall'; value = $Tall; target = 'z' }, @{ name = 'After'; value = 'x'; target = 'y' })
             $b = @(@{ type = 'richtable'; title = 'Straddle'; columns = $Cols; rows = $Rows; limit = 50 })
-            $Pages = @([OfficeIMO.Pdf.PdfReadDocument]::Open((ConvertTo-CippReportPdf -Blocks $b)).Pages | ForEach-Object { $_.ExtractText() })
+            $Pages = @([OfficeIMO.Pdf.PdfDocument]::Load([IO.MemoryStream]::new((ConvertTo-CippReportPdf -Blocks $b))).Pages | ForEach-Object { $_.ExtractText() })
             $Start = @(0..($Pages.Count - 1) | Where-Object { $Pages[$_] -match 'ROWSTART' })
             $End = @(0..($Pages.Count - 1) | Where-Object { $Pages[$_] -match 'ROWEND' })
             $Start | Should -HaveCount 1
@@ -115,17 +128,17 @@ Describe 'ConvertTo-CippReportPdf' {
     Context 'Image formats' {
         BeforeAll {
             # 1x1 fixtures: the smallest valid GIF and WebP, a two-colour SVG, and a corrupt PNG.
-            $script:Gif = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+            $script:Gif = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=='
             $script:Webp = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA'
             $script:Svg = 'data:image/svg+xml;base64,' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="#F77F00"/></svg>'))
             $script:Block = @(@{ type = 'blank'; title = 'Formats'; content = '<p>x</p>' })
         }
-        It 'identifies every raster OfficeIMO decodes, not just PNG and JPEG' {
-            [CIPP.Reporting.ReportComponents]::ImageContentType([CIPP.Reporting.ReportComponents]::DecodeImage($script:Gif)) | Should -Be 'image/gif'
-            [CIPP.Reporting.ReportComponents]::ImageContentType([CIPP.Reporting.ReportComponents]::DecodeImage($script:Webp)) | Should -Be 'image/webp'
+        It 'identifies every raster OfficeIMO decodes, keeping only the first frame of a GIF' {
+            [CIPP.Reporting.ReportComponents]::ImageContentType([CIPP.Reporting.ReportComponents]::DecodeImage($script:Gif, $false)) | Should -Be 'image/png'
+            [CIPP.Reporting.ReportComponents]::ImageContentType([CIPP.Reporting.ReportComponents]::DecodeImage($script:Webp, $false)) | Should -Be 'image/webp'
         }
         It 'rasterises an SVG once at decode time so every placement sees a PNG' {
-            $bytes = [CIPP.Reporting.ReportComponents]::DecodeImage($script:Svg)
+            $bytes = [CIPP.Reporting.ReportComponents]::DecodeImage($script:Svg, $false)
             [CIPP.Reporting.ReportComponents]::ImageContentType($bytes) | Should -Be 'image/png'
             # 40x20 source scaled to 1200px on the long side, aspect kept.
             $size = [CIPP.Reporting.ReportComponents]::ImageSize($bytes)
@@ -133,8 +146,42 @@ Describe 'ConvertTo-CippReportPdf' {
             $size.Item2 | Should -Be 600
         }
         It 'drops what OfficeIMO cannot identify rather than failing the render' {
-            [CIPP.Reporting.ReportComponents]::DecodeImage($script:TinyPng) | Should -BeNullOrEmpty
-            [CIPP.Reporting.ReportComponents]::DecodeImage('data:image/png;base64,' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('not an image'))) | Should -BeNullOrEmpty
+            [CIPP.Reporting.ReportComponents]::DecodeImage($script:TinyPng, $false) | Should -BeNullOrEmpty
+            [CIPP.Reporting.ReportComponents]::DecodeImage('data:image/png;base64,' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('not an image')), $false) | Should -BeNullOrEmpty
+        }
+        It 'shrinks an oversized logo to fit 1040x400 and keeps a small one as uploaded' {
+            $Big = [OfficeIMO.Drawing.OfficeRasterImage]::new(3000, 1500, [OfficeIMO.OfficeColor]::FromRgb(20, 120, 200))
+            $bytes = [CIPP.Reporting.ReportComponents]::DecodeImage('data:image/png;base64,' + [Convert]::ToBase64String([OfficeIMO.Drawing.OfficePngWriter]::Encode($Big)), $false)
+            $size = [CIPP.Reporting.ReportComponents]::ImageSize($bytes)
+            $size.Item1 | Should -Be 800
+            $size.Item2 | Should -Be 400
+            [CIPP.Reporting.ReportComponents]::ImageContentType($bytes) | Should -Be 'image/png'
+
+            $Small = [OfficeIMO.Drawing.OfficePngWriter]::Encode([OfficeIMO.Drawing.OfficeRasterImage]::new(240, 80, [OfficeIMO.OfficeColor]::FromRgb(20, 120, 200)))
+            [Convert]::ToBase64String([CIPP.Reporting.ReportComponents]::DecodeImage('data:image/png;base64,' + [Convert]::ToBase64String($Small), $false)) | Should -Be ([Convert]::ToBase64String($Small))
+        }
+        It 'stores an opaque oversized cover as a 2000px JPEG and keeps a transparent one as PNG' {
+            # Noise, like a photo: a flat colour would compress smaller as PNG and rightly stay one.
+            $Pixels = [byte[]]::new(2100 * 1050 * 4)
+            [Random]::new(1).NextBytes($Pixels)
+            for ($i = 3; $i -lt $Pixels.Length; $i += 4) { $Pixels[$i] = 255 }
+            $Opaque = [OfficeIMO.Drawing.OfficePngWriter]::Encode([OfficeIMO.Drawing.OfficeRasterImage]::FromRgba32(2100, 1050, $Pixels))
+            $bytes = [CIPP.Reporting.ReportComponents]::DecodeImage('data:image/png;base64,' + [Convert]::ToBase64String($Opaque), $true)
+            [CIPP.Reporting.ReportComponents]::ImageContentType($bytes) | Should -Be 'image/jpeg'
+            $size = [CIPP.Reporting.ReportComponents]::ImageSize($bytes)
+            $size.Item1 | Should -Be 2000
+            $size.Item2 | Should -Be 1000
+
+            $SmallPixels = [byte[]]::new(400 * 300 * 4)
+            [Random]::new(1).NextBytes($SmallPixels)
+            for ($i = 3; $i -lt $SmallPixels.Length; $i += 4) { $SmallPixels[$i] = 255 }
+            $SmallOpaque = [OfficeIMO.Drawing.OfficePngWriter]::Encode([OfficeIMO.Drawing.OfficeRasterImage]::FromRgba32(400, 300, $SmallPixels))
+            [CIPP.Reporting.ReportComponents]::ImageContentType([CIPP.Reporting.ReportComponents]::DecodeImage('data:image/png;base64,' + [Convert]::ToBase64String($SmallOpaque), $true)) | Should -Be 'image/png'
+
+            $Clear = [OfficeIMO.Drawing.OfficePngWriter]::Encode([OfficeIMO.Drawing.OfficeRasterImage]::new(4000, 3000))
+            $bytes = [CIPP.Reporting.ReportComponents]::DecodeImage('data:image/png;base64,' + [Convert]::ToBase64String($Clear), $true)
+            [CIPP.Reporting.ReportComponents]::ImageContentType($bytes) | Should -Be 'image/png'
+            [CIPP.Reporting.ReportComponents]::ImageSize($bytes).Item1 | Should -Be 2000
         }
         It 'renders a GIF logo, an SVG logo and a WebP cover' {
             Test-IsPdf (ConvertTo-CippReportPdf -Blocks $script:Block -Branding @{ logo = $script:Gif }) | Should -BeTrue
@@ -193,9 +240,9 @@ Describe 'Watermark layering' {
         $Marked = @($Streams | Where-Object { $_.Contains($Marker) })
         # a content page and the divider at least; the cover never carries one
         $Marked.Count | Should -BeGreaterOrEqual 2
-        $Streams[0] | Should -Not -Match 'Tj\s*ET\s*Q\s*$'
+        $Streams[0] | Should -Not -Match ([regex]::Escape($Marker))
         foreach ($Data in $Marked) {
-            $Data.TrimEnd() | Should -Match "$([regex]::Escape($Marker))\s*ET\s*Q$"
+            $Data.TrimEnd() | Should -Match "$([regex]::Escape($Marker))\s*(EMC\s*)?ET\s*Q$"
             ([regex]::Matches($Data, '> Tj|\) Tj') | Select-Object -Last 1).Value | Should -Be '> Tj'
             $Data.LastIndexOf(' re') | Should -BeLessThan $Data.IndexOf($Marker)
             # rising left to right like the client's rotate(-45deg), the divider's tag angle written back
@@ -212,7 +259,7 @@ Describe 'Watermark layering' {
         $Streams = [regex]::Matches($Pdf, '(?s)<< /Length (\d+) >>\s*stream\n(.*?)\nendstream') | ForEach-Object { $_.Groups[2].Value }
         $Marked = @($Streams | Where-Object { $_ -match '0\.707 0\.707 -0\.707 0\.707' })
         $Marked.Count | Should -BeGreaterOrEqual 1
-        foreach ($Data in $Marked) { $Data.TrimEnd() | Should -Match 'Tj\s*ET\s*Q$' }
+        foreach ($Data in $Marked) { $Data.TrimEnd() | Should -Match 'Tj\s*(EMC\s*)?ET\s*Q$' }
     }
 
     It 'stacks a mark wider than the page on full lines rather than overprinting them' {
@@ -274,7 +321,7 @@ Describe 'Cover footer note' {
         $Cover = {
             param($Branding)
             $Bytes = ConvertTo-CippReportPdf -Blocks @(@{ type = 'blank'; title = 'T'; content = '<p>x</p>' }) -Variables @{ coverfooternote = 'Report wording' } -Branding $Branding -TenantName 'Contoso' -ReportName 'T'
-            [OfficeIMO.Pdf.PdfReadDocument]::Open($Bytes).Pages[0].ExtractText()
+            [OfficeIMO.Pdf.PdfDocument]::Load([IO.MemoryStream]::new($Bytes)).Pages[0].ExtractText()
         }
         $Branded = & $Cover @{ colour = '#0E4C92'; coverFooterText = 'Branded wording' }
         $Branded | Should -Match 'BRANDED\s+WORDING'
@@ -287,7 +334,7 @@ Describe 'Cover footer note' {
         $Logo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAKCAYAAACjd+4vAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAfSURBVDhPY+DzmfR/IDADugC98KjFdMOjFtMNjzyLAVL6P4McNkyeAAAAAElFTkSuQmCC'
         $Variables = @{ coversubtitle = 'A deliberately long subtitle that wraps onto a second line on the landscape cover of the report'; covermeta = '24 sharing links' }
         $Bytes = ConvertTo-CippReportPdf -Blocks @(@{ type = 'blank'; title = 'T'; content = '<p>x</p>' }) -Variables $Variables -Branding @{ colour = '#0E4C92'; logo = $Logo } -TenantName 'Contoso Landscape Tenant' -ReportName 'Quarterly Security Review' -Landscape
-        $Cover = [OfficeIMO.Pdf.PdfReadDocument]::Open($Bytes).Pages[0].ExtractText()
+        $Cover = [OfficeIMO.Pdf.PdfDocument]::Load([IO.MemoryStream]::new($Bytes)).Pages[0].ExtractText()
         $Cover | Should -Match 'Contoso\s+Landscape\s+Tenant'
         $Cover | Should -Match '24\s+sharing\s+links'
         $Cover | Should -Match 'CONFIDENTIAL'
@@ -325,7 +372,7 @@ Describe 'Table empty state' {
     It 'draws a table''s emptyText inside the table when it has no rows' {
         $Table = @{ type = 'richtable'; columns = @(@{ header = 'Plan'; key = 'p'; width = 2 }, @{ header = 'Seats'; key = 's'; width = 1 }); rows = @(); limit = 10; emptyText = 'Nothing to list.' }
         $Bytes = ConvertTo-CippReportPdf -Blocks @($Table) -Variables @{} -Branding @{ colour = '#0E4C92' } -TenantName 'Contoso' -ReportName 'T'
-        $Text = ([OfficeIMO.Pdf.PdfReadDocument]::Open($Bytes).Pages | ForEach-Object { $_.ExtractText() }) -join "`n"
+        $Text = ([OfficeIMO.Pdf.PdfDocument]::Load([IO.MemoryStream]::new($Bytes)).Pages | ForEach-Object { $_.ExtractText() }) -join "`n"
         $Text | Should -Match 'PLAN\s+SEATS\s+Nothing to list\.'
     }
 
@@ -335,7 +382,7 @@ Describe 'Table empty state' {
             @{ type = 'database'; title = 'Header only'; format = 'text'; content = "| Name | UPN |`n|---|---|" }
         )
         $Bytes = ConvertTo-CippReportPdf -Blocks $Blocks -Variables @{} -Branding @{ colour = '#0E4C92' } -TenantName 'Contoso' -ReportName 'T'
-        $Text = ([OfficeIMO.Pdf.PdfReadDocument]::Open($Bytes).Pages | ForEach-Object { $_.ExtractText() }) -join "`n"
+        $Text = ([OfficeIMO.Pdf.PdfDocument]::Load([IO.MemoryStream]::new($Bytes)).Pages | ForEach-Object { $_.ExtractText() }) -join "`n"
         $Text | Should -Match 'PLAN\s+Nothing to report\.'
         ([regex]::Matches($Text, 'Nothing to report')).Count | Should -Be 1
     }

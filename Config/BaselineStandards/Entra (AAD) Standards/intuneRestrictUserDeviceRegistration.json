@@ -2,7 +2,14 @@
   "name": "intuneRestrictUserDeviceRegistration",
   "label": "Configure user restriction for Entra device registration",
   "cat": "Entra (AAD) Standards",
-  "tag": [],
+  "tag": [
+    "CMMC (AC.L1-b.1.ii)",
+    "CMMC (AC.L2-3.1.2)",
+    "CMMC (AC.L2-3.1.5)",
+    "FedRAMP B-D (KSI-IAM-ELP)",
+    "NIST SP 800-171 (3.1.2)",
+    "NIST SP 800-171 (3.1.5)"
+  ],
   "impact": "High Impact",
   "helpText": "Controls whether users can register devices with Entra. Tenants where Entra reports this setting as not admin-configurable (commonly because Intune is enabled) are reported but not written to.",
   "executiveText": "Controls whether employees can register their devices for corporate access. Disabling user device registration prevents unauthorized or unmanaged devices from connecting to company resources, enhancing overall security posture.",

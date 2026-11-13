@@ -29,6 +29,8 @@ function New-GraphGetRequest {
         $Headers
     )
 
+    if ($scope -like '*.sharepoint*') { Assert-CIPPSharePointHost -Uri $uri -Scope $scope }
+
     if ($NoAuthCheck -eq $false) {
         $IsAuthorised = Get-AuthorisedRequest -Uri $uri -TenantID $tenantid
     } else {

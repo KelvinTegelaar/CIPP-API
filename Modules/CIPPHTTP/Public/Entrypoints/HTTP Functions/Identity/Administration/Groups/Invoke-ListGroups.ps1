@@ -1,7 +1,7 @@
 function Invoke-ListGroups {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Identity.Group.Read
     .DESCRIPTION

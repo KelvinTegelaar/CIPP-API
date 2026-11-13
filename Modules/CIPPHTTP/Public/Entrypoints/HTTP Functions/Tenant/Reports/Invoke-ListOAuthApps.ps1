@@ -1,7 +1,7 @@
 function Invoke-ListOAuthApps {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         Tenant.Application.Read
     .DESCRIPTION

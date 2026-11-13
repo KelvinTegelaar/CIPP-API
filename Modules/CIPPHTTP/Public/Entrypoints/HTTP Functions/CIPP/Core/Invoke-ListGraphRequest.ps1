@@ -2,7 +2,7 @@
 function Invoke-ListGraphRequest {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,TenantGroup
     .ROLE
         CIPP.Core.Read
     .DESCRIPTION
