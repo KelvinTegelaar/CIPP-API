@@ -170,6 +170,7 @@ function Get-CIPPDBCacheSchedule {
                 'IntuneReusableSettings'
                 'MDEOnboarding'
                 'AutopilotDeploymentProfiles'
+                'AutopilotDeviceModels'
                 'DeviceEnrollmentConfigurations'
                 'IntuneDeviceManagementSettings'
                 'IntuneDataProcessorOnboarding'
