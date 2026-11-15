@@ -6,7 +6,8 @@ function Get-CIPPStatsEnterpriseApps {
     .DESCRIPTION
     Reads the cached ServicePrincipals rows for every tenant and keeps the Application-type principals
     (no managed identities, legacy or social identity provider principals) whose owner is not a Microsoft
-    tenant in the vendor list (Get-CIPPVendorTenantMap), and that are not CIPP's own app. Apps are keyed
+    tenant in the vendor list (Get-CIPPVendorTenantMap) or the tenant the app was found in, and that are
+    not CIPP's own app. Apps are keyed
     on appId, which is the same object across tenants, and the count is the number of distinct tenants
     that have it.
     #>
@@ -23,9 +24,14 @@ function Get-CIPPStatsEnterpriseApps {
         $Apps = @{}
         # One tenant at a time: service principal rows are large, and holding every tenant's peaks the heap.
         # Ordinal order, as a table read returns them: an app's display name is the first one seen.
-        $Tenants = [string[]]@((Get-Tenants -IncludeErrors).defaultDomainName | Where-Object { $_ })
+        $TenantIds = @{}
+        foreach ($TenantRow in (Get-Tenants -IncludeErrors)) {
+            if ($TenantRow.defaultDomainName) { $TenantIds[[string]$TenantRow.defaultDomainName] = [string]$TenantRow.customerId }
+        }
+        $Tenants = [string[]]@($TenantIds.Keys)
         [Array]::Sort($Tenants, [StringComparer]::Ordinal)
         foreach ($Tenant in $Tenants) {
+            $TenantId = $TenantIds[$Tenant]
             foreach ($Row in (Get-CIPPDbItem -Partition $Tenant -Type 'ServicePrincipals')) {
                 if (-not $Row.Data) { continue }
                 $Parsed = try { $ParseJson.Invoke($null, [object[]]@([string]$Row.Data, $Fields)) } catch { $null }
@@ -34,6 +40,8 @@ function Get-CIPPStatsEnterpriseApps {
                     if ([string]::IsNullOrWhiteSpace($AppId)) { continue }
                     if ($Sp.servicePrincipalType -ne 'Application') { continue }
                     if ($CippAppId -and $AppId -eq $CippAppId) { continue }
+                    # Apps the tenant registered itself carry customer-chosen names; only apps owned elsewhere are reported
+                    if ($TenantId -and [string]$Sp.appOwnerOrganizationId -eq $TenantId) { continue }
                     $Vendor = $null
                     if ($Sp.appOwnerOrganizationId -and $VendorTenants.TryGetValue([string]$Sp.appOwnerOrganizationId, [ref]$Vendor) -and $Vendor.VendorType -eq 'Microsoft') { continue }
 

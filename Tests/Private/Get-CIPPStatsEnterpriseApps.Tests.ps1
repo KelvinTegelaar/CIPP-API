@@ -52,6 +52,30 @@ Describe 'Get-CIPPStatsEnterpriseApps' {
         Should -Invoke Get-CIPPDbItem -Times 2 -Exactly -ParameterFilter { $Partition -in 't1.com', 't2.com' -and $Type -eq 'ServicePrincipals' }
     }
 
+    It 'skips apps registered by the tenant they were found in' {
+        $env:ApplicationID = 'cipp-sam-app'
+        Mock Get-Tenants {
+            [pscustomobject]@{ defaultDomainName = 't1.com'; customerId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' }
+            [pscustomobject]@{ defaultDomainName = 't2.com'; customerId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' }
+        }
+        Mock Get-CIPPDbItem {
+            $Rows = @{}
+            $Rows['t1.com'] = @(
+                (New-Row @{ id = '1'; appId = 'own-app'; displayName = 'Contoso Payroll Sync'; appOwnerOrganizationId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'; servicePrincipalType = 'Application' })
+                (New-Row @{ id = '2'; appId = 'saas-app'; displayName = 'SaaS App'; appOwnerOrganizationId = '11111111-1111-1111-1111-111111111111'; servicePrincipalType = 'Application' })
+            )
+            # Another tenant's app is still a third-party app from t2's point of view
+            $Rows['t2.com'] = @(
+                (New-Row @{ id = '3'; appId = 'own-app'; displayName = 'Contoso Payroll Sync'; appOwnerOrganizationId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'; servicePrincipalType = 'Application' })
+            )
+            $Rows[$Partition]
+        }
+        $r = @(Get-CIPPStatsEnterpriseApps)
+        $r.Count | Should -Be 2
+        ($r | Where-Object ID -EQ 'own-app').Count | Should -Be 1
+        ($r | Where-Object ID -EQ 'saas-app').Count | Should -Be 1
+    }
+
     It 'returns an empty list when the read fails' {
         Mock Get-Tenants { [pscustomobject]@{ defaultDomainName = 't1.com' } }
         Mock Get-CIPPDbItem { throw 'boom' }
