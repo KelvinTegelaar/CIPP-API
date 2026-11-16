@@ -78,11 +78,22 @@ function Get-CIPPBaselineAlignment {
         }
     }
 
+    # Rows written before a tenant was excluded in CIPP stay in the table; fleet views leave them out.
+    $ExcludedTenants = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    if ($TenantScores -or $ByStandard) {
+        foreach ($Excluded in @(Get-Tenants -SkipList)) {
+            foreach ($Name in @($Excluded.defaultDomainName, $Excluded.initialDomainName, $Excluded.customerId)) {
+                if ($Name) { [void]$ExcludedTenants.Add("$Name") }
+            }
+        }
+    }
+
     if ($TenantScores) {
         # Status is a flat column, so per-tenant scores need no definitions, JSON parsing or trends.
         $ByTenant = @{}
         foreach ($Entity in (Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey ne ''" -Property PartitionKey, RowKey, TenantName, Status)) {
             $Key = "$($Entity.PartitionKey)"
+            if ($ExcludedTenants.Contains($Key)) { continue }
             if (-not $ByTenant.ContainsKey($Key)) { $ByTenant[$Key] = [System.Collections.Generic.List[object]]::new() }
             $ByTenant[$Key].Add($Entity)
         }
@@ -533,7 +544,7 @@ function Get-CIPPBaselineAlignment {
     }
 
     if ($ByStandard) {
-        $Entities = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey ne ''"
+        $Entities = Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey ne ''" | Where-Object { -not $ExcludedTenants.Contains("$($_.PartitionKey)") }
         $Rows = @($Entities | ForEach-Object { Convert-CIPPBaselineResolvedEntity -Entity $_ -Definitions $Definitions -ResolveTemplateName $ResolveTemplateName })
 
         $FilterInfo = $null

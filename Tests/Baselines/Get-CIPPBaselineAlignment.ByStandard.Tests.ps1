@@ -8,6 +8,7 @@ BeforeAll {
     function ConvertTo-CIPPODataFilterValue { param($Value) "$Value" }
     function Get-CIPPBaselineDefinition { }
     function Get-CIPPBaseline { param($ID) }
+    function Get-Tenants { param([switch]$SkipList) }
     . (Join-Path $BaselinesPath 'Get-CIPPBaselineAlignment.ps1')
     . (Join-Path $BaselinesPath 'Get-CIPPBaselineStageStandards.ps1')
     . (Join-Path $BaselinesPath 'Convert-CIPPBaselineResolvedEntity.ps1')
@@ -88,6 +89,15 @@ Describe 'Get-CIPPBaselineAlignment -ByStandard' {
         @($r.tenants).Count | Should -Be 3
         @($r.trend).Count | Should -Be 2
         @(($r.standards | Where-Object standardName -EQ 'DisableGuests').trend).Count | Should -Be 2
+    }
+
+    It 'leaves out tenants excluded in CIPP' {
+        Mock Get-Tenants { [pscustomobject]@{ defaultDomainName = 'T3.com'; customerId = 'id-3' } }
+        $r = Get-CIPPBaselineAlignment -ByStandard
+        @($r.tenants.tenantFilter | Sort-Object) | Should -Be @('t1.com', 't2.com')
+        $r.fleet.total | Should -Be 7
+        @($r.activeDeviations).Count | Should -Be 0
+        @((Get-CIPPBaselineAlignment -TenantScores).tenantFilter | Sort-Object) | Should -Be @('t1.com', 't2.com')
     }
 
     It "keeps only the baseline's rolled-out standards per tenant stage" {

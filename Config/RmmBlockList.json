@@ -1,0 +1,3251 @@
+{
+  "source": "https://github.com/Lewis-Barry/RMM-Blocker (products.json)",
+  "credits": "Tool list and blocking approach from RMM Guard (https://rmmguard.com) by Lewis Barry and Roy Klooster. Much of the path and network data comes from LOLRMM (https://github.com/magicsword-io/LOLRMM) by magicsword-io and its contributors.",
+  "license": "Apache-2.0. The data was regrouped and changed by RMM Guard; CIPP uses it unchanged and builds its own policies from it.",
+  "version": "1.0.0.22",
+  "products": {
+    "Absolute / Computrace": {
+      "paths": [
+        "*\\ctespersitence*.exe",
+        "*\\ctes.exe",
+        "*\\cteshostsvc*.exe"
+      ],
+      "vendorDomains": [
+        "search.namequery.com",
+        "server.absolute.com"
+      ]
+    },
+    "Access Remote PC": {
+      "paths": [
+        "*\\access remote pc\\*",
+        "*\\rpcnet*.exe",
+        "*\\apc_host*.exe"
+      ]
+    },
+    "Acronis Cyber Protect Connect": {
+      "paths": [
+        "*\\AcronisCyberProtectConnectAgent*.exe",
+        "*\\AcronisCyberProtectConnectQuickAssist*.exe",
+        "*\\Acronis Cyber Protect Connect*\\*",
+        "*\\Remotix\\*"
+      ],
+      "domains": [
+        "cloud.acronis.com",
+        "connect.acronis.com",
+        "gw.remotix.com"
+      ]
+    },
+    "Action1": {
+      "paths": [
+        "*\\action1_agent*.exe",
+        "*\\action1_connector*.exe",
+        "*\\action1_remote*.exe",
+        "*\\action1_update*.exe",
+        "*\\Windows\\Action1\\*"
+      ],
+      "domains": [
+        "a1-backend-packages.s3.amazonaws.com",
+        "action1.com"
+      ]
+    },
+    "Addigy": {
+      "domains": [
+        "prod.addigy.com",
+        "grtmprod.addigy.com",
+        "agents.addigy.com"
+      ]
+    },
+    "Adobe Connect": {
+      "paths": [
+        "*\\adobe\\connect\\*",
+        "*\\adobeconnectaddin*.exe"
+      ],
+      "domains": [
+        "adobeconnect.com"
+      ]
+    },
+    "AeroAdmin": {
+      "paths": [
+        "*\\aeroadmin\\*",
+        "*\\AeroAdmin*.exe"
+      ],
+      "domains": [
+        "aeroadmin.com"
+      ]
+    },
+    "AliWangWang": {
+      "paths": [
+        "*\\aliwangwang\\*",
+        "*\\alitask*.exe"
+      ],
+      "domains": [
+        "wangwang.taobao.com"
+      ]
+    },
+    "AlloCentra": {
+      "paths": [
+        "*\\allocentra-agent*.exe"
+      ],
+      "domains": [
+        "api.allocentra.co.za"
+      ]
+    },
+    "Alpemix": {
+      "paths": [
+        "*\\AlpemixService*.exe",
+        "*\\alpemix*.exe"
+      ],
+      "domains": [
+        "alpemix.com",
+        "teknopars.com"
+      ]
+    },
+    "Alpha RMM": {
+      "paths": [
+        "*\\AlphaAgent*.exe"
+      ]
+    },
+    "Ammyy Admin": {
+      "paths": [
+        "*\\ammyy admin\\*",
+        "*\\AMMYY_Admin*.exe",
+        "*\\AA_v3.exe",
+        "*\\aa_v*.exe",
+        "*\\AMMYY\\*"
+      ],
+      "domains": [
+        "ammyy.com"
+      ],
+      "ips": [
+        "136.243.104.235",
+        "136.243.104.242",
+        "136.243.18.122"
+      ]
+    },
+    "Any Support": {
+      "paths": [
+        "*\\AnySupport\\*"
+      ],
+      "domains": [
+        "anysupport.net"
+      ]
+    },
+    "AnyDesk": {
+      "paths": [
+        "*\\anydesk\\*",
+        "*\\anydesk*.exe"
+      ],
+      "domains": [
+        "boot.net.anydesk.com",
+        "net.anydesk.com"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "KHRWM533LU"
+          }
+        ],
+        "cask": "anydesk",
+        "source": "https://download.anydesk.com/anydesk.dmg",
+        "verified": "2026-11-08"
+      }
+    },
+    "Anyplace Control": {
+      "paths": [
+        "*\\anyplace control\\*",
+        "*\\awhost32*.exe"
+      ],
+      "domains": [
+        "anyplace-control.com"
+      ]
+    },
+    "AnyViewer": {
+      "paths": [
+        "*\\anyviewer\\*",
+        "*\\anyviewer*.exe"
+      ],
+      "domains": [
+        "anyviewer.com"
+      ]
+    },
+    "Apache Guacamole": {
+      "paths": [
+        "*\\guacd*.exe"
+      ],
+      "domains": [
+        "guacamole.apache.org"
+      ]
+    },
+    "Aspia": {
+      "paths": [
+        "*\\aspia_client*.exe",
+        "*\\Aspia\\*"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "B4CLUJLVCY"
+          }
+        ],
+        "source": "https://github.com/dchapyshev/aspia/releases/download/v3.3.5/aspia-host-3.3.5-universal.pkg",
+        "verified": "2026-11-08"
+      }
+    },
+    "Atera": {
+      "paths": [
+        "*\\atera networks\\ateraagent\\*",
+        "*\\ateraagent*.exe",
+        "*\\atera_agent*.exe",
+        "*\\Atera Networks\\*",
+        "*\\AgentPackageSTRemote.exe",
+        "*\\AgentPackageMonitoring.exe",
+        "*\\AgentPackageHeartbeat.exe",
+        "*\\AgentPackageFileExplorer.exe",
+        "*\\AgentPackageRunCommandInteractive.exe"
+      ],
+      "domains": [
+        "agent-api.atera.com",
+        "agenthb.atera.com",
+        "agentreporting.atera.com",
+        "agentreportingstore.blob.core.windows.net",
+        "app.atera.com",
+        "appcdn.atera.com",
+        "atera-agent-heartbeat.servicebus.windows.net",
+        "atera.pubnubapi.com",
+        "getalphacontrol.com",
+        "packagesstore.blob.core.windows.net",
+        "ps.atera.com",
+        "pubsub.atera.com"
+      ]
+    },
+    "Auvik": {
+      "paths": [
+        "*\\auvikagent*.exe",
+        "*\\auvik.agent*.exe",
+        "*\\auvikservice*.exe",
+        "*\\auvik.engine*.exe",
+        "*\\Auvik\\*"
+      ],
+      "domains": [
+        "auvik.com",
+        "my.auvik.com"
+      ]
+    },
+    "AweSun / Aweray": {
+      "paths": [
+        "*\\aweray\\awesun\\*",
+        "*\\AweSun*.exe",
+        "*\\aweray_remote*.exe"
+      ],
+      "domains": [
+        "client-api.aweray.com"
+      ]
+    },
+    "Backdrop Connect": {
+      "paths": [
+        "*\\Connect.Backdrop.cloud*.exe"
+      ]
+    },
+    "baramundi Management Suite": {
+      "domains": [
+        "baramundi.com",
+        "docs.baramundi.com",
+        "isodownload.baramundi.com"
+      ],
+      "paths": [
+        "*\\bma.exe"
+      ]
+    },
+    "Barracuda": {
+      "domains": [
+        "rmm.barracudamsp.com",
+        "barracudamsp.com"
+      ]
+    },
+    "Beaconly": {
+      "paths": [
+        "*\\beacon-agent*.exe"
+      ]
+    },
+    "BeAnywhere Support Express": {
+      "paths": [
+        "*\\beanywhere support express\\*",
+        "*\\BASEClient*.exe"
+      ],
+      "domains": [
+        "beanywhere.com"
+      ]
+    },
+    "BeInSync": {
+      "paths": [
+        "*\\Beinsync*.exe"
+      ],
+      "domains": [
+        "beinsync.com",
+        "beinsync.net"
+      ]
+    },
+    "BeyondTrust / Bomgar": {
+      "paths": [
+        "*\\beyondtrust\\*",
+        "*\\monitoring client\\plugins\\bomgar\\*",
+        "*\\bomgarjump\\*",
+        "*\\bomgar-scc*.exe",
+        "*\\bomgar-rdp*.exe",
+        "*\\jumpservice*.exe",
+        "*\\jumpclient*.exe",
+        "*\\bomgar-pac*.exe"
+      ],
+      "domains": [
+        "beyondtrustcloud.com",
+        "bomgarcloud.com"
+      ]
+    },
+    "Bitvise SSH": {
+      "paths": [
+        "*\\bitvise ssh client\\*",
+        "*\\bitvise ssh server\\*",
+        "*\\BvSshClient-Inst*.exe",
+        "*\\BvSshServer-Inst*.exe"
+      ]
+    },
+    "BlackCrypt RMM Agent": {
+      "paths": [
+        "*\\BlackCryptAgent*.dll"
+      ],
+      "domains": [
+        "blackcryptknight.com"
+      ]
+    },
+    "Bluetrait": {
+      "paths": [
+        "*\\Bluetrait Agent\\*",
+        "*\\Bluetrait MSP Agent*.exe",
+        "*\\BluetraitUserAgent.exe"
+      ],
+      "domains": [
+        "bluetrait.io"
+      ]
+    },
+    "Borealis": {
+      "paths": [
+        "*\\bsag\\*",
+        "*\\Borealis\\*"
+      ]
+    },
+    "Breeze": {
+      "paths": [
+        "*\\breeze-agent*.exe",
+        "*\\breeze-watchdog*.exe",
+        "*\\breeze-user-helper*.exe",
+        "*\\breeze-backup*.exe",
+        "*\\Breeze\\*"
+      ],
+      "domains": [
+        "breeze.app",
+        "breezermm.com",
+        "eu.2breeze.app",
+        "us.2breeze.app"
+      ]
+    },
+    "CA DSM / Client Automation Remote Control": {
+      "paths": [
+        "*\\CA\\DSM\\bin\\rcHost.exe"
+      ]
+    },
+    "Centurion": {
+      "paths": [
+        "*\\ctiserv*.exe"
+      ],
+      "domains": [
+        "centuriontech.com"
+      ]
+    },
+    "Chrome Remote Desktop": {
+      "paths": [
+        "*\\google\\chrome remote desktop\\*",
+        "*\\remoting_host*.exe",
+        "*\\remoting_native_messaging_host*.exe",
+        "*\\remoting_desktop*.exe",
+        "*\\remoting_assistance_host*.exe"
+      ],
+      "domains": [
+        "chromoting-client.talkgadget.google.com",
+        "chromoting-host.talkgadget.google.com",
+        "chromoting-oauth.talkgadget.google.com",
+        "remotedesktop-pa.googleapis.com",
+        "remotedesktop.google.com"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "EQHXZ8M8AV",
+            "signingId": "com.google.chromeremotedesktop.me2me-host"
+          },
+          {
+            "teamId": "EQHXZ8M8AV",
+            "signingId": "com.google.chrome.remote_desktop.native-messaging-host"
+          },
+          {
+            "teamId": "EQHXZ8M8AV",
+            "signingId": "com.google.chrome.remote_desktop.remote-assistance-host-v2"
+          },
+          {
+            "teamId": "EQHXZ8M8AV",
+            "signingId": "remoting_me2me_host_service"
+          },
+          {
+            "teamId": "EQHXZ8M8AV",
+            "signingId": "remoting_agent_process_broker"
+          },
+          {
+            "teamId": "EQHXZ8M8AV",
+            "signingId": "remote_webauthn"
+          }
+        ],
+        "cask": "chrome-remote-desktop-host",
+        "source": "https://dl.google.com/chrome-remote-desktop/chromeremotedesktop.dmg",
+        "verified": "2026-11-08"
+      }
+    },
+    "Cloud RAS": {
+      "paths": [
+        "*\\CloudRaSd*.exe",
+        "*\\CloudRaCmd*.exe",
+        "*\\CloudRaService*.exe",
+        "*\\CloudRaUtilities*.exe"
+      ]
+    },
+    "Cloudflare Tunnel": {
+      "paths": [
+        "*\\cloudflared*.exe"
+      ],
+      "domains": [
+        "cfargotunnel.com",
+        "cftunnel.com",
+        "h2.cftunnel.com",
+        "quic.cftunnel.com",
+        "region1.v2.argotunnel.com",
+        "region2.v2.argotunnel.com",
+        "trycloudflare.com",
+        "update.argotunnel.com",
+        "us-region1.v2.argotunnel.com",
+        "us-region2.v2.argotunnel.com"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "68WVV388M8",
+            "signingId": "cloudflared"
+          }
+        ],
+        "source": "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-amd64.tgz",
+        "verified": "2026-11-08"
+      }
+    },
+    "Connect / Support tools (generic names)": {
+      "paths": [
+        "*\\supporttool.exe",
+        "*\\ConnectDetector*.exe",
+        "*\\ManualLauncher*.exe",
+        "*\\Connect.exe",
+        "*\\ConnectAppSetup*.exe",
+        "*\\ConnectShellSetup*.exe"
+      ]
+    },
+    "ConnectWise Automate / LabTech": {
+      "paths": [
+        "*\\connectwise\\*",
+        "*\\ltsvcmon*.exe",
+        "*\\ltsvc*.exe",
+        "*\\lttray*.exe"
+      ],
+      "domains": [
+        "hostedrmm.com"
+      ],
+      "vendorDomains": [
+        "connectwise.com"
+      ]
+    },
+    "ConnectWise Control / ScreenConnect": {
+      "paths": [
+        "*\\connectwise\\*",
+        "*\\screenconnect client\\*",
+        "*\\connectwisechat-customer*.exe",
+        "*\\screenconnect.clientservice*.exe",
+        "*\\screenconnect.windowsclient*.exe",
+        "*\\connectwisecontrol.client*.exe",
+        "*\\screenconnect*.exe",
+        "*\\ConnectWiseControl*.exe",
+        "*\\connectwise*.exe",
+        "*\\ScreenConnect*Client*\\*"
+      ],
+      "domains": [
+        "247ithelp.com",
+        "control.connectwise.com",
+        "live.screenconnect.com",
+        "screenconnect.com",
+        "itsupport247.net"
+      ]
+    },
+    "Controlio": {
+      "paths": [
+        "*\\bbl.exe",
+        "*\\wesvc.exe"
+      ]
+    },
+    "ControlR": {
+      "paths": [
+        "*\\ControlR.Agent.Installer*.exe",
+        "*\\ControlR.Agent*.exe",
+        "*\\ControlR.DesktopClient*.exe",
+        "*\\ControlR\\*"
+      ],
+      "domains": [
+        "demo.controlr.app"
+      ]
+    },
+    "ControlUp": {
+      "paths": [
+        "*\\cuAgent.exe",
+        "*\\cuAgentHelper.exe",
+        "*\\Avacee\\sip_agent\\SIPAgent.exe",
+        "*\\Avacee\\sip_agent\\cu_rc.exe",
+        "*\\ControlUp\\AgentManager\\AgentManager.exe"
+      ],
+      "domains": [
+        "sip.controlup.com"
+      ]
+    },
+    "CrossLoop": {
+      "paths": [
+        "*\\CrossLoopConnect*.exe",
+        "*\\crossloopservice*.exe"
+      ],
+      "domains": [
+        "crossloop.com",
+        "crossloop.en.softonic.com"
+      ]
+    },
+    "Crosstec Remote Control": {
+      "paths": [
+        "*\\crosstec remote control\\*"
+      ]
+    },
+    "CSExec": {
+      "paths": [
+        "*\\csexec*.exe"
+      ]
+    },
+    "Dameware": {
+      "paths": [
+        "*\\solarwinds\\dameware mini remote control*\\*",
+        "*\\dameware remote everywhere agent\\*",
+        "*\\solarwinds\\*",
+        "*\\dwrcs*.exe",
+        "*\\DameWare Remote Support*.exe",
+        "*\\dwrcc*.exe",
+        "*\\dwrcst*.exe",
+        "*\\SolarWinds-Dameware-DRS*.exe",
+        "*\\DameWare Mini Remote Control*.exe",
+        "*\\SolarWinds-Dameware-MRC*.exe"
+      ],
+      "domains": [
+        "dameware.com"
+      ]
+    },
+    "Dataplicity": {
+      "domains": [
+        "dataplicity.com"
+      ]
+    },
+    "Datto RMM / Autotask": {
+      "paths": [
+        "*\\centrastage\\*",
+        "*\\AEMAgent*.exe",
+        "*\\CagService*.exe"
+      ],
+      "domains": [
+        "01cc.centrastage.net",
+        "01concordcc.centrastage.net",
+        "01concordws.centrastage.net",
+        "01syrahcc.centrastage.net",
+        "01vidalcc.centrastage.net",
+        "01vidalws.centrastage.net",
+        "01ws.centrastage.net",
+        "02cc.centrastage.net",
+        "02ws.centrastage.net",
+        "03cc.centrastage.net",
+        "03ws.centrastage.net",
+        "agent-gateway.concord.rmm.datto.com",
+        "agent-gateway.merlot.rmm.datto.com",
+        "agent-gateway.pinotage.rmm.datto.com",
+        "agent-gateway.syrah.rmm.datto.com",
+        "agent-gateway.vidal.rmm.datto.com",
+        "agent-gateway.zinfandel.rmm.datto.com",
+        "cc.centrastage.net",
+        "centrastage.net",
+        "concord-agent-comms.centrastage.net",
+        "concord-agent-notifications.centrastage.net",
+        "concord-agent.centrastage.net",
+        "concord-audit.centrastage.net",
+        "concord-frontend-api.centrastage.net",
+        "concord-ips.centrastage.net",
+        "concord-monitoring.centrastage.net",
+        "concord-realtime.centrastage.net",
+        "concord.centrastage.net",
+        "concord.rmm.datto.com",
+        "concordcc.centrastage.net",
+        "concordrmm.centrastage.net",
+        "cpt-concord.centrastage.net",
+        "cpt-concord.centrastage.net.s3.amazonaws.com",
+        "cpt-merlot.centrastage.net",
+        "cpt-merlot.centrastage.net.s3.amazonaws.com",
+        "cpt-syrah.centrastage.net",
+        "cpt-syrah.centrastage.net.s3.amazonaws.com",
+        "cpt-vidal.centrastage.net",
+        "cpt-vidal.centrastage.net.s3.amazonaws.com",
+        "cpt-zinfandel.centrastage.net",
+        "cpt-zinfandel.centrastage.net.s3.amazonaws.com",
+        "cpt.centrastage.net",
+        "cpt.centrastage.net.s3.amazonaws.com",
+        "features.concord.rmm.datto.com",
+        "features.merlot.rmm.datto.com",
+        "features.pinotage.rmm.datto.com",
+        "features.syrah.rmm.datto.com",
+        "features.vidal.rmm.datto.com",
+        "features.zinfandel.rmm.datto.com",
+        "merlot-agent-comms.centrastage.net",
+        "merlot-agent-notifications.centrastage.net",
+        "merlot-agent.centrastage.net",
+        "merlot-audit.centrastage.net",
+        "merlot-frontend-api.centrastage.net",
+        "merlot-ips.centrastage.net",
+        "merlot-monitoring.centrastage.net",
+        "merlot-realtime.centrastage.net",
+        "merlot.centrastage.net",
+        "merlot.rmm.datto.com",
+        "merlotrmm.centrastage.net",
+        "pinot-frontend-api.centrastage.net",
+        "pinotage-agent-comms.centrastage.net",
+        "pinotage-agent-notifications.centrastage.net",
+        "pinotage-agent.centrastage.net",
+        "pinotage-audit.centrastage.net",
+        "pinotage-frontend-api.centrastage.net",
+        "pinotage-ips.centrastage.net",
+        "pinotage-monitoring.centrastage.net",
+        "pinotage-realtime.centrastage.net",
+        "pinotage.centrastage.net",
+        "pinotage.rmm.datto.com",
+        "pinotagermm.centrastage.net",
+        "rmm.datto.com",
+        "storage.centrastage.net",
+        "storage.rmm.datto.com",
+        "syrah-agent-comms.centrastage.net",
+        "syrah-agent-notifications.centrastage.net",
+        "syrah-agent.centrastage.net",
+        "syrah-audit.centrastage.net",
+        "syrah-frontend-api.centrastage.net",
+        "syrah-ips.centrastage.net",
+        "syrah-monitoring.centrastage.net",
+        "syrah-realtime.centrastage.net",
+        "syrah.centrastage.net",
+        "syrah.rmm.datto.com",
+        "syrahcc.centrastage.net",
+        "syrahrmm.centrastage.net",
+        "syrahws.centrastage.net",
+        "ts.centrastage.net",
+        "tunnel-ips.centrastage.net",
+        "tunnel.rmm.datto.com",
+        "update-concord.centrastage.net",
+        "update-merlot.centrastage.net",
+        "update-syrah.centrastage.net",
+        "update-vidal.centrastage.net",
+        "update-zinfandel.centrastage.net",
+        "update.centrastage.net",
+        "vidal-agent-comms.centrastage.net",
+        "vidal-agent-notifications.centrastage.net",
+        "vidal-agent.centrastage.net",
+        "vidal-audit.centrastage.net",
+        "vidal-frontend-api.centrastage.net",
+        "vidal-ips.centrastage.net",
+        "vidal-monitoring.centrastage.net",
+        "vidal-realtime.centrastage.net",
+        "vidal.centrastage.net",
+        "vidal.rmm.datto.com",
+        "vidalcc.centrastage.net",
+        "vidalrmm.centrastage.net",
+        "webrtc.rmm.datto.com",
+        "zinfandel-agent-comms.centrastage.net",
+        "zinfandel-agent-notifications.centrastage.net",
+        "zinfandel-agent.centrastage.net",
+        "zinfandel-audit.centrastage.net",
+        "zinfandel-frontend-api.centrastage.net",
+        "zinfandel-ips.centrastage.net",
+        "zinfandel-monitoring.centrastage.net",
+        "zinfandel-realtime.centrastage.net",
+        "zinfandel.centrastage.net",
+        "zinfandel.rmm.datto.com",
+        "zinfandelrmm.centrastage.net"
+      ]
+    },
+    "DeskDay": {
+      "domains": [
+        "deskday.ai",
+        "app.deskday.ai"
+      ]
+    },
+    "DeskRoll": {
+      "paths": [
+        "*\\DeskRollUA*.exe",
+        "*\\Deskroll*.exe"
+      ]
+    },
+    "DesktopNow": {
+      "paths": [
+        "*\\nch software\\desktopnow\\*",
+        "*\\desktopnow*.exe"
+      ],
+      "domains": [
+        "nchuser.com"
+      ]
+    },
+    "Distant Desktop": {
+      "paths": [
+        "*\\distant-desktop*.exe",
+        "*\\ddsystem*.exe"
+      ],
+      "domains": [
+        "distantdesktop.com",
+        "signalserver.xyz"
+      ]
+    },
+    "DocConnect": {
+      "paths": [
+        "*\\DocConnect.Agent*.exe"
+      ]
+    },
+    "Domotz": {
+      "paths": [
+        "*\\domotz\\*",
+        "*\\domotz*.exe",
+        "*\\domotz_bash*.exe",
+        "*\\Domotz Pro Desktop App*.exe"
+      ],
+      "domains": [
+        "cell-1.domotz.com",
+        "domotz.co",
+        "domotz.com"
+      ]
+    },
+    "DragonDisk": {
+      "paths": [
+        "*\\Almageste\\DragonDisk\\*",
+        "*\\dragondisk*.exe"
+      ]
+    },
+    "Duet Display": {
+      "paths": [
+        "*\\duetdisp*.exe",
+        "*\\duetsetup*.exe"
+      ],
+      "domains": [
+        "rdp.duetdisplay.com",
+        "duetdisplay.com",
+        "itagent.com"
+      ]
+    },
+    "DWService": {
+      "paths": [
+        "*\\dwagent\\*",
+        "*\\dwagent*.exe",
+        "*\\dwagsvc*.exe",
+        "*\\dwaglnc*.exe"
+      ],
+      "domains": [
+        "dwservice.net"
+      ]
+    },
+    "eHorus / Pandora RC": {
+      "paths": [
+        "*\\ehorus_agent\\*",
+        "*\\ehorus standalone*.exe",
+        "*\\ehorus_cmd*.exe",
+        "*\\ehorus_tray*.exe",
+        "*\\ehorus_kill*.exe",
+        "*\\ehorus_agent*.exe",
+        "*\\ehorus_uit*.exe",
+        "*\\ehorus_launcher*.exe"
+      ],
+      "domains": [
+        "ehorus.com",
+        "portal.ehorus.com"
+      ]
+    },
+    "Electric AI (Kaseya)": {
+      "paths": [
+        "*\\kaseya\\*",
+        "*\\kausrtsk*.exe"
+      ],
+      "domains": [
+        "electric.ai"
+      ]
+    },
+    "EMCO Remote Console": {
+      "domains": [
+        "emcosoftware.com"
+      ]
+    },
+    "EMCO Remote Installer": {
+      "paths": [
+        "*\\emco\\remote agents\\remote installer\\*",
+        "*\\emco\\remote installer\\*"
+      ]
+    },
+    "Encapto": {
+      "domains": [
+        "encapto.com"
+      ]
+    },
+    "Ericom": {
+      "paths": [
+        "*\\ericom software\\ericom access server\\*",
+        "*\\ericom software\\ericom connect remote agent\\*",
+        "*\\ericomconnnectconfigurationtool*.exe",
+        "*\\accessserver*.exe",
+        "*\\ericomrdp*.exe",
+        "*\\EricomConnectRemoteHost*.exe",
+        "*\\ericomconnectconfigurationtool*.exe"
+      ],
+      "vendorDomains": [
+        "ericom.com"
+      ]
+    },
+    "ESET Remote Administrator": {
+      "paths": [
+        "*\\eratool*.exe",
+        "*\\era.exe",
+        "*\\ERAAgent*.exe"
+      ]
+    },
+    "ESQ RMM": {
+      "paths": [
+        "*\\esq sst\\rmm agent\\*"
+      ]
+    },
+    "ezHelp": {
+      "paths": [
+        "*\\ezhelp\\server\\*",
+        "*\\ezHelpManager*.exe",
+        "*\\ezhelpclientmanager*.exe",
+        "*\\ezhelpclient*.exe",
+        "*\\ezhelp*.exe"
+      ],
+      "domains": [
+        "ezhelp.co.kr"
+      ]
+    },
+    "Faronics Core": {
+      "paths": [
+        "*\\FaronicsCoreAgent.exe",
+        "*\\CoreAgentService.exe"
+      ],
+      "domains": [
+        "upd.faronicslabs.com"
+      ]
+    },
+    "Faronics Deep Freeze": {
+      "paths": [
+        "*\\DFServ.exe",
+        "*\\DFServEx.exe",
+        "*\\DFWks.exe"
+      ],
+      "domains": [
+        "deepfreeze.com",
+        "cloud.faronics.com"
+      ]
+    },
+    "Faronics Deploy": {
+      "paths": [
+        "*\\FaronicsDeployAgent.exe",
+        "*\\FWAService.exe",
+        "*\\FWA_UI_Agent.exe",
+        "*\\FRCServer.exe"
+      ],
+      "domains": [
+        "deploy.faronics.com",
+        "faronicsdeploy.com",
+        "faronicscloud.com",
+        "remotepro-us-west-2.faronics.com",
+        "remotepro-us-east-1.faronics.com",
+        "remotepro-ca-central-1.faronics.com",
+        "remotepro-eu-west-1.faronicsdeploy.com",
+        "remotepro-ap-southeast-1.faronicsdeploy.com",
+        "remotepro-sa-east-1.faronicsdeploy.com"
+      ]
+    },
+    "Faronics Insight": {
+      "paths": [
+        "*\\FIStudentSvc.exe",
+        "*\\FIStudentAgent.exe",
+        "*\\FIStudentUI.exe",
+        "*\\STAHelper.exe"
+      ],
+      "domains": [
+        "faronics.com",
+        "support.faronics.com",
+        "docs.faronics.com"
+      ]
+    },
+    "FastViewer": {
+      "paths": [
+        "*\\fastviewer remoted service\\*",
+        "*\\FastViewer*.exe",
+        "*\\fastmaster*.exe",
+        "*\\fastclient*.exe"
+      ],
+      "domains": [
+        "fastviewer.com"
+      ]
+    },
+    "FixMe.IT": {
+      "paths": [
+        "*\\FixMeit Expert Setup*.exe",
+        "*\\FixMeit Unattended Access Setup*.exe",
+        "*\\TiExpertStandalone*.exe",
+        "*\\fixmeitclient*.exe",
+        "*\\TiClientCore*.exe",
+        "*\\FixMeit Client*.exe",
+        "*\\TiExpertCore*.exe",
+        "*\\TiClientHelper*.exe"
+      ],
+      "domains": [
+        "fixme.it",
+        "techinline.net"
+      ]
+    },
+    "FleetDeck": {
+      "paths": [
+        "*\\fleetdeck_commander_launcher*.exe",
+        "*\\fleetdeck_agent*.exe",
+        "*\\fleetdeck_commander_svc*.exe",
+        "*\\fleetdeck_agent_svc*.exe",
+        "*\\fleetdeck_installer*.exe",
+        "*\\fleetdeck-agent*.exe",
+        "*\\Temp\\FleetDeck\\*"
+      ],
+      "domains": [
+        "agentmqtt.fleetdeck.io",
+        "checkip.zmazonaws.com",
+        "fleetdeck.io"
+      ]
+    },
+    "Fortra": {
+      "domains": [
+        "fortra.com"
+      ]
+    },
+    "Freshservice": {
+      "paths": [
+        "*\\FSAgentService*.exe",
+        "*\\FSAgentAutoUpdate*.exe",
+        "*\\FSAgentCrashStatusUpdater*.exe",
+        "*\\FSWmiScanner*.exe",
+        "*\\Freshservice.DiscoveryProbe.Window*.exe",
+        "*\\Freshservice.DiscoveryProbe.ScanService*.exe",
+        "*\\Freshservice.DiscoveryProbe.AutoFlush*.exe",
+        "*\\Freshservice.DiscoveryProbe.OIDLibraryPuller*.exe",
+        "*\\Freshservice.DiscoveryProbe.ProgressBar*.exe",
+        "*\\FSProbeReporter*.exe",
+        "*\\FSProbeCrashStatusUpdater*.exe",
+        "*\\Freshworks\\FreshServiceProbe\\*",
+        "*\\Freshdesk\\Freshservice Discovery Agent\\*"
+      ],
+      "domains": [
+        "api.fdcollab.com",
+        "apicdn-wchat.freshchat.com",
+        "fdcollab.com",
+        "fstools.freshasset.com",
+        "fstools.freshservice.com",
+        "rtschannel.com",
+        "static.freshdev.io",
+        "webpush.freshchat.com",
+        "freshservice.com"
+      ]
+    },
+    "GatherPlace": {
+      "domains": [
+        "gatherplace.com",
+        "gatherplace.net"
+      ]
+    },
+    "GetScreen": {
+      "paths": [
+        "*\\getscreen\\*",
+        "*\\GetScreen*.exe"
+      ],
+      "domains": [
+        "getscreen.me",
+        "go.getscreen.me",
+        "image.getscreen.me"
+      ]
+    },
+    "GLPI Agent": {
+      "paths": [
+        "*\\GLPI-Agent\\*"
+      ],
+      "domains": [
+        "glpi-project.org",
+        "nightly.glpi-project.org",
+        "forum.glpi-project.org",
+        "glpi-network.com",
+        "services.glpi-network.com"
+      ]
+    },
+    "Gorelo": {
+      "paths": [
+        "*\\Gorelo.Rmm.Setup*.exe",
+        "*\\Gorelo.RemoteManagement.Agent*.exe",
+        "*\\Gorelo.RemoteManagement.Shell*.exe",
+        "*\\Gorelo.Rmm.Installer.Handler*.exe",
+        "*\\Gorelo.Rmm.Installer*.exe"
+      ],
+      "domains": [
+        "app.gorelo.io",
+        "gorelo-rmm.azurewebsites.net",
+        "gw.usw.gorelo.tech",
+        "lr.rmm.pod1.usw.gorelo.tech",
+        "public.rmm.pod1.usw.gorelo.tech",
+        "r1.rmm.uw.gorelo.tech",
+        "sr.rmm.pod1.usw.gorelo.tech"
+      ]
+    },
+    "GoTo Meeting / Opener": {
+      "paths": [
+        "*\\GoTo Opener\\*",
+        "*\\g2mcomm*.exe",
+        "*\\goto opener*.exe",
+        "*\\g2m_download*.exe",
+        "*\\G2MChat*.exe",
+        "*\\G2MCodecInstExtractor*.exe",
+        "*\\G2MCoreInstExtractor*.exe",
+        "*\\G2MFeedback*.exe",
+        "*\\G2MInstaller*.exe",
+        "*\\G2MInstallerExtractor*.exe",
+        "*\\G2MInstHigh*.exe",
+        "*\\G2MLauncher*.exe",
+        "*\\G2MMatchMaking*.exe",
+        "*\\G2MMaterials*.exe",
+        "*\\G2MPolling*.exe",
+        "*\\G2MQandA*.exe",
+        "*\\G2MRecorder*.exe",
+        "*\\G2MScrUtil64*.exe",
+        "*\\G2MSessionControl*.exe",
+        "*\\G2MStart*.exe",
+        "*\\G2MTesting*.exe",
+        "*\\G2MTranscoder*.exe",
+        "*\\G2MUninstall*.exe",
+        "*\\g2mupload*.exe",
+        "*\\g2mvideoconference*.exe",
+        "*\\G2MView*.exe",
+        "*\\GoToScrUtils*.exe"
+      ]
+    },
+    "GoTo Resolve": {
+      "paths": [
+        "*\\GoToResolveExternalModuleHandler*.exe",
+        "*\\GoToResolveFileManager*.exe",
+        "*\\GoToResolveLoggerProcess*.exe",
+        "*\\GoToResolveNetworkChecker*.exe",
+        "*\\GoToResolveProcessChecker*.exe",
+        "*\\GoToResolveQuickView*.exe",
+        "*\\GoToResolveRegistryEditor*.exe",
+        "*\\GoToResolveRemoteControl*.exe",
+        "*\\GoToResolveService*.exe",
+        "*\\GoToResolveServiceManager*.exe",
+        "*\\GoToResolveTerminal*.exe",
+        "*\\GoToResolveTools32*.exe",
+        "*\\GoToResolveTools64*.exe",
+        "*\\GoToResolveUi*.exe",
+        "*\\GoToResolveUnattended*.exe",
+        "*\\GoToResolveUnattendedRemover*.exe",
+        "*\\GoToResolveUnattendedUi*.exe",
+        "*\\GoTo Resolve Unattended\\*"
+      ]
+    },
+    "GoToAssist": {
+      "paths": [
+        "*\\gotoassist remote support\\*",
+        "*\\gotoassist*.exe",
+        "*\\GoTo Assist Opener*.exe",
+        "*\\g2ax_comm_customer*.exe",
+        "*\\g2ax_comm_expert*.exe",
+        "*\\g2ax_service*.exe"
+      ],
+      "domains": [
+        "cdn.getgo.com",
+        "desktopstreaming.com",
+        "fastsupport.com",
+        "gotoassist.at",
+        "gotoassist.com",
+        "gotoassist.me",
+        "helpme.net",
+        "goto.com"
+      ]
+    },
+    "GoToHTTP": {
+      "paths": [
+        "*\\gotohttpremotecontrolfrombrowser\\*",
+        "*\\gotohttp*.exe",
+        "*\\GotoHTTP_x64*.exe"
+      ],
+      "domains": [
+        "gotohttp.com"
+      ]
+    },
+    "Goverlan / EV Reach": {
+      "paths": [
+        "*\\goverlan inc\\goverlanagent\\*",
+        "*\\PJ Technologies\\GOVsrv\\*",
+        "*\\goverrmc*.exe",
+        "*\\GovAgentx64*.exe",
+        "*\\goverlan*.exe",
+        "*\\GovAgentInstallHelper*.exe",
+        "*\\GovReachClient*.exe",
+        "*\\govsrv*.exe"
+      ],
+      "domains": [
+        "goverlan.com"
+      ]
+    },
+    "GP remote executables (generic names)": {
+      "paths": [
+        "*\\gp3.exe",
+        "*\\gp4.exe",
+        "*\\gp5.exe"
+      ]
+    },
+    "GxM RMM": {
+      "paths": [
+        "*\\GxM.Agent*.exe",
+        "*\\GxM\\agent\\*"
+      ]
+    },
+    "HeartbeatRM": {
+      "paths": [
+        "*\\hbrm-x64*.exe",
+        "*\\hbrm-updater-x64*.exe",
+        "*\\HeartbeatRM\\*",
+        "*\\agent-installer-any.exe"
+      ],
+      "domains": [
+        "heartbeatrm.com"
+      ]
+    },
+    "HelpBeam": {
+      "paths": [
+        "*\\helpbeam*.exe"
+      ],
+      "domains": [
+        "helpbeam.software.informer.com"
+      ]
+    },
+    "HelpU": {
+      "paths": [
+        "*\\helpu\\*",
+        "*\\HelpuUpdater*.exe",
+        "*\\HelpuManager*.exe",
+        "*\\helpuserver*.exe",
+        "*\\helpu_install*.exe",
+        "*\\helpuviewer*.exe"
+      ],
+      "domains": [
+        "helpu.co.kr"
+      ]
+    },
+    "HelpWire": {
+      "paths": [
+        "*\\HelpWire Quick*.exe",
+        "*\\helpwire*.exe"
+      ],
+      "domains": [
+        "account.flexihub.com",
+        "api.helpwire.app",
+        "get.helpwire.app",
+        "helpwire.app",
+        "staging.helpwire.app",
+        "stun.helpwire.app",
+        "stunserver.stunprotocol.org"
+      ]
+    },
+    "HopToDesk": {
+      "paths": [
+        "*\\HopToDesk*.exe",
+        "*\\HopToDesk-Standalone*.exe",
+        "*\\privacyhelper.exe"
+      ],
+      "domains": [
+        "api.hoptodesk.com",
+        "download.hoptodesk.com",
+        "hoptodesk.com",
+        "signal.hoptodesk.com",
+        "turn.hoptodesk.com"
+      ]
+    },
+    "I'm InTouch": {
+      "paths": [
+        "*\\intouch*.exe",
+        "*\\I'm InTouch Go Installer*.exe"
+      ],
+      "domains": [
+        "01com.com"
+      ]
+    },
+    "iDrive": {
+      "paths": [
+        "*\\idrive\\*",
+        "*\\IDriveWinSetup*.exe",
+        "*\\IDriveEClassic*.exe"
+      ],
+      "domains": [
+        "idrive.com",
+        "api.idrive.com"
+      ]
+    },
+    "ImmyBot": {
+      "paths": [
+        "*\\ImmyAgent*.exe",
+        "*\\ImmyUpdater*.exe",
+        "*\\ImmyBot.Agent.Ephemeral*.exe",
+        "*\\ImmyBot\\*"
+      ],
+      "domains": [
+        "immy.bot"
+      ]
+    },
+    "Impero": {
+      "paths": [
+        "*\\impero solutions ltd\\impero client\\*",
+        "*\\ImperoInit*.exe",
+        "*\\ImperoClientSVC*.exe"
+      ]
+    },
+    "Instant Housecall": {
+      "paths": [
+        "*\\instant housecall\\*",
+        "*\\InstantHousecall*.exe",
+        "*\\ihcserver*.exe"
+      ],
+      "domains": [
+        "instanthousecall.com",
+        "instanthousecall.net",
+        "secure.instanthousecall.com"
+      ]
+    },
+    "IntelliAdmin": {
+      "paths": [
+        "*\\iadmin*.exe",
+        "*\\iit.exe",
+        "*\\intelliadmin*.exe"
+      ],
+      "domains": [
+        "intelliadmin.com"
+      ]
+    },
+    "InvGate": {
+      "paths": [
+        "*\\InvGate-ED*.exe",
+        "*\\InvGateAssetsRD*.exe",
+        "*\\InvGateRD*.exe",
+        "*\\Inventec\\InvGate.net Client\\*",
+        "*\\DepHlp.exe",
+        "*\\ARPPRODUCTICON.exe"
+      ],
+      "domains": [
+        "docs.invgate.net",
+        "help.invgate.com",
+        "instances-info.invgate.com",
+        "instances-list.invgate.com",
+        "invgate.com",
+        "invgate.net",
+        "lb-insight-001.invgate.net",
+        "releases.invgate.com",
+        "trust-access.invgate.com",
+        "trust.invgate.com"
+      ]
+    },
+    "Iperius Remote": {
+      "paths": [
+        "*\\iperiusremote*.exe",
+        "*\\iperius*.exe"
+      ],
+      "domains": [
+        "iperius-rs.com",
+        "iperius.com",
+        "iperiusremote.com"
+      ]
+    },
+    "ISL Online": {
+      "paths": [
+        "*\\ISL Online*\\ISL Light*\\*",
+        "*\\ISL Online*\\ISL AlwaysOn*\\*",
+        "*\\ISLLight*.exe",
+        "*\\isllightservice*.exe",
+        "*\\islalwaysonmonitor*.exe",
+        "*\\ISLLightClient*.exe"
+      ],
+      "domains": [
+        "islonline.com",
+        "islonline.net"
+      ]
+    },
+    "ITAgent RMM": {
+      "paths": [
+        "*\\ITAgentRMMSender*.exe",
+        "*\\ITAgentRMMSenderSL*.exe",
+        "*\\ITAgentRMMSenderUpdater*.exe"
+      ]
+    },
+    "ITarian / Comodo": {
+      "paths": [
+        "*\\itarian\\endpoint manager\\*",
+        "*\\itarian\\remotecontrol\\*",
+        "*\\ITarianRemoteAccessSetup*.exe",
+        "*\\ITSMService*.exe",
+        "*\\agentu*.exe",
+        "*\\ITSMAgent*.exe",
+        "*\\ComodoRemoteControl*.exe",
+        "*\\RmmService*.exe",
+        "*\\ItsmRsp*.exe",
+        "*\\RMM.Agent*.exe",
+        "*\\RMM.WebRemote*.exe",
+        "*\\RMM.RTC.Proxy*.exe"
+      ],
+      "domains": [
+        "cmdm.comodo.com",
+        "itsm-us1.comodo.com",
+        "mdmsupport.comodo.com",
+        "one.comodo.com",
+        "remoteaccess.itarian.com",
+        "servicedesk.itarian.com"
+      ]
+    },
+    "Ivanti / LANDesk": {
+      "paths": [
+        "*\\LANDesk\\*",
+        "*\\ldsensors*.exe",
+        "*\\landeskagentbootstrap*.exe",
+        "*\\LANDeskPortalManager*.exe",
+        "*\\IvantiRemoteControl*.exe",
+        "*\\issuser*.exe",
+        "*\\ldinv32*.exe",
+        "*\\rcengmgru*.exe"
+      ],
+      "vendorDomains": [
+        "ivanti.com",
+        "ivanticloud.com"
+      ]
+    },
+    "Jump Desktop": {
+      "paths": [
+        "*\\phase five systems\\jump desktop connect\\*",
+        "*\\jumpconnect*.exe",
+        "*\\jumpdesktopconnect*.exe",
+        "*\\jumpdesktop*.exe",
+        "*\\jumpupdater*.exe",
+        "*\\jumpdesktopupdater*.exe"
+      ],
+      "domains": [
+        "jumpdesktop.com",
+        "jumpto.me"
+      ]
+    },
+    "JumpCloud": {
+      "paths": [
+        "*\\jumpcloud\\*",
+        "*\\jumpcloud-agent*.exe",
+        "*\\JumpCloud*.exe"
+      ],
+      "domains": [
+        "api.jumpcloud.com",
+        "assist.jumpcloud.com"
+      ]
+    },
+    "Kabuto": {
+      "paths": [
+        "*\\repairtech\\kabuto\\*",
+        "*\\KabutoSetup*.exe",
+        "*\\Kabuto.Installer*.exe",
+        "*\\Kabuto.Service.Runner*.exe",
+        "*\\Kabuto.App.Runner*.exe"
+      ],
+      "domains": [
+        "kabuto.io"
+      ]
+    },
+    "Kaseya VSA": {
+      "paths": [
+        "*\\kaseya\\*",
+        "*\\kausrtsk*.exe",
+        "*\\agentmon*.exe",
+        "*\\KaUpdHlp*.exe"
+      ],
+      "domains": [
+        "deploy01.kaseya.com",
+        "managedsupport.kaseya.net",
+        "kaseya.com"
+      ]
+    },
+    "KHelpDesk": {
+      "paths": [
+        "*\\khelpdesk\\*",
+        "*\\KHelpDesk*.exe"
+      ],
+      "domains": [
+        "khelpdesk.com.br"
+      ]
+    },
+    "KickIdler": {
+      "domains": [
+        "kickidler.com",
+        "my.kickidler.com"
+      ]
+    },
+    "KiTTY": {
+      "paths": [
+        "*\\kitty*.exe"
+      ]
+    },
+    "Komari": {
+      "paths": [
+        "*\\komari*.exe",
+        "*\\komari-agent*.exe",
+        "*\\Komari\\*"
+      ],
+      "domains": [
+        "komari-document.pages.dev",
+        "komari.wiki"
+      ],
+      "ips": [
+        "45.153.34.132"
+      ]
+    },
+    "Laplink": {
+      "paths": [
+        "*\\laplink everywhere\\*",
+        "*\\laplink gold\\*",
+        "*\\laplink*.exe",
+        "*\\llrcservice*.exe",
+        "*\\laplinkeverywhere*.exe"
+      ],
+      "domains": [
+        "atled.syspectr.com",
+        "everywhere.laplink.com",
+        "le.laplink.com"
+      ]
+    },
+    "Lavawall": {
+      "paths": [
+        "*\\LavawallWin*.exe",
+        "*\\remote-agent.exe",
+        "*\\uihelper.exe"
+      ],
+      "domains": [
+        "api-ca-1.lavawall.com",
+        "caremote1.lavawall.com",
+        "lavawinupdate.lavawall.com"
+      ]
+    },
+    "Level": {
+      "paths": [
+        "*\\level\\*",
+        "*\\Level\\level.exe",
+        "*\\level-windows-amd64*.exe",
+        "*\\level-remote-control-ffmpeg*.exe",
+        "*\\osqueryi.exe",
+        "*\\level.exe"
+      ],
+      "domains": [
+        "agents.level.io",
+        "builds.level.io",
+        "downloads.level.io",
+        "level.io",
+        "online.level.io"
+      ]
+    },
+    "LightRMM": {
+      "paths": [
+        "*\\LightRmmAgentService*.exe",
+        "*\\LightRmmAgent\\*"
+      ],
+      "domains": [
+        "light-rmm-monitor-20260825.azurewebsites.net"
+      ]
+    },
+    "LiteManager": {
+      "paths": [
+        "*\\litemanager*.exe",
+        "*\\ROMFUSClient*.exe",
+        "*\\lmnoipserver*.exe",
+        "*\\ROMServer*.exe",
+        "*\\romviewer*.exe"
+      ],
+      "domains": [
+        "litemanager.com",
+        "litemanager.ru"
+      ]
+    },
+    "LocalXpose": {
+      "paths": [
+        "*\\loclx.exe"
+      ],
+      "domains": [
+        "localxpose.io",
+        "api.localxpose.io"
+      ]
+    },
+    "LogMeIn / GoToMyPC / Rescue": {
+      "paths": [
+        "*\\logmein\\*",
+        "*\\gotomypc\\*",
+        "*\\gotomypc*.exe",
+        "*\\lmi_rescue*.exe",
+        "*\\support-logmeinrescue*.exe",
+        "*\\g2host*.exe",
+        "*\\g2comm*.exe",
+        "*\\g2file*.exe",
+        "*\\g2fileh*.exe",
+        "*\\g2mainh*.exe",
+        "*\\g2printh*.exe",
+        "*\\g2quick*.exe",
+        "*\\g2tray*.exe",
+        "*\\gopcsrv*.exe",
+        "*\\lmiguardiansvc*.exe",
+        "*\\lmiignition*.exe",
+        "*\\logmeinsystray*.exe",
+        "*\\logmein*.exe",
+        "*\\G2M.exe"
+      ],
+      "domains": [
+        "gotomypc.com",
+        "logmein-gateway.com",
+        "logmein.com",
+        "logmein.eu",
+        "logmeininc.com",
+        "logmeinrescue.com",
+        "logmeinrescue.eu",
+        "rescue-data-cetner.logmein-gateway.com"
+      ]
+    },
+    "LS RMM": {
+      "paths": [
+        "*\\LS RMM*.exe",
+        "*\\LS RMM Worker*.exe",
+        "*\\LS RMM-Update*.exe"
+      ],
+      "domains": [
+        "webserv.logistical-software.co.uk",
+        "logistical-software.co.uk"
+      ]
+    },
+    "Lunixar": {
+      "paths": [
+        "*\\Lunixar*.exe",
+        "*\\LunixarRemote*.exe",
+        "*\\LunixarUpdater*.exe",
+        "*\\Lunixar\\*"
+      ],
+      "domains": [
+        "app.lunixar.com",
+        "devrmm.lunixar.com",
+        "downloads.lunixar.com",
+        "lunixar.com",
+        "mymeetinggoogle.com",
+        "socket.lunixar.com"
+      ]
+    },
+    "ManageEngine": {
+      "paths": [
+        "*\\manageengine\\uems_agent\\*",
+        "*\\DesktopCentral_Agent\\bin\\*",
+        "*\\DesktopCentral_Server\\*",
+        "*\\dcagentregister*.exe",
+        "*\\AgentlessRC*.exe",
+        "*\\MEAgentHelper*.exe",
+        "*\\dcagentservice*.exe",
+        "*\\ManageEngine_Remote_Access_Plus*.exe",
+        "*\\ManageEngine_ServiceDesk_Plus*.exe",
+        "*\\ManageEngine\\ServiceDesk\\*"
+      ],
+      "domains": [
+        "desktopcentral.manageengine.cn",
+        "desktopcentral.manageengine.com",
+        "desktopcentral.manageengine.com.eu",
+        "dms.zoho.com",
+        "dms.zoho.com.eu"
+      ],
+      "vendorDomains": [
+        "manageengine.com"
+      ]
+    },
+    "MeshCentral": {
+      "paths": [
+        "*\\meshcentral agent\\mesh agent\\*",
+        "*\\meshagent*.exe",
+        "*\\meshcentral*.exe"
+      ],
+      "domains": [
+        "meshcentral.com"
+      ]
+    },
+    "Microsoft Remote Desktop / RDP": {
+      "paths": [
+        "*\\termsrv*.exe",
+        "*\\mstsc*.exe",
+        "*\\rdp.exe",
+        "*\\rd.exe",
+        "*\\Remote Desktop*.exe",
+        "*\\remotedesktop.exe"
+      ]
+    },
+    "Mikogo / BeamYourScreen": {
+      "paths": [
+        "*\\mikogo-service*.exe",
+        "*\\beamyourscreen*.exe",
+        "*\\beamyourscreen-host*.exe",
+        "*\\mikogo-starter*.exe",
+        "*\\mikogo*.exe",
+        "*\\mikogolauncher*.exe"
+      ],
+      "domains": [
+        "beamyourscreen.com",
+        "mikogo.com",
+        "mikogo4.com",
+        "real-time-collaboration.com"
+      ]
+    },
+    "MiniRMM": {
+      "paths": [
+        "*\\MiniRmmAgent*.exe"
+      ]
+    },
+    "MioNet": {
+      "paths": [
+        "*\\mionet\\*",
+        "*\\mionet*.exe",
+        "*\\mionetmanager*.exe"
+      ]
+    },
+    "Miradore": {
+      "paths": [
+        "*\\Miradore\\*"
+      ],
+      "domains": [
+        "gateway.miradore.com",
+        "gerwconline.blob.core.windows.net",
+        "miradore.com"
+      ]
+    },
+    "MobaXterm": {
+      "paths": [
+        "*\\mobatek\\mobaxterm\\*",
+        "*\\mobaxterm*.exe"
+      ]
+    },
+    "Monitic": {
+      "paths": [
+        "*\\MoniticInstaller*.exe",
+        "*\\Monitic\\*",
+        "*\\amon.exe"
+      ],
+      "domains": [
+        "api.monitic.com",
+        "app.monitic.com",
+        "devapi.monitic.com",
+        "monitic.com",
+        "turn.monitic.com"
+      ],
+      "ips": [
+        "77.37.120.252"
+      ]
+    },
+    "Mouse Without Borders": {
+      "paths": [
+        "*\\MouseWithoutBorders.exe",
+        "*\\MouseWithoutBordersSvc.exe",
+        "*\\MouseWithoutBordersHelper.exe"
+      ]
+    },
+    "mRemote Agent": {
+      "paths": [
+        "*\\mremote-agent*.exe"
+      ]
+    },
+    "mRemoteNG": {
+      "paths": [
+        "*\\mremoteng\\*",
+        "*\\mRemoteNG*.exe"
+      ],
+      "domains": [
+        "api.mremote.io",
+        "mremoteng.org"
+      ]
+    },
+    "MSP Agent": {
+      "paths": [
+        "*\\msp-agent-core*.exe",
+        "*\\Msp Agent\\*"
+      ]
+    },
+    "MSP360 / CloudBerry Backup": {
+      "paths": [
+        "*\\Cloud.Backup.Scheduler*.exe",
+        "*\\CBBackupPlan*.exe",
+        "*\\Online Backup*.exe",
+        "*\\Cloud.Backup.RM.Service*.exe",
+        "*\\cbb.exe"
+      ],
+      "vendorDomains": [
+        "cloudberrylab.com",
+        "msp360.com",
+        "mspbackups.com"
+      ]
+    },
+    "myGreenPC": {
+      "paths": [
+        "*\\mygreenpc*.exe"
+      ],
+      "domains": [
+        "mygreenpc.com"
+      ]
+    },
+    "MyIVO": {
+      "paths": [
+        "*\\myivomgr*.exe",
+        "*\\myivomanager*.exe"
+      ],
+      "domains": [
+        "myivo-server.software.informer.com"
+      ]
+    },
+    "N-able / SolarWinds": {
+      "paths": [
+        "*\\n-able technologies\\*",
+        "*\\solarwinds\\*",
+        "*\\tclauncherhelper*.exe",
+        "*\\BASupTSHelper*.exe",
+        "*\\basupsrvcupdate*.exe",
+        "*\\basupclphlp*.exe",
+        "*\\BASupSysInf*.exe",
+        "*\\BASupSrvc*.exe",
+        "*\\TakeControl*.exe",
+        "*\\systemmonitor*.exe",
+        "*\\BASupAppElev*.exe",
+        "*\\BASupApp*.exe",
+        "*\\BASupSrvcCnfg*.exe",
+        "*\\BASupAppSrvc*.exe",
+        "*\\tcintegratorcommhelper*.exe",
+        "*\\ncstreamer*.exe",
+        "*\\basupsrvcupdater*.exe",
+        "*\\winwvc*.exe"
+      ],
+      "domains": [
+        "a33d8yamkwy4nx-ats.iot.ap-southeast-2.amazonaws.com",
+        "a33d8yamkwy4nx-ats.iot.eu-central-1.amazonaws.com",
+        "a33d8yamkwy4nx-ats.iot.eu-west-1.amazonaws.com",
+        "a33d8yamkwy4nx-ats.iot.us-west-2.amazonaws.com",
+        "beanywhere.com",
+        "cloudbackup.management",
+        "comserver.eu1.mspa.n-able.com",
+        "comserver.global.mspa.n-able.com",
+        "comserver.us1.mspa.n-able.com",
+        "comserver.us2.mspa.n-able.com",
+        "eb.ap-southeast-2.prd.davinci.system-monitor.com",
+        "eb.eu-central-1.prd.davinci.system-monitor.com",
+        "eb.eu-west-1.prd.davinci.system-monitor.com",
+        "eb.us-west-2.prd.davinci.system-monitor.com",
+        "feeds.n-able.com",
+        "prd.cdo.system-monitor.com",
+        "releases.n-able.com",
+        "remote.management",
+        "sis.n-able.com",
+        "swi-rc.cdn-sw.net",
+        "swi-tc.com",
+        "system-monitor.com",
+        "systemmonitor.co.uk",
+        "systemmonitor.eu.com",
+        "systemmonitor.us",
+        "systemmonitor.us.cdn.cloudflare.net",
+        "update.n-able.com",
+        "n-able.com",
+        "logicnow.com"
+      ]
+    },
+    "NateOn": {
+      "paths": [
+        "*\\nateonmain*.exe",
+        "*\\nateon*.exe"
+      ]
+    },
+    "Naverisk": {
+      "paths": [
+        "*\\naverisk\\*"
+      ],
+      "domains": [
+        "naverisk.com"
+      ]
+    },
+    "NetBird": {
+      "paths": [
+        "*\\netbird.exe"
+      ],
+      "domains": [
+        "netbird.io",
+        "api.netbird.io",
+        "app.netbird.io",
+        "signal.netbird.io",
+        "relay.netbird.io",
+        "login.netbird.io",
+        "pkgs.netbird.io",
+        "googl-6c11f.web.app",
+        "googl-165a0.web.app",
+        "my-sharepoint-inc.com",
+        "my1cloudlive.com",
+        "my2cloudlive.com",
+        "web-16fe.app"
+      ]
+    },
+    "NetLock RMM": {
+      "paths": [
+        "*\\NetLock_RMM_Agent_Installer*.exe",
+        "*\\NetLock_RMM_User_Process*.exe",
+        "*\\NetLock_RMM_User_UAC*.exe",
+        "*\\0x101 Cyber Security\\NetLock RMM\\*"
+      ]
+    },
+    "NetMaster": {
+      "paths": [
+        "*\\NetMaster_Client*.exe"
+      ]
+    },
+    "Netop Remote Control": {
+      "paths": [
+        "*\\netop\\netop remote control\\*",
+        "*\\nldrw32*.exe",
+        "*\\nhstw32*.exe",
+        "*\\wfreerdp*.exe",
+        "*\\Netop Ondemand*.exe",
+        "*\\ngstw32*.exe",
+        "*\\nhostsvc*.exe",
+        "*\\Netop Remote Control\\*",
+        "*\\Danware Data\\NetOp Packn Deploy\\*"
+      ],
+      "domains": [
+        "connect.backdrop.cloud",
+        "imperosoftware.com",
+        "netop.com"
+      ]
+    },
+    "Netreo": {
+      "domains": [
+        "charon.netreo.net",
+        "activation.netreo.net",
+        "netreo.com"
+      ]
+    },
+    "NetSarang Xshell / Xftp": {
+      "paths": [
+        "*\\NetSarang\\xShell\\*",
+        "*\\xshell*.exe",
+        "*\\xftp.exe"
+      ]
+    },
+    "NetSupport Manager": {
+      "paths": [
+        "*\\netsupport\\*",
+        "*\\apps\\support\\netsupport\\*",
+        "*\\netsupport manager\\*",
+        "*\\pcictlui*.exe",
+        "*\\pcnmgr*.exe",
+        "*\\PCIVIDEO*.EXE",
+        "*\\client32*.exe",
+        "*\\pcicfgui*.exe"
+      ],
+      "domains": [
+        "geo.netsupportsoftware.com",
+        "netsupportmanager.com",
+        "paternal-angrily.com"
+      ]
+    },
+    "Neturo": {
+      "paths": [
+        "*\\neturo*.exe"
+      ],
+      "domains": [
+        "neturo.uplus.co.kr"
+      ]
+    },
+    "Netviewer": {
+      "paths": [
+        "*\\kyocera\\netviewer\\*",
+        "*\\nvClient*.exe",
+        "*\\netviewerserver*.exe",
+        "*\\netviewer*.exe",
+        "*\\nvConsole*.exe"
+      ],
+      "domains": [
+        "netviewer.com"
+      ]
+    },
+    "Nexus RMM": {
+      "paths": [
+        "*\\nexusrmm*.exe"
+      ]
+    },
+    "Nezha": {
+      "paths": [
+        "*\\nezha-agent*.exe",
+        "*\\nezha\\*"
+      ],
+      "domains": [
+        "c.mid.al",
+        "gd.bj2.xyz",
+        "nezha.wiki",
+        "rism.pages.dev"
+      ],
+      "ips": [
+        "172.245.52.169",
+        "45.207.220.12"
+      ]
+    },
+    "ngrok": {
+      "paths": [
+        "*\\ngrok*.exe"
+      ],
+      "domains": [
+        "connect.ap.ngrok-agent.com",
+        "connect.au.ngrok-agent.com",
+        "connect.eu.ngrok-agent.com",
+        "connect.in.ngrok-agent.com",
+        "connect.jp.ngrok-agent.com",
+        "connect.ngrok-agent.com",
+        "connect.sa.ngrok-agent.com",
+        "connect.us.ngrok-agent.com",
+        "ngrok-free.app",
+        "ngrok.app",
+        "ngrok.dev",
+        "ngrok.io",
+        "ngrok.pizza",
+        "ngrok.pro",
+        "ngrok.com"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "TEX8MHRDQ9"
+          }
+        ],
+        "cask": "ngrok",
+        "source": "https://bin.ngrok.com/a/msmi2kd3cjc/ngrok-v3-3.39.13-darwin-arm64.zip",
+        "verified": "2026-11-08"
+      }
+    },
+    "NinjaOne / NinjaRMM": {
+      "paths": [
+        "*\\ninjaone\\*",
+        "*\\NinjaRMM LLC QC\\*",
+        "*\\NinjaRMMAgent*.exe",
+        "*\\NinjaRMMAgenPatcher*.exe",
+        "*\\ninjarmm-cli*.exe"
+      ],
+      "domains": [
+        "ninjaone.com",
+        "ninjarmm.com",
+        "ninjarmm.net",
+        "resources.ninjarmm.com",
+        "rmmservice.ca",
+        "rmmservice.com.au",
+        "rmmservice.eu",
+        "ninja-backup.com"
+      ]
+    },
+    "NoMachine": {
+      "paths": [
+        "*\\nxplayer*.exe",
+        "*\\nxd.exe",
+        "*\\nomachine*.exe",
+        "*\\nxservice*.exe"
+      ],
+      "domains": [
+        "nomachine.com"
+      ]
+    },
+    "NTRsupport": {
+      "paths": [
+        "*\\ntrntservice*.exe",
+        "*\\NTRsupportPro_EN*.exe"
+      ],
+      "domains": [
+        "ntrsupport.com"
+      ]
+    },
+    "O&O Syspectr": {
+      "paths": [
+        "*\\OOSysAgent*.exe",
+        "*\\oosysremotedesktopui*.exe",
+        "*\\oolocker*.exe",
+        "*\\oosyspectr*.exe",
+        "*\\syspectr*.exe"
+      ],
+      "domains": [
+        "syspectr.com"
+      ]
+    },
+    "Obliance": {
+      "paths": [
+        "*\\obliance-agent*.exe",
+        "*\\obliance-tray*.exe",
+        "*\\obliance-watchdog*.exe"
+      ]
+    },
+    "OCS Inventory": {
+      "paths": [
+        "*\\ocsservice*.exe",
+        "*\\ocsinventory*.exe"
+      ],
+      "domains": [
+        "ocsinventory-ng.org"
+      ]
+    },
+    "OnionShare": {
+      "paths": [
+        "*\\OnionShare\\*",
+        "*\\onionshare*.exe"
+      ]
+    },
+    "Opale": {
+      "paths": [
+        "*\\opale-agent*.exe"
+      ]
+    },
+    "OpenDesk RMM": {
+      "paths": [
+        "*\\OpenDesk-RMM-Agent*.exe"
+      ]
+    },
+    "OpenUEM": {
+      "paths": [
+        "*\\openuem-agent-setup*.exe",
+        "*\\OpenUEM Agent\\*"
+      ]
+    },
+    "OpsBridge": {
+      "paths": [
+        "*\\OpsBridgeAgent*.exe",
+        "*\\OpsBridge\\*"
+      ],
+      "domains": [
+        "opsbridge.digital"
+      ]
+    },
+    "OptiTune": {
+      "paths": [
+        "*\\bravura\\optitune\\*",
+        "*\\OTPowerShell*.exe",
+        "*\\OTService*.exe"
+      ],
+      "domains": [
+        "opti-tune.com",
+        "optitune.us"
+      ]
+    },
+    "Overlord": {
+      "paths": [
+        "*\\AppData\\Roaming\\Overlord\\agent.exe",
+        "*\\AppData\\Roaming\\Microsoft\\DeviceSync\\ovd_*.exe"
+      ],
+      "domains": [
+        "pandoramods.top"
+      ]
+    },
+    "PAExec": {
+      "paths": [
+        "*\\paexec*.exe"
+      ]
+    },
+    "Panorama9": {
+      "paths": [
+        "*\\panorama9\\*",
+        "*\\p9agent*.exe"
+      ],
+      "domains": [
+        "changes.panorama9.com",
+        "panorama9.com",
+        "trusted.panorama9.com"
+      ]
+    },
+    "Parallels Access": {
+      "paths": [
+        "*\\parallels\\parallels access\\*",
+        "*\\prl_deskctl_agent*.exe",
+        "*\\prl_deskctl_wizard*.exe",
+        "*\\prl_pm_service*.exe",
+        "*\\parallelsaccess-*.exe",
+        "*\\prlsvcctl*.exe"
+      ],
+      "vendorDomains": [
+        "parallels.com"
+      ]
+    },
+    "Parsec": {
+      "paths": [
+        "*\\Parsec*\\*",
+        "*\\parsecd*.exe",
+        "*\\parsec*.exe",
+        "*\\pservice*.exe"
+      ],
+      "domains": [
+        "parsec.app",
+        "parsec.gg"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "Y9MY52XZDB"
+          }
+        ],
+        "cask": "parsec",
+        "source": "https://builds.parsec.app/package/parsec-macos.pkg",
+        "verified": "2026-11-08"
+      }
+    },
+    "pcAnywhere": {
+      "paths": [
+        "*\\pcanywhere\\*",
+        "*\\pcaquickconnect*.exe",
+        "*\\awrem32*.exe",
+        "*\\winaw32*.exe"
+      ]
+    },
+    "PcHelpWare": {
+      "paths": [
+        "*\\PcHelpWare_viewer*.exe"
+      ]
+    },
+    "pcvisit": {
+      "paths": [
+        "*\\pcvisit_client*.exe",
+        "*\\pcvisit_service_client*.exe",
+        "*\\pcvisit*.exe"
+      ],
+      "domains": [
+        "pcvisit.de"
+      ]
+    },
+    "PDQ Connect / Deploy / Inventory": {
+      "paths": [
+        "*\\pdq\\pdq remote desktop agent\\*",
+        "*\\pdq\\pdqconnectagent\\*",
+        "*\\pdq\\pdqconnectupdater\\*",
+        "*\\pdqrunner*.exe",
+        "*\\pdqdeployconsole*.exe",
+        "*\\pdqinventoryconsole*.exe",
+        "*\\pdqinventoryscanner*.exe",
+        "*\\pdq-connect*.exe"
+      ],
+      "domains": [
+        "app.pdq.com",
+        "cfcdn.pdq.com"
+      ]
+    },
+    "Pilixo": {
+      "paths": [
+        "*\\Pilixo_Installer*.exe"
+      ],
+      "domains": [
+        "download.pilixo.com",
+        "pilixo.com"
+      ]
+    },
+    "Ping32": {
+      "paths": [
+        "*\\NSecRTS.exe",
+        "*\\NSecDs.exe"
+      ],
+      "domains": [
+        "cloud.nsecsoft.com"
+      ]
+    },
+    "PiTunnel": {
+      "domains": [
+        "pitunnel.com"
+      ]
+    },
+    "Pixo IT": {
+      "paths": [
+        "*\\PixoIT-agent*.exe"
+      ]
+    },
+    "Pocket Controller": {
+      "paths": [
+        "*\\pocketcontroller*.exe"
+      ],
+      "vendorDomains": [
+        "soti.net"
+      ]
+    },
+    "PocketCloud": {
+      "paths": [
+        "*\\wyse\\pocketcloud\\*",
+        "*\\wyseremoteaccess*.exe",
+        "*\\wysebrowser*.exe",
+        "*\\pocketcloudservice*.exe",
+        "*\\pocketcloud*.exe"
+      ]
+    },
+    "ProxiPort": {
+      "paths": [
+        "*\\proxiport*.exe"
+      ]
+    },
+    "PsExec": {
+      "paths": [
+        "*\\psexec*.exe",
+        "*\\psexecsvc*.exe"
+      ]
+    },
+    "Pulseway": {
+      "paths": [
+        "*\\pulseway\\*",
+        "*\\pulseway remote control\\*",
+        "*\\pcmonitorsrv*.exe",
+        "*\\PCMonitorManager*.exe",
+        "*\\pcmontask*.exe"
+      ],
+      "domains": [
+        "pulseway.com"
+      ]
+    },
+    "PuTTY Tray": {
+      "paths": [
+        "*\\puttytray*.exe"
+      ]
+    },
+    "Quick Assist": {
+      "paths": [
+        "*\\quickassist*.exe"
+      ],
+      "vendorDomains": [
+        "support.services.microsoft.com"
+      ]
+    },
+    "Radmin": {
+      "paths": [
+        "*\\radmin\\*",
+        "*\\Radmin Viewer 3\\*",
+        "*\\radmin*.exe",
+        "*\\rserver3*.exe"
+      ],
+      "domains": [
+        "radmin.com"
+      ]
+    },
+    "Rapid7 Insight": {
+      "paths": [
+        "*\\rapid7_endpoint_broker*.exe",
+        "*\\ir_agent*.exe",
+        "*\\rapid7_agent_core*.exe"
+      ],
+      "domains": [
+        "analytics.insight.rapid7.com",
+        "endpoint.ingress.rapid7.com"
+      ]
+    },
+    "rdesktop": {
+      "paths": [
+        "*\\RDesktop*.exe"
+      ]
+    },
+    "RDP Wrapper": {
+      "paths": [
+        "*\\RDPConf*.exe",
+        "*\\RDPWInst*.exe",
+        "*\\RDPCheck*.exe"
+      ]
+    },
+    "RDP2TCP": {
+      "paths": [
+        "*\\tdp2tcp*.exe",
+        "*\\rdp2tcp*.exe"
+      ]
+    },
+    "RdViewer": {
+      "paths": [
+        "*\\RdClient.exe",
+        "*\\rdService.exe",
+        "*\\dmservice.exe",
+        "*\\diskmgr.exe",
+        "*\\RdServer.exe"
+      ],
+      "domains": [
+        "rdviewer.oss-cn-hangzhou.aliyuncs.com"
+      ]
+    },
+    "RealVNC": {
+      "paths": [
+        "*\\realvnc\\*",
+        "*\\vncaddrbook*.exe",
+        "*\\vncconfig*.exe",
+        "*\\vncserver*.exe",
+        "*\\vncserverui*.exe",
+        "*\\winvnc4*.exe",
+        "*\\vncviewer*.exe",
+        "*\\vncagent*.exe",
+        "*\\vncguihelper*.exe"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "ZNCQ8JEH7X"
+          }
+        ],
+        "cask": "vnc-server",
+        "source": "https://downloads.realvnc.com/download/file/vnc.files/VNC-Server-7.18.1-MacOSX-universal.pkg",
+        "verified": "2026-11-08"
+      },
+      "domains": [
+        "services.vnc.com",
+        "manage.realvnc.com",
+        "update-check.realvnc.com"
+      ],
+      "vendorDomains": [
+        "realvnc.com"
+      ]
+    },
+    "RemCom": {
+      "paths": [
+        "*\\remcom*.exe",
+        "*\\remcomsvc*.exe"
+      ]
+    },
+    "Remcos": {
+      "paths": [
+        "*\\remcos*.exe"
+      ]
+    },
+    "RemMon": {
+      "paths": [
+        "*\\remmon*.exe"
+      ],
+      "domains": [
+        "remmon.hu"
+      ]
+    },
+    "Remobo": {
+      "paths": [
+        "*\\remobo*.exe",
+        "*\\remobo_tracker*.exe",
+        "*\\remobo_client*.exe"
+      ],
+      "domains": [
+        "remobo.en.softonic.com"
+      ]
+    },
+    "Remote Desktop Plus": {
+      "domains": [
+        "donkz.nl"
+      ]
+    },
+    "Remote Utilities": {
+      "paths": [
+        "*\\Remote Utilities*\\*",
+        "*\\rutview*.exe",
+        "*\\rutserv*.exe",
+        "*\\rfusclient*.exe"
+      ],
+      "domains": [
+        "internetid.ru",
+        "remoteutilities.com",
+        "rmansys.ru"
+      ]
+    },
+    "Remote Workforce": {
+      "paths": [
+        "*\\Remote Workforce Client*.exe"
+      ]
+    },
+    "remote.it": {
+      "paths": [
+        "*\\remoteit*.exe",
+        "*\\remote-it-installer*.exe",
+        "*\\remote.it*.exe"
+      ],
+      "domains": [
+        "api.remote.it",
+        "auth.api.remote.it",
+        "remote.it"
+      ]
+    },
+    "RemoteAgent": {
+      "paths": [
+        "*\\RemoteAgentAgent*.exe"
+      ],
+      "domains": [
+        "app-af-agent-prod-009.azurewebsites.net"
+      ]
+    },
+    "Remotely": {
+      "paths": [
+        "*\\Remotely_Agent*.exe",
+        "*\\Remotely_Desktop*.exe"
+      ]
+    },
+    "RemotePass": {
+      "paths": [
+        "*\\remotepass-access*.exe"
+      ],
+      "domains": [
+        "remotepass.com"
+      ]
+    },
+    "RemotePC": {
+      "paths": [
+        "*\\remotepc host\\*",
+        "*\\remotepc viewer\\*",
+        "*\\remotepc\\*",
+        "*\\RemotePC*.exe",
+        "*\\rpaccess*.exe",
+        "*\\RemotePCService*.exe",
+        "*\\remotepchost*.exe",
+        "*\\rpcld*.exe",
+        "*\\rpcsuite*.exe"
+      ],
+      "domains": [
+        "remotedesktop.com",
+        "remotepc.com"
+      ]
+    },
+    "RemotePulse": {
+      "paths": [
+        "*\\InstallCore.exe"
+      ],
+      "domains": [
+        "remotepulse.io"
+      ]
+    },
+    "RemSupp": {
+      "paths": [
+        "*\\RemSupp_Setup_x64*.exe",
+        "*\\RemSupp*.exe",
+        "*\\Uninstall RemSupp*.exe"
+      ],
+      "domains": [
+        "api.remsupp.com",
+        "download.remsupp.com"
+      ]
+    },
+    "RG Supervision": {
+      "paths": [
+        "*\\RG_Supervision*.exe",
+        "*\\RG-Supervision\\*"
+      ],
+      "domains": [
+        "api.rg-supervision.com",
+        "dashboard.rg-supervision.com",
+        "lisa.rg-supervision.com"
+      ]
+    },
+    "RMMCRAT": {
+      "domains": [
+        "softbymade.top"
+      ],
+      "paths": [
+        "*\\rmm.exe"
+      ]
+    },
+    "RMMmax": {
+      "paths": [
+        "*\\RMMmaxAgentSetup*.exe",
+        "*\\RMMmaxAgentService*.exe"
+      ],
+      "domains": [
+        "api.rmmmax.com"
+      ]
+    },
+    "Rocket Remote Desktop": {
+      "paths": [
+        "*\\RocketRemoteDesktop_Setup*.exe"
+      ]
+    },
+    "Rodex": {
+      "paths": [
+        "*\\RodexAgent*.exe"
+      ],
+      "domains": [
+        "rodex.cc"
+      ]
+    },
+    "Roster": {
+      "paths": [
+        "*\\Roster\\*"
+      ]
+    },
+    "Royal TS / Royal Server": {
+      "paths": [
+        "*\\royalts*.exe",
+        "*\\royalserver*.exe"
+      ],
+      "domains": [
+        "royalapps.com"
+      ]
+    },
+    "RPort": {
+      "paths": [
+        "*\\rport*.exe"
+      ],
+      "domains": [
+        "rport.io"
+      ]
+    },
+    "Rsupport RemoteView / RemoteCall": {
+      "paths": [
+        "*\\rpwhostscr*.exe",
+        "*\\remotesupportplayeru*.exe",
+        "*\\rpcvieweruiu*.exe",
+        "*\\rv.exe",
+        "*\\rvagtray*.exe",
+        "*\\rcclinet*.exe",
+        "*\\rxstartsupport*.exe",
+        "*\\remoteview*.exe",
+        "*\\rvagent*.exe",
+        "*\\rcstartsupport*.exe"
+      ],
+      "domains": [
+        "content.rview.com",
+        "remotecall.com",
+        "rview.com",
+        "startsupport.com"
+      ]
+    },
+    "RuDesktop / RMS": {
+      "paths": [
+        "*\\RViewer*.exe",
+        "*\\RHost*.exe",
+        "*\\rudesktop*.exe",
+        "*\\Remote Manipulator System*\\*"
+      ],
+      "domains": [
+        "rudesktop.ru"
+      ]
+    },
+    "RunSmart": {
+      "domains": [
+        "runsmart.io"
+      ]
+    },
+    "RustDesk": {
+      "paths": [
+        "*\\rustdesk\\*",
+        "*\\rustdesk-fullclient\\*",
+        "*\\rustdesk*.exe"
+      ],
+      "domains": [
+        "api.rustdesk.com",
+        "rs-ny.rustdesk.com",
+        "rustdesk.com",
+        "web.rustdesk.com"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "HZF9JMC8YN"
+          }
+        ],
+        "cask": "rustdesk",
+        "source": "https://github.com/rustdesk/rustdesk/releases/download/1.5.1/rustdesk-1.5.1-aarch64.dmg",
+        "verified": "2026-11-08"
+      }
+    },
+    "S3 Browser": {
+      "paths": [
+        "*\\S3 Browser\\*",
+        "*\\s3browser*.exe"
+      ]
+    },
+    "Screen capture rule": {
+      "paths": [
+        "*\\screancap*.exe"
+      ]
+    },
+    "ScreenMeet": {
+      "paths": [
+        "*\\ScreenMeetSupport*.exe",
+        "*\\ScreenMeet.Support*.exe"
+      ],
+      "domains": [
+        "screenmeet.com",
+        "scrn.mt"
+      ]
+    },
+    "SecureCRT": {
+      "paths": [
+        "*\\SecureCRT*.exe"
+      ]
+    },
+    "Seetrol": {
+      "paths": [
+        "*\\seetrolremote*.exe",
+        "*\\seetrolcenter*.exe",
+        "*\\seetrolsetting*.exe",
+        "*\\seetrolclient*.exe",
+        "*\\seetrolmyservice*.exe"
+      ],
+      "domains": [
+        "seetrol.co.kr"
+      ]
+    },
+    "Senso": {
+      "paths": [
+        "*\\SensoClient*.exe",
+        "*\\SensoService*.exe"
+      ],
+      "domains": [
+        "senso.cloud"
+      ]
+    },
+    "Sentinel RMM Agent": {
+      "paths": [
+        "*\\sentinel-agent*.exe"
+      ]
+    },
+    "Server-Eye": {
+      "paths": [
+        "*\\servereye*.exe"
+      ],
+      "domains": [
+        "server-eye.de"
+      ]
+    },
+    "SetMe": {
+      "paths": [
+        "*\\SetMe_Client*.exe",
+        "*\\tinUnattendedModule*.exe",
+        "*\\tinClientDesktopApplication*.exe",
+        "*\\tinClientSessionManager*.exe"
+      ],
+      "domains": [
+        "set.me"
+      ]
+    },
+    "ShellHub": {
+      "domains": [
+        "shellhub.io",
+        "cloud.shellhub.io"
+      ]
+    },
+    "ShowMyPC": {
+      "paths": [
+        "*\\showmypc*.exe",
+        "*\\SMPCSetup*.exe"
+      ],
+      "domains": [
+        "showmypc.com"
+      ]
+    },
+    "SimpleHelp": {
+      "paths": [
+        "*\\simplehelp\\*",
+        "*\\remote access*.exe",
+        "*\\simplehelpcustomer*.exe",
+        "*\\simpleservice*.exe",
+        "*\\simplegatewayservice*.exe",
+        "*\\JWrapper-Remote Access\\*"
+      ],
+      "domains": [
+        "dronemaker.org",
+        "microuptime.com",
+        "simple-help.com",
+        "telesupportgroup.com"
+      ],
+      "ips": [
+        "160.191.182.41",
+        "192.144.34.42",
+        "51.255.19.178",
+        "51.255.19.179"
+      ]
+    },
+    "Site24x7": {
+      "paths": [
+        "*\\site24x7\\winagent\\*",
+        "*\\winagent*.exe",
+        "*\\Site24x7PluginAgent*.exe",
+        "*\\Site24x7WindowsAgentTrayIcon*.exe"
+      ],
+      "vendorDomains": [
+        "site24x7.cn",
+        "site24x7.com",
+        "site24x7.eu",
+        "site24x7.in",
+        "site24x7.net.au"
+      ]
+    },
+    "SkyFex": {
+      "paths": [
+        "*\\deskroll*.exe"
+      ],
+      "domains": [
+        "deskroll.com",
+        "skyfex.com"
+      ]
+    },
+    "SmartFTP": {
+      "paths": [
+        "*\\SmartFTP Client\\*",
+        "*\\smartftp*.exe"
+      ]
+    },
+    "Sorillus": {
+      "paths": [
+        "*\\Sorillus Launcher*.exe",
+        "*\\Sorillus-Launcher*.exe"
+      ],
+      "domains": [
+        "sorillus.com"
+      ]
+    },
+    "Splashtop": {
+      "paths": [
+        "*\\splashtop\\splashtop remote\\*",
+        "*\\SplashtopSOS*.exe",
+        "*\\srservice*.exe",
+        "*\\SRServer*.exe",
+        "*\\SRManager*.exe",
+        "*\\sragent*.exe",
+        "*\\Splashtop_Streamer_Windows*.exe",
+        "*\\Splashtop\\*",
+        "*\\SRUtility.exe",
+        "*\\SRFeature.exe"
+      ],
+      "domains": [
+        "api.splashtop.com",
+        "api.splashtop.eu",
+        "relay.splashtop.com",
+        "splashtop.com"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "CPQQ3AW49Y"
+          }
+        ],
+        "cask": "splashtop-streamer",
+        "source": "https://d17kmd0va0f0mp.cloudfront.net/mac/Splashtop_Streamer_Mac_INSTALLER_v3.8.6.3.dmg",
+        "verified": "2026-11-08"
+      }
+    },
+    "SpyAnywhere": {
+      "domains": [
+        "spyanywhere.com"
+      ]
+    },
+    "StifleR (2Pint Software)": {
+      "paths": [
+        "*\\StifleR.ClientApp.exe",
+        "*\\TwoPint.ConfigEditor.Wpf.exe"
+      ]
+    },
+    "Sunlogin / Oray": {
+      "paths": [
+        "*\\OrayRemoteService*.exe",
+        "*\\OrayRemoteShell*.exe",
+        "*\\sunlogin*.exe"
+      ],
+      "domains": [
+        "client.oray.net",
+        "sunlogin.oray.com"
+      ]
+    },
+    "SuperOps": {
+      "paths": [
+        "*\\superopsticket*.exe",
+        "*\\superops*.exe",
+        "*\\SSUAgent*.exe"
+      ],
+      "domains": [
+        "serv.superopsalpha.com",
+        "superops.ai",
+        "superopsalpha.com",
+        "superopsbeta.com"
+      ]
+    },
+    "Supremo": {
+      "paths": [
+        "*\\supremo\\*",
+        "*\\supremoservice*.exe",
+        "*\\supremo*.exe",
+        "*\\supremosystem*.exe",
+        "*\\supremohelper*.exe"
+      ],
+      "domains": [
+        "supremocontrol.com"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "LL93ZLFYJ2"
+          }
+        ],
+        "cask": "supremo",
+        "source": "https://assets.nanosystems.com/AutoUpdateS/macOS/standard/stable/Supremo_4.12.0.3004.dmg",
+        "verified": "2026-11-08"
+      }
+    },
+    "Syncro": {
+      "paths": [
+        "*\\repairtech\\syncro\\*",
+        "*\\syncrosetup*.exe",
+        "*\\Syncro.Service*.exe",
+        "*\\SyncroLive.Agent*.exe",
+        "*\\Syncro.Overmind.Service*.exe",
+        "*\\Syncro.App.Runner*.exe",
+        "*\\Syncro.Installer*.exe",
+        "*\\SyncroLive.Service*.exe"
+      ],
+      "domains": [
+        "app.kabuto.io",
+        "attachments.servably.com",
+        "kabuto.io",
+        "kabutoservices.com",
+        "ld.aurelius.host",
+        "repairshopr.com",
+        "servably.com",
+        "syncroapi.com",
+        "syncromsp.com"
+      ]
+    },
+    "SysAid": {
+      "paths": [
+        "*\\SysAidServer\\*",
+        "*\\SysAid\\*"
+      ]
+    },
+    "Tactical RMM": {
+      "paths": [
+        "*\\tacticalagent\\*",
+        "*\\tacticalrmm*.exe"
+      ],
+      "domains": [
+        "docs.tacticalrmm.com"
+      ]
+    },
+    "Tailscale": {
+      "paths": [
+        "*\\tailscale-ipn*.exe",
+        "*\\tailscaled*.exe"
+      ],
+      "vendorDomains": [
+        "tailscale.com",
+        "tailscale.io"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "W5364U7YZB"
+          }
+        ],
+        "cask": "tailscale-app",
+        "source": "https://pkgs.tailscale.com/stable/Tailscale-1.104.5-macos.pkg",
+        "verified": "2026-11-08"
+      }
+    },
+    "Tanium": {
+      "paths": [
+        "*\\TaniumCX*.exe",
+        "*\\TaniumExecWrapper*.exe",
+        "*\\TPowerShell*.exe",
+        "*\\TaniumFileInfo*.exe",
+        "*\\TaniumClient*.exe"
+      ],
+      "domains": [
+        "cloud.tanium.com"
+      ]
+    },
+    "TeamViewer": {
+      "paths": [
+        "*\\teamviewer_service*.exe",
+        "*\\tv_w32*.exe",
+        "*\\tv_x64*.exe",
+        "*\\TeamTaskManager*.exe",
+        "*\\teamviewer_desktop*.exe",
+        "*\\teamviewer*.exe",
+        "*\\tv_w64*.exe"
+      ],
+      "domains": [
+        "client.teamviewer.com",
+        "router15.teamviewer.com",
+        "taf.teamviewer.com",
+        "teamviewer.com"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "H7UGFBUGV6"
+          }
+        ],
+        "cask": "teamviewer",
+        "source": "https://download.teamviewer.com/download/TeamViewer.dmg",
+        "verified": "2026-11-08"
+      }
+    },
+    "TeleDesktop": {
+      "paths": [
+        "*\\ptdsk*.exe"
+      ],
+      "domains": [
+        "tele-desk.com"
+      ]
+    },
+    "Teleport Connect": {
+      "paths": [
+        "*\\Teleport Connect.exe",
+        "*\\tsh.exe"
+      ],
+      "domains": [
+        "cdn.teleport.dev",
+        "reporting-connect.teleportinfra.sh",
+        "usage.teleport.dev"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "QH8AA5B8UP"
+          }
+        ],
+        "cask": "teleport-connect",
+        "source": "https://cdn.teleport.dev/teleport-18.11.9.pkg",
+        "verified": "2026-11-08"
+      }
+    },
+    "Tencent QQ": {
+      "paths": [
+        "*\\QQProtect*.exe",
+        "*\\Tencent\\QQ\\qq.exe",
+        "*\\Tencent\\QQIntl\\Bin\\qq.exe",
+        "*\\qqpcmgr*.exe"
+      ],
+      "domains": [
+        "desktop.qq.com",
+        "mdt.qq.com",
+        "qq-messenger.en.softonic.com"
+      ]
+    },
+    "Teramind": {
+      "paths": [
+        "*\\tmagentsvc.exe",
+        "*\\Teramind.Setup.Updater.exe"
+      ],
+      "domains": [
+        "teramind.co",
+        "rt.teramind.co",
+        "sentry.dev.teramind.co"
+      ]
+    },
+    "TiFlux": {
+      "paths": [
+        "*\\TiAgent*.exe",
+        "*\\TiService*.exe",
+        "*\\TiUpdateService*.exe",
+        "*\\TiFLUX\\*"
+      ],
+      "domains": [
+        "agent.tiflux.com",
+        "app.tiflux.com",
+        "my.splashtop.com",
+        "tiflux.com",
+        "tiflux.com.br"
+      ],
+      "ips": [
+        "18.229.110.98"
+      ]
+    },
+    "TigerVNC": {
+      "paths": [
+        "*\\tigervnc\\*",
+        "*\\tigervnc server\\*",
+        "*\\tigervnc*.exe"
+      ],
+      "macos": {
+        "rules": [
+          {
+            "teamId": "S5LX88A9BW"
+          }
+        ],
+        "cask": "tigervnc-viewer",
+        "source": "https://downloads.sourceforge.net/tigervnc/TigerVNC-1.16.2.dmg",
+        "verified": "2026-11-08"
+      }
+    },
+    "TightVNC / Remote Ripple": {
+      "paths": [
+        "*\\tightvnc\\*",
+        "*\\tvnviewer*.exe",
+        "*\\tvnserver*.exe",
+        "*\\RemoteRipple*.exe",
+        "*\\TightVNCViewerPortable*.exe",
+        "*\\Remote Ripple\\*"
+      ],
+      "domains": [
+        "tightvnc.com"
+      ]
+    },
+    "tmate": {
+      "domains": [
+        "tmate.io"
+      ]
+    },
+    "ToDesk": {
+      "paths": [
+        "*\\ToDesk_Setup*.exe",
+        "*\\ToDesk_Service*.exe",
+        "*\\todesk*.exe"
+      ],
+      "domains": [
+        "todesk.com"
+      ]
+    },
+    "ToolsIQ": {
+      "paths": [
+        "*\\toolsiq*.exe"
+      ]
+    },
+    "Total Network Inventory": {
+      "paths": [
+        "*\\tniwinagent*.exe"
+      ]
+    },
+    "Total Software Deployment": {
+      "paths": [
+        "*\\Tsdservice*.exe",
+        "*\\Total Software Deployment\\*"
+      ]
+    },
+    "TrustConnect": {
+      "paths": [
+        "*\\TrustConnectAgent*.exe",
+        "*\\TrustConnect\\*",
+        "*\\TrustConnect Agent\\*"
+      ],
+      "domains": [
+        "networkservice.cyou",
+        "trustconnectsoftware.com"
+      ]
+    },
+    "TSIRC executable (unconfirmed tool)": {
+      "paths": [
+        "*\\tsircusr*.exe"
+      ]
+    },
+    "TurboMeeting": {
+      "paths": [
+        "*\\turbomeeting*.exe",
+        "*\\turbomeetingstarter*.exe"
+      ]
+    },
+    "UltraViewer": {
+      "paths": [
+        "*\\ultraviewer\\*",
+        "*\\UltraViewer_Desktop*.exe",
+        "*\\ultraviewer*.exe",
+        "*\\UltraViewer_Service*.exe"
+      ],
+      "domains": [
+        "ultraviewer.net"
+      ]
+    },
+    "UltraVNC": {
+      "paths": [
+        "*\\winvnc*.exe",
+        "*\\winvncsc*.exe",
+        "*\\WinVNCStub*.exe",
+        "*\\UVNC_Launch*.exe",
+        "*\\UltraVNC*.exe",
+        "*\\uvnc bvba\\UltraVNC\\*"
+      ],
+      "domains": [
+        "ultravnc.com"
+      ]
+    },
+    "UniRMM": {
+      "paths": [
+        "*\\UniRMM*.exe"
+      ]
+    },
+    "Vector / LANutil": {
+      "paths": [
+        "*\\CLBOOT32*.exe",
+        "*\\CLDIST32*.exe",
+        "*\\CLDISTSVC*.exe",
+        "*\\clMeter32*.exe",
+        "*\\clMeterSvc*.exe",
+        "*\\WINCHK32*.exe",
+        "*\\lutinfow32*.exe",
+        "*\\LuSMBIOS32*.exe",
+        "*\\LuLogon*.exe",
+        "*\\LUGuard*.exe",
+        "*\\LUEDIT*.exe",
+        "*\\VnlSelfUpdate*.exe",
+        "*\\VNLDriverInstaller*.exe",
+        "*\\VECWAIT*.exe",
+        "*\\VNConfigUtils*.exe",
+        "*\\MqMailIntegration*.exe",
+        "*\\Vector\\Asset Management Client\\*",
+        "*\\Vector Networks Limited\\LANutil32 Suite\\*"
+      ],
+      "domains": [
+        "downloads.vector-networks.com",
+        "mail.metaquest.com",
+        "vector-networks.com",
+        "vizor.cloud",
+        "metaquest.com"
+      ]
+    },
+    "Vicarius Topia": {
+      "paths": [
+        "*\\topiad*.exe",
+        "*\\Vicarius\\Topia\\*"
+      ],
+      "domains": [
+        "vicarius-ap-southeast-3-installer.s3.amazonaws.com",
+        "vicarius-ap-southeast-3-installer.s3.ap-southeast-3.amazonaws.com",
+        "vicarius-ap-southeast-3-patches.s3.amazonaws.com",
+        "vicarius-ap-southeast-3-patches.s3.ap-southeast-3.amazonaws.com",
+        "vicarius-ap-southeast-3-release.s3.amazonaws.com",
+        "vicarius-ap-southeast-3-release.s3.ap-southeast-3.amazonaws.com",
+        "vicarius-eu-central-1-installer.s3.amazonaws.com",
+        "vicarius-eu-central-1-installer.s3.eu-central-1.amazonaws.com",
+        "vicarius-eu-central-1-patches.s3.amazonaws.com",
+        "vicarius-eu-central-1-patches.s3.eu-central-1.amazonaws.com",
+        "vicarius-eu-central-1-release.s3.amazonaws.com",
+        "vicarius-eu-central-1-release.s3.eu-central-1.amazonaws.com",
+        "vicarius-installer.s3.amazonaws.com",
+        "vicarius-patches.s3.amazonaws.com",
+        "vicarius-release.s3.amazonaws.com",
+        "vicarius-release.s3.us-east-1.amazonaws.com",
+        "vicarius-static-organizationinstallations.vicarius-cdn.com",
+        "vicarius.cloud"
+      ]
+    },
+    "VS Code Remote Tunnels": {
+      "paths": [
+        "*\\code-insiders.exe"
+      ]
+    },
+    "Webex PCNow": {
+      "paths": [
+        "*\\webexpcnow*.exe"
+      ]
+    },
+    "Weezo": {
+      "paths": [
+        "*\\weezohttpd*.exe",
+        "*\\weezo*.exe",
+        "*\\weCliboardListener*.exe",
+        "*\\weprtct*.exe",
+        "*\\wemonc*.exe",
+        "*\\weInstSvc*.exe",
+        "*\\weClipboardListener*.exe"
+      ],
+      "domains": [
+        "weezo.en.softonic.com",
+        "weezo.me",
+        "weezo.net"
+      ]
+    },
+    "Workspace ONE Assist (Omnissa / VMware)": {
+      "paths": [
+        "*\\Workspace ONE Assist\\*",
+        "*\\WorkspaceONE.Assist.Agent.exe"
+      ]
+    },
+    "XCmd": {
+      "paths": [
+        "*\\xcmd.exe",
+        "*\\xcmdsvc*.exe"
+      ]
+    },
+    "XEOX": {
+      "paths": [
+        "*\\xeox-agent_x86*.exe",
+        "*\\xeox_service_windows*.exe",
+        "*\\xeox-agent_x64*.exe",
+        "*\\xeox-agent_*.exe"
+      ],
+      "domains": [
+        "xeox.com"
+      ]
+    },
+    "Xpra": {
+      "paths": [
+        "*\\Xpra\\*",
+        "*\\xpra*.exe"
+      ]
+    },
+    "Zecurit": {
+      "paths": [
+        "*\\ZecuritAgentService*.exe",
+        "*\\ZecuritAgentRegister*.exe",
+        "*\\ZecuritAgentTray*.exe",
+        "*\\ZecuritAgentAssetMgr*.exe",
+        "*\\ZecuritLiveNotifier*.exe",
+        "*\\ZecuritCommandProcessor*.exe",
+        "*\\ZecuritRemoteTools*.exe",
+        "*\\ZecuritScreenReaderService*.exe",
+        "*\\ZecuritScreenReaderApp*.exe",
+        "*\\ZecuritScreenReaderAppUI*.exe",
+        "*\\ZecuritApplicationControlService*.exe",
+        "*\\ZecuritAgentUpgrader*.exe",
+        "*\\zecurit_windows_agent*.exe"
+      ],
+      "domains": [
+        "app.zecurit.com",
+        "d1m8kha1zyjal6.cloudfront.net",
+        "dms.zecurit.com"
+      ]
+    },
+    "Zero RMM": {
+      "paths": [
+        "*\\zero-powershell*.exe"
+      ]
+    },
+    "ZeroTier": {
+      "paths": [
+        "*\\zerotier*.exe"
+      ],
+      "vendorDomains": [
+        "zerotier.com"
+      ]
+    },
+    "Zoho Assist / Meeting": {
+      "paths": [
+        "*\\zoho-assist-desktop\\*",
+        "*\\za_connect*.exe",
+        "*\\Zohours*.exe",
+        "*\\zohotray*.exe",
+        "*\\ZA_Access*.exe",
+        "*\\ZMAgent*.exe",
+        "*\\Zaservice*.exe",
+        "*\\ZohoMeeting*.exe",
+        "*\\ZohoURSService*.exe"
+      ],
+      "domains": [
+        "assist.zoho.com",
+        "downloads.zohocdn.com",
+        "downloads.zohodl.com.cn",
+        "gateway.zohoassist.com",
+        "zohoassist.com",
+        "zohoassist.com.cn",
+        "zohoassist.jp"
+      ]
+    }
+  }
+}

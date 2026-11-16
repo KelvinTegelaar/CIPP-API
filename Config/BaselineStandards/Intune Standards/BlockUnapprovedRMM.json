@@ -1,0 +1,1208 @@
+{
+  "name": "BlockUnapprovedRMM",
+  "label": "Block unapproved RMM and remote access tools",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Blocks RMM and remote access tools you have not approved. Windows devices get an App Control for Business policy that stops the tools from starting, Macs get a policy that denies the tools by code signature. Select every tool you use yourself first, your own RMM included, or it is blocked as well. The policies are enforced, so assign them to a pilot group before all devices. Based on RMM Guard (rmmguard.com) by Lewis Barry and Roy Klooster.",
+  "executiveText": "Stops attackers from using remote control software to get into company devices by blocking every remote management tool the company has not approved.",
+  "docsDescription": "Attackers install a legitimate remote management tool shortly after they get in, because it gives them file transfer, scripting and unattended access without malware. This standard blocks the known tools except the ones you select. On Windows it deploys an enforced App Control for Business policy named 'CIPP - Block unapproved RMM tools (Windows)' that denies each tool by file name and folder. It needs Windows 11 24H2 or newer, because the rules use wildcards older versions do not support. Rules match names and paths, not signatures, so a renamed copy can get past it. On macOS it deploys a settings catalog policy named 'CIPP - Block unapproved RMM tools (macOS)' that denies each tool by the Team ID of its code signature. That needs macOS 27 or newer on a supervised Mac, has no audit mode and only covers the tools with a verified Mac signature. A rule shared by two tools is removed when either of them is allowed. The tool list ships with CIPP, and the policies are reported as out of date and redeployed when a CIPP update brings a newer list. Network blocking with Defender indicators is not part of this standard. The tool list and the approach come from RMM Guard by Lewis Barry and Roy Klooster (https://rmmguard.com, https://github.com/Lewis-Barry/RMM-Blocker), with much of the underlying data from the LOLRMM project (https://lolrmm.io).",
+  "impactColour": "danger",
+  "addedDate": "2026-11-16",
+  "powershellEquivalent": "Graph: POST or PUT deviceManagement/configurationPolicies",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "allowedTools": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": false,
+      "omitWhenBlank": true,
+      "label": "Tools you use (these stay allowed)",
+      "helperText": "Every tool that is not selected is blocked. Select your own RMM.",
+      "options": [
+        {
+          "label": "Absolute / Computrace",
+          "value": "Absolute / Computrace"
+        },
+        {
+          "label": "Access Remote PC",
+          "value": "Access Remote PC"
+        },
+        {
+          "label": "Acronis Cyber Protect Connect",
+          "value": "Acronis Cyber Protect Connect"
+        },
+        {
+          "label": "Action1",
+          "value": "Action1"
+        },
+        {
+          "label": "Addigy",
+          "value": "Addigy"
+        },
+        {
+          "label": "Adobe Connect",
+          "value": "Adobe Connect"
+        },
+        {
+          "label": "AeroAdmin",
+          "value": "AeroAdmin"
+        },
+        {
+          "label": "AliWangWang",
+          "value": "AliWangWang"
+        },
+        {
+          "label": "AlloCentra",
+          "value": "AlloCentra"
+        },
+        {
+          "label": "Alpemix",
+          "value": "Alpemix"
+        },
+        {
+          "label": "Alpha RMM",
+          "value": "Alpha RMM"
+        },
+        {
+          "label": "Ammyy Admin",
+          "value": "Ammyy Admin"
+        },
+        {
+          "label": "Any Support",
+          "value": "Any Support"
+        },
+        {
+          "label": "AnyDesk",
+          "value": "AnyDesk"
+        },
+        {
+          "label": "Anyplace Control",
+          "value": "Anyplace Control"
+        },
+        {
+          "label": "AnyViewer",
+          "value": "AnyViewer"
+        },
+        {
+          "label": "Apache Guacamole",
+          "value": "Apache Guacamole"
+        },
+        {
+          "label": "Aspia",
+          "value": "Aspia"
+        },
+        {
+          "label": "Atera",
+          "value": "Atera"
+        },
+        {
+          "label": "Auvik",
+          "value": "Auvik"
+        },
+        {
+          "label": "AweSun / Aweray",
+          "value": "AweSun / Aweray"
+        },
+        {
+          "label": "Backdrop Connect",
+          "value": "Backdrop Connect"
+        },
+        {
+          "label": "baramundi Management Suite",
+          "value": "baramundi Management Suite"
+        },
+        {
+          "label": "Barracuda",
+          "value": "Barracuda"
+        },
+        {
+          "label": "Beaconly",
+          "value": "Beaconly"
+        },
+        {
+          "label": "BeAnywhere Support Express",
+          "value": "BeAnywhere Support Express"
+        },
+        {
+          "label": "BeInSync",
+          "value": "BeInSync"
+        },
+        {
+          "label": "BeyondTrust / Bomgar",
+          "value": "BeyondTrust / Bomgar"
+        },
+        {
+          "label": "Bitvise SSH",
+          "value": "Bitvise SSH"
+        },
+        {
+          "label": "BlackCrypt RMM Agent",
+          "value": "BlackCrypt RMM Agent"
+        },
+        {
+          "label": "Bluetrait",
+          "value": "Bluetrait"
+        },
+        {
+          "label": "Borealis",
+          "value": "Borealis"
+        },
+        {
+          "label": "Breeze",
+          "value": "Breeze"
+        },
+        {
+          "label": "CA DSM / Client Automation Remote Control",
+          "value": "CA DSM / Client Automation Remote Control"
+        },
+        {
+          "label": "Centurion",
+          "value": "Centurion"
+        },
+        {
+          "label": "Chrome Remote Desktop",
+          "value": "Chrome Remote Desktop"
+        },
+        {
+          "label": "Cloud RAS",
+          "value": "Cloud RAS"
+        },
+        {
+          "label": "Cloudflare Tunnel",
+          "value": "Cloudflare Tunnel"
+        },
+        {
+          "label": "Connect / Support tools (generic names)",
+          "value": "Connect / Support tools (generic names)"
+        },
+        {
+          "label": "ConnectWise Automate / LabTech",
+          "value": "ConnectWise Automate / LabTech"
+        },
+        {
+          "label": "ConnectWise Control / ScreenConnect",
+          "value": "ConnectWise Control / ScreenConnect"
+        },
+        {
+          "label": "Controlio",
+          "value": "Controlio"
+        },
+        {
+          "label": "ControlR",
+          "value": "ControlR"
+        },
+        {
+          "label": "ControlUp",
+          "value": "ControlUp"
+        },
+        {
+          "label": "CrossLoop",
+          "value": "CrossLoop"
+        },
+        {
+          "label": "Crosstec Remote Control",
+          "value": "Crosstec Remote Control"
+        },
+        {
+          "label": "CSExec",
+          "value": "CSExec"
+        },
+        {
+          "label": "Dameware",
+          "value": "Dameware"
+        },
+        {
+          "label": "Dataplicity",
+          "value": "Dataplicity"
+        },
+        {
+          "label": "Datto RMM / Autotask",
+          "value": "Datto RMM / Autotask"
+        },
+        {
+          "label": "DeskDay",
+          "value": "DeskDay"
+        },
+        {
+          "label": "DeskRoll",
+          "value": "DeskRoll"
+        },
+        {
+          "label": "DesktopNow",
+          "value": "DesktopNow"
+        },
+        {
+          "label": "Distant Desktop",
+          "value": "Distant Desktop"
+        },
+        {
+          "label": "DocConnect",
+          "value": "DocConnect"
+        },
+        {
+          "label": "Domotz",
+          "value": "Domotz"
+        },
+        {
+          "label": "DragonDisk",
+          "value": "DragonDisk"
+        },
+        {
+          "label": "Duet Display",
+          "value": "Duet Display"
+        },
+        {
+          "label": "DWService",
+          "value": "DWService"
+        },
+        {
+          "label": "eHorus / Pandora RC",
+          "value": "eHorus / Pandora RC"
+        },
+        {
+          "label": "Electric AI (Kaseya)",
+          "value": "Electric AI (Kaseya)"
+        },
+        {
+          "label": "EMCO Remote Console",
+          "value": "EMCO Remote Console"
+        },
+        {
+          "label": "EMCO Remote Installer",
+          "value": "EMCO Remote Installer"
+        },
+        {
+          "label": "Encapto",
+          "value": "Encapto"
+        },
+        {
+          "label": "Ericom",
+          "value": "Ericom"
+        },
+        {
+          "label": "ESET Remote Administrator",
+          "value": "ESET Remote Administrator"
+        },
+        {
+          "label": "ESQ RMM",
+          "value": "ESQ RMM"
+        },
+        {
+          "label": "ezHelp",
+          "value": "ezHelp"
+        },
+        {
+          "label": "Faronics Core",
+          "value": "Faronics Core"
+        },
+        {
+          "label": "Faronics Deep Freeze",
+          "value": "Faronics Deep Freeze"
+        },
+        {
+          "label": "Faronics Deploy",
+          "value": "Faronics Deploy"
+        },
+        {
+          "label": "Faronics Insight",
+          "value": "Faronics Insight"
+        },
+        {
+          "label": "FastViewer",
+          "value": "FastViewer"
+        },
+        {
+          "label": "FixMe.IT",
+          "value": "FixMe.IT"
+        },
+        {
+          "label": "FleetDeck",
+          "value": "FleetDeck"
+        },
+        {
+          "label": "Fortra",
+          "value": "Fortra"
+        },
+        {
+          "label": "Freshservice",
+          "value": "Freshservice"
+        },
+        {
+          "label": "GatherPlace",
+          "value": "GatherPlace"
+        },
+        {
+          "label": "GetScreen",
+          "value": "GetScreen"
+        },
+        {
+          "label": "GLPI Agent",
+          "value": "GLPI Agent"
+        },
+        {
+          "label": "Gorelo",
+          "value": "Gorelo"
+        },
+        {
+          "label": "GoTo Meeting / Opener",
+          "value": "GoTo Meeting / Opener"
+        },
+        {
+          "label": "GoTo Resolve",
+          "value": "GoTo Resolve"
+        },
+        {
+          "label": "GoToAssist",
+          "value": "GoToAssist"
+        },
+        {
+          "label": "GoToHTTP",
+          "value": "GoToHTTP"
+        },
+        {
+          "label": "Goverlan / EV Reach",
+          "value": "Goverlan / EV Reach"
+        },
+        {
+          "label": "GP remote executables (generic names)",
+          "value": "GP remote executables (generic names)"
+        },
+        {
+          "label": "GxM RMM",
+          "value": "GxM RMM"
+        },
+        {
+          "label": "HeartbeatRM",
+          "value": "HeartbeatRM"
+        },
+        {
+          "label": "HelpBeam",
+          "value": "HelpBeam"
+        },
+        {
+          "label": "HelpU",
+          "value": "HelpU"
+        },
+        {
+          "label": "HelpWire",
+          "value": "HelpWire"
+        },
+        {
+          "label": "HopToDesk",
+          "value": "HopToDesk"
+        },
+        {
+          "label": "I'm InTouch",
+          "value": "I'm InTouch"
+        },
+        {
+          "label": "iDrive",
+          "value": "iDrive"
+        },
+        {
+          "label": "ImmyBot",
+          "value": "ImmyBot"
+        },
+        {
+          "label": "Impero",
+          "value": "Impero"
+        },
+        {
+          "label": "Instant Housecall",
+          "value": "Instant Housecall"
+        },
+        {
+          "label": "IntelliAdmin",
+          "value": "IntelliAdmin"
+        },
+        {
+          "label": "InvGate",
+          "value": "InvGate"
+        },
+        {
+          "label": "Iperius Remote",
+          "value": "Iperius Remote"
+        },
+        {
+          "label": "ISL Online",
+          "value": "ISL Online"
+        },
+        {
+          "label": "ITAgent RMM",
+          "value": "ITAgent RMM"
+        },
+        {
+          "label": "ITarian / Comodo",
+          "value": "ITarian / Comodo"
+        },
+        {
+          "label": "Ivanti / LANDesk",
+          "value": "Ivanti / LANDesk"
+        },
+        {
+          "label": "Jump Desktop",
+          "value": "Jump Desktop"
+        },
+        {
+          "label": "JumpCloud",
+          "value": "JumpCloud"
+        },
+        {
+          "label": "Kabuto",
+          "value": "Kabuto"
+        },
+        {
+          "label": "Kaseya VSA",
+          "value": "Kaseya VSA"
+        },
+        {
+          "label": "KHelpDesk",
+          "value": "KHelpDesk"
+        },
+        {
+          "label": "KickIdler",
+          "value": "KickIdler"
+        },
+        {
+          "label": "KiTTY",
+          "value": "KiTTY"
+        },
+        {
+          "label": "Komari",
+          "value": "Komari"
+        },
+        {
+          "label": "Laplink",
+          "value": "Laplink"
+        },
+        {
+          "label": "Lavawall",
+          "value": "Lavawall"
+        },
+        {
+          "label": "Level",
+          "value": "Level"
+        },
+        {
+          "label": "LightRMM",
+          "value": "LightRMM"
+        },
+        {
+          "label": "LiteManager",
+          "value": "LiteManager"
+        },
+        {
+          "label": "LocalXpose",
+          "value": "LocalXpose"
+        },
+        {
+          "label": "LogMeIn / GoToMyPC / Rescue",
+          "value": "LogMeIn / GoToMyPC / Rescue"
+        },
+        {
+          "label": "LS RMM",
+          "value": "LS RMM"
+        },
+        {
+          "label": "Lunixar",
+          "value": "Lunixar"
+        },
+        {
+          "label": "ManageEngine",
+          "value": "ManageEngine"
+        },
+        {
+          "label": "MeshCentral",
+          "value": "MeshCentral"
+        },
+        {
+          "label": "Microsoft Remote Desktop / RDP",
+          "value": "Microsoft Remote Desktop / RDP"
+        },
+        {
+          "label": "Mikogo / BeamYourScreen",
+          "value": "Mikogo / BeamYourScreen"
+        },
+        {
+          "label": "MiniRMM",
+          "value": "MiniRMM"
+        },
+        {
+          "label": "MioNet",
+          "value": "MioNet"
+        },
+        {
+          "label": "Miradore",
+          "value": "Miradore"
+        },
+        {
+          "label": "MobaXterm",
+          "value": "MobaXterm"
+        },
+        {
+          "label": "Monitic",
+          "value": "Monitic"
+        },
+        {
+          "label": "Mouse Without Borders",
+          "value": "Mouse Without Borders"
+        },
+        {
+          "label": "mRemote Agent",
+          "value": "mRemote Agent"
+        },
+        {
+          "label": "mRemoteNG",
+          "value": "mRemoteNG"
+        },
+        {
+          "label": "MSP Agent",
+          "value": "MSP Agent"
+        },
+        {
+          "label": "MSP360 / CloudBerry Backup",
+          "value": "MSP360 / CloudBerry Backup"
+        },
+        {
+          "label": "myGreenPC",
+          "value": "myGreenPC"
+        },
+        {
+          "label": "MyIVO",
+          "value": "MyIVO"
+        },
+        {
+          "label": "N-able / SolarWinds",
+          "value": "N-able / SolarWinds"
+        },
+        {
+          "label": "NateOn",
+          "value": "NateOn"
+        },
+        {
+          "label": "Naverisk",
+          "value": "Naverisk"
+        },
+        {
+          "label": "NetBird",
+          "value": "NetBird"
+        },
+        {
+          "label": "NetLock RMM",
+          "value": "NetLock RMM"
+        },
+        {
+          "label": "NetMaster",
+          "value": "NetMaster"
+        },
+        {
+          "label": "Netop Remote Control",
+          "value": "Netop Remote Control"
+        },
+        {
+          "label": "Netreo",
+          "value": "Netreo"
+        },
+        {
+          "label": "NetSarang Xshell / Xftp",
+          "value": "NetSarang Xshell / Xftp"
+        },
+        {
+          "label": "NetSupport Manager",
+          "value": "NetSupport Manager"
+        },
+        {
+          "label": "Neturo",
+          "value": "Neturo"
+        },
+        {
+          "label": "Netviewer",
+          "value": "Netviewer"
+        },
+        {
+          "label": "Nexus RMM",
+          "value": "Nexus RMM"
+        },
+        {
+          "label": "Nezha",
+          "value": "Nezha"
+        },
+        {
+          "label": "ngrok",
+          "value": "ngrok"
+        },
+        {
+          "label": "NinjaOne / NinjaRMM",
+          "value": "NinjaOne / NinjaRMM"
+        },
+        {
+          "label": "NoMachine",
+          "value": "NoMachine"
+        },
+        {
+          "label": "NTRsupport",
+          "value": "NTRsupport"
+        },
+        {
+          "label": "O&O Syspectr",
+          "value": "O&O Syspectr"
+        },
+        {
+          "label": "Obliance",
+          "value": "Obliance"
+        },
+        {
+          "label": "OCS Inventory",
+          "value": "OCS Inventory"
+        },
+        {
+          "label": "OnionShare",
+          "value": "OnionShare"
+        },
+        {
+          "label": "Opale",
+          "value": "Opale"
+        },
+        {
+          "label": "OpenDesk RMM",
+          "value": "OpenDesk RMM"
+        },
+        {
+          "label": "OpenUEM",
+          "value": "OpenUEM"
+        },
+        {
+          "label": "OpsBridge",
+          "value": "OpsBridge"
+        },
+        {
+          "label": "OptiTune",
+          "value": "OptiTune"
+        },
+        {
+          "label": "Overlord",
+          "value": "Overlord"
+        },
+        {
+          "label": "PAExec",
+          "value": "PAExec"
+        },
+        {
+          "label": "Panorama9",
+          "value": "Panorama9"
+        },
+        {
+          "label": "Parallels Access",
+          "value": "Parallels Access"
+        },
+        {
+          "label": "Parsec",
+          "value": "Parsec"
+        },
+        {
+          "label": "pcAnywhere",
+          "value": "pcAnywhere"
+        },
+        {
+          "label": "PcHelpWare",
+          "value": "PcHelpWare"
+        },
+        {
+          "label": "pcvisit",
+          "value": "pcvisit"
+        },
+        {
+          "label": "PDQ Connect / Deploy / Inventory",
+          "value": "PDQ Connect / Deploy / Inventory"
+        },
+        {
+          "label": "Pilixo",
+          "value": "Pilixo"
+        },
+        {
+          "label": "Ping32",
+          "value": "Ping32"
+        },
+        {
+          "label": "PiTunnel",
+          "value": "PiTunnel"
+        },
+        {
+          "label": "Pixo IT",
+          "value": "Pixo IT"
+        },
+        {
+          "label": "Pocket Controller",
+          "value": "Pocket Controller"
+        },
+        {
+          "label": "PocketCloud",
+          "value": "PocketCloud"
+        },
+        {
+          "label": "ProxiPort",
+          "value": "ProxiPort"
+        },
+        {
+          "label": "PsExec",
+          "value": "PsExec"
+        },
+        {
+          "label": "Pulseway",
+          "value": "Pulseway"
+        },
+        {
+          "label": "PuTTY Tray",
+          "value": "PuTTY Tray"
+        },
+        {
+          "label": "Quick Assist",
+          "value": "Quick Assist"
+        },
+        {
+          "label": "Radmin",
+          "value": "Radmin"
+        },
+        {
+          "label": "Rapid7 Insight",
+          "value": "Rapid7 Insight"
+        },
+        {
+          "label": "rdesktop",
+          "value": "rdesktop"
+        },
+        {
+          "label": "RDP Wrapper",
+          "value": "RDP Wrapper"
+        },
+        {
+          "label": "RDP2TCP",
+          "value": "RDP2TCP"
+        },
+        {
+          "label": "RdViewer",
+          "value": "RdViewer"
+        },
+        {
+          "label": "RealVNC",
+          "value": "RealVNC"
+        },
+        {
+          "label": "RemCom",
+          "value": "RemCom"
+        },
+        {
+          "label": "Remcos",
+          "value": "Remcos"
+        },
+        {
+          "label": "RemMon",
+          "value": "RemMon"
+        },
+        {
+          "label": "Remobo",
+          "value": "Remobo"
+        },
+        {
+          "label": "Remote Desktop Plus",
+          "value": "Remote Desktop Plus"
+        },
+        {
+          "label": "Remote Utilities",
+          "value": "Remote Utilities"
+        },
+        {
+          "label": "Remote Workforce",
+          "value": "Remote Workforce"
+        },
+        {
+          "label": "remote.it",
+          "value": "remote.it"
+        },
+        {
+          "label": "RemoteAgent",
+          "value": "RemoteAgent"
+        },
+        {
+          "label": "Remotely",
+          "value": "Remotely"
+        },
+        {
+          "label": "RemotePass",
+          "value": "RemotePass"
+        },
+        {
+          "label": "RemotePC",
+          "value": "RemotePC"
+        },
+        {
+          "label": "RemotePulse",
+          "value": "RemotePulse"
+        },
+        {
+          "label": "RemSupp",
+          "value": "RemSupp"
+        },
+        {
+          "label": "RG Supervision",
+          "value": "RG Supervision"
+        },
+        {
+          "label": "RMMCRAT",
+          "value": "RMMCRAT"
+        },
+        {
+          "label": "RMMmax",
+          "value": "RMMmax"
+        },
+        {
+          "label": "Rocket Remote Desktop",
+          "value": "Rocket Remote Desktop"
+        },
+        {
+          "label": "Rodex",
+          "value": "Rodex"
+        },
+        {
+          "label": "Roster",
+          "value": "Roster"
+        },
+        {
+          "label": "Royal TS / Royal Server",
+          "value": "Royal TS / Royal Server"
+        },
+        {
+          "label": "RPort",
+          "value": "RPort"
+        },
+        {
+          "label": "Rsupport RemoteView / RemoteCall",
+          "value": "Rsupport RemoteView / RemoteCall"
+        },
+        {
+          "label": "RuDesktop / RMS",
+          "value": "RuDesktop / RMS"
+        },
+        {
+          "label": "RunSmart",
+          "value": "RunSmart"
+        },
+        {
+          "label": "RustDesk",
+          "value": "RustDesk"
+        },
+        {
+          "label": "S3 Browser",
+          "value": "S3 Browser"
+        },
+        {
+          "label": "Screen capture rule",
+          "value": "Screen capture rule"
+        },
+        {
+          "label": "ScreenMeet",
+          "value": "ScreenMeet"
+        },
+        {
+          "label": "SecureCRT",
+          "value": "SecureCRT"
+        },
+        {
+          "label": "Seetrol",
+          "value": "Seetrol"
+        },
+        {
+          "label": "Senso",
+          "value": "Senso"
+        },
+        {
+          "label": "Sentinel RMM Agent",
+          "value": "Sentinel RMM Agent"
+        },
+        {
+          "label": "Server-Eye",
+          "value": "Server-Eye"
+        },
+        {
+          "label": "SetMe",
+          "value": "SetMe"
+        },
+        {
+          "label": "ShellHub",
+          "value": "ShellHub"
+        },
+        {
+          "label": "ShowMyPC",
+          "value": "ShowMyPC"
+        },
+        {
+          "label": "SimpleHelp",
+          "value": "SimpleHelp"
+        },
+        {
+          "label": "Site24x7",
+          "value": "Site24x7"
+        },
+        {
+          "label": "SkyFex",
+          "value": "SkyFex"
+        },
+        {
+          "label": "SmartFTP",
+          "value": "SmartFTP"
+        },
+        {
+          "label": "Sorillus",
+          "value": "Sorillus"
+        },
+        {
+          "label": "Splashtop",
+          "value": "Splashtop"
+        },
+        {
+          "label": "SpyAnywhere",
+          "value": "SpyAnywhere"
+        },
+        {
+          "label": "StifleR (2Pint Software)",
+          "value": "StifleR (2Pint Software)"
+        },
+        {
+          "label": "Sunlogin / Oray",
+          "value": "Sunlogin / Oray"
+        },
+        {
+          "label": "SuperOps",
+          "value": "SuperOps"
+        },
+        {
+          "label": "Supremo",
+          "value": "Supremo"
+        },
+        {
+          "label": "Syncro",
+          "value": "Syncro"
+        },
+        {
+          "label": "SysAid",
+          "value": "SysAid"
+        },
+        {
+          "label": "Tactical RMM",
+          "value": "Tactical RMM"
+        },
+        {
+          "label": "Tailscale",
+          "value": "Tailscale"
+        },
+        {
+          "label": "Tanium",
+          "value": "Tanium"
+        },
+        {
+          "label": "TeamViewer",
+          "value": "TeamViewer"
+        },
+        {
+          "label": "TeleDesktop",
+          "value": "TeleDesktop"
+        },
+        {
+          "label": "Teleport Connect",
+          "value": "Teleport Connect"
+        },
+        {
+          "label": "Tencent QQ",
+          "value": "Tencent QQ"
+        },
+        {
+          "label": "Teramind",
+          "value": "Teramind"
+        },
+        {
+          "label": "TiFlux",
+          "value": "TiFlux"
+        },
+        {
+          "label": "TigerVNC",
+          "value": "TigerVNC"
+        },
+        {
+          "label": "TightVNC / Remote Ripple",
+          "value": "TightVNC / Remote Ripple"
+        },
+        {
+          "label": "tmate",
+          "value": "tmate"
+        },
+        {
+          "label": "ToDesk",
+          "value": "ToDesk"
+        },
+        {
+          "label": "ToolsIQ",
+          "value": "ToolsIQ"
+        },
+        {
+          "label": "Total Network Inventory",
+          "value": "Total Network Inventory"
+        },
+        {
+          "label": "Total Software Deployment",
+          "value": "Total Software Deployment"
+        },
+        {
+          "label": "TrustConnect",
+          "value": "TrustConnect"
+        },
+        {
+          "label": "TSIRC executable (unconfirmed tool)",
+          "value": "TSIRC executable (unconfirmed tool)"
+        },
+        {
+          "label": "TurboMeeting",
+          "value": "TurboMeeting"
+        },
+        {
+          "label": "UltraViewer",
+          "value": "UltraViewer"
+        },
+        {
+          "label": "UltraVNC",
+          "value": "UltraVNC"
+        },
+        {
+          "label": "UniRMM",
+          "value": "UniRMM"
+        },
+        {
+          "label": "Vector / LANutil",
+          "value": "Vector / LANutil"
+        },
+        {
+          "label": "Vicarius Topia",
+          "value": "Vicarius Topia"
+        },
+        {
+          "label": "VS Code Remote Tunnels",
+          "value": "VS Code Remote Tunnels"
+        },
+        {
+          "label": "Webex PCNow",
+          "value": "Webex PCNow"
+        },
+        {
+          "label": "Weezo",
+          "value": "Weezo"
+        },
+        {
+          "label": "Workspace ONE Assist (Omnissa / VMware)",
+          "value": "Workspace ONE Assist (Omnissa / VMware)"
+        },
+        {
+          "label": "XCmd",
+          "value": "XCmd"
+        },
+        {
+          "label": "XEOX",
+          "value": "XEOX"
+        },
+        {
+          "label": "Xpra",
+          "value": "Xpra"
+        },
+        {
+          "label": "Zecurit",
+          "value": "Zecurit"
+        },
+        {
+          "label": "Zero RMM",
+          "value": "Zero RMM"
+        },
+        {
+          "label": "ZeroTier",
+          "value": "ZeroTier"
+        },
+        {
+          "label": "Zoho Assist / Meeting",
+          "value": "Zoho Assist / Meeting"
+        }
+      ]
+    },
+    "windows": {
+      "type": "switch",
+      "label": "Windows (App Control for Business, Windows 11 24H2 or newer)",
+      "default": true
+    },
+    "macOS": {
+      "type": "switch",
+      "label": "macOS (macOS 27 or newer, supervised Macs)",
+      "default": true
+    },
+    "AssignTo": {
+      "type": "autoComplete",
+      "creatable": false,
+      "label": "Who should the policies be assigned to?",
+      "omitWhenBlank": true,
+      "options": [
+        {
+          "value": "On",
+          "label": "Do not assign"
+        },
+        {
+          "value": "allLicensedUsers",
+          "label": "Assign to all users"
+        },
+        {
+          "value": "AllDevices",
+          "label": "Assign to all devices"
+        },
+        {
+          "value": "AllDevicesAndUsers",
+          "label": "Assign to all users and devices"
+        },
+        {
+          "value": "customGroup",
+          "label": "Assign to Custom Group"
+        }
+      ]
+    },
+    "customGroup": {
+      "type": "textField",
+      "label": "Custom group name (if Custom Group selected, wildcards allowed)",
+      "omitWhenBlank": true
+    },
+    "excludeGroup": {
+      "type": "textField",
+      "label": "Exclude group name(s), comma separated (wildcards allowed)",
+      "omitWhenBlank": true
+    }
+  },
+  "expected": {
+    "windowsPolicy": "Deployed",
+    "macosPolicy": "Deployed"
+  },
+  "read": {
+    "cacheType": "IntuneConfigurationPolicies"
+  },
+  "prepare": "Get-CIPPBaselineBlockUnapprovedRMMState",
+  "remediate": {
+    "executor": "BlockUnapprovedRMM",
+    "allowedTools": "%allowedTools%",
+    "windows": "%windows%",
+    "macOS": "%macOS%",
+    "assignTo": "%AssignTo%",
+    "customGroup": "%customGroup%",
+    "excludeGroup": "%excludeGroup%"
+  }
+}

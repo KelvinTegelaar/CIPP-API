@@ -1,0 +1,123 @@
+{
+  "name": "IntuneMinimumOSVersion",
+  "label": "Keep minimum OS versions in compliance and app protection policies up to date",
+  "cat": "Intune Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Checks the minimum OS version, and on Android the minimum security patch level, in every Intune compliance and app protection policy against the versions the vendor still supports, using endoflife.date. Policies that are behind are reported, and raised when remediation is on. Devices below the new minimum become non-compliant or lose access to company data, so start in Report mode. Based on the IntuneComplianceMaintainer project by James Robinson (SkipToTheEndpoint).",
+  "executiveText": "Keeps devices on operating system versions the vendor still supports by raising the minimum version in Intune a set number of days after each release, as frameworks such as Cyber Essentials require, without anyone editing policies by hand.",
+  "docsDescription": "Looks up the supported releases of Windows, macOS, iOS/iPadOS and Android on endoflife.date once a day and compares them with every compliance policy and app protection policy in the tenant. A policy is reported when its minimum OS version is missing or lower than the required version; remediation raises it and never lowers a value. The required version is the oldest release you chose to allow: for iOS/iPadOS and macOS its latest update, for Android the release number plus the monthly security patch level, for Windows the build of the feature update. A new update or patch level only becomes required after the grace period, and a release that reached end of life stays allowed for the same number of days. App protection policies get the new version as a warning straight away and as a requirement after the grace period. Windows is checked on the feature update build only, not on the monthly cumulative update, and LTSC releases and paid extended support (ESU) do not count as supported. Policies whose name matches an exclusion are neither reported nor changed. The idea and the approach come from IntuneComplianceMaintainer by James Robinson (SkipToTheEndpoint): https://github.com/SkipToTheEndpoint/IntuneComplianceMaintainer",
+  "impactColour": "danger",
+  "addedDate": "2026-11-16",
+  "powershellEquivalent": "Graph: PATCH deviceManagement/deviceCompliancePolicies and deviceAppManagement/*ManagedAppProtections",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "INTUNE_A",
+    "MDM_Services",
+    "EMS",
+    "SCCM",
+    "MICROSOFTINTUNEPLAN1"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "cadenceDays": {
+      "type": "number",
+      "label": "Grace period in days after a release or end of life",
+      "helperText": "Cyber Essentials expects updates within 14 days.",
+      "required": true,
+      "default": 14,
+      "validators": {
+        "min": {
+          "value": 0,
+          "message": "Minimum value is 0"
+        },
+        "max": {
+          "value": 90,
+          "message": "Maximum value is 90"
+        }
+      }
+    },
+    "supportedReleases": {
+      "type": "select",
+      "multiple": false,
+      "label": "Releases to allow",
+      "required": true,
+      "options": [
+        {
+          "label": "Every release the vendor still supports",
+          "value": "supported"
+        },
+        {
+          "label": "The latest release and the one before it",
+          "value": "latestTwo"
+        },
+        {
+          "label": "Only the latest release",
+          "value": "latest"
+        }
+      ],
+      "default": "supported"
+    },
+    "compliancePolicies": {
+      "type": "switch",
+      "label": "Check compliance policies",
+      "default": true
+    },
+    "appProtectionPolicies": {
+      "type": "switch",
+      "label": "Check app protection policies",
+      "default": true
+    },
+    "windows": {
+      "type": "switch",
+      "label": "Windows",
+      "default": true
+    },
+    "macOS": {
+      "type": "switch",
+      "label": "macOS",
+      "default": true
+    },
+    "iOS": {
+      "type": "switch",
+      "label": "iOS/iPadOS",
+      "default": true
+    },
+    "android": {
+      "type": "switch",
+      "label": "Android",
+      "default": true
+    },
+    "excludedPolicies": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "omitWhenBlank": true,
+      "label": "Do not change or alert on policies containing the following name (wildcards allowed)"
+    }
+  },
+  "expected": {
+    "offenders": []
+  },
+  "read": {
+    "cacheType": "IntunePolicies",
+    "freshnessType": "IntuneDeviceCompliancePolicies"
+  },
+  "prepare": "Get-CIPPBaselineIntuneMinimumOSVersionState",
+  "remediate": {
+    "executor": "GraphBulkSweep",
+    "refreshCache": [
+      "IntunePolicies",
+      "IntuneAppProtectionPolicies"
+    ],
+    "writes": [
+      {
+        "method": "PATCH",
+        "asApp": false,
+        "uri": "%uri%",
+        "body": "%body%"
+      }
+    ]
+  }
+}
