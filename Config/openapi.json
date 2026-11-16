@@ -73,6 +73,9 @@
       "name": "Endpoint > Reports"
     },
     {
+      "name": "Identity > Administration > AdministrativeUnits"
+    },
+    {
       "name": "Identity > Administration > Devices"
     },
     {
@@ -252,6 +255,98 @@
     }
   },
   "paths": {
+    "/api/AddAdministrativeUnit": {
+      "post": {
+        "summary": "AddAdministrativeUnit",
+        "operationId": "AddAdministrativeUnit",
+        "tags": [
+          "Identity > Administration > AdministrativeUnits"
+        ],
+        "description": "Creates an administrative unit. Membership is assigned by hand or kept by a dynamic rule over users or\ndevices (Entra ID P1). Restricted management can only be chosen here: Graph does not let it change after\nthe unit exists. An assigned unit can be given its first users, groups and devices in the same request.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "isMemberManagementRestricted": {
+                    "type": "boolean",
+                    "description": "Restricted management: only roles scoped to the unit can manage its members, not tenant-wide admins."
+                  },
+                  "members": {
+                    "type": "string",
+                    "description": "Users, groups or devices to add once the unit exists, as picker objects or object ids. Assigned units only."
+                  },
+                  "membershipRule": {
+                    "type": "string",
+                    "description": "Dynamic membership rule, such as (user.department -eq \"Sales\"). Required for a dynamic unit."
+                  },
+                  "membershipType": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Assigned or Dynamic."
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "visibility": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Public or HiddenMembership (only members and roles scoped to the unit see who is in it)."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
     "/api/AddAlert": {
       "post": {
         "summary": "AddAlert",
@@ -9026,6 +9121,114 @@
         "x-cipp-tenant-group": true
       }
     },
+    "/api/EditAdministrativeUnit": {
+      "post": {
+        "summary": "EditAdministrativeUnit",
+        "operationId": "EditAdministrativeUnit",
+        "tags": [
+          "Identity > Administration > AdministrativeUnits"
+        ],
+        "description": "Changes an administrative unit's name, description, visibility or membership, and adds or removes members\nof an assigned unit. Only the fields sent are changed. Switching to dynamic replaces the members with the\nrule's result. Restricted management cannot be changed after creation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "AddMember": {
+                    "type": "string",
+                    "description": "Users, groups or devices to add or remove, as picker objects or object ids. Assigned units only."
+                  },
+                  "currentDisplayName": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "Object id of the administrative unit."
+                  },
+                  "membershipRule": {
+                    "type": "string"
+                  },
+                  "membershipRuleProcessingState": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "On or Paused: whether a dynamic rule is evaluated."
+                  },
+                  "membershipType": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Assigned or Dynamic."
+                  },
+                  "RemoveMember": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "visibility": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Public or HiddenMembership."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
     "/api/EditAntiPhishingFilter": {
       "post": {
         "summary": "EditAntiPhishingFilter",
@@ -13832,6 +14035,86 @@
           }
         ],
         "x-cipp-role": "CIPP.AppSettings.ReadWrite"
+      }
+    },
+    "/api/ExecAdministrativeUnitMembers": {
+      "post": {
+        "summary": "ExecAdministrativeUnitMembers",
+        "operationId": "ExecAdministrativeUnitMembers",
+        "tags": [
+          "Identity > Administration > AdministrativeUnits"
+        ],
+        "description": "Adds users, groups or devices to an administrative unit, or removes them. Adding a group adds the group\nitself, not its members. A dynamic unit's members come from its rule and cannot be changed by hand.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "addMember or removeMember."
+                  },
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "Object id of the administrative unit."
+                  },
+                  "members": {
+                    "type": "string",
+                    "description": "Object ids of the users, groups or devices; picker objects carry the id in value and the name in label."
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
       }
     },
     "/api/ExecAlertsList": {
@@ -45363,6 +45646,241 @@
         "x-cipp-role": "Exchange.Mailbox.Read"
       }
     },
+    "/api/ListAdministrativeUnitMembers": {
+      "get": {
+        "summary": "ListAdministrativeUnitMembers",
+        "operationId": "ListAdministrativeUnitMembers",
+        "tags": [
+          "Identity > Administration > AdministrativeUnits"
+        ],
+        "description": "Lists the users, groups and devices in an administrative unit.",
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "description": "Object id of the administrative unit.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record. The fields taken from Graph are the ones this endpoint selects, so they are what the response actually carries.",
+                    "properties": {
+                      "accountEnabled": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "displayName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "mail": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "operatingSystem": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "type": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "userPrincipalName": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read"
+      }
+    },
+    "/api/ListAdministrativeUnits": {
+      "get": {
+        "summary": "ListAdministrativeUnits",
+        "operationId": "ListAdministrativeUnits",
+        "tags": [
+          "Identity > Administration > AdministrativeUnits"
+        ],
+        "description": "Lists the administrative units of a tenant with their membership type, dynamic rule, visibility and whether\nmanagement is restricted to roles scoped to the unit. Pass an ID to read one unit.",
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "description": "Object id of one administrative unit; leave out to list them all.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The fields taken from Graph are the ones this endpoint selects, so they are what the response actually carries.",
+                    "properties": {
+                      "description": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend,frontend"
+                      },
+                      "displayName": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend,frontend"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend"
+                      },
+                      "isMemberManagementRestricted": {
+                        "type": "boolean",
+                        "x-cipp-field-source": "graph,backend,frontend"
+                      },
+                      "members": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "membershipRule": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend,frontend"
+                      },
+                      "membershipRuleProcessingState": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend,frontend"
+                      },
+                      "membershipType": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend,frontend"
+                      },
+                      "visibility": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph,backend,frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read"
+      }
+    },
+    "/api/ListAdministrativeUnitUsage": {
+      "get": {
+        "summary": "ListAdministrativeUnitUsage",
+        "operationId": "ListAdministrativeUnitUsage",
+        "tags": [
+          "Identity > Administration > AdministrativeUnits"
+        ],
+        "description": "Lists what an administrative unit is used for: Entra role assignments scoped to it (active and PIM\neligible) and Exchange role assignments scoped to it, for admins and for apps (RBAC for Applications).\nExchange is read best effort: when it cannot be read, the Entra rows are returned with status 207.",
+        "parameters": [
+          {
+            "name": "displayName",
+            "in": "query",
+            "description": "Display name of the unit, used to match Exchange assignments that report the unit by name.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ID",
+            "in": "query",
+            "description": "Object id of the administrative unit.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read"
+      }
+    },
     "/api/ListAdminPortalLicenses": {
       "get": {
         "summary": "ListAdminPortalLicenses",
@@ -76358,6 +76876,68 @@
           }
         ],
         "x-cipp-role": "Public"
+      }
+    },
+    "/api/RemoveAdministrativeUnit": {
+      "post": {
+        "summary": "RemoveAdministrativeUnit",
+        "operationId": "RemoveAdministrativeUnit",
+        "tags": [
+          "Identity > Administration > AdministrativeUnits"
+        ],
+        "description": "Deletes an administrative unit. Its members are not deleted, but every role assignment scoped to the unit\nstops applying, and Exchange role assignments scoped to it no longer reach any mailbox. A deleted unit can\nbe restored from the Entra recycle bin for 30 days.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "Object id of the administrative unit."
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
       }
     },
     "/api/RemoveAPDevice": {
