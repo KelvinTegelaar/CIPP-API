@@ -185,24 +185,6 @@ function Start-CIPPBaselineOrchestrator {
     }
     Write-LogMessage -API 'Baselines' -message "Baseline $Mode started by ${TriggeredBy}: $($WorkItems.Count) (tenant, standard) checks queued - Run $RunId" -Sev 'Info'
 
-    # 90-day history retention (design doc §4.3): prune on the scheduled run only. The newest
-    # row per (tenant, standard) partition always survives, even when it is older than 90 days.
-    if ($TriggeredBy -eq 'schedule') {
-        try {
-            $HistoryTable = Get-CippTable -tablename 'BaselineHistory'
-            $Cutoff = (Get-Date).AddDays(-90).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-            $OldRows = Get-CIPPAzDataTableEntity @HistoryTable -Filter "Timestamp lt datetime'$Cutoff'"
-            $Prunable = foreach ($Partition in ($OldRows | Group-Object -Property PartitionKey)) {
-                # RowKeys are inverted ticks: the FIRST row sorted ascending is the newest.
-                $Sorted = $Partition.Group | Sort-Object -Property RowKey
-                $Sorted | Select-Object -Skip 1
-            }
-            if ($Prunable) { Remove-CIPPAzDataTableEntity -Force @HistoryTable -Entity @($Prunable) }
-        } catch {
-            Write-Information "Baseline history pruning skipped: $($_.Exception.Message)"
-        }
-    }
-
     Set-CippBaselineRunContext -RunId $null
     return $WorkItems.Count
 }

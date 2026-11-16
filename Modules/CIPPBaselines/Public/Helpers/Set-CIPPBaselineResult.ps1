@@ -71,22 +71,6 @@ function Set-CIPPBaselineResult {
         LastRemediated      = $(if ($Result.Remediated) { $Now } else { $Prior.LastRemediated ?? '' })
     }
 
-    $HistoryTable = Get-CippTable -tablename 'BaselineHistory'
-    $HistoryTable.Force = $true
-    $InvertedTicks = '{0:D19}' -f ([DateTime]::MaxValue.Ticks - [DateTime]::UtcNow.Ticks)
-    Add-CIPPAzDataTableEntity @HistoryTable -Entity @{
-        # '#' is forbidden in Azure Table keys - instance keys sanitize to '~', exactly
-        # like the resolved row's RowKey (readers reverse the mapping).
-        PartitionKey = ('{0}_{1}' -f $Item.TenantFilter, ($Item.Standard -replace '#', '~'))
-        RowKey       = ('{0}-{1}' -f $InvertedTicks, $RunId)
-        RunId        = $RunId
-        Mode         = "$($Result.Mode)"
-        TriggeredBy  = "$($Result.TriggeredBy)"
-        Outcome      = "$($Result.Outcome)"
-        Remediated   = [bool]$Result.Remediated
-        Diff         = [string]$(if ($Result.Diff) { ConvertTo-Json -Compress -Depth 100 -InputObject @($Result.Diff) } else { '' })
-        Detail       = "$Detail"
-        # Whether this run raises an alert - the timeline shows delivery, not just drift.
-        Alerted      = [bool]$Result.AlertEvent
-    }
+    # Alerted: the timeline shows delivery, not just drift.
+    $null = Add-CIPPBaselineHistoryEvent -TenantFilter $Item.TenantFilter -Standard $Item.Standard -Mode $Result.Mode -TriggeredBy $Result.TriggeredBy -Outcome $Result.Outcome -Detail $Detail -Diff $Result.Diff -RunId $RunId -Remediated ([bool]$Result.Remediated) -Alerted ([bool]$Result.AlertEvent)
 }

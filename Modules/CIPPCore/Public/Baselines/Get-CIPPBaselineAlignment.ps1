@@ -238,8 +238,14 @@ function Get-CIPPBaselineAlignment {
             # Reverse the '#'->'~' key sanitization to recover the instance key.
             $StandardName = "$($Row.PartitionKey)".Substring($TenantFilter.Length + 1) -replace '~', '#'
             $Definition = $DefinitionByName[($StandardName -split '#')[0]]
+            # The RowKey holds when the row was written; Timestamp moves when a later identical run extends it.
+            $Written = if ("$($Row.RowKey)" -match '^\d{19}') { [DateTimeOffset]::new($MaxTicks - [long]$Matches[0], [TimeSpan]::Zero).ToUnixTimeSeconds() }
+            elseif ($Row.Timestamp -is [System.DateTimeOffset]) { $Row.Timestamp.ToUnixTimeSeconds() } else { $Row.Timestamp }
             [PSCustomObject]@{
-                timestamp     = $(if ($Row.Timestamp -is [System.DateTimeOffset]) { $Row.Timestamp.ToUnixTimeSeconds() } else { $Row.Timestamp })
+                timestamp     = $Written
+                runCount      = [int]($Row.RunCount ?? 1)
+                lastRunAt     = $Row.LastRunAt
+                lastRunId     = $Row.LastRunId
                 standardName  = $StandardName
                 standardLabel = $ManualLabels[$StandardName] ?? $Definition.label ?? $StandardName
                 mode          = $Row.Mode
