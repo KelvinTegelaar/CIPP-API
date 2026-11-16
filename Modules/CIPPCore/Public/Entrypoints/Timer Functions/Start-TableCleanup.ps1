@@ -5,7 +5,40 @@ function Start-TableCleanup {
     #>
     param()
 
+    $FixedCacheTables = @(
+        'cacheAccessUserRoles', 'CacheAsyncDeployments', 'cacheauditloglookups', 'CacheAzureServiceTags', 'cachebasicauth',
+        'CacheCapabilities', 'cacheCAPolicies', 'CacheDefenderTvmExport', 'CacheExtensionSync', 'cachegeoip',
+        'cacheGitHubReleaseNotes', 'CacheGroupCreation', 'cachehttppermissions', 'CacheHuduAssets', 'CacheHuduRelations',
+        'CacheJITAdmin', 'cachelicenses', 'CacheM365IPRanges', 'cachemfa', 'CacheMxRecords', 'CacheNinjaOneParsedDevices',
+        'CacheNinjaOneParsedUsers', 'CacheNinjaOneUsersUpdate', 'cacheQuarantineMessages', 'cachespotenant',
+        'cachetenantskus', 'CacheTransportRules', 'CacheVersions', 'CacheWebhooks'
+    )
+    try {
+        $Context = New-AzDataTableContext -ConnectionString $env:AzureWebJobsStorage
+        $GraphCacheTables = foreach ($TableName in (Get-AzDataTable -Context $Context)) {
+            if ($TableName -match '^cache' -and $TableName -notin $FixedCacheTables) { $TableName }
+        }
+    } catch {
+        Write-Warning "Could not list tables for Graph cache cleanup: $($_.Exception.Message)"
+        $GraphCacheTables = @()
+    }
+    $GraphCacheCutoff = (Get-Date).AddHours(-24).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+
     $Batch = @(
+        # Get-GraphRequestList tables: read for 1 h, rows up to ~1 MB, part rows share the root's age
+        foreach ($TableName in $GraphCacheTables) {
+            @{
+                FunctionName   = 'TableCleanupTask'
+                Type           = 'CleanupRule'
+                TableName      = $TableName
+                RawDelete      = $true
+                DataTableProps = @{
+                    Filter   = "Timestamp lt datetime'$GraphCacheCutoff'"
+                    First    = 1000
+                    Property = @('PartitionKey', 'RowKey', 'ETag')
+                }
+            }
+        }
         @{
             FunctionName   = 'TableCleanupTask'
             Type           = 'CleanupRule'
