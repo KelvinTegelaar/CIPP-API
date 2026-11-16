@@ -27,12 +27,19 @@ function New-CIPPBackupTask {
         }
         'users' {
             Measure-CippTask -TaskName 'Users' -EventName 'CIPP.BackupCompleted' -Script {
-                New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter | Select-Object * -ExcludeProperty mail, provisionedPlans, onPrem*, *passwordProfile*, *serviceProvisioningErrors*, isLicenseReconciliationNeeded, isManagementRestricted, isResourceAccount, *date*, *external*, identities, deletedDateTime, imAddresses, isSipEnabled, assignedPlans, cloudRealtimeCommunicationInfo, deviceKeys, provisionedPlan, securityIdentifier | ForEach-Object {
-                    #remove the property if the value is $null
-                    $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
-                        $_.psobject.properties.Remove($_.Name)
+                $ExcludedProperties = @('mail', 'provisionedPlans', 'onPrem*', '*passwordProfile*', '*serviceProvisioningErrors*', 'isLicenseReconciliationNeeded', 'isManagementRestricted', 'isResourceAccount', '*date*', '*external*', 'identities', 'deletedDateTime', 'imAddresses', 'isSipEnabled', 'assignedPlans', 'cloudRealtimeCommunicationInfo', 'deviceKeys', 'provisionedPlan', 'securityIdentifier')
+                $KeepProperty = @{}
+                foreach ($User in (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter)) {
+                    $Kept = [ordered]@{}
+                    foreach ($Property in $User.PSObject.Properties) {
+                        $Keep = $KeepProperty[$Property.Name]
+                        if ($null -eq $Keep) {
+                            $Name = $Property.Name
+                            $Keep = $KeepProperty[$Name] = -not $ExcludedProperties.Where({ $Name -like $_ }, 'First')
+                        }
+                        if ($Keep) { $Kept[$Property.Name] = $Property.Value }
                     }
-                    $_
+                    [pscustomobject]$Kept
                 }
             }
         }

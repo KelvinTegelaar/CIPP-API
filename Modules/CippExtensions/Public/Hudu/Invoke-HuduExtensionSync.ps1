@@ -252,8 +252,9 @@ function Invoke-HuduExtensionSync {
         # Only asset to asset relations are checked below, so only those are cached
         $RelationKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         if ($null -ne $RelationsCacheAgeMinutes -and $RelationsCacheAgeMinutes -lt $HuduRelationsCacheTTLMinutes) {
-            foreach ($CachedRelationRow in Get-CIPPAzDataTableEntity @HuduRelationsCache -Filter "PartitionKey eq 'HuduRelation'") {
-                $null = $RelationKeys.Add("$($CachedRelationRow.FromableType)|$($CachedRelationRow.FromableId)|$($CachedRelationRow.ToableType)|$($CachedRelationRow.ToableId)")
+            # The cache is account-wide, so stream it rather than hold every row in each concurrent sync
+            Get-CIPPAzDataTableEntity @HuduRelationsCache -Filter "PartitionKey eq 'HuduRelation'" -Property PartitionKey, RowKey, FromableType, FromableId, ToableType, ToableId -Stream | ForEach-Object {
+                $null = $RelationKeys.Add("$($_.FromableType)|$($_.FromableId)|$($_.ToableType)|$($_.ToableId)")
             }
         } else {
             # Stamped first so syncs starting during the refresh read the existing rows instead of refreshing too
