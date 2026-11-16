@@ -702,6 +702,10 @@ function Invoke-CIPPBaselineStandard {
         # A denied deviation is an operator order: remediate regardless of configured posture.
         $DeniedRemediate = $PriorStatus -eq 'Denied - Remediate Pending'
 
+        if ($Mode -eq 'oneoff' -and -not $Compliant -and $null -ne $Current -and ($AcceptActive -or $PathAccepted -or $PriorStatus -eq 'Denied - Delete Pending')) {
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "`"$Label`" not remediated: it has accepted or denied deviations. Undo or deny them first. - Run $RunId" -Sev 'Warning'
+        }
+
         if (-not $Compliant -and $null -ne $Current -and $AcceptActive) {
             $Result.Outcome = 'Drift'
             $Result.Status = 'Accepted'
