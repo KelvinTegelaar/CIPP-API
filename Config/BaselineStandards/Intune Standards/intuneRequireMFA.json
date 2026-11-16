@@ -1,6 +1,6 @@
 {
   "name": "intuneRequireMFA",
-  "label": "Require Multi-factor Authentication to register or join devices with Microsoft Entra",
+  "label": "Configure MFA requirement to register or join devices with Microsoft Entra",
   "cat": "Intune Standards",
   "tag": [
     "CMMC (IA.L2-3.5.3)",
@@ -8,9 +8,9 @@
     "NIST SP 800-171 (3.5.3)"
   ],
   "impact": "Medium Impact",
-  "helpText": "Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.",
-  "executiveText": "Requires employees to use multi-factor authentication when registering devices for corporate access, adding an extra security layer to prevent unauthorized device enrollment. This helps ensure only legitimate users can connect their devices to company systems.",
-  "docsDescription": "Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.",
+  "helpText": "Sets whether MFA is required to register or join devices with Microsoft Entra. Microsoft recommends enforcing this with a Conditional Access policy for the 'Register or join devices' user action and setting this to Not required. Setting Not required without such a policy leaves device registration without MFA.",
+  "executiveText": "Controls whether employees must use multi-factor authentication when registering or joining devices through the Entra device setting. Microsoft recommends enforcing this through Conditional Access instead, which allows exceptions for scenarios such as meeting room equipment while still protecting device enrollment.",
+  "docsDescription": "Sets whether MFA is required to register or join devices with Microsoft Entra. Microsoft recommends enforcing this with a Conditional Access policy for the 'Register or join devices' user action and setting this to Not required. Setting Not required without such a policy leaves device registration without MFA.",
   "impactColour": "warning",
   "addedDate": "2023-10-23",
   "powershellEquivalent": "Update-MgBetaPolicyDeviceRegistrationPolicy",
@@ -21,9 +21,27 @@
   "requiredCapabilities": [],
   "secureScoreImpact": 0,
   "compare": "subset",
-  "variables": {},
+  "variables": {
+    "state": {
+      "type": "autoComplete",
+      "multiple": false,
+      "label": "MFA to register or join devices",
+      "required": true,
+      "options": [
+        {
+          "label": "Required",
+          "value": "required"
+        },
+        {
+          "label": "Not required (enforce with Conditional Access)",
+          "value": "notRequired"
+        }
+      ],
+      "default": "required"
+    }
+  },
   "expected": {
-    "multiFactorAuthConfiguration": "required"
+    "multiFactorAuthConfiguration": "%state%"
   },
   "read": {
     "cacheType": "DeviceRegistrationPolicy"
@@ -33,7 +51,7 @@
   "remediate": {
     "executor": "DeviceRegistrationPolicy",
     "set": {
-      "multiFactorAuthConfiguration": "required"
+      "multiFactorAuthConfiguration": "%state%"
     }
   }
 }

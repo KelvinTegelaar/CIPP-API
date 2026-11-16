@@ -5,17 +5,19 @@ function Invoke-CIPPStandardintuneRequireMFA {
     .COMPONENT
         (APIName) intuneRequireMFA
     .SYNOPSIS
-        (Label) Require Multi-factor Authentication to register or join devices with Microsoft Entra
+        (Label) Configure MFA requirement to register or join devices with Microsoft Entra
     .DESCRIPTION
-        (Helptext) Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.
-        (DocsDescription) Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.
+        (Helptext) Sets whether MFA is required to register or join devices with Microsoft Entra. Microsoft recommends enforcing this with a Conditional Access policy for the 'Register or join devices' user action and setting this to Not required. Setting Not required without such a policy leaves device registration without MFA.
+        (DocsDescription) Sets whether MFA is required to register or join devices with Microsoft Entra. Microsoft recommends enforcing this with a Conditional Access policy for the 'Register or join devices' user action and setting this to Not required. Setting Not required without such a policy leaves device registration without MFA.
     .NOTES
         CAT
             Intune Standards
         TAG
             "ZTNA21872"
         EXECUTIVETEXT
-            Requires employees to use multi-factor authentication when registering devices for corporate access, adding an extra security layer to prevent unauthorized device enrollment. This helps ensure only legitimate users can connect their devices to company systems.
+            Controls whether employees must use multi-factor authentication when registering or joining devices through the Entra device setting. Microsoft recommends enforcing this through Conditional Access instead, which allows exceptions for scenarios such as meeting room equipment while still protecting device enrollment.
+        ADDEDCOMPONENT
+            {"type":"autoComplete","multiple":false,"creatable":false,"required":true,"label":"MFA to register or join devices","name":"standards.intuneRequireMFA.state","options":[{"label":"Required","value":"required"},{"label":"Not required (enforce with Conditional Access)","value":"notRequired"}]}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -39,31 +41,34 @@ function Invoke-CIPPStandardintuneRequireMFA {
         return
     }
 
+    # Backwards compat: templates saved before the Required/Not required option have no state, keep the original behaviour
+    $Wanted = $Settings.state.value ?? $Settings.state ?? 'required'
+
     if ($Settings.remediate -eq $true) {
-        if ($PreviousSetting.multiFactorAuthConfiguration -eq 'required') {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Require to use MFA when joining/registering Entra Devices is already enabled.' -sev Info
+        if ($PreviousSetting.multiFactorAuthConfiguration -eq $Wanted) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "MFA when joining/registering Entra Devices is already set to $Wanted." -sev Info
         } else {
             try {
                 $NewSetting = $PreviousSetting
-                $NewSetting.multiFactorAuthConfiguration = 'required'
+                $NewSetting.multiFactorAuthConfiguration = $Wanted
                 $NewBody = ConvertTo-Json -Compress -InputObject $NewSetting -Depth 10
                 New-GraphPostRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -Type PUT -Body $NewBody
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Set required to use MFA when joining/registering Entra Devices' -sev Info
-                $PreviousSetting.multiFactorAuthConfiguration = 'required'
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set MFA when joining/registering Entra Devices to $Wanted" -sev Info
+                $PreviousSetting.multiFactorAuthConfiguration = $Wanted
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set require to use MFA when joining/registering Entra Devices: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set MFA when joining/registering Entra Devices to $($Wanted): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
 
-        if ($PreviousSetting.multiFactorAuthConfiguration -eq 'required') {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Require to use MFA when joining/registering Entra Devices is enabled.' -sev Info
+        if ($PreviousSetting.multiFactorAuthConfiguration -eq $Wanted) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "MFA when joining/registering Entra Devices is set to $Wanted." -sev Info
         } else {
-            Write-StandardsAlert -message 'Require to use MFA when joining/registering Entra Devices is not enabled' -object $PreviousSetting -tenant $Tenant -standardName 'intuneRequireMFA' -standardId $Settings.standardId
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Require to use MFA when joining/registering Entra Devices is not enabled.' -sev Info
+            Write-StandardsAlert -message "MFA when joining/registering Entra Devices is not set to $Wanted" -object $PreviousSetting -tenant $Tenant -standardName 'intuneRequireMFA' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "MFA when joining/registering Entra Devices is not set to $Wanted." -sev Info
         }
     }
 
@@ -72,7 +77,7 @@ function Invoke-CIPPStandardintuneRequireMFA {
             multiFactorAuthConfiguration = $PreviousSetting.multiFactorAuthConfiguration
         }
         $ExpectedValue = @{
-            multiFactorAuthConfiguration = 'required'
+            multiFactorAuthConfiguration = $Wanted
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.intuneRequireMFA' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
     }
