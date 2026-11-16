@@ -9781,6 +9781,29 @@
     ]
   },
   {
+    "name": "standards.RecommendationEmailNotifications",
+    "cat": "Entra (AAD) Standards",
+    "tag": [],
+    "helpText": "Turns the Microsoft Entra emails about new recommendations on or off for the whole tenant. These are the \"You have a new recommendation\" emails sent to admins.",
+    "docsDescription": "Sets the tenant-wide **Send email notifications for tenant recommendations** setting (Microsoft Entra admin center, Overview, Recommendations, Email Settings). Turned off, Entra stops emailing admins when a new recommendation appears; the recommendations themselves are still listed in the admin center.",
+    "executiveText": "Controls whether Microsoft emails the tenant's administrators each time Microsoft Entra has a new security recommendation. Turning them off removes notices that are not acted on, for example where the tenant is not managed for security.",
+    "label": "Set email notifications for Entra recommendations",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-11-16",
+    "powershellEquivalent": "Graph API: PATCH https://graph.microsoft.com/beta/directory/recommendationConfiguration",
+    "recommendedBy": [],
+    "requiredCapabilities": [],
+    "addedComponent": [
+      {
+        "name": "standards.RecommendationEmailNotifications.sendEmails",
+        "type": "switch",
+        "label": "Send email notifications for new recommendations",
+        "default": false
+      }
+    ]
+  },
+  {
     "name": "standards.RestrictThirdPartyStorageServices",
     "cat": "Global Standards",
     "tag": [

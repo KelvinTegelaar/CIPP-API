@@ -38,6 +38,7 @@ function Get-CIPPDBCacheSchedule {
                 'AuthenticationMethodsPolicy'
                 'SecurityDefaults'
                 'DirectoryRecommendations'
+                'DirectoryRecommendationConfiguration'
                 'CrossTenantAccessPolicy'
                 'DefaultAppManagementPolicy'
                 'ActivityBasedTimeoutPolicy'

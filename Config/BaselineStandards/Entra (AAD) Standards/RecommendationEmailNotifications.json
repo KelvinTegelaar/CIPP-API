@@ -1,0 +1,44 @@
+{
+  "name": "RecommendationEmailNotifications",
+  "label": "Set email notifications for Entra recommendations",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Low Impact",
+  "helpText": "Turns the Microsoft Entra emails about new recommendations on or off for the whole tenant. These are the \"You have a new recommendation\" emails sent to admins.",
+  "executiveText": "Controls whether Microsoft emails the tenant's administrators each time Microsoft Entra has a new security recommendation. Turning them off removes notices that are not acted on, for example where the tenant is not managed for security.",
+  "docsDescription": "Sets the tenant-wide **Send email notifications for tenant recommendations** setting (Microsoft Entra admin center, Overview, Recommendations, Email Settings). Turned off, Entra stops emailing admins when a new recommendation appears; the recommendations themselves are still listed in the admin center.",
+  "impactColour": "info",
+  "addedDate": "2026-11-16",
+  "powershellEquivalent": "Graph API: PATCH https://graph.microsoft.com/beta/directory/recommendationConfiguration",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "sendEmails": {
+      "type": "switch",
+      "label": "Send email notifications for new recommendations",
+      "default": false
+    }
+  },
+  "expected": {
+    "isNotificationEnabled": "%sendEmails%"
+  },
+  "read": {
+    "cacheType": "DirectoryRecommendationConfiguration"
+  },
+  "writeTarget": "recommendationConfiguration",
+  "remediate": {
+    "executor": "GraphRequest",
+    "requests": [
+      {
+        "method": "PATCH",
+        "asApp": false,
+        "uri": "directory/recommendationConfiguration",
+        "body": {
+          "isNotificationEnabled": "%sendEmails%"
+        }
+      }
+    ]
+  }
+}
