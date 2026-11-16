@@ -1,0 +1,54 @@
+{
+  "name": "ActiveSyncDefaultAccessLevel",
+  "label": "Set the default access level for new mobile devices",
+  "cat": "Exchange Standards",
+  "tag": [],
+  "impact": "High Impact",
+  "helpText": "Sets what Exchange Online does with a mobile device it has not seen before: Allow lets it sync, Quarantine holds it until an admin allows it, Block refuses it. Devices already on a mailbox's allow or block list, or covered by a device access rule, are not affected.",
+  "executiveText": "Controls whether new phones and tablets can reach company email straight away or must be approved first. Requiring approval stops unknown devices from syncing mailbox data, at the cost of a short wait for staff when they set up a new phone.",
+  "docsDescription": "Sets the tenant's default ActiveSync access level, which applies to mobile devices that no allow or block list entry or device access rule covers. With **Quarantine**, a new device cannot sync until it is allowed, for example with **Allow Device** on the ActiveSync Devices report. With **Block**, new devices are refused. For more information, see [Microsoft's documentation](https://learn.microsoft.com/powershell/module/exchangepowershell/set-activesyncorganizationsettings).",
+  "impactColour": "danger",
+  "addedDate": "2026-11-16",
+  "powershellEquivalent": "Set-ActiveSyncOrganizationSettings -DefaultAccessLevel Allow|Quarantine|Block",
+  "recommendedBy": [],
+  "requiredCapabilities": [
+    "EXCHANGE_S_STANDARD",
+    "EXCHANGE_S_ENTERPRISE",
+    "EXCHANGE_S_STANDARD_GOV",
+    "EXCHANGE_S_ENTERPRISE_GOV",
+    "EXCHANGE_LITE"
+  ],
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "variables": {
+    "accessLevel": {
+      "type": "select",
+      "multiple": false,
+      "label": "Default access level for new mobile devices",
+      "required": true,
+      "options": [
+        { "label": "Allow", "value": "Allow" },
+        { "label": "Quarantine (admin must allow each new device)", "value": "Quarantine" },
+        { "label": "Block", "value": "Block" }
+      ]
+    }
+  },
+  "expected": {
+    "DefaultAccessLevel": "%accessLevel%"
+  },
+  "read": {
+    "cacheType": "ExoActiveSyncOrganizationSettings"
+  },
+  "writeTarget": "exoActiveSyncOrganizationSettings",
+  "remediate": {
+    "executor": "ExoRequest",
+    "cmdlets": [
+      {
+        "cmdlet": "Set-ActiveSyncOrganizationSettings",
+        "params": {
+          "DefaultAccessLevel": "%accessLevel%"
+        }
+      }
+    ]
+  }
+}

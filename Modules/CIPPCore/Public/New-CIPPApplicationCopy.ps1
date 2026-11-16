@@ -6,7 +6,7 @@ function New-CIPPApplicationCopy {
     )
 
     Write-Information "Copying application $($App) to tenant $Tenant"
-    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/v1.0/servicePrincipals?$top=999' -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
+    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/v1.0/servicePrincipals?$top=999&$select=id,appId' -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
 
     if ($CurrentInfo.appId -notcontains $App) {
         Write-Information "Application $($App) not found in partner tenant. Cannot copy permissions."
@@ -43,7 +43,7 @@ function New-CIPPApplicationCopy {
             }
             $NoTranslateRequired = $true
         }
-        $TenantInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999' -tenantid $Tenant -NoAuthCheck $true -AsApp $true
+        $TenantInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999&$select=id,appId' -tenantid $Tenant -NoAuthCheck $true -AsApp $true
 
         if ($App -Notin $TenantInfo.appId) {
             Write-Information "Creating service principal with ID: $($App)"

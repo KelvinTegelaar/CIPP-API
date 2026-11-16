@@ -45557,10 +45557,54 @@
         "tags": [
           "Email-Exchange > Reports"
         ],
-        "description": "Lists all ActiveSync mobile devices registered across Exchange Online mailboxes in a tenant.",
+        "description": "Lists Exchange Online mobile devices (ActiveSync and Outlook for iOS and Android) in a tenant: the mailbox, device, access state (Allowed, Blocked, Quarantined), why that state applies (Global, Individual, DeviceRule, Policy) and whether the device is on the mailbox's allow or block list. Supports UseReportDB=true to read the reporting database cache; AllTenants always reads the cache.",
         "parameters": [
           {
-            "$ref": "#/components/parameters/tenantFilter"
+            "name": "manualPagination",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "Target tenant: the tenant's default domain, its tenant ID, or 'AllTenants'. Required unless tenantGroup is sent instead; never send both.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantGroup"
+          },
+          {
+            "name": "UseReportDB",
+            "in": "query",
+            "description": "Serve from the reporting database cache instead of live Exchange. Required for AllTenants.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -45572,55 +45616,52 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
                     "properties": {
                       "clientType": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "clientVersion": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "deviceAccessState": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "deviceAccessStateReason": {
+                        "x-cipp-field-source": "frontend"
                       },
                       "deviceFriendlyName": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "deviceID": {
-                        "x-cipp-field-source": "backend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "deviceModel": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "deviceOS": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "deviceType": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "firstSyncTime": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "Guid": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "identity": {
-                        "x-cipp-field-source": "backend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "lastSuccessSync": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
                       "lastSyncAttemptTime": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
                       },
-                      "syncInfoNote": {
-                        "x-cipp-field-source": "backend"
+                      "mailboxAccessList": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "primarySmtpAddress": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Tenant": {
+                        "x-cipp-field-source": "frontend"
                       },
                       "userDisplayName": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "userPrincipalName": {
-                        "x-cipp-field-source": "backend,frontend"
+                        "x-cipp-field-source": "frontend"
                       }
                     }
                   }
@@ -45633,9 +45674,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -45643,7 +45681,8 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Exchange.Mailbox.Read"
+        "x-cipp-role": "Exchange.Mailbox.Read",
+        "x-cipp-tenant-group": true
       }
     },
     "/api/ListAdministrativeUnitMembers": {
@@ -53506,11 +53545,11 @@
                       },
                       "operatingSystem": {
                         "type": "string",
-                        "x-cipp-field-source": "graph-entity"
+                        "x-cipp-field-source": "graph-entity,frontend"
                       },
                       "osVersion": {
                         "type": "string",
-                        "x-cipp-field-source": "graph-entity"
+                        "x-cipp-field-source": "graph-entity,frontend"
                       },
                       "ownerType": {
                         "type": "object",

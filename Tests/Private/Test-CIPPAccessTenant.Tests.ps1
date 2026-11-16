@@ -10,7 +10,7 @@ BeforeAll {
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function New-GraphGetRequest { param($uri, $tenantid) }
     function New-GraphBulkRequest { param($tenantid, $Requests) }
-    function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams) }
+    function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $Select) }
     function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) }
     function Write-LogMessage { param($headers, $API, $tenant, $tenantId, $message, $sev, $LogData, $level) }
     function Get-CippException { param($Exception) }
@@ -185,6 +185,62 @@ Describe 'Test-CIPPAccessTenant' {
             $Result = Test-CIPPAccessTenant -Tenant 'gdap.onmicrosoft.com'
             @($Result.MissingRoles).Count | Should -BeGreaterThan 0
             $Result.GraphTest | Should -BeLike '*missing required GDAP roles*'
+        }
+    }
+
+    Context 'Exchange access' {
+        BeforeEach {
+            $script:PreviousRootPath = $env:CIPPRootPath
+            $env:CIPPRootPath = $RepoRoot
+            $script:OrgRoles = Get-Content (Join-Path $RepoRoot 'Config/OrganizationManagementRoles.json') -Raw | ConvertFrom-Json
+            $script:AssignedOrgRoles = $script:OrgRoles
+
+            Mock -CommandName Get-Tenants -MockWith {
+                [pscustomobject]@{
+                    customerId               = '33333333-3333-3333-3333-333333333333'
+                    defaultDomainName        = 'exo.onmicrosoft.com'
+                    displayName              = 'EXO Tenant'
+                    delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges'
+                }
+            }
+            Mock -CommandName New-GraphBulkRequest -MockWith { @() }
+            Mock -CommandName New-GraphGetRequest -MockWith { @() }
+            Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*roleManagement/exchange/roleDefinitions*' } -MockWith {
+                throw 'UnknownError'
+            }
+            Mock -CommandName Test-CIPPStandardLicense -MockWith { $true }
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-OrganizationConfig' } -MockWith { [pscustomobject]@{ Name = 'exo' } }
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-ManagementRoleAssignment' } -MockWith {
+                foreach ($Role in $script:AssignedOrgRoles) {
+                    [pscustomobject]@{ RoleAssigneeName = 'Organization Management'; Role = $Role; Guid = [guid]::NewGuid() }
+                }
+            }
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-ManagementRole' } -MockWith {
+                foreach ($Role in @($script:OrgRoles) + 'Some Other Role') {
+                    [pscustomobject]@{ Name = $Role; Description = "$Role description" }
+                }
+            }
+        }
+
+        AfterEach {
+            $env:CIPPRootPath = $script:PreviousRootPath
+        }
+
+        It 'reads available roles from Exchange instead of the Graph role definitions' {
+            $Result = Test-CIPPAccessTenant -Tenant 'exo.onmicrosoft.com'
+            $Result.ExchangeStatus | Should -BeTrue
+            $Result.ExchangeTest | Should -Be 'Successfully connected to Exchange'
+            Should -Invoke -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*roleManagement/exchange*' } -Times 0 -Exactly
+        }
+
+        It 'reports missing Organization Management roles by display name' {
+            $script:AssignedOrgRoles = $script:OrgRoles | Select-Object -Skip 5
+            $Result = Test-CIPPAccessTenant -Tenant 'exo.onmicrosoft.com'
+            $Result.ExchangeStatus | Should -BeFalse
+            $Result.ExchangeTest | Should -BeLike 'Connected to Exchange but missing permissions*'
+            @($Result.OrgManagementRolesMissing).Count | Should -Be 5
+            @($Result.OrgManagementRolesMissing.displayName) | Should -Be @($script:OrgRoles | Select-Object -First 5)
+            $Result.OrgManagementRolesMissing[0].description | Should -Be "$($script:OrgRoles[0]) description"
         }
     }
 }

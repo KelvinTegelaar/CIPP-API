@@ -190,19 +190,21 @@ function Test-CIPPAccessTenant {
                 Write-Information "Found $($OrgManagementRoles.Count) Organization Management roles in Exchange"
                 $Results.OrgManagementRoles = $OrgManagementRoles
 
-                $RoleDefinitions = New-GraphGetRequest -tenantid $Tenant.customerId -uri 'https://graph.microsoft.com/beta/roleManagement/exchange/roleDefinitions'
-                Write-Information "Found $($RoleDefinitions.Count) Exchange role definitions"
+                $ManagementRoles = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-ManagementRole' -Select 'Name,Description'
+                Write-Information "Found $($ManagementRoles.Count) Exchange management roles"
 
                 $OrgRolePath = Join-Path $env:CIPPRootPath 'Config\OrganizationManagementRoles.json'
                 $AllOrgManagementRoles = Get-Content -Path $OrgRolePath -ErrorAction Stop | ConvertFrom-Json
                 Write-Information "Loaded all Organization Management roles from $OrgRolePath"
 
-                $AvailableRoles = $RoleDefinitions | Where-Object -Property displayName -In $AllOrgManagementRoles | Select-Object -Property displayName, id, description
+                $AvailableRoles = foreach ($Role in $ManagementRoles) {
+                    if ($Role.Name -in $AllOrgManagementRoles) { [pscustomobject]@{ displayName = $Role.Name; description = $Role.Description } }
+                }
                 Write-Information "Found $($AvailableRoles.Count) available Organization Management roles in Exchange"
                 $MissingOrgMgmtRoles = $AvailableRoles | Where-Object { $OrgManagementRoles.Role -notcontains $_.displayName }
                 if (($MissingOrgMgmtRoles | Measure-Object).Count -ge 5) {
                     $Results.OrgManagementRolesMissing = $MissingOrgMgmtRoles
-                    Write-Warning "Found $($MissingRoles.Count) missing Organization Management roles in Exchange"
+                    Write-Warning "Found $($MissingOrgMgmtRoles.Count) missing Organization Management roles in Exchange"
                     $ExchangeStatus = $false
                     $ExchangeTest = 'Connected to Exchange but missing permissions in Organization Management. This may impact the ability to manage Exchange features'
                     Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message 'Tenant access check for Exchange failed: Missing Organization Management roles' -sev 'Warning' -LogData $MissingOrgMgmtRoles

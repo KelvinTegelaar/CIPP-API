@@ -81,6 +81,7 @@ function Get-CIPPDBCacheSchedule {
                 'ExoTransportRules'
                 'ExoDkimSigningConfig'
                 'ExoOrganizationConfig'
+                'ExoActiveSyncOrganizationSettings'
                 'ExoAcceptedDomains'
                 'ExoHostedContentFilterPolicy'
                 'ExoHostedOutboundSpamFilterPolicy'
@@ -122,6 +123,7 @@ function Get-CIPPDBCacheSchedule {
                 'MailTrafficSummary'
                 'OfficeActivations'
                 'HVEAccounts'
+                'MobileDevices'
             )
         }
         Mailboxes                        = @{ License = 'Exchange' }
