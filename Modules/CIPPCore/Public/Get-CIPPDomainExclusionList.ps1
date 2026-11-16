@@ -24,6 +24,9 @@ function Get-CIPPDomainExclusionList {
         '*.msteams.8x8.com'
         '*.ucconnect.co.uk'
         '*.teams-sbc.dk'
+        '*.cust.supertrunk.net'
+        '*.hvoip.supertrunk.net'
+        '*.customers.flexteams.dk'
     )
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
