@@ -57,6 +57,9 @@ function Invoke-CIPPStandardAutopilotStatusPage {
 
         # Compatibility for standards made in v8.3.0 or before, which did not have the InstallWindowsUpdates setting
         $InstallWindowsUpdates = $Settings.InstallWindowsUpdates ?? $false
+        # Intune only stores the reset/use-on-failure flags while device use is blocked
+        $AllowReset = [bool]$Settings.BlockDevice -and [bool]$Settings.AllowReset
+        $AllowFail = [bool]$Settings.BlockDevice -and [bool]$Settings.AllowFail
 
         $StateIsCorrect = ($CurrentConfig.installProgressTimeoutInMinutes -eq $Settings.TimeOutInMinutes) -and
         ($CurrentConfig.customErrorMessage -eq $Settings.ErrorMessage) -and
@@ -65,8 +68,8 @@ function Invoke-CIPPStandardAutopilotStatusPage {
         ($CurrentConfig.trackInstallProgressForAutopilotOnly -eq $Settings.OBEEOnly) -and
         ($CurrentConfig.blockDeviceSetupRetryByUser -eq !$Settings.BlockDevice) -and
         ($CurrentConfig.installQualityUpdates -eq $InstallWindowsUpdates) -and
-        ($CurrentConfig.allowDeviceResetOnInstallFailure -eq $Settings.AllowReset) -and
-        ($CurrentConfig.allowDeviceUseOnInstallFailure -eq $Settings.AllowFail)
+        ($CurrentConfig.allowDeviceResetOnInstallFailure -eq $AllowReset) -and
+        ($CurrentConfig.allowDeviceUseOnInstallFailure -eq $AllowFail)
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to check Autopilot Enrollment Status Page: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
@@ -93,8 +96,8 @@ function Invoke-CIPPStandardAutopilotStatusPage {
         trackInstallProgressForAutopilotOnly = $Settings.OBEEOnly
         blockDeviceSetupRetryByUser          = !$Settings.BlockDevice
         installQualityUpdates                = $InstallWindowsUpdates
-        allowDeviceResetOnInstallFailure     = $Settings.AllowReset
-        allowDeviceUseOnInstallFailure       = $Settings.AllowFail
+        allowDeviceResetOnInstallFailure     = $AllowReset
+        allowDeviceUseOnInstallFailure       = $AllowFail
     }
 
     # Remediate if the state is not correct

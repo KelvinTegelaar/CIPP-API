@@ -33,6 +33,9 @@ function Get-CIPPBaselineAutopilotStatusPageState {
     if (-not $Config) { return @{ Current = $null } }
 
     $V = $Item.Variables
+    # Intune only stores the reset/use-on-failure flags while device use is blocked; otherwise
+    # the PATCH succeeds but reads back false, so expecting true would drift forever.
+    $BlockDevice = [bool]($V.BlockDevice -eq $true)
     $Expected = [PSCustomObject]@{
         installProgressTimeoutInMinutes      = [int]"$($V.TimeOutInMinutes)"
         customErrorMessage                   = "$($V.ErrorMessage)"
@@ -41,8 +44,8 @@ function Get-CIPPBaselineAutopilotStatusPageState {
         trackInstallProgressForAutopilotOnly = [bool]($V.OBEEOnly -eq $true)
         blockDeviceSetupRetryByUser          = -not [bool]($V.BlockDevice -eq $true)
         installQualityUpdates                = [bool]($V.InstallWindowsUpdates -eq $true)
-        allowDeviceResetOnInstallFailure     = [bool]($V.AllowReset -eq $true)
-        allowDeviceUseOnInstallFailure       = [bool]($V.AllowFail -eq $true)
+        allowDeviceResetOnInstallFailure     = $BlockDevice -and [bool]($V.AllowReset -eq $true)
+        allowDeviceUseOnInstallFailure       = $BlockDevice -and [bool]($V.AllowFail -eq $true)
     }
     $Current = [PSCustomObject]@{
         installProgressTimeoutInMinutes      = $(if ($null -eq $Config.installProgressTimeoutInMinutes) { -1 } else { [int]$Config.installProgressTimeoutInMinutes })

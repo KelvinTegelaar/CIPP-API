@@ -33,6 +33,7 @@ BeforeAll {
     . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineDeviceRegistrationPolicyState.ps1')
     . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineDisableBasicAuthSMTPState.ps1')
     . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineActivityBasedTimeoutState.ps1')
+    . (Join-Path $Baselines 'PrepareHooks/Get-CIPPBaselineAutopilotStatusPageState.ps1')
 
     $script:Tenant = 'contoso.onmicrosoft.com'
 
@@ -494,5 +495,41 @@ Describe 'Get-CIPPBaselineAddDMARCToMOERAState' {
         Mock New-CIPPDbRequest { @() }
         Mock Get-CIPPDbItem { $null }
         (Get-CIPPBaselineAddDMARCToMOERAState -Item $script:Item -TenantFilter $script:Tenant).Current | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Get-CIPPBaselineAutopilotStatusPageState' {
+    BeforeAll {
+        # What Intune hands back after a PATCH with device use NOT blocked: the reset/use
+        # flags are silently dropped to false whatever was sent.
+        $script:Esp = @{
+            id                                   = 'x_DefaultWindows10EnrollmentCompletionPageConfiguration'
+            deviceEnrollmentConfigurationType    = 'windows10EnrollmentCompletionPageConfiguration'
+            priority                             = 0
+            installProgressTimeoutInMinutes      = 60
+            customErrorMessage                   = ''
+            showInstallationProgress             = $true
+            allowLogCollectionOnInstallFailure   = $true
+            trackInstallProgressForAutopilotOnly = $true
+            blockDeviceSetupRetryByUser          = $true
+            installQualityUpdates                = $false
+            allowDeviceResetOnInstallFailure     = $false
+            allowDeviceUseOnInstallFailure       = $false
+        } | ConvertTo-Cached
+        function New-EspItem { param([bool]$BlockDevice) [PSCustomObject]@{ Variables = [PSCustomObject]@{ TimeOutInMinutes = 60; ErrorMessage = ''; ShowProgress = $true; EnableLog = $true; OBEEOnly = $true; BlockDevice = $BlockDevice; InstallWindowsUpdates = $false; AllowReset = $true; AllowFail = $true } } }
+    }
+    BeforeEach { Mock New-CIPPDbRequest { @($script:Esp) } }
+
+    It 'does not expect the on-failure flags Intune refuses to store when device use is not blocked' {
+        $State = Get-CIPPBaselineAutopilotStatusPageState -Item (New-EspItem -BlockDevice $false) -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $State.Expected -Current $State.Current).Count | Should -Be 0
+    }
+
+    It 'still grades the on-failure flags when device use is blocked' {
+        $Blocked = $script:Esp | ConvertTo-Cached
+        $Blocked.blockDeviceSetupRetryByUser = $false
+        Mock New-CIPPDbRequest { @($Blocked) }
+        $State = Get-CIPPBaselineAutopilotStatusPageState -Item (New-EspItem -BlockDevice $true) -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $State.Expected -Current $State.Current).Count | Should -Be 2
     }
 }
