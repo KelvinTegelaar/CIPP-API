@@ -28,6 +28,7 @@ BeforeAll {
     function Get-CippException { param($Exception) @{ NormalizedError = $Exception.Exception.Message } }
     function Get-CIPPBaselineDefinition { param($Name) }
     function Get-CIPPBaseline { param($ID) }
+    function Get-Tenants { param([switch]$SkipList) }
 
     function New-Request($Body = @{}, $Query = @{}) {
         [pscustomobject]@{ Params = @{ CIPPEndpoint = 'Test' }; Headers = @{}; Body = [pscustomobject]$Body; Query = [pscustomobject]$Query }
