@@ -24,15 +24,17 @@ function Start-CIPPStatsTimer {
         } else {
             Get-Content (Join-Path $env:CIPPRootPath 'version_latest.txt') | Out-String
         }
-        $Table = Get-CIPPTable -TableName Extensionsconfig
         try {
+            $Table = Get-CIPPTable -TableName Extensionsconfig
             $RawExt = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10 -ErrorAction Stop
         } catch {
             $RawExt = @{}
         }
 
-        $ConfigTable = Get-CIPPTable -tablename 'Config'
-        $FunctionOffloading = (Get-CIPPAzDataTableEntity @ConfigTable -Filter "RowKey eq 'OffloadFunctions' and PartitionKey eq 'OffloadFunctions'").state
+        $FunctionOffloading = try {
+            $ConfigTable = Get-CIPPTable -tablename 'Config'
+            (Get-CIPPAzDataTableEntity @ConfigTable -Filter "RowKey eq 'OffloadFunctions' and PartitionKey eq 'OffloadFunctions'").state
+        } catch { $null }
         $OffloadingEnabled = $false
         [bool]::TryParse($FunctionOffloading, [ref]$OffloadingEnabled) | Out-Null
         $CIPPNG = $env:CIPPNG -eq 'true'
@@ -51,8 +53,10 @@ function Start-CIPPStatsTimer {
         $deployedApps = ($counts | Where-Object { $_.RowKey -eq 'IntuneApplications-Count' } | Measure-Object -Property DataCount -Sum).Sum
         $caPolicyCounts = @($counts | Where-Object { $_.RowKey -eq 'ConditionalAccessPolicies-Count' })
         $caPolicyCount = ($caPolicyCounts | Measure-Object -Property DataCount -Sum).Sum
-        $ReportsTable = Get-CippTable -tablename 'ReportBuilderTemplates'
-        $CustomReportCount = (Get-CIPPAzDataTableEntity @ReportsTable -Filter "PartitionKey eq 'ReportBuilderTemplates'" -Property RowKey).count
+        $CustomReportCount = try {
+            $ReportsTable = Get-CippTable -tablename 'ReportBuilderTemplates'
+            (Get-CIPPAzDataTableEntity @ReportsTable -Filter "PartitionKey eq 'ReportBuilderTemplates'" -Property RowKey).count
+        } catch { $null }
         $Standards = @(try { Get-CIPPStandards -TenantFilter allTenants } catch { })
         $uniqueStandardsApplied = Get-CIPPStatsUniqueStandardsApplied -Standards $Standards
         $driftStandardsCount = Get-CIPPStatsDriftStandardsCount -Standards $Standards
@@ -61,6 +65,7 @@ function Start-CIPPStatsTimer {
         $licenseTotals = Get-CIPPStatsLicenseTotals
         $enterpriseApps = Get-CIPPStatsEnterpriseApps
         $tenantSecurity = Get-CIPPStatsTenantSecurity -Tenants $AllTenants -CACounts $caPolicyCounts
+        $autopilotModels = @(Get-CIPPStatsAutopilotModels)
 
         # Feature flags
         $FeatureFlags = @{}
@@ -69,8 +74,10 @@ function Start-CIPPStatsTimer {
         }
 
         # SSO migration status
-        $MigrationTable = Get-CIPPTable -tablename 'SSOMigration'
-        $MigrationConfig = Get-CIPPAzDataTableEntity @MigrationTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'MigrationConfig'" -ErrorAction SilentlyContinue
+        $MigrationConfig = try {
+            $MigrationTable = Get-CIPPTable -tablename 'SSOMigration'
+            Get-CIPPAzDataTableEntity @MigrationTable -Filter "PartitionKey eq 'SSO' and RowKey eq 'MigrationConfig'" -ErrorAction SilentlyContinue
+        } catch { $null }
         $MigrationStatus = $MigrationConfig.Status
         # SSO provisioned outside the setup wizard (ARM-level during NG migration) never writes a
         # migration row. Live EasyAuth is authoritative: when it's active and the row is missing or
@@ -126,6 +133,7 @@ function Start-CIPPStatsTimer {
             BaselineStandardsCount = $baselineStats.BaselineStandardsCount
             Licenses               = ($licenseTotals | ConvertTo-Json -Compress -Depth 5)
             EnterpriseApps         = ($enterpriseApps | ConvertTo-Json -Compress -Depth 5 -AsArray)
+            AutopilotModels        = (ConvertTo-Json -InputObject $autopilotModels -Compress)
             TenantCapabilities     = ($tenantSecurity.TenantCapabilities | ConvertTo-Json -Compress -Depth 5)
             CAPolicies             = $caPolicyCount
             SecuritySettings       = ($tenantSecurity.SecuritySettings | ConvertTo-Json -Compress -Depth 5)
