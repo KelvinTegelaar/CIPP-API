@@ -1,0 +1,79 @@
+{
+  "method": "get",
+  "parameters": [
+    {
+      "name": "OperationId",
+      "in": "query",
+      "required": true,
+      "description": "OperationId returned by ExecOneDriveCopyToUser.",
+      "schema": { "type": "string", "format": "uuid" }
+    },
+    { "$ref": "#/components/parameters/tenantFilter" }
+  ],
+  "responses": {
+    "200": {
+      "description": "Current state. Completed and Failed are final; remove the leaver's licences only when State is Completed (AllCompleted is true). SharePoint is checked at most once a minute per operation and at most 100 jobs per call, so a large copy needs several calls to reach Completed; poll until it does.",
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "Results": {
+                "type": "object",
+                "properties": {
+                  "OperationId": { "type": "string", "format": "uuid" },
+                  "Leaver": { "type": "string" },
+                  "StartedBy": { "type": "string" },
+                  "StartedUtc": { "type": "string", "format": "date-time" },
+                  "State": { "type": "string", "enum": ["Queued", "InProgress", "Completed", "Failed"], "description": "Completed when every recipient is Completed; Failed when every recipient is final and at least one Failed." },
+                  "IsComplete": { "type": "boolean", "description": "State is Completed or Failed." },
+                  "AllCompleted": { "type": "boolean", "description": "State is Completed." },
+                  "RootItemCount": { "type": "integer" },
+                  "SourceFileCount": { "type": ["integer", "null"], "format": "int64", "description": "Files counted in the leaver's whole OneDrive when the copy started. Null for a copy started before this was recorded; such a copy is never Completed." },
+                  "SourceBytes": { "type": ["integer", "null"], "format": "int64", "description": "Total size of those files (current versions)." },
+                  "ExpectedBytes": { "type": "integer", "format": "int64", "description": "Same as SourceBytes; kept for compatibility." },
+                  "Recipients": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "UserPrincipalName": { "type": "string" },
+                        "FolderName": { "type": "string" },
+                        "State": { "type": "string", "enum": ["Queued", "InProgress", "Completed", "Failed"], "description": "Completed needs all of: every copy job (SharePoint bundles root items into 1..RootItemCount jobs) polled and confirmed finished by SharePoint; no errors reported in any check; each job processed at least one object and at least as many as it expected; and at least SourceFileCount files created across the jobs. When every file is accounted for, more files than SourceFileCount, or bytes processed that differ from SourceBytes, still give Completed, with the difference in Warnings and Message ('Copy completed with warnings: ...'). Failed is final: the copy never started, SharePoint returned no jobs or more jobs than root items, or every job has finished and at least one reported errors, failed to report progress five times in a row, or finished without processing everything it expected, or fewer files than SourceFileCount were copied (for example 'copied 6 of 7 files')." },
+                        "IsComplete": { "type": "boolean" },
+                        "JobsComplete": { "type": "integer" },
+                        "JobsTotal": { "type": "integer", "description": "Copy jobs SharePoint created for this recipient (not one per root item: SharePoint bundles items)." },
+                        "ItemsCopied": { "type": "integer", "format": "int64", "description": "Files created in the recipient's folder (the highest count each job has reported, summed). A copy renamed on a name conflict counts as created." },
+                        "ObjectsProcessed": { "type": "integer", "format": "int64", "description": "Files and folders processed, as SharePoint reports them." },
+                        "TotalExpectedObjects": { "type": ["integer", "null"], "format": "int64" },
+                        "BytesCopied": { "type": "integer", "format": "int64", "description": "Bytes processed (the highest count each job has reported, summed)." },
+                        "ErrorCount": { "type": "integer", "format": "int64", "description": "Highest error count each job has reported, summed; a failed job without a count adds one." },
+                        "Errors": { "type": "array", "items": { "type": "string" }, "description": "Every distinct error reported across checks (up to 25 per job, 50 per recipient). Sanitised: URLs, paths and file names are redacted." },
+                        "Warnings": { "type": "array", "items": { "type": "string" }, "description": "Warnings from SharePoint, and on a Completed copy any difference between the totals copied and those counted at the start." },
+                        "Message": { "type": "string" }
+                      }
+                    }
+                  },
+                  "CheckedSharePoint": { "type": "boolean", "description": "False when SharePoint was checked for this operation less than 60 seconds ago; the stored state is returned instead." },
+                  "JobsPolled": { "type": "integer", "description": "Copy jobs polled by this call (at most 100, least recently polled first, so every job is reached over successive calls)." },
+                  "LastCheckedUtc": { "type": ["string", "null"], "format": "date-time", "description": "When SharePoint was last checked for this operation." },
+                  "NextCheckAfterUtc": { "type": ["string", "null"], "format": "date-time", "description": "A call before this time returns stored state without checking SharePoint." },
+                  "LastUpdatedUtc": { "type": "string", "format": "date-time" },
+                  "Message": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "400": {
+      "description": "tenantFilter or OperationId missing, or OperationId malformed.",
+      "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StandardResults" } } }
+    },
+    "404": {
+      "description": "No such operation in this tenant (or it has been removed).",
+      "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StandardResults" } } }
+    }
+  }
+}

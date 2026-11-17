@@ -9,7 +9,10 @@ function Update-CIPPSharePointLibraryCopyStatus {
         [string]$TenantFilter,
 
         [Parameter(Mandatory = $true)]
-        [string]$OperationId
+        [string]$OperationId,
+
+        # Storage table. Other copy features keep their operations apart from the library copy's.
+        [string]$TableName = 'SharePointLibraryCopy'
     )
 
     $CollectIssueMessages = {
@@ -33,7 +36,7 @@ function Update-CIPPSharePointLibraryCopyStatus {
         return @($Results)
     }
 
-    $Operation = Get-CIPPSharePointLibraryCopyOperation -TenantFilter $TenantFilter -OperationId $OperationId
+    $Operation = Get-CIPPSharePointLibraryCopyOperation -TenantFilter $TenantFilter -OperationId $OperationId -TableName $TableName
     if (-not $Operation) {
         throw [System.Management.Automation.ItemNotFoundException]::new('Library copy operation not found.')
     }
@@ -160,7 +163,7 @@ function Update-CIPPSharePointLibraryCopyStatus {
 
     $Expiry = if ($AllComplete) { ([DateTime]::UtcNow.AddHours(48)).ToString('o') } else { $Operation.Expiry }
 
-    Set-CIPPSharePointLibraryCopyOperation -TenantFilter $TenantFilter -OperationId $OperationId -Entity @{
+    Set-CIPPSharePointLibraryCopyOperation -TenantFilter $TenantFilter -OperationId $OperationId -TableName $TableName -Entity @{
         SourceSiteUrl     = $Operation.SourceSiteUrl
         SourceSiteName    = $Operation.SourceSiteName
         SourceLibraryName = $Operation.SourceLibraryName

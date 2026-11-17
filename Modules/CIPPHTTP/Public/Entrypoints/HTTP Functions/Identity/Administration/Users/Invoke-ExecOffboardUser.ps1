@@ -51,6 +51,9 @@ function Invoke-ExecOffboardUser {
                         RunScheduled = $true
                         DeploymentId = $Parameters.DeploymentId
                         StepIndexes  = @($StepIndex)
+                        # The offboarding this step belongs to, which holds state shared between its
+                        # steps (the OneDrive copy the licence step waits for).
+                        OffboardingTaskId = [string]($Parameters.OffboardingTaskId ?? $TaskId)
                     }
                     Reference    = $Task.Reference
                 }

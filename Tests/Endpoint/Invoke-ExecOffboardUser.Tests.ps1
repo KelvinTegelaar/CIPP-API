@@ -267,8 +267,20 @@ Describe 'Invoke-ExecOffboardUser' {
                 $Task.Parameters.Username -eq 'pat@contoso.com' -and
                 $Task.Parameters.DeploymentId -eq 'job-1' -and
                 $Task.Parameters.options.DisableSignIn -eq $true -and
-                (@($Task.Parameters.StepIndexes) -join ',') -eq '1'
+                (@($Task.Parameters.StepIndexes) -join ',') -eq '1' -and
+                $Task.Parameters.OffboardingTaskId -eq 'task-1'
             }
+        }
+
+        It 'keeps a step re-run of a step re-run tied to the original offboarding' {
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+                $Task = New-StoredOffboardingTask
+                $Task.RowKey = 'rerun-task'
+                $Task.Parameters = (@{ Username = 'pat@contoso.com'; options = @{ DisableSignIn = $true }; DeploymentId = 'job-1'; OffboardingTaskId = 'task-1' } | ConvertTo-Json -Compress)
+                $Task
+            }
+            $null = Invoke-ExecOffboardUser -Request (New-RerunRequest -Action 'RerunStep' -Body @{ TaskId = 'rerun-task'; StepIndex = 0 })
+            Should -Invoke Add-CIPPScheduledTask -Times 1 -Exactly -ParameterFilter { $Task.Parameters.OffboardingTaskId -eq 'task-1' }
         }
 
         It 'accepts step zero' {

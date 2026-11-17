@@ -44,4 +44,19 @@ Describe 'Invoke-CIPPSharePointCreateCopyJobs' {
         $Result[0].EncryptionKey | Should -Be 'abc123base64='
         ($Result[0] | Get-Member -Name SourceListItemUniqueIds -ErrorAction SilentlyContinue) | Should -BeNullOrEmpty
     }
+    It 'keeps version history by default and drops it only when asked' -ForEach @(
+        @{ Splat = @{}; Expected = $false }
+        @{ Splat = @{ IgnoreVersionHistory = $true; NameConflictBehavior = 2 }; Expected = $true }
+    ) {
+        Mock New-GraphPOSTRequest { [PSCustomObject]@{ JobId = 'job-1'; JobQueueUri = 'https://queue.core.windows.net/q'; EncryptionKey = 'k' } }
+
+        Invoke-CIPPSharePointCreateCopyJobs -TenantFilter 'contoso.com' -SourceSiteUrl 'https://contoso.sharepoint.com/sites/a' `
+            -ExportObjectUris @('https://contoso.sharepoint.com/sites/a/Shared%20Documents/Folder') `
+            -DestinationUri 'https://contoso.sharepoint.com/sites/b/Shared%20Documents' @Splat | Out-Null
+
+        Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+            $Options = ($body | ConvertFrom-Json).options
+            $Options.IgnoreVersionHistory -eq $Expected -and $Options.NameConflictBehavior -eq ($Splat.NameConflictBehavior ?? 1)
+        }
+    }
 }

@@ -5,8 +5,8 @@ BeforeAll {
     $UpdatePath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Update-CIPPSharePointLibraryCopyStatus.ps1'
     if (-not (Test-Path $UpdatePath)) { throw "Could not locate $UpdatePath" }
 
-    function Set-CIPPSharePointLibraryCopyOperation { param([string]$TenantFilter, [string]$OperationId, [hashtable]$Entity) }
-    function Get-CIPPSharePointLibraryCopyOperation { param([string]$TenantFilter, [string]$OperationId) }
+    function Set-CIPPSharePointLibraryCopyOperation { param([string]$TenantFilter, [string]$OperationId, [hashtable]$Entity, [string]$TableName) }
+    function Get-CIPPSharePointLibraryCopyOperation { param([string]$TenantFilter, [string]$OperationId, [string]$TableName) }
     function Get-CIPPSharePointCopyJobProgress { param([string]$TenantFilter, [string]$SourceSiteUrl, $CopyJobInfo) }
 
     . $UpdatePath

@@ -18,7 +18,8 @@ function Invoke-CIPPSharePointCreateCopyJobs {
         [string]$DestinationUri,
 
         [int]$NameConflictBehavior = 1,
-        [bool]$SameWebCopyMoveOptimization = $false
+        [bool]$SameWebCopyMoveOptimization = $false,
+        [bool]$IgnoreVersionHistory = $false
     )
 
     $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
@@ -30,7 +31,7 @@ function Invoke-CIPPSharePointCreateCopyJobs {
         options          = @{
             IsMoveMode                            = $false
             MoveButKeepSource                     = $true
-            IgnoreVersionHistory                  = $false
+            IgnoreVersionHistory                  = $IgnoreVersionHistory
             AllowSchemaMismatch                   = $true
             AllowSmallerVersionLimitOnDestination = $true
             NameConflictBehavior                  = $NameConflictBehavior

@@ -12,10 +12,13 @@ function Set-CIPPSharePointLibraryCopyOperation {
         [string]$OperationId,
 
         [Parameter(Mandatory = $true)]
-        [hashtable]$Entity
+        [hashtable]$Entity,
+
+        # Storage table. Other copy features keep their operations apart from the library copy's.
+        [string]$TableName = 'SharePointLibraryCopy'
     )
 
-    $Table = Get-CIPPTable -TableName 'SharePointLibraryCopy'
+    $Table = Get-CIPPTable -TableName $TableName
 
     $SafeTenant = $TenantFilter -replace "'", "''"
     $SafeOp = $OperationId -replace "'", "''"

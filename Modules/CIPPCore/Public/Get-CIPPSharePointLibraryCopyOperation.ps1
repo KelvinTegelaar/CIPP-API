@@ -9,10 +9,13 @@ function Get-CIPPSharePointLibraryCopyOperation {
         [string]$TenantFilter,
 
         [Parameter(Mandatory = $true)]
-        [string]$OperationId
+        [string]$OperationId,
+
+        # Storage table. Other copy features keep their operations apart from the library copy's.
+        [string]$TableName = 'SharePointLibraryCopy'
     )
 
-    $Table = Get-CIPPTable -TableName 'SharePointLibraryCopy'
+    $Table = Get-CIPPTable -TableName $TableName
     $SafeTenant = $TenantFilter -replace "'", "''"
     $SafeOp = $OperationId -replace "'", "''"
     $Primary = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeTenant' and RowKey eq '$SafeOp'") | Select-Object -First 1
