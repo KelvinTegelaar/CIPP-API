@@ -16,7 +16,7 @@ BeforeAll {
     function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) $true }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-AlertContentHash.ps1')
-    foreach ($Name in 'TERRL', 'EntraConnectSyncStatus', 'QuotaUsed', 'EntraLicenseUtilization', 'OverusedLicenses', 'UnusedLicenses', 'LowDomainScore', 'SecureScore') {
+    foreach ($Name in 'TERRL', 'EntraConnectSyncStatus', 'QuotaUsed', 'EntraLicenseUtilization', 'OverusedLicenses', 'UnusedLicenses', 'LowDomainScore', 'SecureScore', 'DefenderIncidents', 'DefenderAlerts') {
         . (Join-Path $Alerts "Get-CIPPAlert$Name.ps1")
     }
 
@@ -130,6 +130,34 @@ Describe 'Alert item identity is stable while live numbers change' {
         $A = Get-RunHashes { Get-CIPPAlertSecureScore -InputValue $In -TenantFilter 'contoso.onmicrosoft.com' }
         $script:Current = 50
         $B = Get-RunHashes { Get-CIPPAlertSecureScore -InputValue $In -TenantFilter 'contoso.onmicrosoft.com' }
+        $A.Count | Should -Be 1
+        $B | Should -Be $A
+    }
+
+    It 'Defender incidents hash the same when renamed or assigned, and differ when severity changes' {
+        $script:Incident = @{ displayName = 'Persistence on one endpoint'; severity = 'medium'; assignedTo = $null }
+        Mock New-GraphGetRequest {
+            [pscustomobject]@{ id = '8321'; displayName = $script:Incident.displayName; severity = $script:Incident.severity; assignedTo = $script:Incident.assignedTo; classification = 'unknown'; determination = 'unknown'; summary = $null; createdDateTime = '2026-10-17T16:30:00Z'; incidentWebUrl = 'https://security.microsoft.com/incidents/8321' }
+        }
+        $A = Get-RunHashes { Get-CIPPAlertDefenderIncidents -InputValue @{} -TenantFilter 'contoso.onmicrosoft.com' }
+        $script:Incident = @{ displayName = 'Persistence on multiple endpoints'; severity = 'medium'; assignedTo = 'tech@contoso.com' }
+        $B = Get-RunHashes { Get-CIPPAlertDefenderIncidents -InputValue @{} -TenantFilter 'contoso.onmicrosoft.com' }
+        $script:Incident.severity = 'high'
+        $C = Get-RunHashes { Get-CIPPAlertDefenderIncidents -InputValue @{} -TenantFilter 'contoso.onmicrosoft.com' }
+        $A.Count | Should -Be 1
+        $B | Should -Be $A
+        $C[0] | Should -Not -Be $A[0]
+        $script:Captured[0].PSObject.Properties.Name[-1] | Should -Be 'Id'
+    }
+
+    It 'Defender alerts hash the same when renamed or assigned' {
+        $script:Alert = @{ title = 'Suspicious sign-in'; assignedTo = $null }
+        Mock New-GraphGetRequest {
+            [pscustomobject]@{ id = 'da637578995287055888_-1792764142'; title = $script:Alert.title; assignedTo = $script:Alert.assignedTo; severity = 'medium'; status = 'new'; incidentId = '8321'; lastActivityDateTime = '2026-10-17T16:30:00Z' }
+        }
+        $A = Get-RunHashes { Get-CIPPAlertDefenderAlerts -InputValue @{} -TenantFilter 'contoso.onmicrosoft.com' }
+        $script:Alert = @{ title = 'Suspicious sign-in from a new country'; assignedTo = 'tech@contoso.com' }
+        $B = Get-RunHashes { Get-CIPPAlertDefenderAlerts -InputValue @{} -TenantFilter 'contoso.onmicrosoft.com' }
         $A.Count | Should -Be 1
         $B | Should -Be $A
     }
