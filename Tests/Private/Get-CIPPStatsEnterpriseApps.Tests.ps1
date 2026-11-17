@@ -1,6 +1,7 @@
 # Pester tests for Get-CIPPStatsEnterpriseApps: non-Microsoft, non-default enterprise apps counted by the tenants they appear in.
 
 BeforeAll {
+    $script:SavedAppId = $env:ApplicationID
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     if (-not ('CIPP.CippJson' -as [type])) { Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll') }
     function Get-CIPPDbItem { param($Partition, $Type) }
@@ -81,4 +82,8 @@ Describe 'Get-CIPPStatsEnterpriseApps' {
         Mock Get-CIPPDbItem { throw 'boom' }
         @(Get-CIPPStatsEnterpriseApps).Count | Should -Be 0
     }
+}
+
+AfterAll {
+    $env:ApplicationID = $script:SavedAppId
 }

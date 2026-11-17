@@ -3,6 +3,7 @@
 # sorting, the empty reconcile, and that a missing or failed cache read does not reconcile.
 
 BeforeAll {
+    $script:SavedAppId = $env:ApplicationID
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $AlertPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Get-CIPPAlertRiskyAppPermissions.ps1' -File -ErrorAction SilentlyContinue |
         Select-Object -First 1 -ExpandProperty FullName
@@ -67,7 +68,7 @@ Describe 'Get-CIPPAlertRiskyAppPermissions' {
     }
 
     AfterAll {
-        [System.Environment]::SetEnvironmentVariable('ApplicationID', $null)
+        [System.Environment]::SetEnvironmentVariable('ApplicationID', $script:SavedAppId)
     }
 
     Context 'aggregation' {

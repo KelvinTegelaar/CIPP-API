@@ -9,6 +9,7 @@
 #   - nothing is ever posted with a noExpiration schedule.
 
 BeforeAll {
+    $script:SavedAppId = $env:ApplicationID
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/PIM/New-CIPPPIMScheduleRequest.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/PIM/Invoke-CIPPPIMAssignmentAction.ps1')
@@ -218,4 +219,8 @@ Describe 'Invoke-CIPPPIMAssignmentAction' {
             $script:Posts[0].Body.action | Should -Be 'adminRemove'
         }
     }
+}
+
+AfterAll {
+    $env:ApplicationID = $script:SavedAppId
 }

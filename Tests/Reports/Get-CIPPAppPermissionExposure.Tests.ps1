@@ -2,6 +2,7 @@
 # Covers the per-app row shape and ownership, missing caches and the live Graph path.
 
 BeforeAll {
+    $script:SavedAppId = $env:ApplicationID
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $env:CIPPRootPath = $RepoRoot
     Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
@@ -79,7 +80,7 @@ Describe 'Get-CIPPAppPermissionExposure' {
     }
 
     AfterAll {
-        [System.Environment]::SetEnvironmentVariable('ApplicationID', $null)
+        [System.Environment]::SetEnvironmentVariable('ApplicationID', $script:SavedAppId)
         [System.Environment]::SetEnvironmentVariable('TenantID', $null)
     }
 

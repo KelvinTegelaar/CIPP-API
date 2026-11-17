@@ -1,6 +1,7 @@
 # Pester tests for Invoke-ExecEnterpriseAppRole.
 
 BeforeAll {
+    $script:SavedAppId = $env:ApplicationID
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
 
     class HttpResponseContext {
@@ -88,7 +89,7 @@ Describe 'Add' {
         try {
             $Response = Invoke-ExecEnterpriseAppRole -Request (New-Request @{ Action = 'Add'; RoleDefinitionIds = @($script:Reader) })
         } finally {
-            $env:ApplicationID = $null
+            $env:ApplicationID = $script:SavedAppId
         }
 
         $Response.StatusCode | Should -Be 400

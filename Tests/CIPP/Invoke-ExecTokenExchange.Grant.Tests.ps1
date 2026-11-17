@@ -3,6 +3,9 @@
 # /organizations, forward only the wizard's fields, and bind client_id to this instance's SAM app.
 
 BeforeAll {
+    $script:SavedAppId = $env:ApplicationID
+    $script:SavedAppSecret = $env:ApplicationSecret
+    $script:SavedCertMode = $env:CertificateAuthMode
     $BackendRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Join-Path $BackendRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/CIPP/Setup/Invoke-ExecTokenExchange.ps1'
 
@@ -45,7 +48,9 @@ Describe 'Invoke-ExecTokenExchange grant and field locking' {
         Mock Invoke-RestMethod { $script:Captured = $Body; @{ access_token = 'token' } }
     }
     AfterAll {
-        Remove-Item Env:\ApplicationSecret, Env:\ApplicationID -ErrorAction SilentlyContinue
+        $env:ApplicationID = $script:SavedAppId
+        $env:ApplicationSecret = $script:SavedAppSecret
+        $env:CertificateAuthMode = $script:SavedCertMode
     }
 
     It 'rejects client_credentials without ever calling the token endpoint' {

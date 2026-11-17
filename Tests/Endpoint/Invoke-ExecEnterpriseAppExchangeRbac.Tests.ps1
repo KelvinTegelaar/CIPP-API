@@ -3,6 +3,7 @@
 # check what was sent and when.
 
 BeforeAll {
+    $script:SavedAppId = $env:ApplicationID
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
 
     class HttpResponseContext {
@@ -84,7 +85,7 @@ BeforeAll {
 }
 
 AfterAll {
-    [System.Environment]::SetEnvironmentVariable('ApplicationID', $null)
+    [System.Environment]::SetEnvironmentVariable('ApplicationID', $script:SavedAppId)
 }
 
 Describe 'Invoke-ExecEnterpriseAppExchangeRbac' {

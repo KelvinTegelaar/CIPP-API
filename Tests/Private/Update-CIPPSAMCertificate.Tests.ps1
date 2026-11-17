@@ -1,6 +1,7 @@
 # Pester tests for Update-CIPPSAMCertificate reconcile / renew / drift / bootstrap
 
 BeforeAll {
+    $script:SavedAppId = $env:ApplicationID
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $UpdatePath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Update-CIPPSAMCertificate.ps1'
     $NewCertPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/New-CIPPSAMCertificate.ps1'
@@ -328,4 +329,8 @@ Describe 'Update-CIPPSAMCertificate' {
         $script:MintCalled | Should -BeFalse
         $script:PatchBodies.Count | Should -Be 0
     }
+}
+
+AfterAll {
+    $env:ApplicationID = $script:SavedAppId
 }
