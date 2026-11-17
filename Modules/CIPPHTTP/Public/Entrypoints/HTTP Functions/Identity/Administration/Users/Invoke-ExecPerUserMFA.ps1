@@ -4,7 +4,7 @@ function Invoke-ExecPerUserMFA {
     Entrypoint
 
     .ROLE
-    Identity.User.ReadWrite
+    Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     #>
     param($Request, $TriggerMetadata)
 
@@ -25,11 +25,12 @@ function Invoke-ExecPerUserMFA {
         APIName      = $APIName
     }
     try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $UserId
         $Result = Set-CIPPPerUserMFA @Request
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

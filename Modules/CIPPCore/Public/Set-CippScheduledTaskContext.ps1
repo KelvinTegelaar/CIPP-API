@@ -13,6 +13,9 @@ function Set-CippScheduledTaskContext {
     .PARAMETER AlertRun
         A hashtable Write-AlertTrace adds the run's item counts to (New, Reopened, Continuing, Resolved,
         Snoozed) and sets Reported on, so the scheduler can record what the run found. Reset on every call.
+    .PARAMETER PrivilegedUserRestricted
+        The task was queued by a caller without Identity.PrivilegedUser.ReadWrite, so Assert-CippPrivilegedUserAccess
+        checks its users. Reset on every call.
     .FUNCTIONALITY
         Internal
     #>
@@ -20,7 +23,8 @@ function Set-CippScheduledTaskContext {
     param(
         [string]$TaskId,
         [bool]$AlertReNotify,
-        [hashtable]$AlertRun
+        [hashtable]$AlertRun,
+        [bool]$PrivilegedUserRestricted
     )
 
     if (-not $script:CippScheduledTaskIdStorage) {
@@ -35,4 +39,8 @@ function Set-CippScheduledTaskContext {
         $script:CippAlertRunStorage = [System.Threading.AsyncLocal[hashtable]]::new()
     }
     $script:CippAlertRunStorage.Value = $AlertRun
+    if (-not $script:CippPrivilegedUserRestrictedStorage) {
+        $script:CippPrivilegedUserRestrictedStorage = [System.Threading.AsyncLocal[bool]]::new()
+    }
+    $script:CippPrivilegedUserRestrictedStorage.Value = $PrivilegedUserRestricted
 }

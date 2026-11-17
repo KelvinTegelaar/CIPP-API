@@ -12931,13 +12931,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
-                  "properties": {
-                    "Results": {
-                      "x-cipp-field-source": "backend"
-                    }
-                  }
+                  "$ref": "#/components/schemas/StandardResults"
                 }
               }
             }
@@ -17623,9 +17617,6 @@
           },
           "404": {
             "description": "Not found"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -17721,9 +17712,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -19612,9 +19600,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -19677,9 +19662,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -21132,9 +21114,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -22722,9 +22701,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -34692,9 +34668,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -34806,9 +34779,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -37237,9 +37207,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -37299,9 +37266,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -37392,9 +37356,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -37546,9 +37507,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -37761,9 +37719,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -40368,9 +40323,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -77960,9 +77912,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -80666,9 +80615,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [

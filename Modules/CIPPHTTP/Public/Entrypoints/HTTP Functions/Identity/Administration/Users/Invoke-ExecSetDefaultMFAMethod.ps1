@@ -4,7 +4,7 @@ function Invoke-ExecSetDefaultMFAMethod {
     Entrypoint
 
     .ROLE
-    Identity.User.ReadWrite
+    Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
 
     .DESCRIPTION
     Sets the default second factor a user is prompted with, by patching signInPreferences.
@@ -37,6 +37,7 @@ function Invoke-ExecSetDefaultMFAMethod {
     }
 
     try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $UserId
         # signInPreferences only exists on the beta endpoint.
         # Guest UPNs contain '#EXT#'; unencoded, the '#' starts a URI fragment and truncates the Graph path.
         $Uri = 'https://graph.microsoft.com/beta/users/{0}/authentication/signInPreferences' -f [System.Uri]::EscapeDataString($UserId)
@@ -50,7 +51,7 @@ function Invoke-ExecSetDefaultMFAMethod {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to set the default MFA method for user $UserId. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

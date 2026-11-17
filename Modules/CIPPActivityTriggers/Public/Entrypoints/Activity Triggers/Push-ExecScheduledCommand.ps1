@@ -30,13 +30,15 @@ function Push-ExecScheduledCommand {
     # Store task id in CIPPCore module-scoped AsyncLocal storage so Write-LogMessage can read it -
     # global vars are unreliable in Azure Functions
     $AlertRun = @{}
-    Set-CippScheduledTaskContext -TaskId $Item.TaskInfo.RowKey -AlertReNotify ([string]$Item.TaskInfo.AlertReNotify -eq 'True') -AlertRun $AlertRun
+    Set-CippScheduledTaskContext -TaskId $Item.TaskInfo.RowKey -AlertReNotify ([string]$Item.TaskInfo.AlertReNotify -eq 'True') -AlertRun $AlertRun -PrivilegedUserRestricted ([string]$Item.TaskInfo.PrivilegedUserRestricted -eq 'True')
 
     # Store action source + creating user identity (from stored headers) for outbound User-Agent attribution
     Set-CippUserAgentContext -Headers $Item.Parameters.Headers -Source 'scheduled-task' -TaskId $Item.TaskInfo.RowKey
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
     $task = $Item.TaskInfo
+    # Set by Add-CIPPScheduledTask when the creator lacked Identity.PrivilegedUser.ReadWrite.
+    $PrivilegedUserRestricted = [string]$task.PrivilegedUserRestricted -eq 'True'
     $commandParameters = $Item.Parameters | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
 
     # Handle tenant resolution - support both direct tenant and group-expanded tenants
@@ -391,6 +393,10 @@ function Push-ExecScheduledCommand {
                 $LoggedParameters = $individualCommandParameters.Clone()
                 $LoggedParameters.Remove('Headers')
                 Write-CippResultLog -Prefix "Executing command $($Item.Command) for individual matched data item with parameters" -Value $LoggedParameters
+                if ($PrivilegedUserRestricted) {
+                    $Targets = @(Get-CIPPPrivilegedUserTaskTarget -Command $Item.Command -Parameters $individualCommandParameters -TenantFilter $Tenant)
+                    if ($Targets.Count -gt 0) { Assert-CippPrivilegedUserAccess -TenantFilter $Tenant -UserId $Targets -Enforce }
+                }
                 & $Item.Command @individualCommandParameters
                 Write-CippResultLog -Prefix 'Results for individual execution' -Value $results
             } catch {
@@ -420,6 +426,10 @@ function Push-ExecScheduledCommand {
                 $LoggedParameters.Remove('Headers')
                 $LoggedParameters.Remove('TaskInfo')
                 Write-CippResultLog -Prefix "Starting task: $($Item.Command) for tenant: $Tenant with parameters" -Value $LoggedParameters
+                if ($PrivilegedUserRestricted) {
+                    $Targets = @(Get-CIPPPrivilegedUserTaskTarget -Command $Item.Command -Parameters $commandParameters -TenantFilter $Tenant)
+                    if ($Targets.Count -gt 0) { Assert-CippPrivilegedUserAccess -TenantFilter $Tenant -UserId $Targets -Enforce }
+                }
                 $results = & $Item.Command @commandParameters
             } catch {
                 $ExceptionData = Get-CippException -Exception $_

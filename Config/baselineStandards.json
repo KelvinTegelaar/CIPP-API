@@ -3059,8 +3059,8 @@
     "name": "standards.Branding",
     "cat": "Global Standards",
     "tag": [],
-    "helpText": "Sets the branding for the tenant. This includes the login page, and the Office 365 portal.",
-    "docsDescription": "Sets the branding for the tenant. This includes the login page, and the Office 365 portal.",
+    "helpText": "Sets the sign-in page branding for the tenant: text, colours, which links show, custom link targets and the 'Stay signed in?' prompt.",
+    "docsDescription": "Sets the default sign-in page branding for the tenant: sign-in page and username hint text, layout, background and header colours, which self-service and footer links are shown, custom text and URLs for those links, and whether users see the 'Stay signed in?' prompt. Settings left blank are not managed. Images are not set by this standard.",
     "executiveText": "Customizes Microsoft 365 login pages and portals with company branding, including logos, colors, and messaging. This creates a consistent corporate identity experience for employees and reinforces brand recognition while maintaining professional appearance across all Microsoft services.",
     "label": "Set branding for the tenant",
     "impact": "Low Impact",
@@ -3122,6 +3122,133 @@
         "type": "switch",
         "label": "Show footer",
         "default": false
+      },
+      {
+        "name": "standards.Branding.isKeepMeSignedInDisabled",
+        "type": "switch",
+        "label": "Hide the 'Stay signed in?' prompt",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.hideForgotMyPassword",
+        "type": "switch",
+        "label": "Hide 'Forgot my password'",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.hideCannotAccessYourAccount",
+        "type": "switch",
+        "label": "Hide 'Can't access your account?'",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.hideResetItNow",
+        "type": "switch",
+        "label": "Hide 'Reset it now'",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.hideTermsOfUse",
+        "type": "switch",
+        "label": "Hide 'Terms of use'",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.hidePrivacyAndCookies",
+        "type": "switch",
+        "label": "Hide 'Privacy & cookies'",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.backgroundColor",
+        "type": "colorPicker",
+        "label": "Background colour",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.headerBackgroundColor",
+        "type": "colorPicker",
+        "label": "Header background colour",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.customAccountResetCredentialsUrl",
+        "type": "textField",
+        "label": "Self-service password reset URL",
+        "omitWhenBlank": true,
+        "helperText": "Replaces Microsoft's password reset link",
+        "validators": {
+          "pattern": {
+            "value": "^https://\\S+$",
+            "message": "Enter a full https:// URL"
+          }
+        }
+      },
+      {
+        "name": "standards.Branding.customForgotMyPasswordText",
+        "type": "textField",
+        "label": "'Forgot my password' text",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.customResetItNowText",
+        "type": "textField",
+        "label": "'Reset it now' text",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.customCannotAccessYourAccountText",
+        "type": "textField",
+        "label": "'Can't access your account?' text",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.customCannotAccessYourAccountUrl",
+        "type": "textField",
+        "label": "'Can't access your account?' URL",
+        "omitWhenBlank": true,
+        "validators": {
+          "pattern": {
+            "value": "^https://\\S+$",
+            "message": "Enter a full https:// URL"
+          }
+        }
+      },
+      {
+        "name": "standards.Branding.customTermsOfUseText",
+        "type": "textField",
+        "label": "Terms of use text",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.customTermsOfUseUrl",
+        "type": "textField",
+        "label": "Terms of use URL",
+        "omitWhenBlank": true,
+        "validators": {
+          "pattern": {
+            "value": "^https://\\S+$",
+            "message": "Enter a full https:// URL"
+          }
+        }
+      },
+      {
+        "name": "standards.Branding.customPrivacyAndCookiesText",
+        "type": "textField",
+        "label": "Privacy & cookies text",
+        "omitWhenBlank": true
+      },
+      {
+        "name": "standards.Branding.customPrivacyAndCookiesUrl",
+        "type": "textField",
+        "label": "Privacy & cookies URL",
+        "omitWhenBlank": true,
+        "validators": {
+          "pattern": {
+            "value": "^https://\\S+$",
+            "message": "Enter a full https:// URL"
+          }
+        }
       }
     ]
   },

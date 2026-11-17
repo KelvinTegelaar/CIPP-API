@@ -6,6 +6,8 @@
 # second table call afterwards, so a failure there left an alert scoped to every tenant.
 
 BeforeAll {
+    # Outside a request, as background callers run.
+    function Get-CippRequestAllowedPermissions { }
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Add-CIPPScheduledTask.ps1'
 

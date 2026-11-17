@@ -3,7 +3,7 @@ Function Invoke-ExecDisableUser {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.User.ReadWrite
+        Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -19,11 +19,12 @@ Function Invoke-ExecDisableUser {
     $Enable = [System.Convert]::ToBoolean($Enable)
 
     try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $ID
         $Result = Set-CIPPSignInState -UserID $ID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers -AccountEnabled $Enable
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

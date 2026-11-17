@@ -11,6 +11,8 @@
 # Push-ExecScheduledCommand.TenantCoercion.Tests.ps1).
 
 BeforeAll {
+    # Outside a request, as background callers run.
+    function Get-CippRequestAllowedPermissions { }
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Add-CIPPScheduledTask.ps1'
 

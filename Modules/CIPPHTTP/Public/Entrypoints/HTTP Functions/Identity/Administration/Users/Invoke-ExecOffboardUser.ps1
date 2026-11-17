@@ -3,7 +3,7 @@ function Invoke-ExecOffboardUser {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.User.ReadWrite
+        Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     .DESCRIPTION
         Runs the offboarding wizard: one scheduled offboarding job per user, immediately or at the
         scheduled time, reporting live progress under one job id. Action=Rerun queues an existing
@@ -27,6 +27,8 @@ function Invoke-ExecOffboardUser {
                 $FailCode = [HttpStatusCode]::NotFound
                 throw 'No offboarding task with that id exists in this tenant'
             }
+            $Parameters = $Task.Parameters | ConvertFrom-Json
+            Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $Parameters.Username
 
             if ($Action -eq 'Rerun') {
                 $Result = Add-CIPPScheduledTask -RunNow -RowKey $TaskId -Headers $Request.Headers
@@ -36,7 +38,6 @@ function Invoke-ExecOffboardUser {
                 if ($null -eq $StepIndex) { $FailCode = [HttpStatusCode]::BadRequest; throw 'StepIndex is required' }
                 # Title of that step, used to name the re-run task
                 $StepTitle = [string]$Request.Body.StepTitle
-                $Parameters = $Task.Parameters | ConvertFrom-Json
                 # A step re-run is its own scheduled task (so it has results and logs of its own) that
                 # reports to the original job's progress row.
                 $taskObject = [PSCustomObject]@{
@@ -61,7 +62,7 @@ function Invoke-ExecOffboardUser {
                 })
         } catch {
             return ([HttpResponseContext]@{
-                    StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
+                    StatusCode = $FailCode ?? (Get-CippErrorStatusCode -ErrorRecord $_)
                     Body       = @{ Results = "Failed to queue the re-run: $($_.Exception.Message)" }
                 })
         }
@@ -78,6 +79,25 @@ function Invoke-ExecOffboardUser {
     $AllUsers = $Validation.Users
     $TenantFilter = $Validation.TenantFilter
     $OffboardingOptions = $Request.Body | Select-Object * -ExcludeProperty user, tenantFilter, Scheduled
+
+    try {
+        $Refused = @(Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId @($AllUsers) -PassThru)
+    } catch {
+        return ([HttpResponseContext]@{
+                StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
+                Body       = [pscustomobject]@{ Results = @($_.Exception.Message) }
+            })
+    }
+    # Privileged users are reported and left out; everyone else is still offboarded.
+    $RefusedResults = @(foreach ($Username in $Refused) { "Skipped $Username`: they hold a privileged admin role. Managing privileged users needs the Identity.PrivilegedUser.ReadWrite permission." })
+    $RequestedCount = @($AllUsers).Count
+    if ($Refused.Count -eq $RequestedCount) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::Forbidden
+                Body       = [pscustomobject]@{ Results = $RefusedResults }
+            })
+    }
+    $AllUsers = @(@($AllUsers).Where({ $Refused -notcontains $_ }))
 
     # One live-progress job per wizard run with a queued row per user: the wizard polls it when
     # running now, and the task page shows it for any job. Progress is a nice-to-have, so failing to
@@ -131,8 +151,8 @@ function Invoke-ExecOffboardUser {
             $_.Exception.message
         }
     }
-    $StatusCode = Get-CippBulkStatusCode -Total @($AllUsers).Count -Failed $Failed
-    $body = [pscustomobject]@{'Results' = @($Results) }
+    $StatusCode = Get-CippBulkStatusCode -Total $RequestedCount -Failed ($Failed + $Refused.Count)
+    $body = [pscustomobject]@{'Results' = @($RefusedResults) + @($Results) }
     if ($DeploymentId -and -not $Request.Body.Scheduled.enabled) {
         # Only a run-now job is worth polling straight away; a scheduled one is watched from its task page.
         $body | Add-Member -NotePropertyName DeploymentId -NotePropertyValue $DeploymentId

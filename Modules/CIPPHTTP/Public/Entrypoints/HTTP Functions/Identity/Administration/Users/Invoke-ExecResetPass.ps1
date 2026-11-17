@@ -3,7 +3,7 @@ Function Invoke-ExecResetPass {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.User.ReadWrite
+        Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -21,11 +21,12 @@ Function Invoke-ExecResetPass {
     $MustChange = [System.Convert]::ToBoolean($MustChange)
 
     try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $ID
         $Result = Set-CIPPResetPassword -UserID $ID -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers -forceChangePasswordNextSignIn $MustChange -DisplayName $DisplayName
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

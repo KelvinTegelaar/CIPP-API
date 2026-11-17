@@ -162,6 +162,12 @@ function Invoke-CIPPBaselineStandard {
                 if ($VariableProperty.Value -is [string] -and $VariableProperty.Value.Contains('%')) {
                     $VariableProperty.Value = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $VariableProperty.Value
                 }
+                # A switch bound to a custom variable resolves to text; compare and writes are type-strict, so make it a bool.
+                if ($VariableProperty.Value -is [string] -and "$(($Definition.variables ?? [PSCustomObject]@{}).($VariableProperty.Name).type)" -eq 'switch') {
+                    $Text = $VariableProperty.Value.Trim()
+                    if ($Text -in @('true', '1', 'yes')) { $VariableProperty.Value = $true }
+                    elseif ($Text -in @('false', '0', 'no')) { $VariableProperty.Value = $false }
+                }
             }
             $Normalized
         }
@@ -343,10 +349,15 @@ function Invoke-CIPPBaselineStandard {
         # and omitWhenBlank did not prune it). Pruned/optional blanks are legitimate.
         $ConfiguredVariables = $Item.Variables ?? [PSCustomObject]@{}
         $RenderedExpectedJson = $(if ($null -ne $ExpectedTemplate) { ConvertTo-Json -Compress -Depth 100 -InputObject $ExpectedTemplate } else { '' })
-        $Unresolved = @(($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties | Where-Object {
-                [string]::IsNullOrEmpty("$($ConfiguredVariables.$($_.Name))") -and
-                ($_.Value.required -eq $true -or $RenderedExpectedJson.Contains(('%{0}%' -f $_.Name)))
-            } | ForEach-Object { $_.Name })
+        $Unresolved = @(($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties | ForEach-Object {
+                $Configured = $ConfiguredVariables.$($_.Name)
+                if ([string]::IsNullOrEmpty("$Configured") -and ($_.Value.required -eq $true -or $RenderedExpectedJson.Contains(('%{0}%' -f $_.Name)))) {
+                    $_.Name
+                } elseif ($_.Value.type -eq 'switch' -and $Configured -is [string] -and $Configured -ne '') {
+                    # Normalize turned every true/false into a bool, so a string here is a custom variable this tenant has no true/false value for.
+                    "$($_.Name) ('$Configured' is not true or false for this tenant)"
+                }
+            })
         if ($Unresolved.Count -gt 0) {
             if ($GradeOnly) { return $null }
             $Missing = $Unresolved -join ', '

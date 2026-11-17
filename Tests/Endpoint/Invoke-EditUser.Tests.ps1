@@ -51,6 +51,8 @@ BeforeAll {
 
     . $CorePath
     . $FunctionPath
+    function Assert-CippPrivilegedUserAccess { param($TenantFilter, $UserId) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
 }
 
 Describe 'Invoke-EditUser body construction' {

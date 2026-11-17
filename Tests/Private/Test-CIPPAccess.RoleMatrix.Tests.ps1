@@ -198,7 +198,7 @@ BeforeAll {
         AnyWrite   = 'AddThingApp'
     }
     $script:CIPPFunctionPermissions = @{
-        'Invoke-ExecResetPass'     = @{ Role = 'Identity.User.ReadWrite'; Functionality = 'Entrypoint' }
+        'Invoke-ExecResetPass'     = @{ Role = 'Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite'; Functionality = 'Entrypoint' }
         'Invoke-ListUsers'         = @{ Role = 'Identity.User.Read'; Functionality = 'Entrypoint' }
         'Invoke-ExecStandardThing' = @{ Role = 'Tenant.Standards.ReadWrite'; Functionality = 'Entrypoint' }
         'Invoke-ExecSuperThing'    = @{ Role = 'CIPP.SuperAdmin.ReadWrite'; Functionality = 'Entrypoint' }
@@ -325,7 +325,7 @@ Describe 'Test-CIPPAccess with combined roles' {
             @{ Roles = @('w-g12-no2'); Op = 'Write'; Filter = 'group:g12'; Expect = "Your role 'w-g12-no2' excludes a tenant in the tenant group 'group:g12'." }
             @{ Roles = @('w-t1-blockep'); Op = 'Write'; Filter = 'tenant-1'; Expect = "Your role 'w-t1-blockep' blocks ExecResetPass on t1.example.com." }
             @{ Roles = @('w-t1-blockep'); Op = 'Write'; Filter = $null; Expect = "Your role 'w-t1-blockep' blocks ExecResetPass." }
-            @{ Roles = @('r-t2'); Op = 'Write'; Filter = 'tenant-2'; Expect = 'Access to this CIPP API endpoint is not allowed, you do not have the required permission: Identity.User.ReadWrite' }
+            @{ Roles = @('r-t2'); Op = 'Write'; Filter = 'tenant-2'; Expect = 'Access to this CIPP API endpoint is not allowed, you do not have the required permission: Identity.User.ReadWrite or Identity.PrivilegedUser.ReadWrite' }
         ) {
             { Test-CIPPAccess -Request (New-RoleRequest -Roles $Roles -Op $Op -Filter $Filter) } | Should -Throw -ExpectedMessage $Expect
         }
@@ -393,6 +393,27 @@ Describe 'Test-CIPPAccess with combined roles' {
         }
     }
 
+    Context 'an endpoint listing several permissions' {
+        It 'is granted by a custom role holding only the second one, on that role''s tenants' {
+            $script:RoleDefs['priv-t1'] = New-Role 'priv-t1' @('Identity.PrivilegedUser.ReadWrite') @('tenant-1')
+            Get-AccessDecision -Roles 'priv-t1' -Op 'Write' -Filter 'tenant-1' | Should -Be 'allow'
+            Get-AccessDecision -Roles 'priv-t1' -Op 'Write' -Filter 'tenant-2' | Should -Be 'deny'
+            Get-AccessDecision -Roles 'priv-t1' -Op 'Read' -Filter 'tenant-1' | Should -Be 'deny'
+        }
+
+        It 'is granted by a base role that excludes the first one but not the second' {
+            $Saved = $script:CIPPBaseRoles
+            try {
+                $script:CIPPBaseRoles = [pscustomobject]@{ editor = [pscustomobject]@{ include = @('*.ReadWrite'); exclude = @('Identity.User.*') } }
+                Get-AccessDecision -Roles 'editor' -Op 'Write' -Filter 'tenant-1' | Should -Be 'allow'
+                $script:CIPPBaseRoles = [pscustomobject]@{ editor = [pscustomobject]@{ include = @('*.ReadWrite'); exclude = @('Identity.*') } }
+                Get-AccessDecision -Roles 'editor' -Op 'Write' -Filter 'tenant-1' | Should -Be 'deny'
+            } finally {
+                $script:CIPPBaseRoles = $Saved
+            }
+        }
+    }
+
     Context 'the tenant list for a request' {
         It '<Roles> -> <Op> tenant list is <Expect>' -ForEach $script:ListCases {
             Get-ScopeList -Roles $Roles -Op $Op | Should -Be $Expect
@@ -408,7 +429,7 @@ Describe 'Endpoint permission names' {
         # The dispatcher compares with an unanchored -match, so a name that contains another one would grant it.
         $ModulesRoot = Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))) 'Modules'
         $Roles = Get-ChildItem $ModulesRoot -Recurse -Filter 'Invoke-*.ps1' | ForEach-Object {
-            if ((Get-Content $_.FullName -Raw) -match '\.ROLE\s*\r?\n\s*([A-Za-z0-9.]+)') { $Matches[1] }
+            if ((Get-Content $_.FullName -Raw) -match '\.ROLE\s*\r?\n\s*([A-Za-z0-9., ]+)') { ($Matches[1] -split ',').Trim().Where({ $_ }) }
         } | Sort-Object -Unique
         $Roles.Count | Should -BeGreaterThan 50
         $Collisions = foreach ($Required in $Roles) {

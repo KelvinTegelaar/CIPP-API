@@ -3,7 +3,7 @@ function Invoke-ExecBECRemediate {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.User.ReadWrite
+        Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     .SYNOPSIS
         Runs selectable Business Email Compromise containment for a user.
     .DESCRIPTION
@@ -36,6 +36,7 @@ function Invoke-ExecBECRemediate {
             if (-not $SuspectUser) { throw 'username or userid is required' }
             $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($SuspectUser)?`$select=userPrincipalName" -tenantid $TenantFilter -AsApp $true).userPrincipalName
         }
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $Username
 
         $Catalog = Get-CIPPBecContainmentActions
         $Selected = if ($Actions.Count -eq 0) { @($Catalog | Where-Object { $_.DefaultSelected }) } else { @($Catalog | Where-Object { $_.Id -in $Actions }) }
@@ -61,7 +62,7 @@ function Invoke-ExecBECRemediate {
             })
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        if ($StatusCode -eq [HttpStatusCode]::OK) { $StatusCode = [HttpStatusCode]::InternalServerError }
+        if ($StatusCode -eq [HttpStatusCode]::OK) { $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_ }
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "BEC containment for $Username was not executed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         @([pscustomobject]@{ resultText = $ErrorMessage.NormalizedError; state = 'error' })
     }

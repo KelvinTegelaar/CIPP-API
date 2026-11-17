@@ -3,7 +3,7 @@ function Invoke-ExecResetMFA {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.User.ReadWrite
+        Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -24,11 +24,12 @@ function Invoke-ExecResetMFA {
     if ($MethodId) { $MFAParams.MethodId = $MethodId }
 
     try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $UserID
         $Result = Remove-CIPPUserMFA @MFAParams
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

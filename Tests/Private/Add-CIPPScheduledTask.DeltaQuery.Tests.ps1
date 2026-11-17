@@ -4,6 +4,8 @@
 # persisting an orphan, and that the delta query is keyed by the new task's RowKey.
 
 BeforeAll {
+    # Outside a request, as background callers run.
+    function Get-CippRequestAllowedPermissions { }
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Add-CIPPScheduledTask.ps1' -File -ErrorAction SilentlyContinue |
         Select-Object -First 1 -ExpandProperty FullName

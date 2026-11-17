@@ -139,6 +139,15 @@ function New-CIPPRestoreTask {
 
             Write-Host "Restore users for $TenantFilter"
             Write-Information "User count in backup: $($backupUsers.Count)"
+            # A task queued without Identity.PrivilegedUser.ReadWrite leaves privileged users as they are.
+            $CurrentIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@($currentUsers.id), [System.StringComparer]::OrdinalIgnoreCase)
+            try {
+                $Refused = if ($overwrite) { @(Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId @(@($backupUsers).Where({ $CurrentIds.Contains([string]$_.id) }).id) -PassThru) } else { @() }
+            } catch {
+                $RestoreData.Add("Users were not restored: $($_.Exception.Message)")
+                Write-LogMessage -Headers $Headers -API $APINAME -message "Users were not restored: $($_.Exception.Message)" -Sev 'Error'
+                break
+            }
             $BackupUsers | ForEach-Object {
                 try {
                     $userObject = $_
@@ -146,6 +155,11 @@ function New-CIPPRestoreTask {
 
                     if ($overwrite) {
                         if ($userObject.id -in $currentUsers.id -or $userObject.userPrincipalName -in $currentUsers.userPrincipalName) {
+                            if ($Refused -contains $userObject.id) {
+                                $restorationStats['Users'].failed++
+                                $RestoreData.Add("Skipped $($UPN): they hold a privileged admin role. Managing privileged users needs the Identity.PrivilegedUser.ReadWrite permission.")
+                                return
+                            }
                             # Patch existing user - clean object to remove reference properties, nulls, and empty strings
                             $cleanedUser = ConvertTo-RestorableGraphObject -Object $userObject
                             $patchBody = $cleanedUser | ConvertTo-Json -Depth 100 -Compress

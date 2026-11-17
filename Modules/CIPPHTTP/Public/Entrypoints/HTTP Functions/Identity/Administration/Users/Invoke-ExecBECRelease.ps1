@@ -3,7 +3,7 @@ function Invoke-ExecBECRelease {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.User.ReadWrite
+        Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     .SYNOPSIS
         Releases a user from the containment run on a BEC case.
     .DESCRIPTION
@@ -38,6 +38,7 @@ function Invoke-ExecBECRelease {
             throw "BEC case $CaseId was not found"
         }
         $Username = [string]$Run.UserPrincipalName
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $Username
         if (-not $Confirmation -or $Confirmation.Trim() -ine $Username.Trim()) {
             $StatusCode = [HttpStatusCode]::BadRequest
             throw "Type the user's UPN ($Username) to confirm releasing them from containment"
@@ -45,7 +46,7 @@ function Invoke-ExecBECRelease {
         @(Invoke-CIPPBecRelease -TenantFilter $TenantFilter -CaseId $CaseId -Actions $Actions -Headers $Headers -APIName $APIName)
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        if ($StatusCode -eq [HttpStatusCode]::OK) { $StatusCode = [HttpStatusCode]::InternalServerError }
+        if ($StatusCode -eq [HttpStatusCode]::OK) { $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_ }
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "BEC release for case $CaseId was not executed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         @([pscustomobject]@{ resultText = $ErrorMessage.NormalizedError; state = 'error' })
     }

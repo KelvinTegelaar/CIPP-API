@@ -3,7 +3,7 @@ function Invoke-ExecRequirePasswordChange {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.User.ReadWrite
+        Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     .DESCRIPTION
         Requires password change at next sign-in without resetting the password.
         Sets passwordProfile.forceChangePasswordNextSignIn via Graph. Not supported for directory-synced users.
@@ -18,11 +18,12 @@ function Invoke-ExecRequirePasswordChange {
     $ID = $Request.Query.ID ?? $Request.Body.ID
 
     try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $ID
         $Result = Set-CIPPRequirePasswordChange -UserID $ID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers -ForceChangePasswordNextSignIn $true
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

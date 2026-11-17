@@ -3,7 +3,7 @@ Function Invoke-ExecRevokeSessions {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.User.ReadWrite
+        Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -18,11 +18,12 @@ Function Invoke-ExecRevokeSessions {
     $Username = $Request.Query.Username ?? $Request.Body.Username
 
     try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $ID
         $Result = Revoke-CIPPSessions -UserID $ID -TenantFilter $TenantFilter -Username $Username -APIName $APIName -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

@@ -2,6 +2,8 @@
 # [pscustomobject]: a future ScheduledTime kept as a Unix-time string, and the real parameter keys.
 
 BeforeAll {
+    # Outside a request, as background callers run.
+    function Get-CippRequestAllowedPermissions { }
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Add-CIPPScheduledTask.ps1'
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPScheduledTaskNextRun.ps1')

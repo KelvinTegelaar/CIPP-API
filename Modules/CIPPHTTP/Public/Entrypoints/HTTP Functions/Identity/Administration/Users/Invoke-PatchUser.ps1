@@ -3,7 +3,7 @@ function Invoke-PatchUser {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.User.ReadWrite
+        Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -40,6 +40,23 @@ function Invoke-PatchUser {
             $TotalManagerSuccessCount = 0
             $TotalSponsorSuccessCount = 0
             $AllErrorMessages = [System.Collections.Generic.List[string]]::new()
+
+            # Privileged users are left out of a sensitive change and reported, so the rest of the batch still goes through.
+            $SensitiveProperties = @('userPrincipalName', 'mobilePhone', 'businessPhones', 'otherMails', 'accountEnabled', 'passwordProfile', 'passwordPolicies', 'onPremisesImmutableId')
+            $Refused = @{}
+            foreach ($TenantGroup in $UsersByTenant) {
+                $SensitiveUsers = @($TenantGroup.Group.Where({ $User = $_; $SensitiveProperties.Where({ $null -ne $User.PSObject.Properties[$_] }, 'First').Count -gt 0 }))
+                $Refused[$TenantGroup.Name] = @(Assert-CippPrivilegedUserAccess -TenantFilter $TenantGroup.Name -UserId @($SensitiveUsers.id) -PassThru)
+                foreach ($Id in $Refused[$TenantGroup.Name]) {
+                    [void]$AllErrorMessages.Add("Skipped user $Id in tenant $($TenantGroup.Name): they hold a privileged admin role. Managing privileged users needs the Identity.PrivilegedUser.ReadWrite permission.")
+                }
+            }
+            if ($AllErrorMessages.Count -eq @($Users).Count) {
+                return ([HttpResponseContext]@{
+                        StatusCode = [HttpStatusCode]::Forbidden
+                        Body       = @{'Results' = @($AllErrorMessages) }
+                    })
+            }
             $HasManagerUpdates = @($Users | Where-Object { -not [string]::IsNullOrWhiteSpace($_.manager) }).Count -gt 0
             $HasSponsorUpdates = @($Users | Where-Object { -not [string]::IsNullOrWhiteSpace($_.sponsor) }).Count -gt 0
             $HasRelationshipUpdates = $HasManagerUpdates -or $HasSponsorUpdates
@@ -47,7 +64,7 @@ function Invoke-PatchUser {
             # Process each tenant separately
             foreach ($TenantGroup in $UsersByTenant) {
                 $tenantFilter = $TenantGroup.Name
-                $TenantUsers = $TenantGroup.Group
+                $TenantUsers = @($TenantGroup.Group.Where({ $Refused[$tenantFilter] -notcontains $_.id }))
                 $UsersWithManager = $TenantUsers | Where-Object { -not [string]::IsNullOrWhiteSpace($_.manager) }
                 $ManagerGroups = $UsersWithManager | Group-Object -Property manager
                 $UsersWithSponsor = $TenantUsers | Where-Object { -not [string]::IsNullOrWhiteSpace($_.sponsor) }
@@ -179,7 +196,7 @@ function Invoke-PatchUser {
         }
 
     } catch {
-        $HttpResponse.StatusCode = [HttpStatusCode]::InternalServerError
+        $HttpResponse.StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
         $HttpResponse.Body = @{'Results' = @("Failed to patch user(s). Error: $($_.Exception.Message)") }
     }
 

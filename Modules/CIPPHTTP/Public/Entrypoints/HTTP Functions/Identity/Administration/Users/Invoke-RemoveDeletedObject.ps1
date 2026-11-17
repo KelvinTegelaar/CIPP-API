@@ -19,6 +19,7 @@ Function Invoke-RemoveDeletedObject {
     $DisplayName = $Request.Body.displayName
 
     try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $RequestID -Deleted
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/directory/deletedItems/$($RequestID)" -tenantid $TenantFilter -type DELETE -body '{}' -Verbose
         $Result = "Successfully permanently deleted item with ID: '$($RequestID)'"
         if ($UserPrincipalName) { $Result += " User Principal Name: '$($UserPrincipalName)'" }
@@ -34,7 +35,7 @@ Function Invoke-RemoveDeletedObject {
         $Result += " Error: $($ErrorMessage.NormalizedError)"
 
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

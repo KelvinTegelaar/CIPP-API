@@ -11,7 +11,7 @@ BeforeAll {
         Select-Object -First 1 -ExpandProperty FullName
     if (-not $FunctionPath) { throw 'Could not locate Push-ExecScheduledCommand.ps1 under Modules/' }
 
-    function Set-CippScheduledTaskContext { param($TaskId, $AlertReNotify, $AlertRun) }
+    function Set-CippScheduledTaskContext { param($TaskId, $AlertReNotify, $AlertRun, $PrivilegedUserRestricted) }
     function Set-CippUserAgentContext { param($Headers, $Source, $TaskId) }
     function Get-CippTable { param($tablename) }
     function Get-AzDataTableEntity { param($Context, $Filter, $Property) }

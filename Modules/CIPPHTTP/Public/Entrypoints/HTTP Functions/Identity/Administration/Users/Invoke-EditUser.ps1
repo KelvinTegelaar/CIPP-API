@@ -3,7 +3,7 @@ function Invoke-EditUser {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.User.ReadWrite
+        Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -18,6 +18,15 @@ function Invoke-EditUser {
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
                 Body       = $Body
+            })
+    }
+
+    try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $UserObj.tenantFilter -UserId $UserObj.id
+    } catch {
+        return ([HttpResponseContext]@{
+                StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
+                Body       = @{ 'Results' = @("Failed to edit user. $($_.Exception.Message)") }
             })
     }
 

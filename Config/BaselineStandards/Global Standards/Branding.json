@@ -4,9 +4,9 @@
   "cat": "Global Standards",
   "tag": [],
   "impact": "Low Impact",
-  "helpText": "Sets the branding for the tenant. This includes the login page, and the Office 365 portal.",
+  "helpText": "Sets the sign-in page branding for the tenant: text, colours, which links show, custom link targets and the 'Stay signed in?' prompt.",
   "executiveText": "Customizes Microsoft 365 login pages and portals with company branding, including logos, colors, and messaging. This creates a consistent corporate identity experience for employees and reinforces brand recognition while maintaining professional appearance across all Microsoft services.",
-  "docsDescription": "Sets the branding for the tenant. This includes the login page, and the Office 365 portal.",
+  "docsDescription": "Sets the default sign-in page branding for the tenant: sign-in page and username hint text, layout, background and header colours, which self-service and footer links are shown, custom text and URLs for those links, and whether users see the 'Stay signed in?' prompt. Settings left blank are not managed. Images are not set by this standard.",
   "impactColour": "info",
   "addedDate": "2024-05-13",
   "powershellEquivalent": "Portal only",
@@ -61,19 +61,146 @@
       "type": "switch",
       "label": "Show footer",
       "default": false
+    },
+    "isKeepMeSignedInDisabled": {
+      "type": "switch",
+      "label": "Hide the 'Stay signed in?' prompt",
+      "omitWhenBlank": true
+    },
+    "hideForgotMyPassword": {
+      "type": "switch",
+      "label": "Hide 'Forgot my password'",
+      "omitWhenBlank": true
+    },
+    "hideCannotAccessYourAccount": {
+      "type": "switch",
+      "label": "Hide 'Can't access your account?'",
+      "omitWhenBlank": true
+    },
+    "hideResetItNow": {
+      "type": "switch",
+      "label": "Hide 'Reset it now'",
+      "omitWhenBlank": true
+    },
+    "hideTermsOfUse": {
+      "type": "switch",
+      "label": "Hide 'Terms of use'",
+      "omitWhenBlank": true
+    },
+    "hidePrivacyAndCookies": {
+      "type": "switch",
+      "label": "Hide 'Privacy & cookies'",
+      "omitWhenBlank": true
+    },
+    "backgroundColor": {
+      "type": "colorPicker",
+      "label": "Background colour",
+      "omitWhenBlank": true
+    },
+    "headerBackgroundColor": {
+      "type": "colorPicker",
+      "label": "Header background colour",
+      "omitWhenBlank": true
+    },
+    "customAccountResetCredentialsUrl": {
+      "type": "textField",
+      "label": "Self-service password reset URL",
+      "omitWhenBlank": true,
+      "helperText": "Replaces Microsoft's password reset link",
+      "validators": {
+        "pattern": {
+          "value": "^https://\\S+$",
+          "message": "Enter a full https:// URL"
+        }
+      }
+    },
+    "customForgotMyPasswordText": {
+      "type": "textField",
+      "label": "'Forgot my password' text",
+      "omitWhenBlank": true
+    },
+    "customResetItNowText": {
+      "type": "textField",
+      "label": "'Reset it now' text",
+      "omitWhenBlank": true
+    },
+    "customCannotAccessYourAccountText": {
+      "type": "textField",
+      "label": "'Can't access your account?' text",
+      "omitWhenBlank": true
+    },
+    "customCannotAccessYourAccountUrl": {
+      "type": "textField",
+      "label": "'Can't access your account?' URL",
+      "omitWhenBlank": true,
+      "validators": {
+        "pattern": {
+          "value": "^https://\\S+$",
+          "message": "Enter a full https:// URL"
+        }
+      }
+    },
+    "customTermsOfUseText": {
+      "type": "textField",
+      "label": "Terms of use text",
+      "omitWhenBlank": true
+    },
+    "customTermsOfUseUrl": {
+      "type": "textField",
+      "label": "Terms of use URL",
+      "omitWhenBlank": true,
+      "validators": {
+        "pattern": {
+          "value": "^https://\\S+$",
+          "message": "Enter a full https:// URL"
+        }
+      }
+    },
+    "customPrivacyAndCookiesText": {
+      "type": "textField",
+      "label": "Privacy & cookies text",
+      "omitWhenBlank": true
+    },
+    "customPrivacyAndCookiesUrl": {
+      "type": "textField",
+      "label": "Privacy & cookies URL",
+      "omitWhenBlank": true,
+      "validators": {
+        "pattern": {
+          "value": "^https://\\S+$",
+          "message": "Enter a full https:// URL"
+        }
+      }
     }
   },
   "expected": {
     "signInPageText": "%signInPageText%",
     "usernameHintText": "%usernameHintText%",
     "loginPageTextVisibilitySettings": {
-      "hideAccountResetCredentials": "%hideAccountResetCredentials%"
+      "hideAccountResetCredentials": "%hideAccountResetCredentials%",
+      "hideForgotMyPassword": "%hideForgotMyPassword%",
+      "hideCannotAccessYourAccount": "%hideCannotAccessYourAccount%",
+      "hideResetItNow": "%hideResetItNow%",
+      "hideTermsOfUse": "%hideTermsOfUse%",
+      "hidePrivacyAndCookies": "%hidePrivacyAndCookies%"
     },
     "loginPageLayoutConfiguration": {
       "layoutTemplateType": "%layoutTemplateType%",
       "isHeaderShown": "%isHeaderShown%",
       "isFooterShown": "%isFooterShown%"
-    }
+    },
+    "isKeepMeSignedInDisabled": "%isKeepMeSignedInDisabled%",
+    "backgroundColor": "%backgroundColor%",
+    "headerBackgroundColor": "%headerBackgroundColor%",
+    "customAccountResetCredentialsUrl": "%customAccountResetCredentialsUrl%",
+    "customForgotMyPasswordText": "%customForgotMyPasswordText%",
+    "customResetItNowText": "%customResetItNowText%",
+    "customCannotAccessYourAccountText": "%customCannotAccessYourAccountText%",
+    "customCannotAccessYourAccountUrl": "%customCannotAccessYourAccountUrl%",
+    "customTermsOfUseText": "%customTermsOfUseText%",
+    "customTermsOfUseUrl": "%customTermsOfUseUrl%",
+    "customPrivacyAndCookiesText": "%customPrivacyAndCookiesText%",
+    "customPrivacyAndCookiesUrl": "%customPrivacyAndCookiesUrl%"
   },
   "read": {
     "cacheType": "OrganizationBranding",
@@ -95,13 +222,30 @@
           "signInPageText": "%signInPageText%",
           "usernameHintText": "%usernameHintText%",
           "loginPageTextVisibilitySettings": {
-            "hideAccountResetCredentials": "%hideAccountResetCredentials%"
+            "hideAccountResetCredentials": "%hideAccountResetCredentials%",
+            "hideForgotMyPassword": "%hideForgotMyPassword%",
+            "hideCannotAccessYourAccount": "%hideCannotAccessYourAccount%",
+            "hideResetItNow": "%hideResetItNow%",
+            "hideTermsOfUse": "%hideTermsOfUse%",
+            "hidePrivacyAndCookies": "%hidePrivacyAndCookies%"
           },
           "loginPageLayoutConfiguration": {
             "layoutTemplateType": "%layoutTemplateType%",
             "isHeaderShown": "%isHeaderShown%",
             "isFooterShown": "%isFooterShown%"
-          }
+          },
+          "isKeepMeSignedInDisabled": "%isKeepMeSignedInDisabled%",
+          "backgroundColor": "%backgroundColor%",
+          "headerBackgroundColor": "%headerBackgroundColor%",
+          "customAccountResetCredentialsUrl": "%customAccountResetCredentialsUrl%",
+          "customForgotMyPasswordText": "%customForgotMyPasswordText%",
+          "customResetItNowText": "%customResetItNowText%",
+          "customCannotAccessYourAccountText": "%customCannotAccessYourAccountText%",
+          "customCannotAccessYourAccountUrl": "%customCannotAccessYourAccountUrl%",
+          "customTermsOfUseText": "%customTermsOfUseText%",
+          "customTermsOfUseUrl": "%customTermsOfUseUrl%",
+          "customPrivacyAndCookiesText": "%customPrivacyAndCookiesText%",
+          "customPrivacyAndCookiesUrl": "%customPrivacyAndCookiesUrl%"
         }
       },
       {
@@ -111,13 +255,30 @@
           "signInPageText": "%signInPageText%",
           "usernameHintText": "%usernameHintText%",
           "loginPageTextVisibilitySettings": {
-            "hideAccountResetCredentials": "%hideAccountResetCredentials%"
+            "hideAccountResetCredentials": "%hideAccountResetCredentials%",
+            "hideForgotMyPassword": "%hideForgotMyPassword%",
+            "hideCannotAccessYourAccount": "%hideCannotAccessYourAccount%",
+            "hideResetItNow": "%hideResetItNow%",
+            "hideTermsOfUse": "%hideTermsOfUse%",
+            "hidePrivacyAndCookies": "%hidePrivacyAndCookies%"
           },
           "loginPageLayoutConfiguration": {
             "layoutTemplateType": "%layoutTemplateType%",
             "isHeaderShown": "%isHeaderShown%",
             "isFooterShown": "%isFooterShown%"
-          }
+          },
+          "isKeepMeSignedInDisabled": "%isKeepMeSignedInDisabled%",
+          "backgroundColor": "%backgroundColor%",
+          "headerBackgroundColor": "%headerBackgroundColor%",
+          "customAccountResetCredentialsUrl": "%customAccountResetCredentialsUrl%",
+          "customForgotMyPasswordText": "%customForgotMyPasswordText%",
+          "customResetItNowText": "%customResetItNowText%",
+          "customCannotAccessYourAccountText": "%customCannotAccessYourAccountText%",
+          "customCannotAccessYourAccountUrl": "%customCannotAccessYourAccountUrl%",
+          "customTermsOfUseText": "%customTermsOfUseText%",
+          "customTermsOfUseUrl": "%customTermsOfUseUrl%",
+          "customPrivacyAndCookiesText": "%customPrivacyAndCookiesText%",
+          "customPrivacyAndCookiesUrl": "%customPrivacyAndCookiesUrl%"
         }
       }
     ]

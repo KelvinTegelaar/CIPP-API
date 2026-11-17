@@ -30,6 +30,8 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
 
     . $FunctionPath
+    function Assert-CippPrivilegedUserAccess { param($TenantFilter, $UserId, [switch]$PassThru) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
 
     function New-OffboardRequest {
@@ -88,6 +90,25 @@ Describe 'Invoke-ExecOffboardUser' {
                 TenantFilter = $Body.tenantFilter
                 Errors       = @()
             }
+        }
+    }
+
+    Context 'Privileged users' {
+        It 'skips a privileged user, offboards the rest and reports a partial result' {
+            Mock -CommandName Assert-CippPrivilegedUserAccess -MockWith { 'admin@contoso.com' }
+            $Response = Invoke-ExecOffboardUser -Request (New-OffboardRequest -Users 'admin@contoso.com', 'pat@contoso.com')
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]207)
+            @($Response.Body.Results)[0] | Should -BeLike 'Skipped admin@contoso.com: they hold a privileged admin role*'
+            Should -Invoke Add-CIPPScheduledTask -Times 1 -Exactly -ParameterFilter { $Task.Parameters.Username -eq 'pat@contoso.com' }
+            Should -Invoke New-CIPPAsyncDeployment -Times 1 -Exactly -ParameterFilter { (@($Names) -join ',') -eq 'pat@contoso.com' }
+        }
+
+        It 'refuses with 403 and queues nothing when every user is privileged' {
+            Mock -CommandName Assert-CippPrivilegedUserAccess -MockWith { 'admin@contoso.com' }
+            $Response = Invoke-ExecOffboardUser -Request (New-OffboardRequest -Users 'admin@contoso.com')
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::Forbidden)
+            Should -Invoke Add-CIPPScheduledTask -Times 0
+            Should -Invoke New-CIPPAsyncDeployment -Times 0
         }
     }
 

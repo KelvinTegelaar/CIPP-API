@@ -13,6 +13,8 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecContainmentActions.ps1')
     $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-ExecBECRemediate.ps1' | Select-Object -First 1
     . $FunctionPath.FullName
+    function Assert-CippPrivilegedUserAccess { param($TenantFilter, $UserId) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
 
     function New-Request {
         param([hashtable]$Body)

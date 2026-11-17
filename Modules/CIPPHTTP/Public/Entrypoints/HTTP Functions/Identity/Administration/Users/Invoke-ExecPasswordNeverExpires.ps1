@@ -4,7 +4,7 @@ function Invoke-ExecPasswordNeverExpires {
     Entrypoint
 
     .ROLE
-    Identity.User.ReadWrite
+    Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     #>
     Param($Request, $TriggerMetadata)
 
@@ -21,6 +21,7 @@ function Invoke-ExecPasswordNeverExpires {
 
     if ([string]::IsNullOrWhiteSpace($UserId)) { exit }
     try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $UserId
         $Body = ConvertTo-Json -InputObject @{ passwordPolicies = $PasswordPolicy } -Depth 5 -Compress
         $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/users/$UserId" -tenantid $TenantFilter -Body $Body -type PATCH
         $Result = "Successfully set PasswordPolicy for user $UserPrincipalName to $PasswordPolicyName"
@@ -30,7 +31,7 @@ function Invoke-ExecPasswordNeverExpires {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to set PasswordPolicy for user $UserPrincipalName to $PasswordPolicyName. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

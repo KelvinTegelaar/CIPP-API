@@ -45,10 +45,12 @@ function Get-CIPPHttpFunctions {
 
             if ($Functionality -notmatch 'Entrypoint') { continue }
             if ($Role -eq 'Public') { continue }
-            [PSCustomObject]@{
-                Function    = $Function.Name
-                Role        = $Role
-                Description = $Description
+            foreach ($EachRole in @("$Role" -split ',')) {
+                [PSCustomObject]@{
+                    Function    = $Function.Name
+                    Role        = $EachRole.Trim()
+                    Description = $Description
+                }
             }
         }
 

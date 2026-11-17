@@ -3,7 +3,7 @@ Function Invoke-RemoveUser {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.User.ReadWrite
+        Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -19,12 +19,13 @@ Function Invoke-RemoveUser {
 
     if (!$UserID) { exit }
     try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $UserID
         $Result = Remove-CIPPUser -UserID $UserID -Username $Username -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
         $Result = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

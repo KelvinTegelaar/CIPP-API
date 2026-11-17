@@ -22,6 +22,8 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
 
     . $FunctionPath
+    function Assert-CippPrivilegedUserAccess { param($TenantFilter, $UserId) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
 
     function New-ClrRequest {
         param($Attributes)

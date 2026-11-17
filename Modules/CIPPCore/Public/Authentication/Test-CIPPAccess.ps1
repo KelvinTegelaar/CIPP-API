@@ -66,6 +66,10 @@ function Test-CIPPAccess {
                 Write-Warning "Function '$FunctionName' not found"
             }
         }
+        # '.ROLE A,B': either permission grants the endpoint; A is the one messages name.
+        $APIRoles = @(@("$APIRole" -split ',').ForEach({ $_.Trim() }).Where({ $_ }))
+        if ($APIRoles.Count -eq 0) { $APIRoles = @($null) }
+        $APIRole = $APIRoles[0]
         $swHelp.Stop()
         $AccessTimings['GetHelp'] = $swHelp.Elapsed.TotalMilliseconds
     }
@@ -267,20 +271,14 @@ function Test-CIPPAccess {
     # Check base role permissions before continuing to custom roles
     if ($null -ne $BaseRole) {
         $BaseRoleAllowed = $false
-        foreach ($Include in $BaseRole.Value.include) {
-            if ($APIRole -like $Include) {
+        foreach ($Candidate in $APIRoles) {
+            if (@($BaseRole.Value.include).Where({ $Candidate -like $_ }, 'First').Count -gt 0 -and @($BaseRole.Value.exclude).Where({ $Candidate -like $_ }, 'First').Count -eq 0) {
                 $BaseRoleAllowed = $true
                 break
             }
         }
-        foreach ($Exclude in $BaseRole.Value.exclude) {
-            if ($APIRole -like $Exclude) {
-                $BaseRoleAllowed = $false
-                break
-            }
-        }
         if (!$BaseRoleAllowed) {
-            throw "Access to this CIPP API endpoint is not allowed, the '$($BaseRole.Name)' base role does not have the required permission: $APIRole"
+            throw "Access to this CIPP API endpoint is not allowed, the '$($BaseRole.Name)' base role does not have the required permission: $($APIRoles -join ' or ')"
         }
     }
 
@@ -311,7 +309,7 @@ function Test-CIPPAccess {
                 # permission contribute, and a granting role that blocks it takes away every
                 # tenant (or group) it reaches - the same rules as the per-request decision.
                 $Endpoint = $Request.Params.CIPPEndpoint
-                $GrantingRules = @(foreach ($Rule in $ScopeRules) { if (-not $APIRole -or @($Rule.Permissions).Where({ $_ -match $APIRole }, 'First').Count -gt 0) { $Rule } })
+                $GrantingRules = @(foreach ($Rule in $ScopeRules) { if (-not $APIRole -or @($Rule.Permissions).Where({ $Held = $_; $APIRoles.Where({ $Held -match $_ }, 'First').Count -gt 0 }, 'First').Count -gt 0) { $Rule } })
                 $AllowingRules = @($GrantingRules.Where({ $_.BlockedEndpoints -notcontains $Endpoint }))
                 $BlockingRules = @($GrantingRules.Where({ $_.BlockedEndpoints -contains $Endpoint }))
 
@@ -404,9 +402,9 @@ function Test-CIPPAccess {
                 # Only a role that grants the endpoint's permission can allow or block it, and it
                 # has to cover the tenant itself: a permission from one role never combines with
                 # another role's tenants, so the order the roles arrive in cannot change the answer.
-                $GrantingRoles = @(foreach ($Role in $PermissionSet) { if (@($Role.Permissions).Where({ $_ -match $APIRole }, 'First').Count -gt 0) { $Role } })
+                $GrantingRoles = @(foreach ($Role in $PermissionSet) { if (@($Role.Permissions).Where({ $Held = $_; $APIRoles.Where({ $Held -match $_ }, 'First').Count -gt 0 }, 'First').Count -gt 0) { $Role } })
                 if ($GrantingRoles.Count -eq 0) {
-                    throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $APIRole"
+                    throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $($APIRoles -join ' or ')"
                 }
 
                 # Block pass: deny wins wherever a granting role that blocks this endpoint reaches.

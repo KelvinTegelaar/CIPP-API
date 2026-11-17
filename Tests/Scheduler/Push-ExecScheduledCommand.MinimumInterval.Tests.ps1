@@ -9,7 +9,7 @@ BeforeAll {
         Select-Object -First 1 -ExpandProperty FullName
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPScheduledTaskNextRun.ps1')
 
-    function Set-CippScheduledTaskContext { param($TaskId, $AlertReNotify, $AlertRun) }
+    function Set-CippScheduledTaskContext { param($TaskId, $AlertReNotify, $AlertRun, $PrivilegedUserRestricted) }
     function Set-CippUserAgentContext { param($Headers, $Source, $TaskId) }
     function Get-CippTable { param($tablename) }
     function Get-AzDataTableEntity { param($Context, $Filter) }

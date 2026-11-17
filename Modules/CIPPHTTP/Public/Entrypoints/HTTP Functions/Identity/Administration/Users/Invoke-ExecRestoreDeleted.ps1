@@ -19,6 +19,7 @@ function Invoke-ExecRestoreDeleted {
     $DisplayName = $Request.Body.displayName
 
     try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $RequestID -Deleted
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/directory/deletedItems/$($RequestID)/restore" -tenantid $TenantFilter -type POST -body '{}' -Verbose
         $Result = "Successfully restored deleted item with ID: '$($RequestID)'"
         if ($UserPrincipalName) { $Result += " User Principal Name: '$($UserPrincipalName)'" }
@@ -34,7 +35,7 @@ function Invoke-ExecRestoreDeleted {
         $Result += " Error: $($ErrorMessage.NormalizedError)"
 
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

@@ -3,7 +3,7 @@ Function Invoke-ExecCreateTAP {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Identity.User.ReadWrite
+        Identity.User.ReadWrite,Identity.PrivilegedUser.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -25,6 +25,7 @@ Function Invoke-ExecCreateTAP {
     $GeneratePwPushLink = ($Request.Query.generatePwPushLink -eq $true) -or ($Request.Body.generatePwPushLink -eq $true)
 
     try {
+        Assert-CippPrivilegedUserAccess -TenantFilter $TenantFilter -UserId $UserID
         # Create parameter hashtable for splatting
         $TAPParams = @{
             UserID             = $UserID
@@ -52,7 +53,7 @@ Function Invoke-ExecCreateTAP {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Results = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{
