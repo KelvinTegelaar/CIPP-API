@@ -20,7 +20,7 @@ function Invoke-ListIntuneAssignments {
     # The user's id or UPN, the group's id, or the Intune managed device id
     $PrincipalId = $Request.Query.id
     # Group lookups only: also include assignments to the groups this group is nested in
-    $IncludeNested = $Request.Query.includeNested -eq $true -or $Request.Query.includeNested -eq 'true'
+    $IncludeNested = $Request.Query.includeNested -eq $true
 
     if ($PrincipalType -notin @('user', 'group', 'device') -or [string]::IsNullOrWhiteSpace($PrincipalId)) {
         return ([HttpResponseContext]@{
