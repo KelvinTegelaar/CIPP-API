@@ -35,10 +35,7 @@ function Invoke-AddPolicy {
 
     $Failed = 0
     $Results = foreach ($Tenant in $Tenants) {
-        if ($Request.Body.replacemap.$Tenant) {
-            ([pscustomobject]$Request.Body.replacemap.$Tenant).PSObject.Properties | ForEach-Object { $RawJSON = $RawJSON -replace $_.name, $_.value }
-        }
-
+        $TenantJSON = $RawJSON
         $reusableSettings = $Request.Body.ReusableSettings ?? $Request.Body.reusableSettings
         if (-not $reusableSettings -or $reusableSettings.Count -eq 0) {
             try {
@@ -57,30 +54,37 @@ function Invoke-AddPolicy {
                     $templateObj = $templateEntity.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
                     $templateObj = Repair-CIPPIntuneTemplateNesting -Template $templateObj -Table $templatesTable
                     if ($templateObj.ReusableSettings) { $reusableSettings = $templateObj.ReusableSettings }
-                    if ($templateObj.RAWJson) { $RawJSON = $templateObj.RAWJson }
+                    if ($templateObj.RAWJson) { $TenantJSON = $templateObj.RAWJson }
                 }
             } catch {}
         }
 
-        if (-not $reusableSettings -and $RawJSON) {
+        if ($Request.Body.replacemap.$Tenant -and $TenantJSON) {
+            foreach ($Placeholder in ([pscustomobject]$Request.Body.replacemap.$Tenant).PSObject.Properties) {
+                $Encoded = ConvertTo-Json -InputObject ([string]$Placeholder.Value) -Compress
+                $TenantJSON = $TenantJSON.Replace($Placeholder.Name, $Encoded.Substring(1, $Encoded.Length - 2))
+            }
+        }
+
+        if (-not $reusableSettings -and $TenantJSON) {
             try {
                 # Discover referenced reusable settings from the policy JSON when none were supplied
-                $reusableResult = Get-CIPPReusableSettingsFromPolicy -PolicyJson $RawJSON -Tenant $Tenant -Headers $Headers -APIName $APIName
+                $reusableResult = Get-CIPPReusableSettingsFromPolicy -PolicyJson $TenantJSON -Tenant $Tenant -Headers $Headers -APIName $APIName
                 if ($reusableResult.ReusableSettings) { $reusableSettings = $reusableResult.ReusableSettings }
-                if ($reusableResult.RawJSON) { $RawJSON = $reusableResult.RawJSON }
+                if ($reusableResult.RawJSON) { $TenantJSON = $reusableResult.RawJSON }
             } catch {}
         }
 
         $reusableSettingsForSet = $reusableSettings
         if ($Request.Body.TemplateType -eq 'Catalog') {
-            $syncResult = Sync-CIPPReusablePolicySettings -TemplateInfo ([pscustomobject]@{ RawJSON = $RawJSON; ReusableSettings = $reusableSettings }) -Tenant $Tenant
-            if ($syncResult.RawJSON) { $RawJSON = $syncResult.RawJSON }
+            $syncResult = Sync-CIPPReusablePolicySettings -TemplateInfo ([pscustomobject]@{ RawJSON = $TenantJSON; ReusableSettings = $reusableSettings }) -Tenant $Tenant
+            if ($syncResult.RawJSON) { $TenantJSON = $syncResult.RawJSON }
             $reusableSettingsForSet = $null # helper already created/updated reusable settings and rewrote JSON
         }
 
         try {
             # Per tenant, because the replacemap above rewrites the payload.
-            $Validation = Test-CIPPIntuneTemplate -RawJSON $RawJSON -TemplateType $Request.Body.TemplateType -DisplayName $DisplayName
+            $Validation = Test-CIPPIntuneTemplate -RawJSON $TenantJSON -TemplateType $Request.Body.TemplateType -DisplayName $DisplayName
             if (-not $Validation.IsValid) {
                 throw "Not deployed to $Tenant : $($Validation.Errors -join ' ')"
             }
@@ -91,7 +95,7 @@ function Invoke-AddPolicy {
                 TemplateType     = $Validation.Type
                 Description      = $description
                 DisplayName      = $DisplayName
-                RawJSON          = $RawJSON
+                RawJSON          = $TenantJSON
                 ReusableSettings = $reusableSettingsForSet
                 AssignTo         = $AssignTo
                 ExcludeGroup     = $ExcludeGroup

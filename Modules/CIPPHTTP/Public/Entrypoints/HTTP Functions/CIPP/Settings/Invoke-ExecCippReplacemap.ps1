@@ -170,7 +170,14 @@ function Invoke-ExecCippReplacemap {
                 }
             }
             'AddEdit' {
-                $VariableName = $Request.Body.RowKey
+                $VariableName = [string]$Request.Body.RowKey
+                # Same rule as the variables page: an empty name would make %% a token and rewrite every %% in a script.
+                if ([string]::IsNullOrWhiteSpace($VariableName) -or $VariableName -match '[\s~`!#$%^&*+=\[\]\\'';,/{}|":<>?-]') {
+                    return ([HttpResponseContext]@{
+                            StatusCode = [HttpStatusCode]::BadRequest
+                            Body       = @{ Results = "'$VariableName' is not a valid variable name. Use letters, numbers, underscores or dots, with no spaces." }
+                        })
+                }
                 $VariableValue = $Request.Body.Value
                 $VariableDescription = $Request.Body.Description
 

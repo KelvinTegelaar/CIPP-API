@@ -237,6 +237,26 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
         }
     }
 
+    Context 'variable names' {
+        It 'rejects <Name>' -ForEach @(
+            @{ Name = 'an empty name'; RowKey = '' }
+            @{ Name = 'a blank name'; RowKey = '  ' }
+            @{ Name = 'a space'; RowKey = 'has space' }
+            @{ Name = 'a percent sign'; RowKey = 'pct%x' }
+            @{ Name = 'a quote'; RowKey = "quo'te" }
+            @{ Name = 'brackets'; RowKey = 'brk[0]' }
+        ) {
+            $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name $RowKey)
+
+            $Response.StatusCode | Should -Be 400
+            $script:SavedEntity | Should -BeNullOrEmpty
+        }
+
+        It 'accepts <RowKey>' -ForEach @(@{ RowKey = 'site_code' }, @{ RowKey = 'dot.0' }, @{ RowKey = 'paren(x)' }) {
+            (Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name $RowKey)).StatusCode | Should -Be 200
+            $script:SavedEntity.RowKey | Should -Be $RowKey
+        }
+    }
     Context 'values at the edges of each type' {
         It 'accepts zero and negative integers' {
             foreach ($Value in @('0', '-5')) {
