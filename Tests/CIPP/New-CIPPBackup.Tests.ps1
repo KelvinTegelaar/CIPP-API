@@ -27,8 +27,20 @@ BeforeAll {
     function Push-CIPPBackupReplication { param($BackupType, $BlobName, $Content, $Headers) $script:Captured = $Content }
 
     . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/New-CIPPBackup.ps1')
-    $null = New-CIPPBackup -backupType 'CIPP' -ConnectionString 'UseDevelopmentStorage=true'
+    $script:OriginalStorage = $env:AzureWebJobsStorage
+    $env:AzureWebJobsStorage = 'UseDevelopmentStorage=true'
+    $null = New-CIPPBackup -backupType 'CIPP'
     $script:Rows = $script:Captured | ConvertFrom-Json
+}
+
+AfterAll {
+    $env:AzureWebJobsStorage = $script:OriginalStorage
+}
+
+Describe 'New-CIPPBackup storage destination' {
+    It 'takes no caller-supplied connection string, so a backup only goes to CIPP storage' {
+        { New-CIPPBackup -backupType 'CIPP' -ConnectionString 'DefaultEndpointsProtocol=https;AccountName=attacker;AccountKey=x' } | Should -Throw
+    }
 }
 
 Describe 'New-CIPPBackup CIPP backup contents' {

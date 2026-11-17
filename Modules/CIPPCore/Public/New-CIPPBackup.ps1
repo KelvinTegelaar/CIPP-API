@@ -12,9 +12,11 @@ function New-CIPPBackup {
 
         $ScheduledBackupValues,
         $APIName = 'CIPP Backup',
-        $Headers,
-        [Parameter(Mandatory = $false)] [string] $ConnectionString = $env:AzureWebJobsStorage
+        $Headers
     )
+
+    # Always CIPP's own storage: a caller-chosen account would receive the whole configuration.
+    $ConnectionString = $env:AzureWebJobsStorage
 
     # Validate that TenantFilter is provided for Scheduled backups
     if ($backupType -eq 'Scheduled' -and [string]::IsNullOrEmpty($TenantFilter)) {
