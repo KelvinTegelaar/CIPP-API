@@ -26,7 +26,7 @@ function Get-HuduMapping {
     try {
         $Configuration = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop
 
-        Connect-HuduAPI -configuration $Configuration
+        Connect-HuduAPI
         $HuduCompanies = Get-HuduCompanies
 
     } catch {

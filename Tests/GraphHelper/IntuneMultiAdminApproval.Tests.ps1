@@ -23,6 +23,7 @@ BeforeAll {
     function Set-CIPPAssignedPolicy { param($GroupName, $PolicyId, $PlatformType, $Type, $TenantFilter, $ExcludeGroup, $AssignmentMode) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/New-GraphPOSTRequest.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Assert-CIPPMicrosoftHost.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/New-CIPPIntuneApprovalRequest.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Invoke-CIPPIntuneApprovalRetry.ps1')
 

@@ -96,7 +96,7 @@ function Invoke-NinjaOneTenantSync {
 
         if (($Configuration.IncludeLAPS -and -not $MappedFields.LAPSPassword) -or ($Configuration.IncludeBitLocker -and -not $MappedFields.BitLockerRecoveryKeys)) {
             $Token = Get-NinjaOneToken -configuration $Configuration -WebSession $NinjaSession
-            Initialize-NinjaOneCredentialField -Configuration $Configuration -Token $Token -MappedFields $MappedFields -WebSession $NinjaSession
+            Initialize-NinjaOneCredentialField -Token $Token -MappedFields $MappedFields -WebSession $NinjaSession
         }
 
         # Per-tenant opt-out of password data; the global switches still gate the feature.

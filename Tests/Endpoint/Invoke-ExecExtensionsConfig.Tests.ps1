@@ -20,7 +20,8 @@ BeforeAll {
         $script:ScheduleCalls += @{ Reschedule = $Reschedule.IsPresent; NextSync = $NextSync; Extensions = $Extensions }
     }
     function Set-ExtensionAPIKey { param($Extension, $APIKey) $script:KeyWrites.Add($Extension) }
-    function Initialize-NinjaOneCredentialField { param($Configuration) $script:InitCalls.Add($Configuration) }
+    # It reads the stored config itself, so record what was saved when it ran.
+    function Initialize-NinjaOneCredentialField { $script:InitCalls.Add($script:SavedConfig.NinjaOne) }
     . "$PSScriptRoot/../../Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/CIPP/Extensions/Invoke-ExecExtensionsConfig.ps1"
 }
 

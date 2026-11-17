@@ -30,7 +30,7 @@ function New-NinjaOneTicket {
     $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).NinjaOne
     $TicketTable = Get-CIPPTable -TableName 'PSATickets'
     # Ticket writes are refused for the app-only token, so they run as the technician who connected.
-    $Token = Get-NinjaOneUserToken -Configuration $Configuration
+    $Token = Get-NinjaOneUserToken
     if (-not $Token.access_token) {
         $Message = 'Failed to send ticket to NinjaOne: ticketing is not connected. Use Connect on the NinjaOne integration page to sign in.'
         Write-LogMessage -message $Message -API 'NinjaOneTicket' -sev Error

@@ -98,7 +98,7 @@ Function Invoke-ExecExtensionTest {
                 }
             }
             'Hudu' {
-                Connect-HuduAPI -configuration $Configuration
+                Connect-HuduAPI
                 $HuduInfoErrors = $null
                 $Version = Get-HuduAppInfo -ErrorAction SilentlyContinue -ErrorVariable HuduInfoErrors 3>$null
                 if ($Version.version -and $Version.version -ne '0.0.0.0') {

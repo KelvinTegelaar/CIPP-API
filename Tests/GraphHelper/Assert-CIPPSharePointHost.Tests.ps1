@@ -12,6 +12,7 @@ BeforeAll {
     function Invoke-CIPPRestMethod { }
 
     . (Join-Path $Helpers 'Assert-CIPPSharePointHost.ps1')
+    . (Join-Path $Helpers 'Assert-CIPPMicrosoftHost.ps1')
     . (Join-Path $Helpers 'New-GraphGetRequest.ps1')
     . (Join-Path $Helpers 'New-GraphPOSTRequest.ps1')
 }
@@ -54,13 +55,13 @@ Describe 'Graph request helpers refuse a foreign host for a SharePoint token' {
     }
 
     It 'New-GraphGetRequest throws before requesting a token' {
-        { New-GraphGetRequest -uri 'https://evil.example.com/_api/web' -tenantid 'contoso.onmicrosoft.com' -scope 'https://contoso.sharepoint.com/.default' -AsApp $true } | Should -Throw '*is not a SharePoint URL*'
+        { New-GraphGetRequest -uri 'https://graph.microsoft.com/_api/web' -tenantid 'contoso.onmicrosoft.com' -scope 'https://contoso.sharepoint.com/.default' -AsApp $true } | Should -Throw '*is not a SharePoint URL*'
         Should -Invoke Get-GraphToken -Times 0 -Exactly
         Should -Invoke Invoke-CIPPRestMethod -Times 0 -Exactly
     }
 
     It 'New-GraphPOSTRequest throws before requesting a token' {
-        { New-GraphPOSTRequest -uri 'https://evil.example.com/_api/web' -tenantid 'contoso.onmicrosoft.com' -scope 'https://contoso.sharepoint.com/.default' -body '{}' -AsApp $true } | Should -Throw '*is not a SharePoint URL*'
+        { New-GraphPOSTRequest -uri 'https://graph.microsoft.com/_api/web' -tenantid 'contoso.onmicrosoft.com' -scope 'https://contoso.sharepoint.com/.default' -body '{}' -AsApp $true } | Should -Throw '*is not a SharePoint URL*'
         Should -Invoke Get-GraphToken -Times 0 -Exactly
         Should -Invoke Invoke-CIPPRestMethod -Times 0 -Exactly
     }
@@ -70,3 +71,53 @@ Describe 'Graph request helpers refuse a foreign host for a SharePoint token' {
         Should -Invoke Invoke-CIPPRestMethod -Times 1 -Exactly
     }
 }
+
+Describe 'Assert-CIPPMicrosoftHost' {
+    It 'allows <Uri>' -ForEach @(
+        @{ Uri = 'https://graph.microsoft.com/beta/users' }
+        @{ Uri = 'https://api.partnercenter.microsoft.com/v1/customers' }
+        @{ Uri = 'https://outlook.office365.com/adminapi/beta/x/InvokeCommand' }
+        @{ Uri = 'https://login.microsoftonline.com/x/oauth2/v2.0/token' }
+        @{ Uri = 'https://contoso-admin.sharepoint.com/_api/web' }
+        @{ Uri = 'https://admin.cloud.microsoft/api' }
+        @{ Uri = 'https://management.azure.com/subscriptions' }
+        @{ Uri = 'https://mde-rsp-apiportal-prd-weu.securitycenter.windows.com/api/cloud/portal/onboarding/intune/provision' }
+        @{ Uri = 'https://intuneautopatchbeta-bwhtaqgefgcyaaa8.westeurope-01.azurewebsites.net/api/autoPatch' }
+    ) {
+        { Assert-CIPPMicrosoftHost -Uri $Uri } | Should -Not -Throw
+    }
+
+    It 'refuses <Uri>' -ForEach @(
+        @{ Uri = 'https://evil.example.com/v1.0/users' }
+        @{ Uri = 'https://graph.microsoft.com.evil.example/v1.0/users' }
+        @{ Uri = 'https://evilmicrosoft.com/' }
+        @{ Uri = 'https://victim.cloudapp.azure.com/' }
+        @{ Uri = 'https://attacker.azurewebsites.net/' }
+        @{ Uri = 'https://attacker.blob.core.windows.net/' }
+        @{ Uri = 'http://graph.microsoft.com/v1.0/users' }
+        @{ Uri = 'https://user:pw@graph.microsoft.com/v1.0/users' }
+        @{ Uri = 'users' }
+    ) {
+        { Assert-CIPPMicrosoftHost -Uri $Uri } | Should -Throw
+    }
+}
+
+Describe 'Graph request helpers refuse a non-Microsoft host' {
+    BeforeEach {
+        Mock Get-GraphToken { @{} }
+        Mock Invoke-CIPPRestMethod { }
+    }
+
+    It 'New-GraphGetRequest throws before requesting a token' {
+        { New-GraphGetRequest -uri 'https://evil.example.com/v1.0/users' -tenantid 'contoso.onmicrosoft.com' } | Should -Throw '*not a Microsoft service host*'
+        Should -Invoke Get-GraphToken -Times 0 -Exactly
+        Should -Invoke Invoke-CIPPRestMethod -Times 0 -Exactly
+    }
+
+    It 'New-GraphPOSTRequest throws before requesting a token' {
+        { New-GraphPOSTRequest -uri 'https://evil.example.com/v1.0/users' -tenantid 'contoso.onmicrosoft.com' -body '{}' -AsApp $true } | Should -Throw '*not a Microsoft service host*'
+        Should -Invoke Get-GraphToken -Times 0 -Exactly
+        Should -Invoke Invoke-CIPPRestMethod -Times 0 -Exactly
+    }
+}
+

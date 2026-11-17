@@ -29,6 +29,7 @@ function New-GraphGetRequest {
         $Headers
     )
 
+    Assert-CIPPMicrosoftHost -Uri $uri
     if ($scope -like '*.sharepoint*') { Assert-CIPPSharePointHost -Uri $uri -Scope $scope }
 
     if ($NoAuthCheck -eq $false) {

@@ -6,14 +6,13 @@ function Invoke-HuduExtensionSync {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [object]$Configuration,
-
-        [Parameter(Mandatory = $true)]
         [string]$TenantFilter
     )
     try {
-        Connect-HuduAPI -configuration $Configuration | Out-Null
-        $Configuration = $Configuration.Hudu
+        # Stored config only: a caller must not be able to switch on LAPS or BitLocker sync.
+        $ExtensionTable = Get-CIPPTable -TableName Extensionsconfig
+        $Configuration = ((Get-CIPPAzDataTableEntity @ExtensionTable).config | ConvertFrom-Json).Hudu
+        Connect-HuduAPI | Out-Null
         $Culture = Get-CippExtensionCulture -Value $Configuration.Locale
         $TimeZone = try { [TimeZoneInfo]::FindSystemTimeZoneById([string]$env:CIPP_TIMEZONE) } catch { [TimeZoneInfo]::Utc }
         $Tenant = Get-Tenants -TenantFilter $TenantFilter -IncludeErrors

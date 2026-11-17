@@ -50,6 +50,8 @@ function Get-CIPPSchedulerBlockedCommands {
         'Get-HaloToken'
         'Invoke-SyncroRequest'
         'Get-NinjaOneToken'
+        'Get-NinjaOneUserToken'
+        'Invoke-NinjaOneDeviceWebhook'
         'Get-SherwebAuthentication'
         'Invoke-ExternalCSPRequest'
         'Get-HIBPAuth'
@@ -70,6 +72,7 @@ function Get-CIPPSchedulerBlockedCommands {
         'Set-ExtensionAPIKey'
         'Remove-ExtensionAPIKey'
         'Get-CIPPOmaSettingDecryptedValue'
+        'Get-CIPPVapidKeys'
 
         # End-tenant secret material - recovery keys & admin passwords, PostExecution would exfiltrate them
         'Get-CIPPLAPSPassword'

@@ -9,11 +9,14 @@ function Initialize-NinjaOneCredentialField {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]$Configuration,
         $Token,
         $MappedFields,
         $WebSession
     )
+
+    # Stored config only, so the token and client secret only ever go to the saved NinjaOne instance.
+    $ExtensionTable = Get-CIPPTable -TableName Extensionsconfig
+    $Configuration = ((Get-CIPPAzDataTableEntity @ExtensionTable).config | ConvertFrom-Json).NinjaOne
 
     if (-not $MappedFields) {
         $MappedFields = [pscustomobject]@{}

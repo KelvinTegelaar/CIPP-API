@@ -214,7 +214,9 @@ function Send-CIPPAlert {
             }
         }
 
-        $WebhookAuthType = [string]$Config.webhookAuthType
+        # Stored webhook and Cloudflare credentials only go to the URL saved in notification settings.
+        $SendStoredCredentials = [string]::IsNullOrWhiteSpace($AltWebhook) -or $AltWebhook -eq $Config.webhook
+        $WebhookAuthType = if ($SendStoredCredentials) { [string]$Config.webhookAuthType } else { '' }
         switch ($WebhookAuthType.ToLowerInvariant()) {
             'bearer' {
                 $WebhookAuthToken = [string]$Config.webhookAuthToken
@@ -276,7 +278,7 @@ function Send-CIPPAlert {
             $Configuration = $null
         }
 
-        if ($Configuration.CFZTNA.WebhookEnabled -eq $true -and $Configuration.CFZTNA.Enabled -eq $true) {
+        if ($SendStoredCredentials -and $Configuration.CFZTNA.WebhookEnabled -eq $true -and $Configuration.CFZTNA.Enabled -eq $true) {
             $CFAPIKey = Get-ExtensionAPIKey -Extension 'CFZTNA'
             $RequestHeaders['CF-Access-Client-Id'] = $Configuration.CFZTNA.ClientId
             $RequestHeaders['CF-Access-Client-Secret'] = "$CFAPIKey"

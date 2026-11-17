@@ -1,4 +1,6 @@
 BeforeAll {
+    # The sync reads its config from the Extensionsconfig table; this stores what that read returns.
+    function Invoke-HuduSyncWithConfig { param($Configuration, $TenantFilter) $script:HuduConfig = $Configuration; Invoke-HuduExtensionSync -TenantFilter $TenantFilter }
     Add-Type -Path "$PSScriptRoot/../../Shared/CIPPSharp/bin/CIPPSharp.dll"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Find-HuduDeviceMatch.ps1"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Get-HuduDeviceMatchKey.ps1"
@@ -44,6 +46,7 @@ BeforeAll {
 
 Describe 'Invoke-HuduExtensionSync credential integration' {
     BeforeEach {
+        Mock Get-CIPPAzDataTableEntity -ParameterFilter { -not $Filter } { [pscustomobject]@{ config = ($script:HuduConfig | ConvertTo-Json -Depth 20) } }
         $env:CIPPRootPath = (Resolve-Path "$PSScriptRoot/../..").Path
         $script:CachedHash = $null
         $script:HuduDevice = [PSCustomObject]@{
@@ -155,8 +158,8 @@ Describe 'Invoke-HuduExtensionSync credential integration' {
     }
 
     It 'updates missing credentials once and performs a no-op asset sync on the second pass' {
-        $First = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
-        $Second = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $First = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Second = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         $First.Devices | Should -Be 1
         $Second.Devices | Should -Be 1
@@ -179,7 +182,7 @@ Describe 'Invoke-HuduExtensionSync credential integration' {
     It 'hashes the device body without the sync timestamp and writes it with one' {
         Mock Get-StringHash { $script:HashedDevice = $String; 'device-hash' }
         Mock Set-HuduAsset { $script:ObservedDeviceFields = $Fields }
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         $script:HashedDevice | Should -Match '>DEVICE-01<'
         $script:HashedDevice | Should -Not -Match '>Synced '
@@ -205,7 +208,7 @@ Describe 'Invoke-HuduExtensionSync credential integration' {
             if ($Filter -like "*PartitionKey eq 'HuduRelation'*") { return @() }
         }
 
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-GraphGetRequest -Times 0 -Exactly -ParameterFilter { $Uri -like '*deviceLocalCredentials*' }
         Should -Invoke Get-CIPPLapsPassword -Times 0 -Exactly
@@ -220,7 +223,7 @@ Describe 'Invoke-HuduExtensionSync credential integration' {
         Mock Get-HuduBitLockerSyncField { throw 'Key vault access denied' }
         Mock Set-HuduAsset { $script:ObservedDeviceFields = $Fields }
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com' 3>$null
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com' 3>$null
 
         Should -Invoke Set-HuduAsset -Times 1 -Exactly
         $script:ObservedDeviceFields.Keys | Should -Contain 'microsoft_365'
@@ -232,7 +235,7 @@ Describe 'Invoke-HuduExtensionSync credential integration' {
     It 'reports a tenant-level error once when the BitLocker cache is not populated' {
         Mock Get-CIPPDbItem { @() }
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com' 3>$null
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com' 3>$null
 
         @($Result.Errors | Where-Object { $_ -like 'Company: BitLocker sync skipped*' }) | Should -HaveCount 1
         $Result.Errors | Should -Contain 'Company: BitLocker sync skipped for all devices, unable to retrieve BitLocker key metadata: BitLocker key metadata cache has not been populated.'
@@ -243,6 +246,7 @@ Describe 'Invoke-HuduExtensionSync credential integration' {
 
 Describe 'Invoke-HuduExtensionSync user license sync' {
     BeforeEach {
+        Mock Get-CIPPAzDataTableEntity -ParameterFilter { -not $Filter } { [pscustomobject]@{ config = ($script:HuduConfig | ConvertTo-Json -Depth 20) } }
         $env:CIPPRootPath = (Resolve-Path "$PSScriptRoot/../..").Path
         $script:ObservedUserFields = $null
         $script:LicenseCache = @(
@@ -318,7 +322,7 @@ Describe 'Invoke-HuduExtensionSync user license sync' {
     }
 
     It 'writes friendly license names to a dedicated Licenses field and drops excluded SKUs' {
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         $Result.Users | Should -Be 1
         $Result.Errors | Where-Object { $_ -like 'User *' } | Should -BeNullOrEmpty
@@ -330,7 +334,7 @@ Describe 'Invoke-HuduExtensionSync user license sync' {
     }
 
     It 'hashes the People body without the sync timestamp and writes it with one' {
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         $script:HashedUserBody | Should -Match 'Jane Doe'
         $script:HashedUserBody | Should -Not -Match 'Synced '
@@ -355,7 +359,7 @@ Describe 'Invoke-HuduExtensionSync user license sync' {
             }
         }
 
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         $script:ObservedUserFields.microsoft_365 | Should -Match 'bob@contoso\.onmicrosoft\.com'
         $script:ObservedUserFields.microsoft_365 | Should -Not -Match '588700ea'
@@ -363,7 +367,7 @@ Describe 'Invoke-HuduExtensionSync user license sync' {
 
     It 'falls back to the raw SKU IDs when the license cache is empty' {
         $script:LicenseCache = @()
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         $script:ObservedUserFields.licenses | Should -Be '4ef96642-f096-40de-a3e9-d83fb2f90211, cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46, f30db892-07e9-47e9-837c-80727f46fd3d'
     }
@@ -371,6 +375,7 @@ Describe 'Invoke-HuduExtensionSync user license sync' {
 
 Describe 'Invoke-HuduExtensionSync Magic Dash' {
     BeforeEach {
+        Mock Get-CIPPAzDataTableEntity -ParameterFilter { -not $Filter } { [pscustomobject]@{ config = ($script:HuduConfig | ConvertTo-Json -Depth 20) } }
         $env:CIPPRootPath = (Resolve-Path "$PSScriptRoot/../..").Path
         $script:MagicDash = $null
         $Configuration = [PSCustomObject]@{
@@ -434,11 +439,11 @@ Describe 'Invoke-HuduExtensionSync Magic Dash' {
     }
 
     It 'formats dates with the Locale setting, day first by default' {
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
         $script:MagicDash | Should -Match '>Synced \d{1,2} [A-Z][a-z]{2} \d{4} \d\d:\d\d UTC<'
 
         $Configuration.Hudu | Add-Member -NotePropertyName Locale -NotePropertyValue ([PSCustomObject]@{ label = 'English (US)'; value = 'en-US' })
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
         $script:MagicDash | Should -Match '>Synced [A-Z][a-z]{2} \d{1,2} \d{4} \d\d:\d\d UTC<'
     }
 
@@ -446,12 +451,12 @@ Describe 'Invoke-HuduExtensionSync Magic Dash' {
         $SavedZone = $env:CIPP_TIMEZONE
         try {
             $env:CIPP_TIMEZONE = 'America/New_York'
-            $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+            $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
             $script:MagicDash | Should -Match '>Synced [^<]+ \(UTC-0[45]:00\)<'
 
             foreach ($Zone in 'Not/AZone', '') {
                 $env:CIPP_TIMEZONE = $Zone
-                $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+                $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
                 $script:MagicDash | Should -Match '>Synced [^<]+ \d\d:\d\d UTC<'
             }
         } finally {
@@ -469,7 +474,7 @@ Describe 'Invoke-HuduExtensionSync Magic Dash' {
                 OneDriveUsage = @(); CASMailbox = @(); Mailboxes = @(); MailboxUsage = @(); MailboxPermissions = @()
             }
         }
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         $script:MagicDash | Should -Match '>Jane Doe<'
         $script:MagicDash | Should -Match 'jane@contoso\.onmicrosoft\.com'
@@ -477,7 +482,7 @@ Describe 'Invoke-HuduExtensionSync Magic Dash' {
     }
 
     It 'removes dashes left under an old tenant name after the dash is written' {
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke Get-HuduMagicDashes -Times 1 -Exactly -ParameterFilter { $CompanyId -eq 20 }
         Should -Invoke Remove-HuduMagicDash -Times 2 -Exactly
@@ -489,7 +494,7 @@ Describe 'Invoke-HuduExtensionSync Magic Dash' {
 
     It 'skips the cleanup when the dash could not be written' {
         Mock Set-HuduMagicDash { throw 'Hudu said no' }
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke Get-HuduMagicDashes -Times 0 -Exactly
         Should -Invoke Remove-HuduMagicDash -Times 0 -Exactly
@@ -498,7 +503,7 @@ Describe 'Invoke-HuduExtensionSync Magic Dash' {
 
     It 'reports a failed removal and carries on' {
         Mock Remove-HuduMagicDash { if ($Id -eq 2) { throw 'delete refused' } }
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke Remove-HuduMagicDash -Times 1 -Exactly -ParameterFilter { $Id -eq 3 }
         @(@($Result.Errors) -match 'Magic Dash') | Should -Be @("Company: Failed to remove stale Magic Dash 'Microsoft 365 - Contoso Old': delete refused")
@@ -507,7 +512,7 @@ Describe 'Invoke-HuduExtensionSync Magic Dash' {
 
     It 'warns once and stops when the key may not delete' {
         Mock Remove-HuduMagicDash { throw '{"error": "Key does not have Delete Permissions!"}' }
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke Remove-HuduMagicDash -Times 1 -Exactly
         @(@($Result.Errors) -match 'Magic Dash') | Should -BeNullOrEmpty
@@ -518,14 +523,14 @@ Describe 'Invoke-HuduExtensionSync Magic Dash' {
 
     It 'reports a failed dash lookup without failing the sync' {
         Mock Get-HuduMagicDashes { throw 'lookup failed' }
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         @(@($Result.Errors) -match 'Magic Dash') | Should -Be @('Company: Failed to check for stale Magic Dashes: lookup failed')
         $Result.Logs | Should -Contain 'Updated Magic Dash for Contoso'
     }
 
     It 'lists PIM-eligible members in their own column, drops expired eligibilities and empty roles' {
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke Get-CippDbRoleMembers -ParameterFilter { $RoleTemplateId -eq '62e90394-69f5-4237-9190-012177145e10' -and $TenantFilter -eq 'contoso.onmicrosoft.com' }
         $script:MagicDash | Should -Match '>Direct Admin<'
@@ -536,7 +541,7 @@ Describe 'Invoke-HuduExtensionSync Magic Dash' {
 
     It 'keeps empty roles when HideEmptyRoles is off' {
         $Configuration.Hudu.HideEmptyRoles = $false
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         $script:MagicDash | Should -Match '>Empty Role<'
     }
@@ -544,6 +549,7 @@ Describe 'Invoke-HuduExtensionSync Magic Dash' {
 
 Describe 'Invoke-HuduExtensionSync API pre-flight check' {
     BeforeEach {
+        Mock Get-CIPPAzDataTableEntity -ParameterFilter { -not $Filter } { [pscustomobject]@{ config = ($script:HuduConfig | ConvertTo-Json -Depth 20) } }
         Mock Connect-HuduAPI { }
         Mock Write-LogMessage { }
         Mock Get-Tenants { [PSCustomObject]@{ displayName = 'Contoso'; defaultDomainName = 'contoso.onmicrosoft.com'; customerId = 'tenant-1' } }
@@ -554,7 +560,7 @@ Describe 'Invoke-HuduExtensionSync API pre-flight check' {
     It 'stops before any sync work and reports the Hudu error when the API rejects the key' {
         Mock Get-HuduAppInfo { Write-Error "'{ `"error`": `"Unauthorized IP Address`" }'" }
 
-        $Result = Invoke-HuduExtensionSync -Configuration ([PSCustomObject]@{ Hudu = [PSCustomObject]@{} }) -TenantFilter 'contoso.onmicrosoft.com' 3>$null
+        $Result = Invoke-HuduSyncWithConfig -Configuration ([PSCustomObject]@{ Hudu = [PSCustomObject]@{} }) -TenantFilter 'contoso.onmicrosoft.com' 3>$null
 
         @($Result.Errors).Count | Should -Be 1
         $Result.Errors[0] | Should -BeLike '*Hudu API check failed, sync skipped*Unauthorized IP Address*'
@@ -562,10 +568,15 @@ Describe 'Invoke-HuduExtensionSync API pre-flight check' {
         Should -Invoke Get-HuduCompanies -Times 0 -Exactly
     }
 
+    It 'takes no caller-supplied configuration, so a caller cannot switch on LAPS sync' {
+        { Invoke-HuduExtensionSync -Configuration ([PSCustomObject]@{ Hudu = [PSCustomObject]@{ IncludeLAPS = $true } }) -TenantFilter 'contoso.onmicrosoft.com' } | Should -Throw
+        Should -Invoke Connect-HuduAPI -Times 0 -Exactly
+    }
+
     It 'treats the 0.0.0.0 fallback version as a failed connection' {
         Mock Get-HuduAppInfo { [PSCustomObject]@{ version = '0.0.0.0'; date = '2000-01-01' } }
 
-        $Result = Invoke-HuduExtensionSync -Configuration ([PSCustomObject]@{ Hudu = [PSCustomObject]@{} }) -TenantFilter 'contoso.onmicrosoft.com' 3>$null
+        $Result = Invoke-HuduSyncWithConfig -Configuration ([PSCustomObject]@{ Hudu = [PSCustomObject]@{} }) -TenantFilter 'contoso.onmicrosoft.com' 3>$null
 
         $Result.Errors[0] | Should -BeLike '*Hudu API check failed*no version returned*'
         Should -Invoke Get-HuduCompanies -Times 0 -Exactly
@@ -579,6 +590,7 @@ Describe 'Invoke-HuduExtensionSync device creation safeguards' {
     }
 
     BeforeEach {
+        Mock Get-CIPPAzDataTableEntity -ParameterFilter { -not $Filter } { [pscustomobject]@{ config = ($script:HuduConfig | ConvertTo-Json -Depth 20) } }
         $env:CIPPRootPath = (Resolve-Path "$PSScriptRoot/../..").Path
         # ListedDevices answers the initial fetch; LiveDevices, when set, answers the refetch before the first create.
         $script:ListedDevices = @()
@@ -641,7 +653,7 @@ Describe 'Invoke-HuduExtensionSync device creation safeguards' {
     It 'updates the asset the refetch finds instead of creating one when the initial list is empty' {
         $script:LiveDevices = @(New-TestHuduAsset 501 'DEVICE-01' 'SERIAL-01')
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 0 -Exactly
         Should -Invoke Set-HuduAsset -Times 1 -Exactly -ParameterFilter { $ExistingAsset.id -eq 501 }
@@ -652,7 +664,7 @@ Describe 'Invoke-HuduExtensionSync device creation safeguards' {
         $script:IntuneDevices = @(New-TestIntuneDevice 'DEVICE-01' '')
         $script:LiveDevices = @(New-TestHuduAsset 502 'DEVICE-01' '')
 
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 0 -Exactly
         Should -Invoke Set-HuduAsset -Times 1 -Exactly -ParameterFilter { $ExistingAsset.id -eq 502 }
@@ -662,7 +674,7 @@ Describe 'Invoke-HuduExtensionSync device creation safeguards' {
         $script:ListedDevices = @(New-TestHuduAsset 503 'DEVICE-01' 'SERIAL-01' -Archived)
         $script:LiveDevices = $script:ListedDevices
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 0 -Exactly
         Should -Invoke Set-HuduAsset -Times 0 -Exactly
@@ -673,7 +685,7 @@ Describe 'Invoke-HuduExtensionSync device creation safeguards' {
         $script:LiveDevices = @(New-TestHuduAsset 505 'OTHER-PC' 'SERIAL-OTHER')
         $script:IntuneDevices = @(foreach ($i in 1..30) { New-TestIntuneDevice "PC-$i" "SN-$i" })
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 15 -Exactly
         @($Result.Errors | Where-Object { $_ -like 'Company: Stopped creating devices*' }) | Should -HaveCount 1
@@ -683,7 +695,7 @@ Describe 'Invoke-HuduExtensionSync device creation safeguards' {
         $script:ListedDevices = @(New-TestHuduAsset 504 'OTHER-PC' 'SERIAL-OTHER')
         $script:IntuneDevices = @(foreach ($i in 1..30) { New-TestIntuneDevice "PC-$i" "SN-$i" })
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 15 -Exactly
         @($Result.Errors | Where-Object { $_ -like 'Company: Stopped creating devices*' }) | Should -HaveCount 1
@@ -692,7 +704,7 @@ Describe 'Invoke-HuduExtensionSync device creation safeguards' {
     It 'creates no devices when the initial list fetch fails without throwing' {
         Mock Get-HuduAssets { Write-Error 'Hudu returned 502 for page 2' }
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 0 -Exactly
         @($Result.Errors | Where-Object { $_ -like 'Company: Unable to fetch Devices*' }) | Should -HaveCount 1
@@ -701,7 +713,7 @@ Describe 'Invoke-HuduExtensionSync device creation safeguards' {
     It 'creates every device on a first sync into an empty Hudu company' {
         $script:IntuneDevices = @(foreach ($i in 1..30) { New-TestIntuneDevice "PC-$i" "SN-$i" })
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 30 -Exactly
         # Two calls for the initial list, two for the single refetch before the first create.
@@ -721,6 +733,7 @@ Describe 'Invoke-HuduExtensionSync people creation safeguards' {
     }
 
     BeforeEach {
+        Mock Get-CIPPAzDataTableEntity -ParameterFilter { -not $Filter } { [pscustomobject]@{ config = ($script:HuduConfig | ConvertTo-Json -Depth 20) } }
         $env:CIPPRootPath = (Resolve-Path "$PSScriptRoot/../..").Path
         # ListedPeople answers the initial fetch; LivePeople, when set, answers the refetch before the first create.
         $script:ListedPeople = @()
@@ -789,7 +802,7 @@ Describe 'Invoke-HuduExtensionSync people creation safeguards' {
     It 'updates the person the refetch finds by email instead of creating one when the initial list is empty' {
         $script:LivePeople = @(New-TestPerson 601 'Jane Doe' 'jane@contoso.onmicrosoft.com')
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 0 -Exactly
         Should -Invoke Set-HuduAsset -Times 1 -Exactly -ParameterFilter { $ExistingAsset.id -eq 601 }
@@ -799,7 +812,7 @@ Describe 'Invoke-HuduExtensionSync people creation safeguards' {
     It 'still creates the user when the only same-name person has a different email' {
         $script:LivePeople = @(New-TestPerson 602 'Jane Doe' 'jane.other@fabrikam.example')
 
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 1 -Exactly
         Should -Invoke Set-HuduAsset -Times 0 -Exactly
@@ -809,7 +822,7 @@ Describe 'Invoke-HuduExtensionSync people creation safeguards' {
         $script:ListedPeople = @(New-TestPerson 603 'Jane Doe' 'jane@contoso.onmicrosoft.com' -Archived)
         $script:LivePeople = $script:ListedPeople
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 0 -Exactly
         Should -Invoke Set-HuduAsset -Times 0 -Exactly
@@ -821,7 +834,7 @@ Describe 'Invoke-HuduExtensionSync people creation safeguards' {
         $script:ListedPeople = @(New-TestPerson 604 'Someone Else' 'someone@contoso.onmicrosoft.com')
         $script:TenantUsers = @(foreach ($i in 1..30) { New-TestUser "User $i" "user$i@contoso.onmicrosoft.com" })
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 15 -Exactly
         @($Result.Errors | Where-Object { $_ -like 'Company: Stopped creating people*' }) | Should -HaveCount 1
@@ -830,7 +843,7 @@ Describe 'Invoke-HuduExtensionSync people creation safeguards' {
     It 'matches a Halo contact by Entra object id when its email differs from the UPN' {
         $script:ListedPeople = @(New-TestPerson 605 'Jane Doe' 'jane.alias@contoso.example' -HaloObjectId 'id-jane@contoso.onmicrosoft.com' -HaloEmail 'jane.alias@contoso.example')
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 0 -Exactly
         Should -Invoke Set-HuduAsset -Times 1 -Exactly -ParameterFilter { $ExistingAsset.id -eq 605 }
@@ -840,7 +853,7 @@ Describe 'Invoke-HuduExtensionSync people creation safeguards' {
     It 'matches a Halo contact by its card email when primary_mail is blank' {
         $script:ListedPeople = @(New-TestPerson 606 'Jane D.' '' -HaloEmail 'jane@contoso.onmicrosoft.com')
 
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 0 -Exactly
         Should -Invoke Set-HuduAsset -Times 1 -Exactly -ParameterFilter { $ExistingAsset.id -eq 606 }
@@ -852,7 +865,7 @@ Describe 'Invoke-HuduExtensionSync people creation safeguards' {
             New-TestPerson 608 'Jane Doe' 'jane.alias@contoso.example' -HaloObjectId 'id-jane@contoso.onmicrosoft.com'
         )
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke Set-HuduAsset -Times 1 -Exactly -ParameterFilter { $ExistingAsset.id -eq 608 }
         Should -Invoke Set-HuduAsset -Times 0 -Exactly -ParameterFilter { $ExistingAsset.id -eq 607 }
@@ -865,7 +878,7 @@ Describe 'Invoke-HuduExtensionSync people creation safeguards' {
             New-TestPerson 610 'Jane Doe' 'jane@contoso.onmicrosoft.com'
         )
 
-        $null = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $null = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 0 -Exactly
         Should -Invoke Set-HuduAsset -Times 1 -Exactly -ParameterFilter { $ExistingAsset.id -eq 610 }
@@ -875,7 +888,7 @@ Describe 'Invoke-HuduExtensionSync people creation safeguards' {
         Mock Get-HuduAssets { Write-Error 'Hudu returned 502 for page 2' }
         $script:TenantUsers = @(foreach ($i in 1..5) { New-TestUser "User $i" "user$i@contoso.onmicrosoft.com" })
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 0 -Exactly
         @($Result.Errors | Where-Object { $_ -like 'Company: Unable to fetch People*' }) | Should -HaveCount 1
@@ -889,7 +902,7 @@ Describe 'Invoke-HuduExtensionSync people creation safeguards' {
             $script:ListedPeople | Where-Object { $_.archived -eq [bool]$Archived }
         }
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 0 -Exactly
         @($Result.Errors | Where-Object { $_ -like 'Company: Unable to refresh People*' }) | Should -HaveCount 1
@@ -898,7 +911,7 @@ Describe 'Invoke-HuduExtensionSync people creation safeguards' {
     It 'creates every licensed user on a first sync into an empty Hudu company' {
         $script:TenantUsers = @(foreach ($i in 1..30) { New-TestUser "User $i" "user$i@contoso.onmicrosoft.com" })
 
-        $Result = Invoke-HuduExtensionSync -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $Result = Invoke-HuduSyncWithConfig -Configuration $Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
         Should -Invoke New-HuduAsset -Times 30 -Exactly
         # Two calls for the initial list, two for the single refetch before the first create.

@@ -2,6 +2,7 @@ BeforeAll {
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/NinjaOne/Initialize-NinjaOneCredentialField.ps1"
 
     function Get-CIPPTable { param($TableName) }
+    function Get-CIPPAzDataTableEntity { param($TableName) }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function Write-LogMessage { param($API, $message, $Sev) }
     function Get-ExtensionMapping { param($Extension) }
@@ -16,6 +17,7 @@ BeforeAll {
 Describe 'Initialize-NinjaOneCredentialField' {
     BeforeEach {
         Mock Get-CIPPTable { @{} }
+        Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ config = (@{ NinjaOne = $script:Config } | ConvertTo-Json) } }
         Mock Add-CIPPAzDataTableEntity { }
         Mock Write-LogMessage { }
     }
@@ -24,7 +26,7 @@ Describe 'Initialize-NinjaOneCredentialField' {
         Mock Invoke-WebRequest { }
         $Mapped = [pscustomobject]@{ LAPSAccount = 'a'; LAPSPassword = 'b'; LAPSBackupDate = 'c' }
 
-        Initialize-NinjaOneCredentialField -Configuration $Config -Token $Token -MappedFields $Mapped
+        Initialize-NinjaOneCredentialField -Token $Token -MappedFields $Mapped
 
         Should -Invoke Invoke-WebRequest -Times 0 -Exactly
         Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
@@ -36,7 +38,7 @@ Describe 'Initialize-NinjaOneCredentialField' {
         Mock Invoke-WebRequest -ParameterFilter { $Method -eq 'POST' } { }
         $Mapped = [pscustomobject]@{ LAPSAccount = 'myAccountField' }
 
-        Initialize-NinjaOneCredentialField -Configuration $Config -Token $Token -MappedFields $Mapped
+        Initialize-NinjaOneCredentialField -Token $Token -MappedFields $Mapped
 
         Should -Invoke Invoke-WebRequest -ParameterFilter { $Method -eq 'POST' } -Times 0 -Exactly
         $Mapped.LAPSAccount | Should -Be 'myAccountField'
@@ -50,7 +52,7 @@ Describe 'Initialize-NinjaOneCredentialField' {
         Mock Invoke-WebRequest -ParameterFilter { $Method -eq 'POST' } { }
         $Mapped = [pscustomobject]@{}
 
-        Initialize-NinjaOneCredentialField -Configuration $Config -Token $Token -MappedFields $Mapped
+        Initialize-NinjaOneCredentialField -Token $Token -MappedFields $Mapped
 
         Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter {
             $Method -eq 'POST' -and $Uri -like '*/api/v2/custom-fields/bulk' -and
@@ -70,7 +72,7 @@ Describe 'Initialize-NinjaOneCredentialField' {
         Mock Invoke-WebRequest -ParameterFilter { $Method -eq 'POST' } { throw 'fieldName already exists' }
         $Mapped = [pscustomobject]@{}
 
-        Initialize-NinjaOneCredentialField -Configuration $Config -Token $Token -MappedFields $Mapped
+        Initialize-NinjaOneCredentialField -Token $Token -MappedFields $Mapped
 
         $Mapped.LAPSPassword | Should -Be 'cippLapsPassword'
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { @($Entity).Count -eq 3 }
@@ -82,7 +84,7 @@ Describe 'Initialize-NinjaOneCredentialField' {
         Mock Invoke-WebRequest -ParameterFilter { $Method -eq 'POST' } { throw '{"resultCode":"duplicate_attribute_names_detected","errorMessage":"Duplicate attributes found"}' }
         $Mapped = [pscustomobject]@{}
 
-        Initialize-NinjaOneCredentialField -Configuration $Config -Token $Token -MappedFields $Mapped
+        Initialize-NinjaOneCredentialField -Token $Token -MappedFields $Mapped
 
         $Mapped.LAPSPassword | Should -Be 'cippLapsPassword'
         Should -Invoke Invoke-WebRequest -Times 1 -Exactly -ParameterFilter { $Method -eq 'GET' }
@@ -96,7 +98,7 @@ Describe 'Initialize-NinjaOneCredentialField' {
         Mock Invoke-WebRequest -ParameterFilter { $Method -eq 'GET' } { & $List @() }
         Mock Invoke-WebRequest -ParameterFilter { $Method -eq 'POST' } { throw '{"resultCode":"duplicate_attribute_names_detected"}' }
 
-        Initialize-NinjaOneCredentialField -Configuration $Config
+        Initialize-NinjaOneCredentialField
 
         Should -Invoke Get-ExtensionMapping -Times 1 -Exactly -ParameterFilter { $Extension -eq 'NinjaOneField' }
         Should -Invoke Get-NinjaOneToken -Times 1 -Exactly
@@ -109,7 +111,7 @@ Describe 'Initialize-NinjaOneCredentialField' {
         Mock Get-NinjaOneToken { }
         Mock Invoke-WebRequest { }
 
-        Initialize-NinjaOneCredentialField -Configuration $Config
+        Initialize-NinjaOneCredentialField
 
         Should -Invoke Get-NinjaOneToken -Times 0 -Exactly
         Should -Invoke Invoke-WebRequest -Times 0 -Exactly
@@ -120,10 +122,18 @@ Describe 'Initialize-NinjaOneCredentialField' {
         Mock Invoke-WebRequest -ParameterFilter { $Method -eq 'POST' } { throw 'forbidden' }
         $Mapped = [pscustomobject]@{}
 
-        Initialize-NinjaOneCredentialField -Configuration $Config -Token $Token -MappedFields $Mapped
+        Initialize-NinjaOneCredentialField -Token $Token -MappedFields $Mapped
 
         $Mapped.PSObject.Properties.Name | Should -BeNullOrEmpty
         Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
         Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $Sev -eq 'Warning' -and $message -match 'forbidden' }
+    }
+
+    It 'takes no caller-supplied configuration, so the token only goes to the stored instance' {
+        Mock Invoke-WebRequest { }
+        Mock Get-NinjaOneToken { $Token }
+        { Initialize-NinjaOneCredentialField -Configuration ([pscustomobject]@{ Instance = 'attacker.example'; IncludeLAPS = $true }) } | Should -Throw
+        Should -Invoke Get-NinjaOneToken -Times 0 -Exactly
+        Should -Invoke Invoke-WebRequest -Times 0 -Exactly
     }
 }

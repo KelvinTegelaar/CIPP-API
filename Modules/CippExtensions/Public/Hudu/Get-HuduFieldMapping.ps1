@@ -29,7 +29,7 @@ function Get-HuduFieldMapping {
     $Table = Get-CIPPTable -TableName Extensionsconfig
     try {
         $Configuration = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop
-        Connect-HuduAPI -configuration $Configuration
+        Connect-HuduAPI
 
         try {
             $AssetLayouts = Get-HuduAssetLayouts -ErrorAction Stop | Select-Object @{Name = 'FieldType' ; Expression = { 'Layouts' } }, @{Name = 'value'; Expression = { $_.id } }, name, fields

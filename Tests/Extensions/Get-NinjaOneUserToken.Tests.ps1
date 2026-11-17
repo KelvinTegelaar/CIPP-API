@@ -4,12 +4,16 @@ BeforeAll {
     $BackendRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     function Get-ExtensionAPIKey { param([string]$Extension, [switch]$Force) }
     function Set-ExtensionAPIKey { param([string]$Extension, [string]$APIKey) }
+    function Get-CIPPTable { param($TableName) @{ TableName = $TableName } }
+    function Get-CIPPAzDataTableEntity { param($TableName, $Filter) }
     . (Join-Path $BackendRoot 'Modules/CippExtensions/Public/NinjaOne/Get-NinjaOneUserToken.ps1')
-    $script:Config = [pscustomobject]@{ Instance = 'eu.ninjarmm.com'; ClientID = 'client-id' }
 }
 
 Describe 'Get-NinjaOneUserToken' {
     BeforeEach {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            [pscustomobject]@{ config = (@{ NinjaOne = @{ Instance = 'eu.ninjarmm.com'; ClientID = 'client-id' } } | ConvertTo-Json) }
+        }
         Mock -CommandName Get-ExtensionAPIKey -MockWith {
             param([string]$Extension)
             if ($Extension -eq 'NinjaOneRefreshToken') { 'refresh-1' } else { 'client-secret' }
@@ -24,7 +28,7 @@ Describe 'Get-NinjaOneUserToken' {
     }
 
     It 'posts the refresh grant with the client credentials to the instance token endpoint' {
-        $Token = Get-NinjaOneUserToken -Configuration $script:Config
+        $Token = Get-NinjaOneUserToken
         $Token.access_token | Should -Be 'access'
         $script:Request.Uri | Should -Be 'https://eu.ninjarmm.com/ws/oauth/token'
         $script:Request.Method | Should -Be 'POST'
@@ -36,16 +40,21 @@ Describe 'Get-NinjaOneUserToken' {
     }
 
     It 'stores a rotated refresh token and leaves an unchanged one alone' {
-        $null = Get-NinjaOneUserToken -Configuration $script:Config
+        $null = Get-NinjaOneUserToken
         Should -Invoke -CommandName Set-ExtensionAPIKey -Times 0
         $script:NextRefresh = 'refresh-2'
-        $null = Get-NinjaOneUserToken -Configuration $script:Config
+        $null = Get-NinjaOneUserToken
         Should -Invoke -CommandName Set-ExtensionAPIKey -Times 1 -ParameterFilter { $Extension -eq 'NinjaOneRefreshToken' -and $APIKey -eq 'refresh-2' }
     }
 
     It 'returns nothing without a stored refresh token and never calls the token endpoint' {
         Mock -CommandName Get-ExtensionAPIKey -MockWith { param([string]$Extension) if ($Extension -eq 'NinjaOneRefreshToken') { throw 'not found' } else { 'client-secret' } }
-        Get-NinjaOneUserToken -Configuration $script:Config | Should -BeNullOrEmpty
+        Get-NinjaOneUserToken | Should -BeNullOrEmpty
+        Should -Invoke -CommandName Invoke-RestMethod -Times 0
+    }
+
+    It 'takes no caller-supplied configuration, so the secret only goes to the stored instance' {
+        { Get-NinjaOneUserToken -Configuration @{ Instance = 'attacker.example' } } | Should -Throw
         Should -Invoke -CommandName Invoke-RestMethod -Times 0
     }
 }

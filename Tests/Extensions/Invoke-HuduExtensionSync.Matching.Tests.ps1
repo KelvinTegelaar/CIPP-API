@@ -1,4 +1,6 @@
 BeforeAll {
+    # The sync reads its config from the Extensionsconfig table; this stores what that read returns.
+    function Invoke-HuduSyncWithConfig { param($Configuration, $TenantFilter) $script:HuduConfig = $Configuration; Invoke-HuduExtensionSync -TenantFilter $TenantFilter }
     Add-Type -Path "$PSScriptRoot/../../Shared/CIPPSharp/bin/CIPPSharp.dll"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Find-HuduDeviceMatch.ps1"
     . "$PSScriptRoot/../../Modules/CippExtensions/Public/Hudu/Get-HuduDeviceMatchKey.ps1"
@@ -117,6 +119,7 @@ Describe 'Invoke-HuduExtensionSync matching' {
     }
 
     BeforeEach {
+        Mock Get-CIPPAzDataTableEntity -ParameterFilter { -not $Filter } { [pscustomobject]@{ config = ($script:HuduConfig | ConvertTo-Json -Depth 20) } }
         $env:CIPPRootPath = (Resolve-Path "$PSScriptRoot/../..").Path
         $script:SetAssets = [System.Collections.Generic.List[object]]::new()
         $script:NewAssets = [System.Collections.Generic.List[object]]::new()
@@ -171,7 +174,7 @@ Describe 'Invoke-HuduExtensionSync matching' {
         Mock Get-CippDbRoleMembers { if ($RoleTemplateId -eq 'T-1') { [PSCustomObject]@{ id = 'U-1'; displayName = 'Alice'; userPrincipalName = 'alice@contoso.com'; AssignmentType = 'Direct' } } }
         Mock Write-LogMessage { }
 
-        $script:Result = Invoke-HuduExtensionSync -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
+        $script:Result = Invoke-HuduSyncWithConfig -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
         $script:Alice = $script:UserInputs['alice@contoso.com']
         $script:Bob = $script:UserInputs['bob@contoso.com']
     }
@@ -256,7 +259,7 @@ Describe 'Invoke-HuduExtensionSync matching' {
         $script:Cache.Devices = @($Phone) + @($Devices)
         try {
             $script:SetAssets.Clear(); $script:NewAssets.Clear()
-            $null = Invoke-HuduExtensionSync -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
+            $null = Invoke-HuduSyncWithConfig -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
             @($script:SetAssets.Id) | Should -Contain 201
             @($script:SetAssets.Id) | Should -Contain 202
             @($script:NewAssets.Name) | Should -Contain 'PC-3'
@@ -271,7 +274,7 @@ Describe 'Invoke-HuduExtensionSync matching' {
         $script:Cache.Devices = @($Devices) + @($Twin)
         try {
             $script:NewRelations.Clear()
-            $null = Invoke-HuduExtensionSync -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
+            $null = Invoke-HuduSyncWithConfig -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
             @($script:NewRelations | Where-Object { $_ -eq '102->202' }).Count | Should -Be 1
         } finally {
             $script:Cache.Devices = $Devices
@@ -313,7 +316,7 @@ Describe 'Invoke-HuduExtensionSync matching' {
 
         It 'stamps the refresh first, writes only new asset relations and deletes removed ones' {
             $script:CachedRelationRows = @('1', '2', '3') | ForEach-Object { [PSCustomObject]@{ PartitionKey = 'HuduRelation'; RowKey = $_ } }
-            $null = Invoke-HuduExtensionSync -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
+            $null = Invoke-HuduSyncWithConfig -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
             $script:TableCalls.IndexOf('add:CacheMetadata:LastRefresh') | Should -BeLessThan $script:TableCalls.IndexOf('fetch')
             @($script:TableCalls -like 'add:HuduRelation:*') | Should -Be @('add:HuduRelation:4')
@@ -324,7 +327,7 @@ Describe 'Invoke-HuduExtensionSync matching' {
         It 'reads relation keys from a fresh cache without calling Hudu' {
             $script:CacheFresh = $true
             $script:CachedRelationRows = @([PSCustomObject]@{ PartitionKey = 'HuduRelation'; RowKey = '4'; FromableType = 'Asset'; FromableId = '102'; ToableType = 'Asset'; ToableId = '202' })
-            $null = Invoke-HuduExtensionSync -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
+            $null = Invoke-HuduSyncWithConfig -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
 
             @($script:TableCalls -like '*HuduRelation*') + @($script:TableCalls -like '*CacheMetadata*') + @($script:TableCalls -eq 'fetch') | Should -BeNullOrEmpty
             @($script:NewRelations) | Should -Contain '101->201'
@@ -337,7 +340,7 @@ Describe 'Invoke-HuduExtensionSync matching' {
                 [PSCustomObject]@{ id = 1; fromable_type = 'Asset'; fromable_id = 101; toable_type = 'Asset'; toable_id = 201 }
                 Write-Error 'page 2 failed'
             }
-            $null = Invoke-HuduExtensionSync -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com' 2>$null
+            $null = Invoke-HuduSyncWithConfig -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com' 2>$null
 
             @($script:TableCalls -like 'remove:*') | Should -BeNullOrEmpty
             @($script:NewRelations) | Should -Not -Contain '101->201'

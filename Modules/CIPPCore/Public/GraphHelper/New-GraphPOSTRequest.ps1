@@ -27,6 +27,7 @@ function New-GraphPOSTRequest {
         $ApprovalAssignParams
     )
 
+    Assert-CIPPMicrosoftHost -Uri $uri
     if ($scope -like '*.sharepoint*') { Assert-CIPPSharePointHost -Uri $uri -Scope $scope }
 
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {

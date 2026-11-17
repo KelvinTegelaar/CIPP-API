@@ -13,6 +13,7 @@ BeforeAll {
     function Invoke-CIPPRestMethod { param($Uri, $Method, $Body, $Headers, $ContentType, [switch]$SkipHttpErrorCheck, $ResponseHeadersVariable) }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/New-GraphPOSTRequest.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Assert-CIPPMicrosoftHost.ps1')
 
     function New-BusyException([string]$RetryAfter) {
         $Headers = [System.Collections.Generic.Dictionary[string, string[]]]::new()

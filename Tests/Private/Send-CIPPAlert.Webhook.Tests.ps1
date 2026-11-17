@@ -121,4 +121,19 @@ Describe 'Send-CIPPAlert -Type webhook' {
         $script:Sent.Count | Should -Be 0
         $Result | Should -Match 'Webhook URL'
     }
+
+    It 'sends no stored credentials to an alternate webhook URL' {
+        $script:Config = [pscustomobject]@{ webhook = 'https://8.8.8.8/hook'; webhookAuthType = 'bearer'; webhookAuthToken = 'stored-token' }
+        Send-CIPPAlert -Type 'webhook' -Title 'T' -JSONContent '{"a":1}' -TenantFilter 'contoso.onmicrosoft.com' -altWebhook 'https://1.1.1.1/other' | Out-Null
+        $script:Sent.Count | Should -Be 1
+        $script:Sent[0].Uri | Should -Be 'https://1.1.1.1/other'
+        $script:Sent[0].Headers.Authorization | Should -BeNullOrEmpty
+    }
+
+    It 'still sends stored credentials when the alternate URL is the configured one' {
+        $script:Config = [pscustomobject]@{ webhook = 'https://8.8.8.8/hook'; webhookAuthType = 'bearer'; webhookAuthToken = 'stored-token' }
+        Send-CIPPAlert -Type 'webhook' -Title 'T' -JSONContent '{"a":1}' -TenantFilter 'contoso.onmicrosoft.com' -altWebhook 'https://8.8.8.8/hook' | Out-Null
+        $script:Sent[0].Headers.Authorization | Should -Be 'Bearer stored-token'
+    }
 }
+

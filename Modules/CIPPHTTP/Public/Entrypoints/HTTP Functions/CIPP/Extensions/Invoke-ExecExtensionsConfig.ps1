@@ -180,7 +180,7 @@ function Invoke-ExecExtensionsConfig {
         # Credential fields are created or adopted on save so the mapping page shows them before the first sync
         if ($NinjaOneSettings.Enabled -eq $true -and ($NinjaOneSettings.IncludeLAPS -eq $true -or $NinjaOneSettings.IncludeBitLocker -eq $true)) {
             try {
-                Initialize-NinjaOneCredentialField -Configuration ($Config.config | ConvertFrom-Json).NinjaOne
+                Initialize-NinjaOneCredentialField
             } catch {
                 $AddedText = "$AddedText NinjaOne credential fields were not prepared: $($_.Exception.Message)"
             }

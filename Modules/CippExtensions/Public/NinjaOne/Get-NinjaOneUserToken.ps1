@@ -9,9 +9,11 @@ function Get-NinjaOneUserToken {
         they run as the technician who connected. Returns $null when nobody has connected yet.
     #>
     [CmdletBinding()]
-    param (
-        $Configuration
-    )
+    param ()
+
+    # Read the stored config so the secret only ever goes to the saved NinjaOne instance.
+    $Table = Get-CIPPTable -TableName Extensionsconfig
+    $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).NinjaOne
 
     $RefreshToken = try { Get-ExtensionAPIKey -Extension 'NinjaOneRefreshToken' } catch { $null }
     if ([string]::IsNullOrWhiteSpace($RefreshToken)) { return $null }

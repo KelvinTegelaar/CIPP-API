@@ -9,6 +9,8 @@ BeforeAll {
         CFZTNA = [pscustomobject]@{ Enabled = $true; ClientId = 'pester-client' }
     }
 
+    function Get-CIPPTable { param($TableName) @{} }
+    function Get-CIPPAzDataTableEntity { [pscustomobject]@{ config = ($script:Configuration | ConvertTo-Json -Depth 5) } }
     function Get-ExtensionAPIKey { param($Extension) if ($Extension -eq 'CFZTNA') { 'pester-cf-secret' } else { $script:ApiKey } }
 
     function Get-RecordedCall([string]$Method, [string]$Path) {
@@ -75,7 +77,7 @@ Describe 'HuduAPI requests' {
             }
         }
 
-        Connect-HuduAPI -Configuration $script:Configuration
+        Connect-HuduAPI
         $script:Calls.Clear()
     }
 
@@ -92,7 +94,7 @@ Describe 'HuduAPI requests' {
     It 'sends the Cloudflare Access headers on every request when enabled' {
         $script:Configuration.Hudu.CFEnabled = $true
         try {
-            Connect-HuduAPI -Configuration $script:Configuration
+            Connect-HuduAPI
             $null = Get-HuduAppInfo
             $script:Calls[-1].Headers.'CF-Access-Client-Id' | Should -Be 'pester-client'
             $script:Calls[-1].Headers.'CF-Access-Client-Secret' | Should -Be 'pester-cf-secret'
@@ -228,3 +230,10 @@ Describe 'HuduAPI requests' {
         $Post[0].Body.relation.toable_id | Should -Be 2
     }
 }
+
+Describe 'Connect-HuduAPI configuration source' {
+    It 'takes no caller-supplied configuration, so the key only goes to the stored Hudu URL' {
+        { Connect-HuduAPI -Configuration ([pscustomobject]@{ Hudu = [pscustomobject]@{ BaseURL = 'https://attacker.example' } }) } | Should -Throw
+    }
+}
+

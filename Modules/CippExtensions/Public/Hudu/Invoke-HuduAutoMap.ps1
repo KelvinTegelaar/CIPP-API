@@ -22,7 +22,7 @@ function Invoke-HuduAutoMap {
     }
 
     try {
-        Connect-HuduAPI -configuration $Configuration
+        Connect-HuduAPI
         $Companies = @(Get-HuduCompanies)
     } catch {
         $Message = if ($_.ErrorDetails.Message) { Get-NormalizedError -Message $_.ErrorDetails.Message } else { $_.Exception.Message }

@@ -1,8 +1,10 @@
 function Connect-HuduAPI {
     [CmdletBinding()]
-    param (
-        $Configuration
-    )
+    param ()
+
+    # Read the stored config so the API key only ever goes to the saved Hudu URL.
+    $Table = Get-CIPPTable -TableName Extensionsconfig
+    $Configuration = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json
 
     $APIKey = Get-ExtensionAPIKey -Extension 'Hudu'
 

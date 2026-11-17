@@ -12,6 +12,7 @@ BeforeAll {
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/New-GraphGetRequest.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/New-GraphPOSTRequest.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Assert-CIPPMicrosoftHost.ps1')
 
     function New-HttpFailure([int]$Status, [string]$RetryAfter) {
         $Headers = [System.Collections.Generic.Dictionary[string, string[]]]::new()
