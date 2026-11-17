@@ -15,6 +15,27 @@ function Invoke-ExecCSPLicense {
     $Action = $Request.Body.Action
     $SKU = $Request.Body.SKU.value ?? $Request.Body.SKU
 
+    if ((Get-CIPPCSPProvider) -eq 'ExternalCSP') {
+        try {
+            switch ($Action) {
+                'Add' { $null = Set-ExternalCSPSubscription -Headers $Headers -TenantFilter $TenantFilter -SKU $SKU -Add $Request.Body.Add }
+                'Remove' { $null = Set-ExternalCSPSubscription -Headers $Headers -TenantFilter $TenantFilter -SKU $SKU -Remove $Request.Body.Remove }
+                'NewSub' { $null = Set-ExternalCSPSubscription -Headers $Headers -TenantFilter $TenantFilter -SKU $SKU -Quantity $Request.Body.Quantity }
+                'Cancel' { $null = Invoke-ExternalCSPRequest -Action Cancel -Headers $Headers -TenantFilter $TenantFilter -Body @{ subscriptionIds = @($Request.Body.SubscriptionIds) } }
+                default { throw "The '$Action' action is not supported by the External CSP integration." }
+            }
+            $Result = 'License change executed successfully.'
+            $StatusCode = [HttpStatusCode]::OK
+        } catch {
+            $Result = "Failed to execute license change. Error: $_"
+            $StatusCode = [HttpStatusCode]::InternalServerError
+        }
+        return [HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = $Result
+        }
+    }
+
     try {
         if ($Action -eq 'Add') {
             $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -add $Request.Body.Add

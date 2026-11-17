@@ -288,3 +288,76 @@ Describe 'A stored secret does not follow a changed destination' {
         $script:SavedConfig | Should -BeNullOrEmpty
     }
 }
+
+Describe 'External CSP validation on save' {
+    BeforeEach {
+        $script:SavedConfig = $null
+        $script:StoredConfig = $null
+        $script:ScheduleCalls = @()
+        $script:InitCalls = [System.Collections.Generic.List[object]]::new()
+        $script:KeyWrites = [System.Collections.Generic.List[string]]::new()
+        $script:ExternalCsp = [PSCustomObject]@{
+            Enabled          = $true
+            APIKey           = 'vendor-secret'
+            TestUrl          = 'https://vendor.example/test'
+            CatalogUrl       = 'https://vendor.example/catalog'
+            SubscriptionsUrl = 'https://vendor.example/subscriptions'
+            OrderUrl         = 'https://vendor.example/orders'
+            QuantityUrl      = 'https://vendor.example/quantity'
+            CancelUrl        = 'https://vendor.example/cancel'
+        }
+        $script:NewRequest = {
+            param($Body)
+            @{
+                Params  = @{ CIPPEndpoint = 'ExecExtensionsConfig' }
+                Headers = @{ 'x-ms-original-url' = 'http://localhost:4280/api/ExecExtensionsConfig' }
+                Body    = $Body
+            }
+        }
+    }
+    It 'saves a complete External CSP configuration and stores its secret' {
+        $response = Invoke-ExecExtensionsConfig -Request (& $script:NewRequest ([PSCustomObject]@{ ExternalCSP = $script:ExternalCsp }))
+        $response.Body.Results | Should -BeLike 'Successfully saved*'
+        $script:SavedConfig.ExternalCSP.OrderUrl | Should -Be 'https://vendor.example/orders'
+        $script:SavedConfig.ExternalCSP.APIKey | Should -Be 'SentToKeyVault'
+        $script:KeyWrites | Should -Be @('ExternalCSP')
+    }
+    It 'refuses to enable External CSP alongside Sherweb and saves nothing' {
+        $Body = [PSCustomObject]@{ ExternalCSP = $script:ExternalCsp; Sherweb = [PSCustomObject]@{ Enabled = $true; APIKey = 'SentToKeyVault' } }
+        $response = Invoke-ExecExtensionsConfig -Request (& $script:NewRequest $Body)
+        [int]$response.StatusCode | Should -Be 400
+        $response.Body.Results | Should -BeLike '*cannot both be enabled*'
+        $script:SavedConfig | Should -BeNullOrEmpty
+    }
+    It 'refuses a vendor URL that is not https and saves nothing' {
+        $script:ExternalCsp.CancelUrl = 'http://vendor.example/cancel'
+        $response = Invoke-ExecExtensionsConfig -Request (& $script:NewRequest ([PSCustomObject]@{ ExternalCSP = $script:ExternalCsp }))
+        [int]$response.StatusCode | Should -Be 400
+        $response.Body.Results | Should -BeLike '*CancelUrl must be an https URL*'
+        $script:SavedConfig | Should -BeNullOrEmpty
+    }
+    It 'refuses an enabled configuration with a URL missing' {
+        $script:ExternalCsp.TestUrl = ''
+        $response = Invoke-ExecExtensionsConfig -Request (& $script:NewRequest ([PSCustomObject]@{ ExternalCSP = $script:ExternalCsp }))
+        [int]$response.StatusCode | Should -Be 400
+        $response.Body.Results | Should -BeLike '*TestUrl must be an https URL*'
+    }
+    It 'does not send the stored secret to a changed vendor URL' {
+        $script:StoredConfig = @{ ExternalCSP = @{ Enabled = $true; APIKey = 'SentToKeyVault'; TestUrl = 'https://vendor.example/test'; CatalogUrl = 'https://vendor.example/catalog'; SubscriptionsUrl = 'https://vendor.example/subscriptions'; OrderUrl = 'https://vendor.example/orders'; QuantityUrl = 'https://vendor.example/quantity'; CancelUrl = 'https://vendor.example/cancel' } }
+        $script:ExternalCsp.APIKey = 'SentToKeyVault'
+        $script:ExternalCsp.OrderUrl = 'https://attacker.invalid/orders'
+        $response = Invoke-ExecExtensionsConfig -Request (& $script:NewRequest ([PSCustomObject]@{ ExternalCSP = $script:ExternalCsp }))
+        [int]$response.StatusCode | Should -Be 400
+        $response.Body.Results | Should -BeLike '*Enter a new ExternalCSP API key*'
+        $script:SavedConfig | Should -BeNullOrEmpty
+    }
+    It 'saves an unchanged configuration without re-entering the secret' {
+        $script:StoredConfig = @{ ExternalCSP = @{ Enabled = $true; APIKey = 'SentToKeyVault'; TestUrl = 'https://vendor.example/test'; CatalogUrl = 'https://vendor.example/catalog'; SubscriptionsUrl = 'https://vendor.example/subscriptions'; OrderUrl = 'https://vendor.example/orders'; QuantityUrl = 'https://vendor.example/quantity'; CancelUrl = 'https://vendor.example/cancel' } }
+        $script:ExternalCsp.APIKey = 'SentToKeyVault'
+        $script:ExternalCsp | Add-Member -NotePropertyName AuthHeaderName -NotePropertyValue 'x-vendor-key'
+        $response = Invoke-ExecExtensionsConfig -Request (& $script:NewRequest ([PSCustomObject]@{ ExternalCSP = $script:ExternalCsp }))
+        [int]$response.StatusCode | Should -Be 200
+        $script:SavedConfig.ExternalCSP.AuthHeaderName | Should -Be 'x-vendor-key'
+        $script:KeyWrites.Count | Should -Be 0
+    }
+}

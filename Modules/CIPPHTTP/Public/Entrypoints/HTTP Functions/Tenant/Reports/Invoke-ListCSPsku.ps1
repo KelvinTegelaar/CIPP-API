@@ -5,7 +5,7 @@ function Invoke-ListCSPsku {
     .ROLE
         Tenant.Directory.Read
     .DESCRIPTION
-        Lists available CSP SKUs and current subscriptions for a tenant via the Sherweb integration.
+        Lists available CSP SKUs and current subscriptions for a tenant via the enabled CSP integration (Sherweb or External CSP).
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -14,7 +14,10 @@ function Invoke-ListCSPsku {
     $CurrentSkuOnly = $Request.Query.currentSkuOnly
 
     try {
-        if ($CurrentSkuOnly) {
+        if ((Get-CIPPCSPProvider) -eq 'ExternalCSP') {
+            $ExternalAction = if ($CurrentSkuOnly) { 'Subscriptions' } else { 'Catalog' }
+            $GraphRequest = Invoke-ExternalCSPRequest -Action $ExternalAction -TenantFilter $TenantFilter
+        } elseif ($CurrentSkuOnly) {
             $GraphRequest = Get-SherwebCurrentSubscription -TenantFilter $TenantFilter
         } else {
             $GraphRequest = Get-SherwebCatalog -TenantFilter $TenantFilter

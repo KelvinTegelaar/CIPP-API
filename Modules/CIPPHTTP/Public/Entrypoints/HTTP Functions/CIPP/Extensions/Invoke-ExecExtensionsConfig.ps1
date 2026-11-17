@@ -48,6 +48,7 @@ function Invoke-ExecExtensionsConfig {
             @{ Name = 'PWPush'; Fields = @('BaseUrl'); Url = $true; Secrets = { param($c) if ($c.PWPush.UseBearerAuth -eq $true -or $c.PWPush.EmailAddress) { 'PWPush' }; if ($c.PWPush.CFEnabled -eq $true -and $c.CFZTNA.Enabled -eq $true) { 'CFZTNA' } } }
             @{ Name = 'NinjaOne'; Fields = @('Instance'); Secrets = { param($c) 'NinjaOne' } }
             @{ Name = 'Syncro'; Fields = @('Subdomain'); Secrets = { param($c) 'Syncro' } }
+            @{ Name = 'ExternalCSP'; Fields = @('TestUrl', 'CatalogUrl', 'SubscriptionsUrl', 'OrderUrl', 'QuantityUrl', 'CancelUrl'); Url = $true; Secrets = { param($c) 'ExternalCSP' } }
         )
         foreach ($Route in $SecretRoutes) {
             # No address means nothing is sent anywhere (PWPush falls back to pwpush.com).
@@ -69,6 +70,17 @@ function Invoke-ExecExtensionsConfig {
                 $Started = $Secret -ne 'CFZTNA' -and $OldSecrets -notcontains $Secret
                 if ((-not $Key -or $Key -eq 'SentToKeyVault') -and ($Moved -or $Started)) {
                     $Refusals.Add("The $($Route.Name) settings change where the $Secret API key is sent, so the stored key is not reused. Enter a new $Secret API key to save.")
+                }
+            }
+        }
+        if ($Body.ExternalCSP.Enabled -eq $true) {
+            # One CSP provider serves purchases at a time; the licence endpoints dispatch on whichever is enabled.
+            if ($Body.Sherweb.Enabled -eq $true) {
+                $Refusals.Add('Sherweb and External CSP cannot both be enabled. Disable one of them and save again.')
+            }
+            foreach ($UrlSetting in 'TestUrl', 'CatalogUrl', 'SubscriptionsUrl', 'OrderUrl', 'QuantityUrl', 'CancelUrl') {
+                if ("$($Body.ExternalCSP.$UrlSetting)" -notmatch '^https://') {
+                    $Refusals.Add("External CSP $UrlSetting must be an https URL.")
                 }
             }
         }
@@ -117,7 +129,7 @@ function Invoke-ExecExtensionsConfig {
         }
 
         # The property name becomes the stored secret's name, so only the extensions the settings form posts may store one.
-        $KnownExtensions = @('AutotaskPSA', 'CFZTNA', 'cippapi', 'ConnectWisePSA', 'GitHub', 'Gradient', 'HaloPSA', 'HIBP', 'Hudu', 'KaseyaBMS', 'NinjaOne', 'Pax8', 'PWPush', 'Sherweb', 'Syncro')
+        $KnownExtensions = @('AutotaskPSA', 'CFZTNA', 'cippapi', 'ConnectWisePSA', 'ExternalCSP', 'GitHub', 'Gradient', 'HaloPSA', 'HIBP', 'Hudu', 'KaseyaBMS', 'NinjaOne', 'Pax8', 'PWPush', 'Sherweb', 'Syncro')
         foreach ($APIKey in $Body.PSObject.Properties.Name) {
             Write-Information "Working on $APIKey"
             if ($APIKey -notin $KnownExtensions) {

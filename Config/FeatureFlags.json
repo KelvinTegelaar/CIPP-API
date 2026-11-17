@@ -135,5 +135,16 @@
     "Endpoints": [],
     "Pages": [],
     "Hidden": false
+  },
+  {
+    "Id": "ExternalCSP",
+    "Name": "External CSP Integration (Beta)",
+    "Description": "This is a beta feature. Adds the External CSP integration, which lets CIPP purchase and manage licences through any CSP distributor that implements the CIPP External CSP API. While off, the integration is hidden and CIPP makes no calls to an external CSP provider.",
+    "Enabled": false,
+    "AllowUserToggle": true,
+    "Timers": [],
+    "Endpoints": [],
+    "Pages": [],
+    "Hidden": false
   }
 ]

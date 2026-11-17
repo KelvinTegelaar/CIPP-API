@@ -27,6 +27,10 @@ function Invoke-ListExtensionsConfig {
                     }
                 }
             }
+            # Screens read this to decide which CSP provider is active, so a flagged-off External CSP reads as disabled.
+            if ($Body.ExternalCSP.Enabled -eq $true -and (Get-CIPPFeatureFlag -Id 'ExternalCSP').Enabled -ne $true) {
+                $Body.ExternalCSP.Enabled = $false
+            }
         } else {
             $Body = @{}
         }

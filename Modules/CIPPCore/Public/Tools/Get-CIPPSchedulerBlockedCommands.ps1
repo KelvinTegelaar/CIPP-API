@@ -51,6 +51,7 @@ function Get-CIPPSchedulerBlockedCommands {
         'Invoke-SyncroRequest'
         'Get-NinjaOneToken'
         'Get-SherwebAuthentication'
+        'Invoke-ExternalCSPRequest'
         'Get-HIBPAuth'
 
         # Secret & key material

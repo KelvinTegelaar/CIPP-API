@@ -112,9 +112,15 @@ function Set-CIPPUser {
     try {
 
         if ($licenses -or $UserObj.removeLicenses) {
-            if ($UserObj.sherwebLicense.value) {
-                $null = Set-SherwebSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
-                $Results.Add('Added Sherweb License, scheduling assignment')
+            if ($UserObj.sherwebLicense.value -or $UserObj.cspLicense.value) {
+                if ($UserObj.cspLicense.value) {
+                    $null = Set-ExternalCSPSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.cspLicense.value -Add 1
+                    $CspLabel = 'CSP'
+                } else {
+                    $null = Set-SherwebSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
+                    $CspLabel = 'Sherweb'
+                }
+                $Results.Add("Added $CspLabel License, scheduling assignment")
                 $taskObject = [PSCustomObject]@{
                     TenantFilter  = $UserObj.tenantFilter
                     Name          = "Assign License: $UserPrincipalName"
@@ -123,7 +129,7 @@ function Set-CIPPUser {
                     }
                     Parameters    = [pscustomobject]@{
                         UserId            = $UserObj.id
-                        APIName           = 'Sherweb License Assignment'
+                        APIName           = "$CspLabel License Assignment"
                         AddLicenses       = $licenses
                         UserPrincipalName = $UserPrincipalName
                     }

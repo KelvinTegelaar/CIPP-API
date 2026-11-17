@@ -459,8 +459,6 @@ user-documentation/tenant/reports/app-permission-exposure
 user-documentation/tenant/reports/application-consent
 user-documentation/tenant/reports/custom-test-report
 user-documentation/tenant/reports/graph-office-reports
-user-documentation/tenant/reports/list-csp-licenses
-user-documentation/tenant/reports/list-csp-licenses/add-subscription
 user-documentation/tenant/reports/list-licenses
 user-documentation/tenant/reports/list-licenses/optimization
 user-documentation/tenant/reports/list-licenses/pricing

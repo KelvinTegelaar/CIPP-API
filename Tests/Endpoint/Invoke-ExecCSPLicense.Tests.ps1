@@ -25,6 +25,9 @@ BeforeAll {
     function Remove-SherwebSubscription { param($Headers, $tenantFilter, $SubscriptionIds) }
     function Get-SherwebCurrentSubscription { param($TenantFilter, $CustomerId, $SKU, $ProductName) }
     function Add-CIPPScheduledTask { param($Task, $hidden, $Headers) }
+    function Get-CIPPCSPProvider { 'Sherweb' }
+    function Set-ExternalCSPSubscription { param($Headers, $TenantFilter, $SKU, $Add, $Remove, $Quantity) }
+    function Invoke-ExternalCSPRequest { param($Action, $Headers, $TenantFilter, $Body) }
 
     . $FunctionPath
 
@@ -118,5 +121,38 @@ Describe 'Invoke-ExecCSPLicense ScheduleRemoval' {
         $Response.StatusCode | Should -Be 500
         $Response.Body | Should -BeLike '*does not have a renewal date*'
         Should -Invoke Add-CIPPScheduledTask -Times 0
+    }
+}
+
+Describe 'Invoke-ExecCSPLicense with External CSP enabled' {
+    BeforeEach {
+        Mock Get-CIPPCSPProvider { 'ExternalCSP' }
+        Mock Set-ExternalCSPSubscription { }
+        Mock Invoke-ExternalCSPRequest { }
+        Mock Set-SherwebSubscription { }
+        Mock Remove-SherwebSubscription { }
+    }
+
+    It 'routes a quantity increase to the External CSP setter and never to Sherweb' {
+        $Response = Invoke-ExecCSPLicense -Request (New-ScheduleRequest -Body @{ Action = 'Add'; Add = 2 }) -TriggerMetadata @{}
+
+        $Response.StatusCode | Should -Be 200
+        Should -Invoke Set-ExternalCSPSubscription -Times 1 -Exactly -ParameterFilter { $SKU -eq 'SW-P-O365-15-M1M' -and $Add -eq 2 }
+        Should -Invoke Set-SherwebSubscription -Times 0
+    }
+
+    It 'routes a cancel to the vendor cancel call with the subscription ids' {
+        $Response = Invoke-ExecCSPLicense -Request (New-ScheduleRequest -Body @{ Action = 'Cancel'; SubscriptionIds = 'sub-1' }) -TriggerMetadata @{}
+
+        $Response.StatusCode | Should -Be 200
+        Should -Invoke Invoke-ExternalCSPRequest -Times 1 -Exactly -ParameterFilter { $Action -eq 'Cancel' -and $Body.subscriptionIds -contains 'sub-1' }
+        Should -Invoke Remove-SherwebSubscription -Times 0
+    }
+
+    It 'rejects the Sherweb-only scheduled decrease' {
+        $Response = Invoke-ExecCSPLicense -Request (New-ScheduleRequest) -TriggerMetadata @{}
+
+        $Response.StatusCode | Should -Be 500
+        $Response.Body | Should -BeLike "*'ScheduleRemoval' action is not supported*"
     }
 }
