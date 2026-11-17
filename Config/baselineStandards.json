@@ -1455,6 +1455,23 @@
         "omitWhenBlank": true,
         "type": "autoComplete",
         "label": "Email OTP for external users"
+      },
+      {
+        "name": "standards.AuthenticationMethods.PasswordChangeAfterSecureSignIn",
+        "creatable": false,
+        "options": [
+          {
+            "value": "true",
+            "label": "Enabled"
+          },
+          {
+            "value": "false",
+            "label": "Disabled"
+          }
+        ],
+        "omitWhenBlank": true,
+        "type": "autoComplete",
+        "label": "Password: change after secure sign-in (Preview)"
       }
     ]
   },
@@ -10822,6 +10839,29 @@
     ],
     "requiredCapabilities": [],
     "addedComponent": []
+  },
+  {
+    "name": "standards.PasswordChangeAfterSecureSignIn",
+    "cat": "Entra (AAD) Standards",
+    "tag": [],
+    "helpText": "Sets whether users can change their password from My Sign-Ins without entering their current password after signing in with a strong authentication method. Microsoft preview feature (MC1437671), requires Entra ID P1.",
+    "docsDescription": "Sets allowPasswordChangeAfterSecureSignIn on the Password configuration of the authentication methods policy. When enabled, a user who signed in with a strong authentication method can set a new password from My Sign-Ins without supplying the current one. The feature is a Microsoft preview (MC1437671) that requires Entra ID P1 and has no effect until Microsoft has rolled it out to the tenant. The state of the Password method itself is never changed.",
+    "executiveText": "Controls whether employees who have proven their identity with a strong sign-in method, such as a passkey or the Authenticator app, may replace their password without knowing the current one. Enabling it supports passwordless adoption and reduces helpdesk password resets, while disabling it keeps the current password as a requirement for every password change.",
+    "label": "Allow password change after secure sign-in (Preview)",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-11-16",
+    "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
+    "recommendedBy": [],
+    "requiredCapabilities": [],
+    "addedComponent": [
+      {
+        "name": "standards.PasswordChangeAfterSecureSignIn.state",
+        "type": "switch",
+        "label": "Allow password change after secure sign-in",
+        "default": false
+      }
+    ]
   },
   {
     "name": "standards.PasswordExpireDisabled",

@@ -35,7 +35,7 @@ function Invoke-SetAuthMethod {
             'EmailAllowExternalIdToUseEmailOtp', 'EmailExcludeGroupIds', 'ExcludeGroupIds'
             'QRCodeLifetimeInDays', 'QRCodePinLength'
             'FIDO2AttestationEnforced', 'FIDO2SelfServiceRegistration', 'VoiceIsOfficePhoneAllowed'
-            'SmsIsUsableForSignIn'
+            'SmsIsUsableForSignIn', 'PasswordAllowChangeAfterSecureSignIn'
         )
         foreach ($Setting in $OptionalSettings) {
             if ($null -ne $Request.Body.$Setting) {

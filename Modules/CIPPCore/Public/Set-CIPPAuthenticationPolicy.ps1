@@ -8,9 +8,9 @@ function Set-CIPPAuthenticationPolicy {
         # providers such as Duo or Okta) are keyed by their configuration's GUID.
         [Parameter(Mandatory = $true)]
         [ValidateScript({
-                $_ -in @('FIDO2', 'MicrosoftAuthenticator', 'SMS', 'TemporaryAccessPass', 'HardwareOATH', 'softwareOath', 'Voice', 'Email', 'x509Certificate', 'QRCodePin') -or
+                $_ -in @('FIDO2', 'MicrosoftAuthenticator', 'SMS', 'TemporaryAccessPass', 'HardwareOATH', 'softwareOath', 'Voice', 'Email', 'x509Certificate', 'QRCodePin', 'Password') -or
                 $_ -match '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$'
-            }, ErrorMessage = "'{0}' is not a built-in authentication method name (FIDO2, MicrosoftAuthenticator, SMS, TemporaryAccessPass, HardwareOATH, softwareOath, Voice, Email, x509Certificate, QRCodePin) or the GUID of an external authentication method.")]
+            }, ErrorMessage = "'{0}' is not a built-in authentication method name (FIDO2, MicrosoftAuthenticator, SMS, TemporaryAccessPass, HardwareOATH, softwareOath, Voice, Email, x509Certificate, QRCodePin, Password) or the GUID of an external authentication method.")]
         $AuthenticationMethodId,
         [Parameter(Mandatory = $true)][bool]$Enabled, # true = enabled or false = disabled
         $MicrosoftAuthenticatorSoftwareOathEnabled,
@@ -31,6 +31,7 @@ function Set-CIPPAuthenticationPolicy {
         [Parameter()][bool]$FIDO2SelfServiceRegistration,
         [Parameter()][bool]$VoiceIsOfficePhoneAllowed,
         [Parameter()][bool]$SmsIsUsableForSignIn,
+        [Parameter()][bool]$PasswordAllowChangeAfterSecureSignIn,
         $APIName = 'Set Authentication Policy',
         $Headers
     )
@@ -172,6 +173,20 @@ function Set-CIPPAuthenticationPolicy {
                 $OptionalLogMessage = "with QR code lifetime $QRCodeLifetimeInDays days and PIN length $QRCodePinLength"
             }
         }
+        # Password
+        'Password' {
+            # Password is the tenant's base credential: its state and targeting are never written
+            # from CIPP, whatever the caller passed. Only its own settings can change.
+            $State = 'unchanged'
+            $CurrentInfo.PSObject.Properties.Remove('state')
+            $null = $PSBoundParameters.Remove('GroupIds'), $PSBoundParameters.Remove('ExcludeGroupIds')
+            # Preview (MC1437671). The property can be absent where the feature has not rolled out yet.
+            if ($PSBoundParameters.ContainsKey('PasswordAllowChangeAfterSecureSignIn')) {
+                $CurrentInfo | Add-Member -NotePropertyName 'allowPasswordChangeAfterSecureSignIn' -NotePropertyValue $PasswordAllowChangeAfterSecureSignIn -Force
+                $OptionalLogMessage = "with password change after secure sign-in set to $PasswordAllowChangeAfterSecureSignIn"
+            }
+        }
+
         # External authentication method (third-party MFA provider), keyed by configuration GUID.
         # Only state and targeting apply; the provider settings (appId, OIDC) are left as read.
         { $_ -match '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$' } {

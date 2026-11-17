@@ -12,7 +12,7 @@ BeforeAll {
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp) }
     function New-GraphPostRequest { param($uri, $tenantid, $type, $body, $AsApp, $ContentType, $scope) }
     function Set-CIPPRegistrationCampaign { param($Tenant, $State, $TargetedAuthenticationMethod, $SnoozeDurationInDays, $EnforceRegistrationAfterAllowedSnoozes, $IncludeTargets, $ExcludeTargets, $APIName) }
-    function Set-CIPPAuthenticationPolicy { param($Tenant, $APIName, $AuthenticationMethodId, [bool]$Enabled, $GroupIds, $MicrosoftAuthenticatorSoftwareOathEnabled, $MicrosoftAuthenticatorDisplayAppInfo, $MicrosoftAuthenticatorDisplayLocation, $MicrosoftAuthenticatorCompanionApp, $TAPisUsableOnce, $TAPDefaultLifeTime, $TAPMinimumLifetime, $TAPMaximumLifetime, $TAPDefaultLength, $QRCodeLifetimeInDays, $QRCodePinLength, $EmailAllowExternalIdToUseEmailOtp, $ExcludeGroupIds) }
+    function Set-CIPPAuthenticationPolicy { param($Tenant, $APIName, $AuthenticationMethodId, [bool]$Enabled, $GroupIds, $MicrosoftAuthenticatorSoftwareOathEnabled, $MicrosoftAuthenticatorDisplayAppInfo, $MicrosoftAuthenticatorDisplayLocation, $MicrosoftAuthenticatorCompanionApp, $TAPisUsableOnce, $TAPDefaultLifeTime, $TAPMinimumLifetime, $TAPMaximumLifetime, $TAPDefaultLength, $QRCodeLifetimeInDays, $QRCodePinLength, $EmailAllowExternalIdToUseEmailOtp, $ExcludeGroupIds, $PasswordAllowChangeAfterSecureSignIn) }
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneCompareExclusions.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Compare-CIPPIntuneObject.ps1')
@@ -197,6 +197,51 @@ Describe 'Get-CIPPBaselineAuthenticationMethodsState' {
         $Prepared.Current.methodsOutOfPolicy | Should -Match 'state'
         $Prepared.Current.remediationSets[0].Params.TAPMinimumLifetime | Should -Be 60
         $Prepared.Current.remediationSets[0].Params.TAPDefaultLength | Should -Be 8
+    }
+
+    It 'a baseline saved before the Password variable existed never grades Password' {
+        # The tenant has the setting ON; an existing baseline has no opinion about it, so the
+        # result must be what it was before the variable was added - no drift, no write.
+        $PasswordPolicy = @{ authenticationMethodConfigurations = @(
+                @{ id = 'Sms'; state = 'enabled'; includeTargets = @(@{ id = 'all_users'; targetType = 'group' }) }
+                @{ id = 'Password'; state = 'enabled'; allowPasswordChangeAfterSecureSignIn = $true }
+            ) }
+        Mock New-CIPPDbRequest { @($PasswordPolicy | ConvertTo-Cached) }
+        foreach ($Variables in @(
+                [PSCustomObject]@{ SMSEnabled = $true }
+                [PSCustomObject]@{ SMSEnabled = $true; PasswordChangeAfterSecureSignIn = '' }
+            )) {
+            $Prepared = Get-CIPPBaselineAuthenticationMethodsState -Item ([PSCustomObject]@{ Variables = $Variables }) -TenantFilter $script:Tenant
+            @($Prepared.Current.methodsOutOfPolicy).Count | Should -Be 0
+            @($Prepared.Current.remediationSets).Count | Should -Be 0
+        }
+        # Nothing configured at all still short-circuits exactly as before.
+        $Empty = Get-CIPPBaselineAuthenticationMethodsState -Item ([PSCustomObject]@{ Variables = [PSCustomObject]@{} }) -TenantFilter $script:Tenant
+        $Empty.Current | Should -BeNullOrEmpty
+    }
+
+    It 'grades the Password setting alone and carries only that setting for the write' {
+        # No method is configured: the Password variable on its own must still grade, and the
+        # remediation set may carry neither targeting nor a state the operator never chose.
+        $PasswordPolicy = @{ authenticationMethodConfigurations = @(
+                @{ id = 'Password'; state = 'enabled'; allowPasswordChangeAfterSecureSignIn = $false }
+            ) }
+        Mock New-CIPPDbRequest { @($PasswordPolicy | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasswordChangeAfterSecureSignIn = 'true' } }
+        $Prepared = Get-CIPPBaselineAuthenticationMethodsState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.methodsOutOfPolicy | Should -Match 'Password: allowPasswordChangeAfterSecureSignIn'
+        @($Prepared.Current.remediationSets).Count | Should -Be 1
+        $Params = $Prepared.Current.remediationSets[0].Params
+        $Params.AuthenticationMethodId | Should -Be 'Password'
+        $Params.PasswordAllowChangeAfterSecureSignIn | Should -BeTrue
+        $Params.Keys | Should -Not -Contain 'GroupIds'
+        $Params.Keys | Should -Not -Contain 'ExcludeGroupIds'
+
+        # Compliant when the tenant already matches; a missing preview property reads as off.
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ PasswordChangeAfterSecureSignIn = 'false' } }
+        $Prepared = Get-CIPPBaselineAuthenticationMethodsState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Current.methodsOutOfPolicy).Count | Should -Be 0
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
     }
 
     It 'grades blank QRCodePin settings as the defaults, never 0' {

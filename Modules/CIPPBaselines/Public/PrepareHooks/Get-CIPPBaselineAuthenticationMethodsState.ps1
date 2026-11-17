@@ -60,7 +60,12 @@ function Get-CIPPBaselineAuthenticationMethodsState {
                 ExcludeGroupName = "$($V."$($Method.Key)ExcludeGroup")"
             }
         })
-    if ($Configured.Count -eq 0) { return @{ Current = $null } }
+    # Password is never enabled, disabled or targeted here. Its one setting grades only when
+    # the variable holds a value; blank or absent (every baseline saved before it existed)
+    # changes nothing about what this hook returns.
+    $PasswordChange = "$($V.PasswordChangeAfterSecureSignIn.value ?? $V.PasswordChangeAfterSecureSignIn)"
+    $ManagePasswordChange = $PasswordChange -in @('true', 'false')
+    if ($Configured.Count -eq 0 -and -not $ManagePasswordChange) { return @{ Current = $null } }
 
     $Configs = @{}
     foreach ($Config in @($Policy.authenticationMethodConfigurations)) { $Configs["$($Config.id)"] = $Config }
@@ -184,6 +189,17 @@ function Get-CIPPBaselineAuthenticationMethodsState {
         if ($Drifts.Count -gt 0) {
             foreach ($Drift in $Drifts) { $AllDrifts.Add($Drift) }
             $RemediationSets.Add([PSCustomObject]@{ Label = $Method.Label; Params = $Params })
+        }
+    }
+
+    if ($ManagePasswordChange -and $Configs['Password']) {
+        $DesiredPasswordChange = [System.Convert]::ToBoolean($PasswordChange)
+        # Absent (feature not rolled out to the tenant yet) reads as the Microsoft default, false.
+        $CurrentPasswordChange = [bool]$Configs['Password'].allowPasswordChangeAfterSecureSignIn
+        if ($CurrentPasswordChange -ne $DesiredPasswordChange) {
+            $AllDrifts.Add("Password: allowPasswordChangeAfterSecureSignIn '$CurrentPasswordChange' should be '$DesiredPasswordChange'")
+            # Enabled is mandatory on the helper but never written for the Password method.
+            $RemediationSets.Add([PSCustomObject]@{ Label = 'Password'; Params = @{ AuthenticationMethodId = 'Password'; Enabled = $true; PasswordAllowChangeAfterSecureSignIn = $DesiredPasswordChange } })
         }
     }
 

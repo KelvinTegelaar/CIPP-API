@@ -81,6 +81,21 @@ Describe 'Invoke-CIPPBaselineStandard -GradeOnly' {
         (Invoke-CIPPBaselineStandard -Item $script:EngineItem -Mode 'oneoff' -GradeOnly).Compliant | Should -BeFalse
     }
 
+    It 'PasswordChangeAfterSecureSignIn grades a tenant without the preview property as off' {
+        # Tenants where the preview has not landed return the Password configuration without
+        # allowPasswordChangeAfterSecureSignIn. That is Microsoft's default (off), not a gap.
+        $Real = Get-Content (Join-Path $script:RepoRoot 'Config/BaselineStandards/Entra (AAD) Standards/PasswordChangeAfterSecureSignIn.json') -Raw | ConvertFrom-Json
+        Mock Get-CIPPBaselineDefinition { $Real }
+        Mock New-CIPPDbRequest { [PSCustomObject]@{ authenticationMethodConfigurations = @([PSCustomObject]@{ id = 'Password'; state = 'enabled' }) } }
+        $Item = $script:EngineItem + @{}
+        $Item.Standard = $Item.BaseName = 'PasswordChangeAfterSecureSignIn'
+
+        $Item.Variables = [PSCustomObject]@{ state = $false }
+        (Invoke-CIPPBaselineStandard -Item $Item -Mode 'oneoff' -GradeOnly).Compliant | Should -BeTrue
+        $Item.Variables = [PSCustomObject]@{ state = $true }
+        (Invoke-CIPPBaselineStandard -Item $Item -Mode 'oneoff' -GradeOnly).Compliant | Should -BeFalse
+    }
+
     It 'a verification that CRASHES returns null without overwriting the optimistic row' {
         Mock New-CIPPDbRequest { throw 'transient table outage' }
         Invoke-CIPPBaselineStandard -Item $script:EngineItem -Mode 'oneoff' -GradeOnly | Should -BeNullOrEmpty

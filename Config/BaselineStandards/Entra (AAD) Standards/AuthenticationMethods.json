@@ -454,6 +454,22 @@
       "omitWhenBlank": true,
       "type": "autoComplete",
       "label": "Email OTP for external users"
+    },
+    "PasswordChangeAfterSecureSignIn": {
+      "creatable": false,
+      "options": [
+        {
+          "value": "true",
+          "label": "Enabled"
+        },
+        {
+          "value": "false",
+          "label": "Disabled"
+        }
+      ],
+      "omitWhenBlank": true,
+      "type": "autoComplete",
+      "label": "Password: change after secure sign-in (Preview)"
     }
   },
   "read": {
@@ -484,7 +500,8 @@
     "TemporaryAccessPass.defaultLifetimeInMinutes": "%TAPDefaultLifetime%",
     "TemporaryAccessPass.minimumLifetimeInMinutes": "%TAPMinLifetime%",
     "TemporaryAccessPass.maximumLifetimeInMinutes": "%TAPMaxLifetime%",
-    "TemporaryAccessPass.defaultLength": "%TAPDefaultLength%"
+    "TemporaryAccessPass.defaultLength": "%TAPDefaultLength%",
+    "Password.allowPasswordChangeAfterSecureSignIn": "%PasswordChangeAfterSecureSignIn%"
   },
   "remediate": {
     "executor": "AuthenticationMethods"

@@ -211,4 +211,57 @@ Describe 'Set-CIPPAuthenticationPolicy' {
         $body = $script:lastBody | ConvertFrom-Json
         $body.isOfficePhoneAllowed | Should -Be $true
     }
+
+    It 'writes the Password change-after-secure-sign-in setting to the PATCH body' {
+        $script:mockCurrentInfo = [pscustomobject]@{
+            id                                   = 'Password'
+            state                                = 'enabled'
+            allowPasswordChangeAfterSecureSignIn = $false
+        }
+
+        Set-CIPPAuthenticationPolicy -Tenant 'contoso.onmicrosoft.com' -AuthenticationMethodId 'Password' `
+            -Enabled $true -PasswordAllowChangeAfterSecureSignIn $true
+
+        $script:lastUri | Should -BeLike '*authenticationMethodConfigurations/Password'
+        $body = $script:lastBody | ConvertFrom-Json
+        $body.allowPasswordChangeAfterSecureSignIn | Should -Be $true
+        $body.PSObject.Properties['state'] | Should -BeNullOrEmpty
+    }
+
+    It 'adds the Password setting when the tenant does not return the preview property yet' {
+        $script:mockCurrentInfo = [pscustomobject]@{ id = 'Password'; state = 'enabled' }
+
+        Set-CIPPAuthenticationPolicy -Tenant 'contoso.onmicrosoft.com' -AuthenticationMethodId 'Password' `
+            -Enabled $true -PasswordAllowChangeAfterSecureSignIn $true
+
+        ($script:lastBody | ConvertFrom-Json).allowPasswordChangeAfterSecureSignIn | Should -Be $true
+    }
+
+    It 'never changes the state of the Password method, even when asked to disable it' {
+        # A "Disable Policy" click or a stray Enabled = $false from a standard must not be able
+        # to switch passwords off for the tenant.
+        $script:mockCurrentInfo = [pscustomobject]@{
+            id                                   = 'Password'
+            state                                = 'enabled'
+            allowPasswordChangeAfterSecureSignIn = $true
+        }
+
+        $Result = Set-CIPPAuthenticationPolicy -Tenant 'contoso.onmicrosoft.com' -AuthenticationMethodId 'Password' -Enabled $false
+
+        $body = $script:lastBody | ConvertFrom-Json
+        $body.PSObject.Properties['state'] | Should -BeNullOrEmpty
+        $body.allowPasswordChangeAfterSecureSignIn | Should -Be $true
+        $Result | Should -Match 'state to unchanged'
+    }
+
+    It 'never writes include or exclude targets on the Password method' {
+        $script:mockCurrentInfo = [pscustomobject]@{ id = 'Password'; state = 'enabled'; allowPasswordChangeAfterSecureSignIn = $false }
+
+        Set-CIPPAuthenticationPolicy -Tenant 'contoso.onmicrosoft.com' -AuthenticationMethodId 'Password' `
+            -Enabled $true -GroupIds @('group-a') -ExcludeGroupIds @('group-b')
+
+        $body = $script:lastBody | ConvertFrom-Json
+        $body.PSObject.Properties['includeTargets'] | Should -BeNullOrEmpty
+        $body.PSObject.Properties['excludeTargets'] | Should -BeNullOrEmpty
+    }
 }
