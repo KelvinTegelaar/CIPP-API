@@ -9,7 +9,7 @@ function Get-CIPPStatsEnterpriseApps {
     tenant in the vendor list (Get-CIPPVendorTenantMap) or the tenant the app was found in, and that are
     not CIPP's own app. Apps are keyed
     on appId, which is the same object across tenants, and the count is the number of distinct tenants
-    that have it.
+    that have it. Each app also carries the tenant ID of the publisher that owns it.
     #>
     [CmdletBinding()]
     param()
@@ -47,7 +47,8 @@ function Get-CIPPStatsEnterpriseApps {
 
                     if (-not $Apps.ContainsKey($AppId)) {
                         $Apps[$AppId] = @{
-                            DisplayName = [string]$Sp.displayName
+                            DisplayName      = [string]$Sp.displayName
+                            AppOwnerTenantId = [string]$Sp.appOwnerOrganizationId
                             Tenants     = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
                         }
                     }
@@ -59,9 +60,10 @@ function Get-CIPPStatsEnterpriseApps {
         $Results = [System.Collections.Generic.List[object]]::new()
         foreach ($AppId in $Apps.Keys) {
             $Results.Add([PSCustomObject]@{
-                    ID          = $AppId
-                    DisplayName = $Apps[$AppId].DisplayName
-                    Count       = $Apps[$AppId].Tenants.Count
+                    ID               = $AppId
+                    DisplayName      = $Apps[$AppId].DisplayName
+                    AppOwnerTenantId = $Apps[$AppId].AppOwnerTenantId
+                    Count            = $Apps[$AppId].Tenants.Count
                 })
         }
         return @($Results | Sort-Object -Property @{ Expression = 'Count'; Descending = $true }, 'DisplayName')

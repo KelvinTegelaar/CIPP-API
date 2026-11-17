@@ -47,8 +47,10 @@ Describe 'Get-CIPPStatsEnterpriseApps' {
         $r.Count | Should -Be 2
         $r[0].ID | Should -Be 'app-a'
         $r[0].DisplayName | Should -Be 'MyEnterpriseApp'
+        $r[0].AppOwnerTenantId | Should -Be '11111111-1111-1111-1111-111111111111'
         $r[0].Count | Should -Be 2
         $r[1].ID | Should -Be 'app-c'
+        $r[1].AppOwnerTenantId | Should -Be '22222222-2222-2222-2222-222222222222'
         $r[1].Count | Should -Be 1
         Should -Invoke Get-CIPPDbItem -Times 2 -Exactly -ParameterFilter { $Partition -in 't1.com', 't2.com' -and $Type -eq 'ServicePrincipals' }
     }
