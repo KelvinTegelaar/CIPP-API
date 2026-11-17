@@ -19266,6 +19266,10 @@
                   "tenantId": {
                     "type": "string"
                   },
+                  "Text": {
+                    "type": "string",
+                    "description": "Text containing %variables% to resolve for this tenant"
+                  },
                   "Value": {
                     "type": "string"
                   },
@@ -19292,7 +19296,8 @@
               "enum": [
                 "AddEdit",
                 "Delete",
-                "List"
+                "List",
+                "Preview"
               ]
             }
           },

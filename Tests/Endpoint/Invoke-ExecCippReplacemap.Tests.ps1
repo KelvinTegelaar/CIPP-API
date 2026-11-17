@@ -543,3 +543,46 @@ Describe 'Invoke-ExecCippReplacemap - a failed read' {
         $Response.Body.Results | Should -BeLike '*server is busy*'
     }
 }
+
+Describe 'Invoke-ExecCippReplacemap - Preview' {
+    BeforeAll {
+        function Get-CIPPTextReplacement { param($TenantFilter, $Text, [switch]$EscapeForJson) }
+        function New-PreviewRequest {
+            param([string]$TenantId = 'contoso.onmicrosoft.com', $Text)
+            [pscustomobject]@{
+                Params  = @{ CIPPEndpoint = 'ExecCippReplacemap' }
+                Headers = @{}
+                Query   = @{}
+                Body    = [pscustomobject]@{ Action = 'Preview'; tenantId = $TenantId; Text = $Text }
+            }
+        }
+    }
+
+    BeforeEach {
+        Mock -CommandName Get-Tenants -MockWith { [pscustomobject]@{ customerId = 'contoso-id' } }
+        Mock -CommandName Get-CIPPTextReplacement -MockWith { "resolved:${TenantFilter}:${Text}:$($EscapeForJson.IsPresent)" }
+    }
+
+    It 'resolves the text for the tenant' {
+        $Response = Invoke-ExecCippReplacemap -Request (New-PreviewRequest -Text 'mail+%initialdomainprefix%@example.com')
+
+        $Response.StatusCode | Should -Be 200
+        $Response.Body.Results | Should -Be 'resolved:contoso-id:mail+%initialdomainprefix%@example.com:False'
+    }
+
+    It 'escapes values for JSON when the text is JSON' {
+        $Response = Invoke-ExecCippReplacemap -Request (New-PreviewRequest -Text '{"name":"%tenantname%"}')
+
+        $Response.Body.Results | Should -BeLike '*:True'
+    }
+
+    It 'rejects <Name>' -ForEach @(
+        @{ Name = 'global scope'; TenantId = 'AllTenants'; Text = '%tenantname%' }
+        @{ Name = 'empty text'; TenantId = 'contoso.onmicrosoft.com'; Text = ' ' }
+    ) {
+        $Response = Invoke-ExecCippReplacemap -Request (New-PreviewRequest -TenantId $TenantId -Text $Text)
+
+        $Response.StatusCode | Should -Be 400
+        Should -Invoke Get-CIPPTextReplacement -Times 0
+    }
+}
