@@ -5,6 +5,7 @@
 # logged without stopping the remaining devices.
 
 BeforeAll {
+    . (Join-Path $PSScriptRoot '../../Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Send-CIPPAlert.ps1'
     $Dll = Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll'

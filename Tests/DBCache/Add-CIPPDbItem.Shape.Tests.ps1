@@ -3,6 +3,7 @@
 # picker offers.
 
 BeforeAll {
+    . (Join-Path $PSScriptRoot '../../Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     . (Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Add-CIPPDbItem.ps1' | Select-Object -First 1 -ExpandProperty FullName)

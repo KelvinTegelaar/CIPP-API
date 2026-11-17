@@ -39,7 +39,7 @@ function Add-CIPPScheduledTask {
 
         if ($RunNow.IsPresent -and $RowKey) {
             try {
-                $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$($RowKey)'"
+                $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $RowKey)'"
                 $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
                 if ($PrivilegedUserRestricted) { $ExistingTask | Add-Member -NotePropertyName PrivilegedUserRestricted -NotePropertyValue $true -Force }
                 $Now = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
@@ -101,7 +101,7 @@ function Add-CIPPScheduledTask {
             if ($PostExecution -match '(^|,)Push(,|$)' -and $Headers.'x-ms-client-principal') {
                 $PushUser = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
                 $PushTable = Get-CIPPTable -TableName 'PushSubscriptions'
-                if (-not (Get-CIPPAzDataTableEntity @PushTable -Filter "PartitionKey eq '$PushUser'" -First 1)) {
+                if (-not (Get-CIPPAzDataTableEntity @PushTable -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $PushUser)'" -First 1)) {
                     return 'Error - Push (notify me) was selected but you have no push notification devices registered. Enable notifications under Preferences > Push Notifications first, or remove Push from the post execution actions.'
                 }
             }

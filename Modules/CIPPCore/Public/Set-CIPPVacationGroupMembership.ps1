@@ -74,7 +74,7 @@ function Set-CIPPVacationGroupMembership {
             return $Result
         }
 
-        $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$MembershipKey'"
+        $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TenantFilter)' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $MembershipKey)'"
         if (-not $Entity) {
             # Without a record we cannot tell vacation members from standing ones, so remove nothing.
             $Result = "No vacation membership record found for group $GroupId. No members were removed."

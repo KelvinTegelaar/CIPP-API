@@ -42,7 +42,7 @@ function Send-CIPPAlert {
     if ($Type -eq 'push') {
         if ([string]::IsNullOrWhiteSpace($TargetUser)) { return 'No target user for push notification' }
         $SubTable = Get-CIPPTable -tablename 'PushSubscriptions'
-        $Subscriptions = @(Get-CIPPAzDataTableEntity @SubTable -Filter "PartitionKey eq '$TargetUser'")
+        $Subscriptions = @(Get-CIPPAzDataTableEntity @SubTable -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TargetUser)'")
         if ($Subscriptions.Count -eq 0) { return "No push devices registered for $TargetUser" }
 
         $Keys = Get-CIPPVapidKeys

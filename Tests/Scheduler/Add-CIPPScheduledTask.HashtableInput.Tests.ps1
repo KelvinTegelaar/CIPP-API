@@ -2,6 +2,7 @@
 # [pscustomobject]: a future ScheduledTime kept as a Unix-time string, and the real parameter keys.
 
 BeforeAll {
+    . (Join-Path $PSScriptRoot '../../Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     # Outside a request, as background callers run.
     function Get-CippRequestAllowedPermissions { }
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -68,6 +69,14 @@ Describe 'Add-CIPPScheduledTask hashtable input' {
 
         $script:CapturedEntity.ScheduledTime | Should -BeOfType [string]
         [int64]$script:CapturedEntity.ScheduledTime | Should -BeLessThan ([int64]$script:Future)
+    }
+
+    It 'looks up a re-queued task by its exact RowKey, even one containing quotes' {
+        Mock -CommandName Add-CippQueueMessage -MockWith { $true }
+
+        $null = Add-CIPPScheduledTask -RunNow -RowKey "n' or RowKey eq 'victim"
+
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Filter -eq "PartitionKey eq 'ScheduledTask' and RowKey eq 'n'' or RowKey eq ''victim'" }
     }
 
     It 'keeps a recurring task on its slots when re-queuing with RunNow' {

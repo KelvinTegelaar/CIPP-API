@@ -28,7 +28,7 @@ function Set-CIPPMailboxType {
                     # Server-side point lookup for this specific mailbox only.
                     # Cached mailbox rows are keyed RowKey = 'Mailboxes-<EntraObjectId>'.
                     $Table = Get-CippTable -tablename 'CippReportingDB'
-                    $Filter = "PartitionKey eq '{0}' and RowKey eq 'Mailboxes-{1}'" -f $PartitionKey, $UserID
+                    $Filter = "PartitionKey eq '{0}' and RowKey eq 'Mailboxes-{1}'" -f (ConvertTo-CIPPODataFilterValue -Value $PartitionKey), (ConvertTo-CIPPODataFilterValue -Value $UserID)
                     $CachedMailbox = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Select-Object -First 1
                     if ($CachedMailbox.Data) {
                         $StorageBytes = [int64]([string]($CachedMailbox.Data | ConvertFrom-Json).storageUsedInBytes)

@@ -74,7 +74,7 @@ function Invoke-ExecExtensionOAuth {
                 $State = "$($Request.Body.state)"
                 $Code = "$($Request.Body.code)"
                 if (-not $State -or -not $Code) { throw 'code and state are required.' }
-                $StateRow = Get-CIPPAzDataTableEntity @OAuthTable -Filter "PartitionKey eq 'State' and RowKey eq '$State'"
+                $StateRow = Get-CIPPAzDataTableEntity @OAuthTable -Filter "PartitionKey eq 'State' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $State)'"
                 if ($StateRow) { Remove-CIPPAzDataTableEntity @OAuthTable -Entity $StateRow -Force }
                 if (-not $StateRow -or $StateRow.Extension -ne "$Extension" -or ([datetime]::UtcNow - [datetime]::Parse($StateRow.Created).ToUniversalTime()).TotalMinutes -gt 10) {
                     throw 'The sign-in state is unknown or expired. Start the sign-in again.'

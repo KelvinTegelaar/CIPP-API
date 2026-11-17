@@ -9,13 +9,14 @@ Function Invoke-ListUserSigninLogs {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $top = $Request.Query.top ? $Request.Query.top : 50
+    $top = [Math]::Min([Math]::Max(($Request.Query.top -as [int]) ?? 50, 1), 1000)
 
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.UserID
-    $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$UserID')&`$top=$top&`$orderby=createdDateTime desc"
+    $SafeUserId = [uri]::EscapeDataString((ConvertTo-CIPPODataFilterValue -Value $UserID))
+    $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$SafeUserId')&`$top=$top&`$orderby=createdDateTime desc"
 
     try {
         $Result = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose

@@ -1,4 +1,5 @@
 BeforeAll {
+    . (Join-Path $PSScriptRoot '../../Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     $BackendRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Join-Path $BackendRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Tenant/Reports/Invoke-ExecLicensePricing.ps1'
 
@@ -207,6 +208,12 @@ Describe 'Invoke-ExecLicensePricing bulk import' {
         $Response.Body.Results | Should -Match 'failed 1'
         $script:Writes.Count | Should -Be 1
         $script:Writes[0].RowKey | Should -Be "$($script:E5)-gbp"
+    }
+
+    It 'removes only the exact price override, even when the sku carries a filter' {
+        $null = Invoke-ExecLicensePricing -Request (New-Request -Body ([pscustomobject]@{ Action = 'RemovePrice'; skuId = "x' or true or rowkey eq 'y"; Currency = 'USD' })) -TriggerMetadata $null
+
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Filter -eq "PartitionKey eq 'Price' and RowKey eq 'x'' or true or rowkey eq ''y-usd'" }
     }
 
     It 'keeps the existing single-row set and remove actions working' {

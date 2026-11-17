@@ -41,7 +41,7 @@ function Invoke-RemoveCustomScript {
         # Delete matching test result rows for this custom script across tenants
         $CustomTestId = "CustomScript-$ScriptGuid"
         $TestResultsTable = Get-CippTable -tablename 'CippTestResults'
-        $TestResultsFilter = "RowKey eq '{0}'" -f $CustomTestId
+        $TestResultsFilter = "RowKey eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $CustomTestId)
         $RelatedTestResults = @(Get-CIPPAzDataTableEntity @TestResultsTable -Filter $TestResultsFilter)
         foreach ($ResultRow in $RelatedTestResults) {
             Remove-CIPPAzDataTableEntity @TestResultsTable -Entity $ResultRow

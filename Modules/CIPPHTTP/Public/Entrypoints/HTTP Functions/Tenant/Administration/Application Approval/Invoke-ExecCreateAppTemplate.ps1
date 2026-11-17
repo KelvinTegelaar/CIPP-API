@@ -160,7 +160,7 @@ function Invoke-ExecCreateAppTemplate {
 
             $Tenant = Get-Tenants -TenantFilter $TenantFilter
             if ($Tenant.customerId -ne $env:TenantID) {
-                $ExistingApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=displayName eq '$DisplayName'" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
+                $ExistingApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=displayName eq '$([uri]::EscapeDataString((ConvertTo-CIPPODataFilterValue -Value $DisplayName)))'" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
 
                 if ($ExistingApp) {
                     Write-Information "App Registration $AppId already exists in partner tenant"

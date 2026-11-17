@@ -134,7 +134,7 @@ function Add-CIPPDbItem {
         # Empty collections only clear existing data when the caller explicitly confirms
         # the response was authoritative by passing -ClearOnEmpty.
         if (-not $Count.IsPresent -and -not $Append.IsPresent -and ($TotalProcessed -gt 0 -or $ClearOnEmpty.IsPresent)) {
-            $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}0'" -f $TenantFilter, $Type
+            $Filter = "PartitionKey eq '{0}' and RowKey ge '{1}-' and RowKey lt '{1}0'" -f (ConvertTo-CIPPODataFilterValue -Value $TenantFilter), (ConvertTo-CIPPODataFilterValue -Value $Type)
 
             # The Timestamp predicate is NARROWING ONLY: it lets the service return candidate
             # orphans instead of every row of this type for the tenant, which at the end of a
@@ -178,7 +178,7 @@ function Add-CIPPDbItem {
             # already recorded is kept rather than wiped.
             $ExistingCount = $null
             if ($Append.IsPresent -or $ShapeFields.PSBase.Count -eq 0) {
-                $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}-Count'" -f $TenantFilter, $Type
+                $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}-Count'" -f (ConvertTo-CIPPODataFilterValue -Value $TenantFilter), (ConvertTo-CIPPODataFilterValue -Value $Type)
                 $ExistingCount = Get-CIPPAzDataTableEntity @Table -Filter $Filter
             }
             if ($Append.IsPresent -and $ExistingCount.DataCount) { $NewCount += [int]$ExistingCount.DataCount }

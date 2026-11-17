@@ -227,7 +227,7 @@ function Get-GraphRequestList {
     try {
         if ($QueueId) {
             $Table = Get-CIPPTable -TableName $TableName
-            $Filter = "QueueId eq '{0}'" -f $QueueId
+            $Filter = "QueueId eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $QueueId)
             $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
             # A queue's rows span every tenant in the run; serve only the caller's
             $AllowedTenantNames = [System.Collections.Generic.HashSet[string]]::new([string[]]@((Get-Tenants -IncludeErrors).defaultDomainName), [StringComparer]::OrdinalIgnoreCase)

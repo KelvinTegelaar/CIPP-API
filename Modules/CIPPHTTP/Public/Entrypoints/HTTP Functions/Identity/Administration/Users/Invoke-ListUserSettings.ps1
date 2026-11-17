@@ -51,7 +51,7 @@ function Invoke-ListUserSettings {
         }
 
         $UserSettingsEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq 'allUsers'"
-        if (!$UserSettingsEntity) { $UserSettingsEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq '$Username'" }
+        if (!$UserSettingsEntity) { $UserSettingsEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Username)'" }
         $UserSettings = & $ConvertUserSettings $UserSettingsEntity
 
         if (!$UserSettings) {
@@ -64,7 +64,7 @@ function Invoke-ListUserSettings {
             }
         }
 
-        $UserSpecificEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq '$Username'"
+        $UserSpecificEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserSettings' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Username)'"
         $UserSpecificSettings = & $ConvertUserSettings $UserSpecificEntity
 
         $TestOffboardingConfigured = {
@@ -91,7 +91,7 @@ function Invoke-ListUserSettings {
 
         # Get user bookmarks
         try {
-            $UserBookmarks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserBookmarks' and RowKey eq '$Username'"
+            $UserBookmarks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'UserBookmarks' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Username)'"
             $UserBookmarks = $UserBookmarks.JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
             if ($UserBookmarks -and $UserBookmarks -isnot [System.Array]) {
                 $UserBookmarks = @($UserBookmarks)

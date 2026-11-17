@@ -46,7 +46,7 @@ function New-CippCustomScriptExecution {
 
         # Get script from database
         $Table = Get-CippTable -tablename 'CustomPowershellScripts'
-        $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f $ScriptGuid
+        $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $ScriptGuid)
         $Scripts = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $Scripts) {

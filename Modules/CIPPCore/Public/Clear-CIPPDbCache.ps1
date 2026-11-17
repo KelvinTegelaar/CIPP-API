@@ -37,7 +37,8 @@ function Clear-CIPPDbCache {
         $CountRowKey = "$TypeName-Count"
 
         if ($IsAllTenants) {
-            $Filter = "RowKey ge '$TypeName-' and RowKey lt '${TypeName}0'"
+            $SafeType = ConvertTo-CIPPODataFilterValue -Value $TypeName
+            $Filter = "RowKey ge '$SafeType-' and RowKey lt '${SafeType}0'"
             $ResultTenant = 'AllTenants'
             $DbTenant = $null
         } else {
@@ -50,7 +51,8 @@ function Clear-CIPPDbCache {
                 throw "Tenant '$TenantFilter' has no defaultDomainName"
             }
             $ResultTenant = $DbTenant
-            $Filter = "PartitionKey eq '$DbTenant' and RowKey ge '$TypeName-' and RowKey lt '${TypeName}0'"
+            $SafeType = ConvertTo-CIPPODataFilterValue -Value $TypeName
+            $Filter = "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $DbTenant)' and RowKey ge '$SafeType-' and RowKey lt '${SafeType}0'"
         }
 
         $Rows = @(Get-AzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey -ErrorAction Stop)

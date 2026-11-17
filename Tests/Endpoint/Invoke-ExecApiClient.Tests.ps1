@@ -29,6 +29,8 @@ BeforeAll {
     function Get-CippProtectedAppId { @() }
     function New-GraphGetRequest { param($uri, $NoAuthCheck, $asapp, [switch]$ComplexFilter) }
     function Get-CIPPSiteHostname { param([switch]$AsRedirectUri) }
+    function New-GraphPOSTRequest { param($uri, $type, $Body, $NoAuthCheck, $asapp) }
+    function Remove-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
 
     . $FunctionPath
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
@@ -130,6 +132,47 @@ Describe 'Invoke-ExecApiClient - protected SSO/SAM apps' {
 
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
         Should -Invoke New-CIPPAPIConfig -Times 0 -Exactly
+    }
+}
+
+Describe 'Invoke-ExecApiClient - deleting a client' {
+    BeforeEach {
+        $env:WEBSITE_SITE_NAME = 'cipp-site'
+        Mock -CommandName Write-LogMessage -MockWith { }
+        Mock -CommandName Get-CippProtectedAppId -MockWith { @('11111111-1111-1111-1111-111111111111') }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { }
+        Mock -CommandName Remove-CIPPAzDataTableEntity -MockWith { }
+        Mock -CommandName New-GraphPOSTRequest -MockWith { }
+    }
+    AfterEach { $env:WEBSITE_SITE_NAME = $null }
+
+    It 'refuses a ClientId that is not a GUID before any lookup' {
+        Mock -CommandName New-GraphGetRequest -MockWith { }
+        $Request = [pscustomobject]@{ Params = @{ CIPPEndpoint = 'ExecApiClient' }; Headers = @{}; Query = [pscustomobject]@{}; Body = [pscustomobject]@{ Action = 'Delete'; RemoveAppReg = $true; ClientId = "00000000-0000-0000-0000-000000000000' or appId eq '11111111-1111-1111-1111-111111111111" } }
+
+        $Response = Invoke-ExecApiClient -Request $Request
+
+        $Response.StatusCode | Should -Be 400
+        Should -Invoke New-GraphGetRequest -Times 0
+        Should -Invoke New-GraphPOSTRequest -Times 0
+    }
+
+    It 'never deletes an app registration the lookup returned for a different or protected appId' {
+        Mock -CommandName New-GraphGetRequest -MockWith { [pscustomobject]@{ id = 'object-id'; appId = '11111111-1111-1111-1111-111111111111'; web = @{ redirectUris = @('https://cipp-site.azurewebsites.net/.auth/callback') } } }
+        $Request = [pscustomobject]@{ Params = @{ CIPPEndpoint = 'ExecApiClient' }; Headers = @{}; Query = [pscustomobject]@{}; Body = [pscustomobject]@{ Action = 'Delete'; RemoveAppReg = $true; ClientId = '22222222-2222-2222-2222-222222222222' } }
+
+        $null = Invoke-ExecApiClient -Request $Request
+
+        Should -Invoke New-GraphPOSTRequest -Times 0
+    }
+
+    It 'deletes the app registration of a normal API client' {
+        Mock -CommandName New-GraphGetRequest -MockWith { [pscustomobject]@{ id = 'object-id'; appId = '22222222-2222-2222-2222-222222222222'; web = @{ redirectUris = @('https://cipp-site.azurewebsites.net/.auth/callback') } } }
+        $Request = [pscustomobject]@{ Params = @{ CIPPEndpoint = 'ExecApiClient' }; Headers = @{}; Query = [pscustomobject]@{}; Body = [pscustomobject]@{ Action = 'Delete'; RemoveAppReg = $true; ClientId = '22222222-2222-2222-2222-222222222222' } }
+
+        $null = Invoke-ExecApiClient -Request $Request
+
+        Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter { $uri -eq 'https://graph.microsoft.com/v1.0/applications/object-id' -and $type -eq 'DELETE' }
     }
 }
 

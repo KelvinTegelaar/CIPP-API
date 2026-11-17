@@ -405,7 +405,13 @@ function Invoke-ExecApiClient {
         'Delete' {
             try {
                 if ($Request.Body.ClientId) {
-                    $ClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
+                    $ClientId = [string]($Request.Body.ClientId.value ?? $Request.Body.ClientId)
+                    if ($ClientId -notmatch '^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$') {
+                        $StatusCode = [HttpStatusCode]::BadRequest
+                        $Body = @{ Results = 'Invalid ClientId.' }
+                        break
+                    }
+                    $ClientId = $ClientId.ToLowerInvariant()
                     # Block deleting a client whose role outranks the caller (tamper/DoS).
                     $ExistingClientForAuth = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $ClientId)'"
                     if ($ExistingClientForAuth) {
@@ -421,7 +427,7 @@ function Invoke-ExecApiClient {
                         Write-Information "Deleting API Client: $ClientId from Entra"
                         $App = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=appId eq '$($ClientId)'&`$select=id,appId,web" -NoAuthCheck $true -asapp $true
                         $Id = $App.id
-                        if ($Id -and $App.web.redirectUris -like "*$($env:WEBSITE_SITE_NAME)*" -and $ClientId -notin (Get-CippProtectedAppId)) {
+                        if (@($App).Count -eq 1 -and $Id -and $App.appId -eq $ClientId -and $App.web.redirectUris -like "*$($env:WEBSITE_SITE_NAME)*" -and $App.appId -notin (Get-CippProtectedAppId)) {
                             New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$Id" -type DELETE -Body '{}' -NoAuthCheck $true -asapp $true
                             Write-Information "Deleted App Registration for $ClientId"
                         } else {

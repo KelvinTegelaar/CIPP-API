@@ -5,6 +5,7 @@
 # membership is never stripped when the vacation ends.
 
 BeforeAll {
+    . (Join-Path $PSScriptRoot '../../Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Set-CIPPVacationGroupMembership.ps1'
     if (-not (Test-Path $FunctionPath)) { throw "Could not locate Set-CIPPVacationGroupMembership.ps1 at $FunctionPath" }

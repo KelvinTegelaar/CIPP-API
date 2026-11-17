@@ -14,7 +14,7 @@ function Invoke-ListPushSubscriptions {
 
     try {
         $Table = Get-CIPPTable -tablename 'PushSubscriptions'
-        $Devices = foreach ($Row in (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$Username'")) {
+        $Devices = foreach ($Row in (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Username)'")) {
             [pscustomobject]@{
                 RowKey     = $Row.RowKey
                 DeviceName = $Row.DeviceName

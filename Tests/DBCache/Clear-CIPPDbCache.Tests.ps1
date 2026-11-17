@@ -1,6 +1,7 @@
 # Pester tests for Clear-CIPPDbCache and Remove-CIPPDbItem.
 
 BeforeAll {
+    . (Join-Path $PSScriptRoot '../../Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
 
     function Get-CippTable { param($tablename) @{ TableName = $tablename } }

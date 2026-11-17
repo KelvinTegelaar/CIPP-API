@@ -68,7 +68,7 @@ function Remove-CIPPDbItem {
             }
         }
 
-        $Filter = "PartitionKey eq '$TenantFilter' and RowKey eq '$RowKey'"
+        $Filter = "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TenantFilter)' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $RowKey)'"
         $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if ($Entity) {
@@ -85,7 +85,7 @@ function Remove-CIPPDbItem {
 
             try {
                 $CountRowKey = "$Type-Count"
-                $CountFilter = "PartitionKey eq '$TenantFilter' and RowKey eq '$CountRowKey'"
+                $CountFilter = "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TenantFilter)' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $CountRowKey)'"
                 $CountEntity = Get-CIPPAzDataTableEntity @Table -Filter $CountFilter
 
                 if ($CountEntity -and $CountEntity.DataCount -gt 0) {

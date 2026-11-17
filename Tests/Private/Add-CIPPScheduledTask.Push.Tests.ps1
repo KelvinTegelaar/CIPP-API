@@ -3,6 +3,7 @@
 # creation is refused with a pointer to Preferences. Other channels and enrolled users pass.
 
 BeforeAll {
+    . (Join-Path $PSScriptRoot '../../Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     # Outside a request, as background callers run.
     function Get-CippRequestAllowedPermissions { }
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))

@@ -23,14 +23,14 @@ function Push-CIPPTemplateToRepo {
     )
 
     $TemplateTable = Get-CIPPTable -TableName templates
-    $TemplateEntity = Get-CIPPAzDataTableEntity @TemplateTable -Filter "RowKey eq '$($GUID)' or OriginalEntityId eq '$($GUID)'" | Select-Object -ExcludeProperty ETag, Timestamp
+    $TemplateEntity = Get-CIPPAzDataTableEntity @TemplateTable -Filter ("RowKey eq '{0}' or OriginalEntityId eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $GUID)) | Select-Object -ExcludeProperty ETag, Timestamp
     if (-not $TemplateEntity) {
         throw [System.Management.Automation.ItemNotFoundException]::new("Template '$($GUID)' not found")
     }
 
     if (-not $Branch) {
         $RepoTable = Get-CIPPTable -TableName CommunityRepos
-        $RepoEntity = Get-CIPPAzDataTableEntity @RepoTable -Filter "PartitionKey eq 'CommunityRepos' and FullName eq '$($FullName)'"
+        $RepoEntity = Get-CIPPAzDataTableEntity @RepoTable -Filter "PartitionKey eq 'CommunityRepos' and FullName eq '$(ConvertTo-CIPPODataFilterValue -Value $FullName)'"
         $Branch = $RepoEntity.UploadBranch ?? $RepoEntity.DefaultBranch
     }
 

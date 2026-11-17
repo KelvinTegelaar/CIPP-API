@@ -18,6 +18,8 @@ BeforeAll {
     function New-GraphBulkRequest { param($Requests, $tenantid, $NoAuthCheck, $AsApp) }
     function Set-CIPPGDAPAutoExtend { param($RelationShipid, $PartnerTenantId) }
 
+    function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Select-CippAllowedTenantData.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Test-IsGuid.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Test-CIPPGDAPRelationshipId.ps1')
     foreach ($Name in 'Invoke-ListGDAPRelationships', 'Invoke-ListGDAPAccessAssignments', 'Invoke-ExecGDAPAccessAssignment', 'Invoke-ExecDeleteGDAPRelationship', 'Invoke-ExecGDAPRemoveGArole', 'Invoke-ExecAutoExtendGDAP') {
@@ -86,5 +88,26 @@ Describe 'GDAP endpoints refuse a malformed relationship id' {
         $Request = [pscustomobject]@{ Params = @{ CIPPEndpoint = 'ExecAutoExtendGDAP' }; Headers = @{}; Query = [pscustomobject]@{}; Body = [pscustomobject]@{ ID = $script:GoodId } }
         (Invoke-ExecAutoExtendGDAP -Request $Request -TriggerMetadata $null).StatusCode | Should -Be 200
         Should -Invoke Set-CIPPGDAPAutoExtend -Times 1 -Exactly
+    }
+}
+
+Describe 'ListGDAPRelationships tenant scope' {
+    BeforeEach {
+        Mock Get-CIPPPartnerTenantList { [pscustomobject]@{ partnerTenantId = 'partner-id'; displayName = 'Partner'; IsPrimary = $true } }
+        Mock New-GraphGetRequest {
+            [pscustomobject]@{ id = 'rel-a'; customer = [pscustomobject]@{ tenantId = 'customer-a' } }
+            [pscustomobject]@{ id = 'rel-b'; customer = [pscustomobject]@{ tenantId = 'customer-b' } }
+        }
+        $script:Request = [pscustomobject]@{ Params = @{ CIPPEndpoint = 'ListGDAPRelationships' }; Headers = @{}; Query = [pscustomobject]@{}; Body = [pscustomobject]@{} }
+    }
+    AfterEach { $script:CippAllowedTenantsStorage = $null }
+
+    It 'returns every relationship to an unrestricted caller' {
+        @((Invoke-ListGDAPRelationships -Request $script:Request -TriggerMetadata $null).Body.Results.id) | Should -Be @('rel-a', 'rel-b')
+    }
+
+    It 'returns only the customers a tenant-scoped caller is allowed' {
+        $script:CippAllowedTenantsStorage = [pscustomobject]@{ Value = @('customer-a') }
+        @((Invoke-ListGDAPRelationships -Request $script:Request -TriggerMetadata $null).Body.Results.id) | Should -Be @('rel-a')
     }
 }

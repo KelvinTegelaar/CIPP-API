@@ -48,7 +48,7 @@ function Push-ExecGenerateReportBuilderReport {
             # setup and name are read fresh on every run, so edits made to the template after the
             # schedule was created are picked up without recreating the schedule.
             $TemplateTable = Get-CippTable -tablename 'templates'
-            $Template = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'ReportBuilderTemplate' and RowKey eq '$($TemplateGUID)'"
+            $Template = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'ReportBuilderTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TemplateGUID)'"
             if (-not $Template -or -not $Template.JSON) {
                 throw "Report template $TemplateGUID was not found. It may have been deleted; recreate the schedule from a saved template."
             }

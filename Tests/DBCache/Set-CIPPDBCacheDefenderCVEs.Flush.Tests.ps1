@@ -8,6 +8,7 @@
 # count equal to the final chunk. These tests fail if anyone reintroduces a per-chunk flush.
 
 BeforeAll {
+    . (Join-Path $PSScriptRoot '../../Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $CollectorPath = Join-Path $RepoRoot 'Modules/CIPPDB/Public/DBCache/Set-CIPPDBCacheDefenderCVEs.ps1'
     $DbItemPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Add-CIPPDbItem.ps1'

@@ -266,7 +266,7 @@ function Invoke-ExecLicensePricing {
                 Write-LogMessage -API $APIName -headers $Headers -message $Result -Sev 'Info'
             }
             'RemovePrice' {
-                $Filter = "PartitionKey eq 'Price' and RowKey eq '{0}'" -f $RowKey
+                $Filter = "PartitionKey eq 'Price' and RowKey eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value $RowKey)
                 $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
                 if ($Entity) {
                     Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entity

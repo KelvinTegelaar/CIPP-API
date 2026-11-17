@@ -15,7 +15,7 @@ function Push-ExecAppApprovalTemplate {
 
         # Get the template data to determine if it's a Gallery Template or Enterprise App
         $Table = Get-CIPPTable -TableName 'templates'
-        $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$TemplateId'"
+        $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TemplateId)'"
 
         if (!$Template) {
             Write-LogMessage -message "Template $TemplateId not found" -tenant $Item.Tenant -API 'Add Multitenant App' -sev Error

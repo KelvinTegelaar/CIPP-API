@@ -124,6 +124,15 @@ function Get-CIPPSchedulerBlockedCommands {
         'Get-CIPPAzStorageQueueAnalysis'
         'Clear-CIPPAzStorageQueue'
 
+        # Reporting-cache helpers - free table, partition and row key parameters reach other tenants and tables
+        'Add-CIPPDbItem'
+        'Get-CIPPDbItem'
+        'Get-CIPPDbItemPage'
+        'Update-CIPPDbItem'
+        'Remove-CIPPDbItem'
+        'Clear-CIPPDbCache'
+        'Push-CIPPBackupReplication'
+
         # Infrastructure control - denial of service
         'Request-CIPPRestart'
 

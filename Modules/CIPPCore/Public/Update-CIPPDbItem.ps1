@@ -53,7 +53,7 @@ function Update-CIPPDbItem {
         $RowKey = "$Type-$ItemId" -replace '[/\\#?]', '_' -replace '[\u0000-\u001F\u007F-\u009F]', ''
 
         # Get existing entity
-        $Filter = "PartitionKey eq '$TenantFilter' and RowKey eq '$RowKey'"
+        $Filter = "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TenantFilter)' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $RowKey)'"
         $ExistingEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
         if (-not $ExistingEntity) {

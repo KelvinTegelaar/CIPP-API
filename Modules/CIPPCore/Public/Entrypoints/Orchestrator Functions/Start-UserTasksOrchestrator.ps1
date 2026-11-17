@@ -18,7 +18,7 @@ function Start-UserTasksOrchestrator {
     $4HoursAgo = (Get-Date).AddHours(-4).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     $1HourAgo = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     if ($TaskId) {
-        $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$TaskId'"
+        $Filter = "PartitionKey eq 'ScheduledTask' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TaskId)'"
     } else {
         # Pending = orchestrator claimed but executor not yet started, Running = actively executing
         # Pick up: Planned, Failed-Planned, stuck Pending (>1hr - orphaned claim), or stuck Running/Processing (>4hr for large AllTenants tasks)

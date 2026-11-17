@@ -48,6 +48,8 @@ function Invoke-ListGDAPRelationships {
                 }
             }
         }
+        # A tenant-scoped caller only sees relationships with the customers its roles cover.
+        $Results = foreach ($Entry in @(@($Results).ForEach({ [pscustomobject]@{ Tenant = [string]$_.customer.tenantId; Row = $_ } }) | Select-CippAllowedTenantData)) { $Entry.Row }
         if ($Id -and (@($Results) | Measure-Object).Count -eq 0) {
             throw "GDAP relationship $Id was not found under any configured partner tenant."
         }

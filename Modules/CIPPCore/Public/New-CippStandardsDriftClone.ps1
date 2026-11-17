@@ -6,7 +6,7 @@ function New-CippStandardsDriftClone {
     )
 
     $Table = Get-CippTable -tablename 'templates'
-    $Filter = "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$TemplateId'"
+    $Filter = "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $TemplateId)'"
     $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     $data = $Entity.JSON | ConvertFrom-Json
     $data.excludedTenants = @() #blank excluded Tenants

@@ -19,7 +19,7 @@ function Invoke-ListSnoozedAlerts {
 
         # Build filter based on provided parameters
         if (-not [string]::IsNullOrWhiteSpace($CmdletName)) {
-            $Filter = "PartitionKey eq '$($CmdletName)'"
+            $Filter = "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $CmdletName)'"
             $SnoozeRecords = Get-CIPPAzDataTableEntity @SnoozeTable -Filter $Filter
         } else {
             $SnoozeRecords = Get-CIPPAzDataTableEntity @SnoozeTable
