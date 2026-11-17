@@ -124,6 +124,7 @@ function Get-CIPPTextReplacement {
         '%tenantid%',
         '%tenantfilter%',
         '%initialdomain%',
+        '%initialdomainprefix%',
         '%tenantname%',
         '%partnertenantid%',
         '%samappid%',
@@ -226,6 +227,7 @@ function Get-CIPPTextReplacement {
         '%tenantfilter%'    = $Tenant.defaultDomainName
         '%defaultdomain%'   = $Tenant.defaultDomainName
         '%initialdomain%'   = $Tenant.initialDomainName
+        '%initialdomainprefix%' = ($Tenant.initialDomainName -split '\.')[0]
         '%tenantname%'      = $Tenant.displayName
         # Partner specific replacements
         '%partnertenantid%' = $env:TenantID

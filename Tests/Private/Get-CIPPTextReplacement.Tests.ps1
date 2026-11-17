@@ -304,6 +304,11 @@ Describe 'Get-CIPPTextReplacement' {
                 Should -Be 'Welcome to Contoso Ltd (11111111-1111-1111-1111-111111111111)'
         }
 
+        It 'resolves the initial domain prefix without its onmicrosoft suffix' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text 'mail+%initialdomainprefix%@example.com (%initialdomain%)' |
+                Should -Be 'mail+contoso@example.com (contoso.onmicrosoft.com)'
+        }
+
         It 'returns non-string input untouched' {
             $Input = @{ a = 1 }
             Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text $Input | Should -Be $Input

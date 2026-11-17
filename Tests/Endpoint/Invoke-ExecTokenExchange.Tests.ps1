@@ -58,7 +58,7 @@ BeforeAll {
 Describe 'Invoke-ExecTokenExchange certificate assertion audience' {
     BeforeEach {
         $script:SavedEnv = @{}
-        foreach ($Name in 'CertificateAuthMode', 'ApplicationSecret', 'TenantID', 'AzureWebJobsStorage', 'NonLocalHostAzurite') {
+        foreach ($Name in 'CertificateAuthMode', 'ApplicationSecret', 'TenantID', 'AzureWebJobsStorage', 'NonLocalHostAzurite', 'ApplicationID') {
             $script:SavedEnv[$Name] = [Environment]::GetEnvironmentVariable($Name)
         }
         # Partner tenant GUID - the regression was using this as aud instead of tokenUrl.
@@ -67,6 +67,7 @@ Describe 'Invoke-ExecTokenExchange certificate assertion audience' {
         $env:ApplicationSecret = 'AppSecret'
         Remove-Item env:AzureWebJobsStorage -ErrorAction SilentlyContinue
         Remove-Item env:NonLocalHostAzurite -ErrorAction SilentlyContinue
+        Remove-Item env:ApplicationID -ErrorAction SilentlyContinue
 
         Mock Write-LogMessage {}
         Mock Get-CippKeyVaultName { 'test-kv' }

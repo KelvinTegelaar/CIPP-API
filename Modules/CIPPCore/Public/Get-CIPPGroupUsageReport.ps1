@@ -102,28 +102,7 @@ function Get-CIPPGroupUsageReport {
     }
 
     # Intune — every cached family stores its Graph assignments verbatim
-    $IntuneCacheTypes = [ordered]@{
-        IntuneDeviceConfigurations               = 'Intune Configuration Profile'
-        IntuneConfigurationPolicies              = 'Intune Settings Catalog Policy'
-        IntuneDeviceCompliancePolicies           = 'Intune Compliance Policy'
-        IntuneGroupPolicyConfigurations          = 'Intune Administrative Template'
-        IntuneMobileAppConfigurations            = 'Intune App Configuration Policy'
-        IntuneWindowsDriverUpdateProfiles        = 'Intune Driver Update Profile'
-        IntuneWindowsFeatureUpdateProfiles       = 'Intune Feature Update Profile'
-        IntuneWindowsQualityUpdatePolicies       = 'Intune Quality Update Policy'
-        IntuneWindowsQualityUpdateProfiles       = 'Intune Quality Update Profile'
-        IntuneHardwareConfigurations             = 'Intune Hardware Configuration'
-        IntuneIntents                            = 'Intune Endpoint Security Policy'
-        IntuneAppProtectionPolicies              = 'Intune App Protection Policy'
-        IntuneAppProtectionManagedAppPolicies    = 'Intune App Protection Policy'
-        IntuneApplications                       = 'Intune Application'
-        IntuneWindowsScripts                     = 'Intune Platform Script'
-        IntuneMacOSScripts                       = 'Intune Platform Script'
-        IntuneLinuxScripts                       = 'Intune Platform Script'
-        IntuneRemediationScripts                 = 'Intune Remediation Script'
-        IntuneWindowsAutopilotDeploymentProfiles = 'Autopilot Deployment Profile'
-        IntuneDeviceEnrollmentConfigurations     = 'Intune Enrollment Configuration'
-    }
+    $IntuneCacheTypes = Get-CIPPIntuneAssignmentSources
     foreach ($CacheType in $IntuneCacheTypes.Keys) {
         foreach ($Policy in (& $ReadCache $CacheType)) {
             $PolicyName = $Policy.displayName ?? $Policy.name

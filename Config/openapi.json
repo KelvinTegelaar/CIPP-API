@@ -60023,6 +60023,87 @@
         "x-cipp-role": "Endpoint.MEM.Read"
       }
     },
+    "/api/ListIntuneAssignments": {
+      "get": {
+        "summary": "Lists the Intune assignments that apply to one user, group or device.",
+        "operationId": "ListIntuneAssignments",
+        "tags": [
+          "Endpoint > MEM"
+        ],
+        "description": "Shows every Intune policy, app, script and enrollment profile assigned to a user, group or Intune device, and\nwhether it applies, is excluded or depends on an assignment filter. Policies come from the Intune reporting\ncache; group memberships are read live so nested and dynamic groups count.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "The user's id or UPN, the group's id, or the Intune managed device id",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeNested",
+            "in": "query",
+            "description": "Group lookups only: also include assignments to the groups this group is nested in",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "What to look up: user, group or device",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "device",
+                "group",
+                "user"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.MEM.Read"
+      }
+    },
     "/api/ListIntuneDeploymentStatus": {
       "get": {
         "summary": "ListIntuneDeploymentStatus",

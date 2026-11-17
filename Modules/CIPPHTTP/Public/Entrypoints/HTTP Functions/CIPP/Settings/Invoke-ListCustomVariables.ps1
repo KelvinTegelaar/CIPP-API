@@ -63,6 +63,13 @@ function Invoke-ListCustomVariables {
                 Category    = 'tenant'
             },
             @{
+                Name        = 'initialdomainprefix'
+                Variable    = '%initialdomainprefix%'
+                Description = 'The tenant initial domain name without its onmicrosoft suffix'
+                Type        = 'reserved'
+                Category    = 'tenant'
+            },
+            @{
                 Name        = 'globaladminsid'
                 Variable    = '%globaladminsid%'
                 Description = 'The tenant Global Administrator role SID, from the cached directory roles'

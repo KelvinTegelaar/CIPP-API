@@ -22,6 +22,7 @@ BeforeAll {
     . $FunctionPath
 
     $script:CurrentAppId = '11111111-1111-1111-1111-111111111111'
+    $script:SavedAppId = $env:ApplicationID
     $env:ApplicationID = $script:CurrentAppId
 
     $script:Item = [pscustomobject]@{
@@ -329,4 +330,8 @@ Describe 'Push-UpdatePermissionsQueue CPV consent gate' {
             $script:WrittenRow.LastError | Should -Match 'AADSTS65001'
         }
     }
+}
+
+AfterAll {
+    $env:ApplicationID = $script:SavedAppId
 }

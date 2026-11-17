@@ -86,11 +86,12 @@ function Get-CIPPIntunePolicyListDefinitions {
             FetchDeviceStatuses = $true
         }
         [PSCustomObject]@{
-            Id             = 'Intents'
-            CacheType      = 'IntuneIntents'
-            GraphUri       = '/deviceManagement/intents?$top=1000'
-            CacheUri       = '/deviceManagement/intents?$top=1000'
-            PolicyTypeName = 'Endpoint Security'
+            Id               = 'Intents'
+            CacheType        = 'IntuneIntents'
+            GraphUri         = '/deviceManagement/intents?$top=1000'
+            CacheUri         = '/deviceManagement/intents?$top=1000'
+            PolicyTypeName   = 'Endpoint Security'
+            FetchAssignments = $true
         }
         [PSCustomObject]@{
             Id               = 'ManagedAppPolicies'
