@@ -38,7 +38,7 @@ function Set-CIPPSharePointLibraryCopyOperation {
         return
     }
 
-    $ChunkRows = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeTenant' and startswith(RowKey, '$SafeOp`_')")
+    $ChunkRows = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeTenant' and RowKey ge '$SafeOp`_' and RowKey lt '$SafeOp``'")
     $Existing = @($PrimaryExisting) + @($ChunkRows) | Where-Object { $_ }
 
     foreach ($Row in $Existing) {

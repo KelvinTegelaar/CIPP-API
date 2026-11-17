@@ -70,7 +70,8 @@ function Remove-CIPPLicenseAfterOneDriveCopy {
     }
 
     try {
-        $Status = Update-CIPPOneDriveCopyToUserStatus -TenantFilter $TenantFilter -OperationId $OperationId
+        # 25 minutes, so the 30-minute recurring check never lands just inside the window.
+        $Status = Update-CIPPOneDriveCopyToUserStatus -TenantFilter $TenantFilter -OperationId $OperationId -MinimumIntervalSeconds 1500
     } catch [System.Management.Automation.ItemNotFoundException] {
         $Message = & $KeptMessage "OneDrive copy $OperationId could not be found."
         if ($Scheduled) { return & $StopChecking $Message 'Error' }

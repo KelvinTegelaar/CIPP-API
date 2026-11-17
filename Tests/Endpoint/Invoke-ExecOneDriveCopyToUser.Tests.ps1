@@ -2,6 +2,7 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     $UsersDir = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Identity/Administration/Users'
     $script:ExecPath = Join-Path $UsersDir 'Invoke-ExecOneDriveCopyToUser.ps1'
     $script:ListPath = Join-Path $UsersDir 'Invoke-ListOneDriveCopyToUser.ps1'
@@ -17,8 +18,11 @@ BeforeAll {
         $Accelerators::Add('HttpStatusCode', [System.Net.HttpStatusCode])
     }
 
-    function Start-CIPPOneDriveCopyToUser { param($TenantFilter, $Leaver, $Recipients, $IncludeVersionHistory, $StartedBy, $OperationId, $Headers, $APIName, [switch]$WaitForSignInBlock) }
+    function Start-CIPPOneDriveCopyToUser { param($TenantFilter, $Leaver, $Recipients, $Library, $IncludeVersionHistory, $StartedBy, $OperationId, $Headers, $APIName, [switch]$WaitForSignInBlock) }
     function Update-CIPPOneDriveCopyToUserStatus { param($TenantFilter, $OperationId) }
+    function Get-CIPPTable { param($TableName) @{ TableName = $TableName } }
+    function Get-CIPPAzDataTableEntity { param($Filter, $TableName) }
+    function Get-CIPPOneDriveCopyTenantKey { param($TenantFilter) 'c0ffee00-1111-2222-3333-444444444444' }
     function Write-LogMessage { param($Headers, $API, $tenant, $message, $sev, $LogData) }
     function Get-CippException { param($Exception) [PSCustomObject]@{ NormalizedError = $Exception.Exception.Message ?? $Exception.Message } }
 
@@ -91,6 +95,35 @@ Describe 'Invoke-ExecOneDriveCopyToUser' {
         }
     }
 
+    It 'gives the UI one result line, as a warning when a recipient did not start' {
+        Mock Start-CIPPOneDriveCopyToUser {
+            [pscustomobject]@{ OperationId = 'op-1'; Message = 'Started copying.'; Warnings = @(); Recipients = @(
+                    [pscustomobject]@{ UserPrincipalName = 'bob@contoso.com'; State = 'Queued' }
+                    [pscustomobject]@{ UserPrincipalName = 'carol@contoso.com'; State = 'Failed'; Message = 'Copy failed to start: denied' }
+                ) }
+        }
+        $Results = (Invoke-ExecOneDriveCopyToUser -Request (New-ExecRequest @{ tenantFilter = 'contoso.com'; leaver = 'jane@contoso.com'; recipients = @('bob@contoso.com', 'carol@contoso.com') })).Body.Results
+        $Results.resultText | Should -Be 'Started copying. carol@contoso.com: Copy failed to start: denied'
+        $Results.state | Should -Be 'warning'
+        $Results.OperationId | Should -Be 'op-1'
+    }
+
+    It 'reports a clean start as success' {
+        Mock Start-CIPPOneDriveCopyToUser { [pscustomobject]@{ OperationId = 'op-1'; Message = 'Started copying.'; Recipients = @([pscustomobject]@{ UserPrincipalName = 'bob@contoso.com'; State = 'Queued' }) } }
+        (Invoke-ExecOneDriveCopyToUser -Request (New-ExecRequest @{ tenantFilter = 'contoso.com'; leaver = 'jane@contoso.com'; recipients = @('bob@contoso.com') })).Body.Results.state | Should -Be 'success'
+    }
+
+    It 'accepts a document library instead of recipients' {
+        $Response = Invoke-ExecOneDriveCopyToUser -Request (New-ExecRequest @{
+                tenantFilter = 'contoso.com'; leaver = 'jane@contoso.com'
+                library      = [pscustomobject]@{ site = [pscustomobject]@{ value = 'https://contoso.sharepoint.com/sites/HR' }; library = [pscustomobject]@{ label = 'Leavers'; value = 'list-1' }; folder = 'Leavers' }
+            })
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::Accepted)
+        Should -Invoke Start-CIPPOneDriveCopyToUser -Times 1 -Exactly -ParameterFilter {
+            @($Recipients).Count -eq 0 -and $Library.site -eq 'https://contoso.sharepoint.com/sites/HR' -and $Library.library -eq 'list-1' -and $Library.folder -eq 'Leavers'
+        }
+    }
+
     It 'never lets the caller choose the operation id (it could reuse an id the offboarding licence step waits for)' {
         Invoke-ExecOneDriveCopyToUser -Request (New-ExecRequest @{ tenantFilter = 'contoso.com'; leaver = 'jane@contoso.com'; recipients = 'bob@contoso.com'; OperationId = '11111111-2222-3333-4444-555555555555' }) | Out-Null
         Should -Invoke Start-CIPPOneDriveCopyToUser -Times 1 -Exactly -ParameterFilter { [string]::IsNullOrEmpty($OperationId) }
@@ -131,34 +164,57 @@ Describe 'Invoke-ExecOneDriveCopyToUser' {
 }
 
 Describe 'Invoke-ListOneDriveCopyToUser' {
+    BeforeAll {
+        function New-ListRequest($Query) { [pscustomobject]@{ Params = @{ CIPPEndpoint = 'ListOneDriveCopyToUser' }; Headers = @{}; Query = $Query } }
+    }
     BeforeEach {
         Mock Update-CIPPOneDriveCopyToUserStatus { [pscustomobject]@{ OperationId = $OperationId; State = 'InProgress'; Recipients = @() } }
+        Mock Get-CIPPAzDataTableEntity {}
         Mock Write-LogMessage {}
     }
 
-    It 'returns the status for the operation in the tenant' {
-        $Response = Invoke-ListOneDriveCopyToUser -Request ([pscustomobject]@{
-                Params  = @{ CIPPEndpoint = 'ListOneDriveCopyToUser' }
-                Headers = @{}
-                Query   = @{ tenantFilter = 'contoso.com'; OperationId = 'op-1' }
-            })
+    It 'returns the status of one copy as a one-row list' {
+        $Response = Invoke-ListOneDriveCopyToUser -Request (New-ListRequest @{ tenantFilter = 'contoso.com'; OperationId = 'op-1' })
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
-        $Response.Body.Results.State | Should -Be 'InProgress'
+        @($Response.Body).Count | Should -Be 1
+        $Response.Body[0].State | Should -Be 'InProgress'
         Should -Invoke Update-CIPPOneDriveCopyToUserStatus -ParameterFilter { $TenantFilter -eq 'contoso.com' -and $OperationId -eq 'op-1' }
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 0 -Exactly
     }
 
-    It 'returns BadRequest when <Missing> is missing' -ForEach @(
-        @{ Missing = 'tenantFilter'; Query = @{ OperationId = 'op-1' } }
-        @{ Missing = 'OperationId'; Query = @{ tenantFilter = 'contoso.com' } }
-    ) {
-        $Response = Invoke-ListOneDriveCopyToUser -Request ([pscustomobject]@{ Params = @{ CIPPEndpoint = 'ListOneDriveCopyToUser' }; Headers = @{}; Query = $Query })
+    It 'lists every copy in the tenant from stored state, without polling SharePoint' {
+        Mock Get-CIPPAzDataTableEntity {
+            [pscustomobject]@{
+                RowKey = 'op-1'; Kind = 'Operation'; LeaverUPN = 'jane@contoso.com'; State = 'Completed'; StartedBy = 'tech@partner.com'
+                StartedUtc = '2026-11-17T00:00:00Z'; LastCheckedUnix = 1763337600; SourceFileCount = 6; SourceBytes = 60
+                RecipientSummary = '[{"UserPrincipalName":"bob@contoso.com","State":"Completed","ItemsCopied":6},{"UserPrincipalName":"carol@contoso.com","State":"Completed","ItemsCopied":6}]'
+            }
+            [pscustomobject]@{ RowKey = 'op-2'; Kind = 'Operation'; LeaverUPN = 'pat@contoso.com' }
+        }
+        $Response = Invoke-ListOneDriveCopyToUser -Request (New-ListRequest @{ tenantFilter = 'contoso.com' })
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        $Rows = @($Response.Body)
+        $Rows.Count | Should -Be 2
+        $Rows[0].OperationId | Should -Be 'op-1'
+        $Rows[0].Destinations | Should -Be 'bob@contoso.com, carol@contoso.com'
+        $Rows[0].Recipients[1].ItemsCopied | Should -Be 6
+        $Rows[0].LastCheckedUtc | Should -Be '2025-11-17T00:00:00.0000000Z'
+        $Rows[1].State | Should -Be 'Queued'
+        @($Rows[1].Recipients).Count | Should -Be 0
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Filter -eq "PartitionKey eq 'c0ffee00-1111-2222-3333-444444444444' and Kind eq 'Operation'" }
+        Should -Invoke Update-CIPPOneDriveCopyToUserStatus -Times 0 -Exactly
+    }
+
+    It 'returns BadRequest when tenantFilter is missing' {
+        $Response = Invoke-ListOneDriveCopyToUser -Request (New-ListRequest @{ OperationId = 'op-1' })
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
         Should -Invoke Update-CIPPOneDriveCopyToUserStatus -Times 0 -Exactly
     }
 
     It 'returns NotFound for an unknown operation' {
         Mock Update-CIPPOneDriveCopyToUserStatus { throw [System.Management.Automation.ItemNotFoundException]::new('OneDrive copy operation not found.') }
-        $Response = Invoke-ListOneDriveCopyToUser -Request ([pscustomobject]@{ Params = @{ CIPPEndpoint = 'ListOneDriveCopyToUser' }; Headers = @{}; Query = @{ tenantFilter = 'contoso.com'; OperationId = 'op-1' } })
+        $Response = Invoke-ListOneDriveCopyToUser -Request (New-ListRequest @{ tenantFilter = 'contoso.com'; OperationId = 'op-1' })
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::NotFound)
+        $Response.Body.Results | Should -BeLike 'Failed to retrieve OneDrive copies:*'
     }
 }

@@ -3,6 +3,7 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     class HttpResponseContext { [object]$StatusCode; [object]$Body }
     $Accelerators = [psobject].Assembly.GetType('System.Management.Automation.TypeAccelerators')
     if (-not $Accelerators::Get.ContainsKey('HttpStatusCode')) { $Accelerators::Add('HttpStatusCode', [System.Net.HttpStatusCode]) }

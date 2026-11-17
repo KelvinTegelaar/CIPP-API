@@ -103,7 +103,7 @@ Describe 'Invoke-CIPPOffboardingJob OneDrive copy' {
         $Body = @{ tenantFilter = 'contoso.com'; user = @(@{ value = 'pat@contoso.com' }); OneDriveCopyTo = @(@{ value = 'bob-id' }); RemoveLicenses = $true } + $Extra
         $Result = Test-CIPPOffboardingRequest -Body ([pscustomobject]$Body)
         $Result.IsValid | Should -BeFalse
-        $Result.Errors | Should -BeLike "*'OneDriveCopyTo' needs 'DisableSignIn'*"
+        $Result.Errors | Should -BeLike "*OneDriveCopyLibrary') needs 'DisableSignIn'*"
     }
 
     It 'the validator refuses the copy together with Delete user' {
@@ -111,7 +111,7 @@ Describe 'Invoke-CIPPOffboardingJob OneDrive copy' {
         $Result = Test-CIPPOffboardingRequest -Body ([pscustomobject]@{ tenantFilter = 'contoso.com'; user = @(@{ value = 'pat@contoso.com' }); OneDriveCopyTo = @(@{ value = 'bob-id' }); DisableSignIn = $true; DeleteUser = $true })
         $Result.IsValid | Should -BeFalse
         @($Result.Errors).Count | Should -Be 1
-        $Result.Errors | Should -BeLike "*'OneDriveCopyTo' cannot be combined with 'DeleteUser'*"
+        $Result.Errors | Should -BeLike "*OneDriveCopyLibrary') cannot be combined with 'DeleteUser'*"
     }
 
     It 'the validator still accepts Delete user without the copy' {

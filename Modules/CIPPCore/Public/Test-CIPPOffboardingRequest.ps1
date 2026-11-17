@@ -73,7 +73,8 @@ function Test-CIPPOffboardingRequest {
     )
     $CollectionActions = @('AccessNoAutomap', 'AccessAutomap', 'AccessSendAs', 'AccessSendOnBehalf', 'OnedriveAccess', 'OneDriveCopyTo')
 
-    $HasAction = $false
+    $OneDriveCopySelected = @($Body.OneDriveCopyTo | Where-Object { $null -ne $_ }).Count -gt 0 -or -not [string]::IsNullOrWhiteSpace([string]($Body.OneDriveCopyLibrary.library.value ?? $Body.OneDriveCopyLibrary.library))
+    $HasAction = $OneDriveCopySelected
     foreach ($Key in $BooleanActions) {
         if ($Body.$Key -eq $true) { $HasAction = $true; break }
     }
@@ -92,14 +93,13 @@ function Test-CIPPOffboardingRequest {
         $Errors.Add('No offboarding actions were selected. Enable at least one action (e.g. RemoveLicenses, DisableSignIn, RevokeSessions) before submitting.')
     }
 
-    $OneDriveCopySelected = @($Body.OneDriveCopyTo | Where-Object { $null -ne $_ }).Count -gt 0
     # The OneDrive copy only starts for a blocked account, so it needs Disable sign in in the same run.
     if ($OneDriveCopySelected -and $Body.DisableSignIn -ne $true) {
-        $Errors.Add("'OneDriveCopyTo' needs 'DisableSignIn': the OneDrive is only copied once the user is blocked from signing in.")
+        $Errors.Add("A OneDrive copy ('OneDriveCopyTo' or 'OneDriveCopyLibrary') needs 'DisableSignIn': the OneDrive is only copied once the user is blocked from signing in.")
     }
     # Deleting the user skips every other step, the copy included, and starts the OneDrive's deletion.
     if ($OneDriveCopySelected -and $Body.DeleteUser -eq $true) {
-        $Errors.Add("'OneDriveCopyTo' cannot be combined with 'DeleteUser': deleting the user skips the copy and starts deleting their OneDrive. Copy the OneDrive first, then delete the user once the copy has completed.")
+        $Errors.Add("A OneDrive copy ('OneDriveCopyTo' or 'OneDriveCopyLibrary') cannot be combined with 'DeleteUser': deleting the user skips the copy and starts deleting their OneDrive. Copy the OneDrive first, then delete the user once the copy has completed.")
     }
 
     return [PSCustomObject]@{

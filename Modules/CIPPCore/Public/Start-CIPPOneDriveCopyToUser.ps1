@@ -18,10 +18,12 @@ function Start-CIPPOneDriveCopyToUser {
         [string]$Leaver,
 
         # UPNs or object ids of the users who receive the copy.
-        [Parameter(Mandatory = $true)]
-        [string[]]$Recipients,
+        [string[]]$Recipients = @(),
 
-        # Off by default: version history can use many times the space the quota check counts.
+        # A document library to copy into as well: site (URL), library (list id) and an optional folder in it.
+        $Library,
+
+        # Off by default: version history can use many times the space of the current versions.
         [bool]$IncludeVersionHistory = $false,
 
         [string]$StartedBy,
@@ -66,8 +68,11 @@ function Start-CIPPOneDriveCopyToUser {
 
     $RecipientIds = @($Recipients | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ } |
             Sort-Object -Unique)
-    if ($RecipientIds.Count -eq 0) {
-        throw [System.ArgumentException]::new('At least one recipient is required.')
+    $LibrarySiteUrl = [string]($Library.site.value ?? $Library.site)
+    $LibraryListId = [string]($Library.library.value ?? $Library.library)
+    $LibraryFolder = ([string]$Library.folder).Trim().Trim('/')
+    if ($RecipientIds.Count -eq 0 -and -not $LibraryListId) {
+        throw [System.ArgumentException]::new('At least one recipient or a document library is required.')
     }
     if ($RecipientIds.Count -gt $MaxRecipients) {
         throw [System.ArgumentException]::new("At most $MaxRecipients recipients can receive one copy.")
@@ -89,8 +94,9 @@ function Start-CIPPOneDriveCopyToUser {
         throw [System.ArgumentException]::new("Leaver $($Source.UserPrincipalName) can still sign in. Block sign-in for the account first, then start the copy.")
     }
 
-    $Children = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/drives/$($Source.DriveId)/root/children?`$select=id,name,size,folder,file,package&`$top=999" -tenantid $TenantFilter -asapp $true)
-    $RootItems = @($Children | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_.name) -and ($_.folder -or $_.file -or $_.package) })
+    $Children = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/drives/$($Source.DriveId)/root/children?`$select=id,name,size,folder,file,package,specialFolder&`$top=999" -tenantid $TenantFilter -asapp $true)
+    # Shortcuts only links other people's folders, so it is not the leaver's to copy.
+    $RootItems = @($Children | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_.name) -and ($_.folder -or $_.file -or $_.package) -and $_.specialFolder.name -ne 'shortcuts' })
     if ($RootItems.Count -eq 0) {
         throw [System.ArgumentException]::new("Leaver $($Source.UserPrincipalName)'s OneDrive has nothing to copy.")
     }
@@ -124,6 +130,26 @@ function Start-CIPPOneDriveCopyToUser {
     }
 
     $Warnings = [System.Collections.Generic.List[string]]::new()
+    # Free space each destination needs. With version history that is the library's StorageMetrics
+    # TotalSize (every version, not the recycle bin), which the delta file sizes do not include.
+    $RequiredBytes = $SourceBytes
+    if ($IncludeVersionHistory) {
+        $TotalSize = $null
+        if ($Source.ListId -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
+            try {
+                $SharePointInfo = Get-SharePointAdminLink -Public $false -tenantFilter $TenantFilter
+                $Metrics = New-GraphGetRequest -uri "$($Source.SiteUrl)/_api/web/lists(guid'$($Source.ListId)')/RootFolder?`$select=StorageMetrics&`$expand=StorageMetrics" -tenantid $TenantFilter -scope "$($SharePointInfo.SharePointUrl)/.default" -extraHeaders @{ Accept = 'application/json;odata=nometadata' } -UseCertificate -AsApp $true
+                $TotalSize = ConvertTo-SPOAdminListInt64 -Raw $Metrics.StorageMetrics.TotalSize
+            } catch {
+                Write-Information "OneDrive copy: could not read the storage metrics of $($Source.UserPrincipalName)'s OneDrive: $($_.Exception.Message)"
+            }
+        }
+        if ($null -ne $TotalSize) {
+            $RequiredBytes = [Math]::Max($SourceBytes, [int64]$TotalSize)
+        } else {
+            $Warnings.Add('The size of the version history could not be read, so free space was checked against current versions only.')
+        }
+    }
     $Oversized = @($RootItems | Where-Object { [int64]($_.size ?? 0) -gt $PerJobByteLimit })
     if ($Oversized.Count -gt 0) {
         $Warnings.Add("$($Oversized.Count) root item(s) are larger than 100 GB, SharePoint's limit for one copy job. Those items are likely to fail; split them into smaller folders and copy again.")
@@ -147,8 +173,8 @@ function Start-CIPPOneDriveCopyToUser {
             $Problems.Add("Recipient $($Target.UserPrincipalName)'s OneDrive is not in the same tenant as the leaver's.")
             continue
         }
-        if ($null -ne $Target.QuotaRemaining -and $Target.QuotaRemaining -lt $SourceBytes) {
-            $Problems.Add("Recipient $($Target.UserPrincipalName) does not have enough space: the copy needs $SourceBytes bytes and $($Target.QuotaRemaining) are free.")
+        if ($null -ne $Target.QuotaRemaining -and $Target.QuotaRemaining -lt $RequiredBytes) {
+            $Problems.Add("Recipient $($Target.UserPrincipalName) does not have enough space: the copy needs $RequiredBytes bytes and $($Target.QuotaRemaining) are free.")
             continue
         }
         if ($null -eq $Target.QuotaRemaining) {
@@ -156,16 +182,62 @@ function Start-CIPPOneDriveCopyToUser {
         }
         $Targets.Add($Target)
     }
+    if ($LibraryListId) {
+        $SiteUri = $null
+        $FolderSegments = @(if ($LibraryFolder) { $LibraryFolder -split '/' })
+        if (-not [System.Uri]::TryCreate($LibrarySiteUrl, [System.UriKind]::Absolute, [ref]$SiteUri) -or $SiteUri.Scheme -ne 'https') {
+            $Problems.Add("The document library's site '$LibrarySiteUrl' is not a SharePoint site URL.")
+        } elseif ($LibraryListId -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
+            $Problems.Add("'$LibraryListId' is not a document library id.")
+        } elseif ($FolderSegments.Where({ $_ -in @('', '.', '..') }, 'First').Count -gt 0) {
+            $Problems.Add("'$LibraryFolder' is not a valid folder path.")
+        } else {
+            $SitePath = $SiteUri.AbsolutePath.TrimEnd('/')
+            $SiteSegment = if ($SitePath) { "$($SiteUri.Host):$($SitePath):" } else { $SiteUri.Host }
+            $EscapedFolder = ($FolderSegments | ForEach-Object { [System.Uri]::EscapeDataString($_) }) -join '/'
+            $Drive = $null
+            $Parent = $null
+            try {
+                $Drive = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/sites/$SiteSegment/lists/$LibraryListId/drive?`$select=id,name,webUrl,quota" -tenantid $TenantFilter -asapp $true
+                $Parent = if ($EscapedFolder) { New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/drives/$($Drive.id)/root:/$EscapedFolder`?`$select=id,folder" -tenantid $TenantFilter -asapp $true }
+            } catch {
+                if ($_.Exception.Message -notmatch 'itemNotFound|ResourceNotFound|not found|could not be found|does not exist|404') { throw }
+            }
+            if (-not $Drive.id) {
+                $Problems.Add("The document library was not found on $LibrarySiteUrl.")
+            } elseif ($EscapedFolder -and -not $Parent.folder) {
+                $Problems.Add("The folder '$LibraryFolder' was not found in the document library $([System.Uri]::UnescapeDataString([string]$Drive.webUrl)).")
+            } else {
+                $DriveWebUrl = ([string]$Drive.webUrl).TrimEnd('/')
+                $Target = [PSCustomObject]@{
+                    Kind              = 'Library'
+                    UserId            = [string]$Drive.id
+                    UserPrincipalName = [System.Uri]::UnescapeDataString((@($DriveWebUrl -replace '^https://', '') + @(if ($EscapedFolder) { $EscapedFolder }) -join '/'))
+                    DriveId           = [string]$Drive.id
+                    DriveWebUrl       = $DriveWebUrl
+                    ParentPath        = $EscapedFolder
+                    QuotaRemaining    = if ($null -ne $Drive.quota.remaining) { [int64]$Drive.quota.remaining } else { $null }
+                }
+                if ($null -ne $Target.QuotaRemaining -and $Target.QuotaRemaining -lt $RequiredBytes) {
+                    $Problems.Add("The site holding $($Target.UserPrincipalName) does not have enough space: the copy needs $RequiredBytes bytes and $($Target.QuotaRemaining) are free.")
+                } else {
+                    if ($null -eq $Target.QuotaRemaining) { $Warnings.Add("Free space on the site holding $($Target.UserPrincipalName) could not be read, so it was not checked.") }
+                    $Targets.Add($Target)
+                }
+            }
+        }
+    }
     # Checked for every recipient before any folder is created, so a later clash leaves no empty folders behind.
     foreach ($Target in $Targets) {
         $Existing = $null
+        $ItemPath = (@(@($Target.ParentPath).Where({ $_ })) + [System.Uri]::EscapeDataString($FolderName)) -join '/'
         try {
-            $Existing = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/drives/$($Target.DriveId)/root:/$([System.Uri]::EscapeDataString($FolderName))?`$select=id,name,folder,file,package" -tenantid $TenantFilter -asapp $true
+            $Existing = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/drives/$($Target.DriveId)/root:/$ItemPath`?`$select=id,name,folder,file,package" -tenantid $TenantFilter -asapp $true
         } catch {
             if ($_.Exception.Message -notmatch 'itemNotFound|ResourceNotFound|not found|could not be found|does not exist|404') { throw }
         }
         if ($Existing.id -and -not $Existing.folder) {
-            $Problems.Add("Recipient $($Target.UserPrincipalName) already has a file named $FolderName at the root of their OneDrive. Rename it and try again.")
+            $Problems.Add("$($Target.UserPrincipalName) already has a file named $FolderName where the copy folder goes. Rename it and try again.")
         }
     }
     if ($Problems.Count -gt 0) {
@@ -177,18 +249,21 @@ function Start-CIPPOneDriveCopyToUser {
             "$($Source.DriveWebUrl)/$([System.Uri]::EscapeDataString([string]$_.name))"
         })
 
-    $FolderCreated = @{}
+    $Prepared = @{}
     foreach ($Target in $Targets) {
         $Folder = $null
         $Created = $false
-        $FolderPath = "https://graph.microsoft.com/v1.0/drives/$($Target.DriveId)/root:/$([System.Uri]::EscapeDataString($FolderName))"
+        $ParentPath = [string]$Target.ParentPath
+        $ItemPath = (@(@($ParentPath).Where({ $_ })) + [System.Uri]::EscapeDataString($FolderName)) -join '/'
+        $FolderPath = "https://graph.microsoft.com/v1.0/drives/$($Target.DriveId)/root:/$ItemPath"
+        $ChildrenUri = if ($ParentPath) { "https://graph.microsoft.com/v1.0/drives/$($Target.DriveId)/root:/$($ParentPath):/children" } else { "https://graph.microsoft.com/v1.0/drives/$($Target.DriveId)/root/children" }
         try {
             $Body = ConvertTo-Json -Compress -InputObject @{
                 name                                = $FolderName
                 folder                              = @{}
                 '@microsoft.graph.conflictBehavior' = 'fail'
             }
-            $Folder = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/drives/$($Target.DriveId)/root/children" -tenantid $TenantFilter -type POST -body $Body -AsApp $true
+            $Folder = New-GraphPOSTRequest -uri $ChildrenUri -tenantid $TenantFilter -type POST -body $Body -AsApp $true
             $Created = $true
         } catch {
             $CreateError = $_
@@ -199,24 +274,24 @@ function Start-CIPPOneDriveCopyToUser {
             throw "Could not create or find the folder $FolderName in $($Target.UserPrincipalName)'s OneDrive."
         }
         if (-not $Created -and -not $Folder.folder) {
-            throw [System.ArgumentException]::new("Recipient $($Target.UserPrincipalName) already has a file named $FolderName at the root of their OneDrive. Rename it and try again.")
+            throw [System.ArgumentException]::new("$($Target.UserPrincipalName) already has a file named $FolderName where the copy folder goes. Rename it and try again.")
         }
-        $FolderCreated[$Target.UserId] = $Created
+        $Prepared[$Target.UserId] = @{ Created = $Created; DestinationUri = "$($Target.DriveWebUrl)/$ItemPath" }
     }
 
-    if (-not $OperationId) { $OperationId = (New-Guid).Guid }
+    if (-not $OperationId) { $OperationId = [guid]::NewGuid().ToString() }
     $Expiry = ([DateTime]::UtcNow.AddDays(14)).ToString('o')
     $RecipientRecords = [System.Collections.Generic.List[object]]::new()
     $Index = 0
     foreach ($Target in $Targets) {
         $SubOperationId = "$OperationId-r$Index"
-        $DestinationUri = "$($Target.DriveWebUrl)/$([System.Uri]::EscapeDataString($FolderName))"
+        $DestinationUri = $Prepared[$Target.UserId].DestinationUri
         $Record = [ordered]@{
             Index             = $Index
             UserId            = $Target.UserId
             UserPrincipalName = $Target.UserPrincipalName
             FolderName        = $FolderName
-            FolderCreated     = [bool]$FolderCreated[$Target.UserId]
+            FolderCreated     = [bool]$Prepared[$Target.UserId].Created
             SubOperationId    = $SubOperationId
             JobCount          = 0
             StartError        = $null
@@ -252,7 +327,7 @@ function Start-CIPPOneDriveCopyToUser {
                 JobHandleCount    = $Jobs.Count
                 Expiry            = $Expiry
                 CopyJobInfos      = @($Jobs)
-                HandleStates      = (ConvertTo-Json -InputObject @($Jobs | ForEach-Object { [PSCustomObject]@{ Status = 'Queued'; IsComplete = $false } }) -Compress -Depth 4)
+                HandleStates      = [CIPP.CippJson]::ToJson(@($Jobs | ForEach-Object { [PSCustomObject]@{ Status = 'Queued'; IsComplete = $false } }), 4)
             }
         } catch {
             $Detail = (Get-CippException -Exception $_).NormalizedError
@@ -271,6 +346,9 @@ function Start-CIPPOneDriveCopyToUser {
 
     $StartedAt = [DateTimeOffset]::UtcNow
     $StartedUtc = $StartedAt.UtcDateTime.ToString('o')
+    $Summary = @($RecipientRecords | ForEach-Object {
+            [PSCustomObject]@{ UserPrincipalName = $_.UserPrincipalName; State = if ($_.StartError) { 'Failed' } else { 'Queued' }; Message = if ($_.StartError) { $_.StartError } else { 'Copy queued.' }; ItemsCopied = 0; BytesCopied = 0; JobsComplete = 0; JobsTotal = $_.JobCount }
+        })
     $Table = Get-CIPPTable -TableName $TableName
     Add-CIPPAzDataTableEntity @Table -Force -Entity @{
         PartitionKey          = $PartitionKey
@@ -284,10 +362,12 @@ function Start-CIPPOneDriveCopyToUser {
         RootItemCount         = $RootItems.Count
         SourceFileCount       = $SourceFileCount
         SourceBytes           = $SourceBytes
-        ExpectedBytes         = $SourceBytes
+        ExpectedBytes         = $RequiredBytes
         IncludeVersionHistory = $IncludeVersionHistory
         Expiry                = $Expiry
-        Recipients            = (ConvertTo-Json -InputObject @($RecipientRecords) -Compress -Depth 4)
+        Recipients            = [CIPP.CippJson]::ToJson(@($RecipientRecords), 4) ?? [string](ConvertTo-Json -InputObject @($RecipientRecords) -Compress -Depth 4)
+        State                 = 'Queued'
+        RecipientSummary      = [CIPP.CippJson]::ToJson($Summary, 3) ?? (ConvertTo-Json -InputObject $Summary -Compress -Depth 3)
     }
 
     $Names = ($RecipientRecords | ForEach-Object { $_.UserPrincipalName }) -join ', '
@@ -301,7 +381,7 @@ function Start-CIPPOneDriveCopyToUser {
         RootItemCount   = $RootItems.Count
         SourceFileCount = $SourceFileCount
         SourceBytes     = $SourceBytes
-        ExpectedBytes   = $SourceBytes
+        ExpectedBytes   = $RequiredBytes
         StartedBy       = [string]$StartedBy
         StartedUtc      = $StartedUtc
         Recipients      = @($RecipientRecords | ForEach-Object {
@@ -314,6 +394,6 @@ function Start-CIPPOneDriveCopyToUser {
                 }
             })
         Warnings        = @($Warnings)
-        Message         = 'OneDrive copy started. Poll ListOneDriveCopyToUser with the OperationId until State is Completed before removing licences.'
+        Message         = "Started copying $($Source.UserPrincipalName)'s OneDrive into a $FolderName folder for $Names. Follow it on the OneDrive Copies page (ListOneDriveCopyToUser) and remove licences only once it is Completed."
     }
 }

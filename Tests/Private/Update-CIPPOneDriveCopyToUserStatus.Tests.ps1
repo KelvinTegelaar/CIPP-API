@@ -3,6 +3,7 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Update-CIPPOneDriveCopyToUserStatus.ps1'
     if (-not (Test-Path $FunctionPath)) { throw "Could not locate $FunctionPath" }
 
@@ -527,6 +528,14 @@ Describe 'Update-CIPPOneDriveCopyToUserStatus' {
             $Recipient.Message | Should -BeLike '*Copied 99 bytes with version history, less than the 100 bytes*'
         }
 
+        It 'with version history, counts each copied version as a file without warning (seen live: 5 files, 3 versions of one, 7 created)' {
+            Set-Operation @((New-Recipient 0 'bob@contoso.com' $null 1)) -RootItemCount 3 -Files 5 -Bytes 10510 -VersionHistory $true
+            $script:Progress['0-0'] = New-Progress $true 9 -Files 7 -Bytes 18530
+            $Recipient = (Invoke-Status).Recipients[0]
+            $Recipient.State | Should -Be 'Completed'
+            $Recipient.Message | Should -Be 'Copy completed.'
+        }
+
         It 'does not compare totals while jobs are still running' {
             Set-Operation @((New-Recipient 0 'bob@contoso.com' $null 4)) -RootItemCount 7 -Files 7 -Bytes 2068394
             $script:Progress['0-0'] = New-Progress $true 10 -Files 2 -Bytes 29 -Expected 10
@@ -668,6 +677,34 @@ Describe 'Update-CIPPOneDriveCopyToUserStatus' {
             (Invoke-Status).Recipients[0].ItemsCopied | Should -Be 5
         }
     }
+    Context 'stored summary' {
+        It 'saves the overall state and per-recipient summary on the operation row after a check' {
+            $script:Progress['0-0'] = New-Progress $true 2
+            $script:Progress['0-1'] = New-Progress $true 2
+            $script:Progress['0-2'] = New-Progress $true 2
+            $null = Invoke-Status
+            $Row = $script:Store[$script:OpId]
+            $Row.State | Should -Be 'Completed'
+            $Summary = @([CIPP.CippJson]::ConvertFromJson($Row.RecipientSummary, $null))
+            $Summary[0].UserPrincipalName | Should -Be 'bob@contoso.com'
+            $Summary[0].State | Should -Be 'Completed'
+            $Summary[0].ItemsCopied | Should -Be 6
+        }
+
+        It 'writes the summary only when it changed' {
+            $script:Progress['0-0'] = New-Progress $false 1
+            $null = Invoke-Status
+            $null = Invoke-Status
+            Should -Invoke Update-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Force -and $Entity.RecipientSummary }
+        }
+
+        It 'does not write the summary when SharePoint was not checked' {
+            $null = Invoke-Status 60
+            $null = Invoke-Status 60
+            Should -Invoke Update-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Force -and $Entity.RecipientSummary }
+        }
+    }
+
     Context 'partition key' {
         BeforeEach {
             $script:CustomerId = 'c0ffee00-1111-2222-3333-444444444444'

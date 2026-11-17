@@ -35,7 +35,7 @@ function Invoke-CIPPOffboardingJob {
         }
 
         # With a OneDrive copy, the licence step waits for it (Remove-CIPPLicenseAfterOneDriveCopy).
-        $OneDriveCopySelected = @($Options.OneDriveCopyTo | Where-Object { $_ }).Count -gt 0
+        $OneDriveCopySelected = @($Options.OneDriveCopyTo | Where-Object { $_ }).Count -gt 0 -or -not [string]::IsNullOrWhiteSpace([string]($Options.OneDriveCopyLibrary.library.value ?? $Options.OneDriveCopyLibrary.library))
 
         # Build dynamic batch of offboarding tasks based on selected options
         $Batch = [System.Collections.Generic.List[object]]::new()
@@ -257,6 +257,7 @@ function Invoke-CIPPOffboardingJob {
                     TenantFilter = $TenantFilter
                     Username     = $Username
                     Recipients   = $Options.OneDriveCopyTo
+                    Library      = $Options.OneDriveCopyLibrary
                     OperationId  = $null
                     APIName      = $APIName
                     Headers      = $Headers
@@ -475,7 +476,7 @@ function Invoke-CIPPOffboardingJob {
             $OwnerTaskId = if ($OffboardingTaskId) { $OffboardingTaskId } elseif ($StepIndexes.Count -eq 0) { [string]$TaskInfo.RowKey }
             $OneDriveCopyOperationId = $null
             if ($RunsCopyStep) {
-                $OneDriveCopyOperationId = (New-Guid).Guid
+                $OneDriveCopyOperationId = [guid]::NewGuid().ToString()
                 if ($OwnerTaskId) {
                     try {
                         $TaskTable = Get-CippTable -tablename 'ScheduledTasks'

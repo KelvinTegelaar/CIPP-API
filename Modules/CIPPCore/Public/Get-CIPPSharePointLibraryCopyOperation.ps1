@@ -23,7 +23,8 @@ function Get-CIPPSharePointLibraryCopyOperation {
         return $null
     }
 
-    $ChunkRows = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeTenant' and startswith(RowKey, '$SafeOp`_')") |
+    # Table storage has no startswith(); '`' is the character after '_'.
+    $ChunkRows = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeTenant' and RowKey ge '$SafeOp`_' and RowKey lt '$SafeOp``'") |
         Sort-Object RowKey
 
     $HandlesParts = [System.Collections.Generic.List[string]]::new()

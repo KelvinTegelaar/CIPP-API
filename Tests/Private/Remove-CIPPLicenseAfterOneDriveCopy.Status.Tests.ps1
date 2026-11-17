@@ -3,6 +3,7 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Update-CIPPOneDriveCopyToUserStatus.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Remove-CIPPLicenseAfterOneDriveCopy.ps1')
     # Partition keys: the real helper over a Get-Tenants that knows no tenant, so rows are keyed by the

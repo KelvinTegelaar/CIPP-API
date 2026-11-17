@@ -3,7 +3,7 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Invoke-CIPPOffboardingOneDriveCopy.ps1')
-    function Start-CIPPOneDriveCopyToUser { param($TenantFilter, $Leaver, $Recipients, $StartedBy, $OperationId, $Headers, $APIName, [switch]$WaitForSignInBlock) }
+    function Start-CIPPOneDriveCopyToUser { param($TenantFilter, $Leaver, $Recipients, $Library, $StartedBy, $OperationId, $Headers, $APIName, [switch]$WaitForSignInBlock) }
 
     function New-StartResult([object[]]$Recipients) {
         [pscustomobject]@{ OperationId = 'op-1'; FolderName = 'pat@contoso.com'; RootItemCount = 4; ExpectedBytes = 100; Warnings = @(); Recipients = $Recipients }
@@ -25,6 +25,17 @@ Describe 'Invoke-CIPPOffboardingOneDriveCopy' {
         }
     }
 
+    It 'copies to the wizard library alone, with no recipients' {
+        $Library = [pscustomobject]@{ site = [pscustomobject]@{ value = 'https://contoso.sharepoint.com/sites/HR' }; library = [pscustomobject]@{ label = 'Leavers'; value = '11111111-2222-3333-4444-555555555555' }; folder = '' }
+        $null = Invoke-CIPPOffboardingOneDriveCopy -TenantFilter 'contoso.com' -Username 'pat@contoso.com' -Recipients $null -Library $Library
+        Should -Invoke Start-CIPPOneDriveCopyToUser -Times 1 -Exactly -ParameterFilter { @($Recipients).Count -eq 0 -and $Library.library.value -eq '11111111-2222-3333-4444-555555555555' }
+    }
+
+    It 'passes no library when the picker is empty' {
+        $null = Invoke-CIPPOffboardingOneDriveCopy -TenantFilter 'contoso.com' -Username 'pat@contoso.com' -Recipients @('bob-id') -Library ([pscustomobject]@{ site = $null; library = $null; folder = '' })
+        Should -Invoke Start-CIPPOneDriveCopyToUser -Times 1 -Exactly -ParameterFilter { $null -eq $Library }
+    }
+
     It 'starts the copy under the operation id the offboarding job chose' {
         $Id = '11111111-2222-3333-4444-555555555555'
         $null = Invoke-CIPPOffboardingOneDriveCopy -TenantFilter 'contoso.com' -Username 'pat@contoso.com' -Recipients @('bob-id') -OperationId $Id
@@ -37,7 +48,7 @@ Describe 'Invoke-CIPPOffboardingOneDriveCopy' {
     }
 
     It 'throws when there are no recipients, without starting anything' {
-        { Invoke-CIPPOffboardingOneDriveCopy -TenantFilter 'contoso.com' -Username 'pat@contoso.com' -Recipients @(@{ label = 'x' }) } | Should -Throw 'No OneDrive copy recipients were given.'
+        { Invoke-CIPPOffboardingOneDriveCopy -TenantFilter 'contoso.com' -Username 'pat@contoso.com' -Recipients @(@{ label = 'x' }) } | Should -Throw 'No OneDrive copy recipients or document library were given.'
         Should -Invoke Start-CIPPOneDriveCopyToUser -Times 0 -Exactly
     }
 

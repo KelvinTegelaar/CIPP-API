@@ -8,7 +8,7 @@ BeforeAll {
     function Get-CippTable { param($tablename) @{ TableName = $tablename } }
     function Get-CIPPAzDataTableEntity { param($Filter, $TableName) }
     function Update-AzDataTableEntity { param($Entity, [switch]$Force, $TableName) }
-    function Update-CIPPOneDriveCopyToUserStatus { param($TenantFilter, $OperationId) }
+    function Update-CIPPOneDriveCopyToUserStatus { param($TenantFilter, $OperationId, $MinimumIntervalSeconds) }
     function Remove-CIPPLicense { param($Headers, $userid, $username, $APIName, $TenantFilter, [switch]$Schedule) }
     function Add-CIPPScheduledTask { param($Task, $hidden, $DisallowDuplicateName) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $sev) }

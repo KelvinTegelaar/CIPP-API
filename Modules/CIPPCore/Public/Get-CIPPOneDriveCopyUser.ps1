@@ -94,6 +94,7 @@ function Get-CIPPOneDriveCopyUser {
         DriveHost         = ([System.Uri]$Drive.webUrl).Host
         SiteUrl           = $SiteUrl.TrimEnd('/')
         RootId            = [string]$Root.id
+        ListId            = [string]$Root.sharepointIds.listId
         QuotaRemaining    = $QuotaRemaining
         QuotaTotal        = if ($null -ne $Drive.quota.total) { [int64]$Drive.quota.total } else { $null }
     }

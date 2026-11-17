@@ -21,7 +21,7 @@ BeforeAll {
             $rowKey = $Matches[2]
             return @($script:TableRows | Where-Object { $_.PartitionKey -eq $tenant -and $_.RowKey -eq $rowKey })
         }
-        if ($Filter -match "PartitionKey eq '([^']+)' and startswith\(RowKey, '([^']+)'\)") {
+        if ($Filter -match "PartitionKey eq '([^']+)' and RowKey ge '([^']+)' and RowKey lt '[^']+'") {
             $tenant = $Matches[1]
             $prefix = $Matches[2]
             return @($script:TableRows | Where-Object { $_.PartitionKey -eq $tenant -and $_.RowKey.StartsWith($prefix) })

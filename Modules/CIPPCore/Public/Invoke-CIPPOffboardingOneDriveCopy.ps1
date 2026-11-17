@@ -1,7 +1,7 @@
 function Invoke-CIPPOffboardingOneDriveCopy {
     <#
     .SYNOPSIS
-        Offboarding step: starts a copy of the leaver's OneDrive into each recipient's OneDrive.
+        Offboarding step: starts a copy of the leaver's OneDrive into each recipient's OneDrive and/or a document library.
     .DESCRIPTION
         Accepts the wizard's {label,value} recipients and returns one line of text for the offboarding results.
     .FUNCTIONALITY
@@ -19,6 +19,9 @@ function Invoke-CIPPOffboardingOneDriveCopy {
         # UPNs or object ids, as strings or {label, value} objects.
         $Recipients,
 
+        # {site, library, folder} as the wizard's library picker sends it.
+        $Library,
+
         # Chosen by Invoke-CIPPOffboardingJob and also given to the licence step, which waits for this copy.
         [string]$OperationId,
 
@@ -31,14 +34,16 @@ function Invoke-CIPPOffboardingOneDriveCopy {
             $Value = if ($Recipient -is [System.Collections.IDictionary]) { $Recipient['value'] } else { $Recipient.value ?? $Recipient }
             if ($Value -is [string] -and -not [string]::IsNullOrWhiteSpace($Value)) { $Value.Trim() }
         })
-    if ($RecipientIds.Count -eq 0) {
-        throw 'No OneDrive copy recipients were given.'
+    $HasLibrary = -not [string]::IsNullOrWhiteSpace([string]($Library.library.value ?? $Library.library))
+    if ($RecipientIds.Count -eq 0 -and -not $HasLibrary) {
+        throw 'No OneDrive copy recipients or document library were given.'
     }
 
     $StartParams = @{
         TenantFilter = $TenantFilter
         Leaver       = $Username
         Recipients   = $RecipientIds
+        Library      = if ($HasLibrary) { $Library }
         Headers      = $Headers
         APIName      = $APIName
         # Disable sign in ran a step earlier; give Graph a moment to show the account as blocked.

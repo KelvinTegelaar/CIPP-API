@@ -18,7 +18,7 @@ function Update-CIPPOneDriveCopyToUserStatus {
         [Parameter(Mandatory = $true)]
         [string]$OperationId,
 
-        [int]$MinimumIntervalSeconds = 60,
+        [int]$MinimumIntervalSeconds = 1800,
 
         # About a second per job, which keeps a status call well inside the HTTP timeout.
         [int]$MaxJobsPerCheck = 100
@@ -168,7 +168,7 @@ function Update-CIPPOneDriveCopyToUserStatus {
         $CheckedSharePoint = $true
         $LastChecked = $Now
         # Stop before the window ends so the next window's winner never polls jobs this call is still writing.
-        $PollBudgetSeconds = if ($MinimumIntervalSeconds -gt 0) { [Math]::Max(1.0, $MinimumIntervalSeconds * 0.75) } else { [double]::MaxValue }
+        $PollBudgetSeconds = if ($MinimumIntervalSeconds -gt 0) { [Math]::Max(1.0, [Math]::Min(45.0, $MinimumIntervalSeconds * 0.75)) } else { [double]::MaxValue }
         $PollClock = [System.Diagnostics.Stopwatch]::StartNew()
 
         $Candidates = foreach ($Record in $Records) {
@@ -232,8 +232,8 @@ function Update-CIPPOneDriveCopyToUserStatus {
                         BytesProcessed   = [int64]$State.BytesProcessed
                         TotalErrors      = [int64]$State.TotalErrors
                         TotalWarnings    = [int64]$State.TotalWarnings
-                        ErrorMessages    = (ConvertTo-Json -InputObject @($State.ErrorMessages) -Compress)
-                        WarningMessages  = (ConvertTo-Json -InputObject @($State.WarningMessages) -Compress)
+                        ErrorMessages    = [CIPP.CippJson]::ToJson(@($State.ErrorMessages), 2)
+                        WarningMessages  = [CIPP.CippJson]::ToJson(@($State.WarningMessages), 2)
                         PollFailures     = [int]$State.PollFailures
                         LastPolledUnix   = [int64]$State.LastPolledUnix
                     })
@@ -304,7 +304,8 @@ function Update-CIPPOneDriveCopyToUserStatus {
                 $Shortfall = "Copy finished, but copied $($Entry.ItemsCopied) of $SourceFileCount files."
             } else {
                 # Every file is accounted for, so extra files or changed bytes are warnings, not failures.
-                if ($Entry.ItemsCopied -gt $SourceFileCount) {
+                # With version history SharePoint counts every copied version as a file created.
+                if ($Entry.ItemsCopied -gt $SourceFileCount -and -not $IncludeVersionHistory) {
                     $TotalsWarnings.Add("Copied $($Entry.ItemsCopied) files, more than the $SourceFileCount counted when the copy started (files may have been added since).")
                 }
                 if ($IncludeVersionHistory -and $Entry.BytesCopied -lt $SourceBytes) {
@@ -362,6 +363,21 @@ function Update-CIPPOneDriveCopyToUserStatus {
         'Failed' { 'Copy finished, but failed for at least one recipient. Do not remove licences until the failures are resolved.' }
         'Queued' { 'Copy queued.' }
         default { 'Copy in progress.' }
+    }
+
+    # The OneDrive Copies list reads this summary instead of polling every copy.
+    if ($Claimed) {
+        $SummaryRows = @(foreach ($Entry in $Results) {
+                [PSCustomObject]@{ UserPrincipalName = $Entry.UserPrincipalName; State = $Entry.State; Message = $Entry.Message; ItemsCopied = $Entry.ItemsCopied; BytesCopied = $Entry.BytesCopied; JobsComplete = $Entry.JobsComplete; JobsTotal = $Entry.JobsTotal }
+            })
+        $Summary = [CIPP.CippJson]::ToJson($SummaryRows, 3) ?? (ConvertTo-Json -InputObject $SummaryRows -Compress -Depth 3)
+        if ($State -ne $Operation.State -or $Summary -ne $Operation.RecipientSummary) {
+            try {
+                Update-CIPPAzDataTableEntity @Table -Force -Entity ([PSCustomObject]@{ PartitionKey = $PartitionKey; RowKey = $OperationId; State = $State; RecipientSummary = $Summary })
+            } catch {
+                Write-Information "OneDrive copy $OperationId status: could not save the summary ($($_.Exception.Message))"
+            }
+        }
     }
 
     [PSCustomObject]@{

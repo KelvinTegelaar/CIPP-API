@@ -2,11 +2,13 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Start-CIPPOneDriveCopyToUser.ps1'
     if (-not (Test-Path $FunctionPath)) { throw "Could not locate $FunctionPath" }
 
     function Get-CIPPOneDriveCopyUser { param($TenantFilter, $UserId, $Kind) }
-    function New-GraphGetRequest { param($uri, $tenantid, $asapp, $noPagination, [switch]$SkipValueExtraction) }
+    function New-GraphGetRequest { param($uri, $tenantid, $asapp, $noPagination, [switch]$SkipValueExtraction, $scope, $extraHeaders, [switch]$UseCertificate) }
+    function Get-SharePointAdminLink { param($Public, $tenantFilter) [pscustomobject]@{ SharePointUrl = 'https://contoso.sharepoint.com' } }
     function New-GraphPOSTRequest { param($uri, $tenantid, $type, $body, $AsApp) }
     function Invoke-CIPPSharePointCreateCopyJobs { param($TenantFilter, $SourceSiteUrl, $ExportObjectUris, $DestinationUri, $NameConflictBehavior, $SameWebCopyMoveOptimization, $IgnoreVersionHistory) }
     function Set-CIPPSharePointLibraryCopyOperation { param($TenantFilter, $OperationId, $Entity, $TableName) }
@@ -17,6 +19,7 @@ BeforeAll {
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = [string]$Exception.Exception.Message } }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-SPOAdminListInt64.ps1')
     # Partition keys: the real helper over a Get-Tenants that knows no tenant, so rows are keyed by the
     # lower-cased tenantFilter unless a test says otherwise.
     function Get-Tenants { param($TenantFilter) }
@@ -31,6 +34,7 @@ BeforeAll {
             DriveWebUrl       = "https://$DriveHost/personal/$Personal/Documents"
             DriveHost         = $DriveHost
             SiteUrl           = "https://$DriveHost/personal/$Personal"
+            ListId            = '33333333-4444-5555-6666-777777777777'
             QuotaRemaining    = $Remaining
             AccountEnabled    = $AccountEnabled
             UserType          = 'Member'
@@ -103,6 +107,119 @@ Describe 'Start-CIPPOneDriveCopyToUser' {
         Mock Get-CIPPAzDataTableEntity {}
         Mock Write-LogMessage {}
         Mock Start-Sleep {}
+    }
+
+    It 'leaves the Shortcuts folder out: it only links other people''s folders' {
+        $script:Children = @($script:Children) + [pscustomobject]@{ id = 's'; name = 'Shortcuts'; size = 0; folder = @{ childCount = 2 }; specialFolder = @{ name = 'shortcuts' } } + [pscustomobject]@{ id = 'r'; name = 'Recordings'; size = 5; folder = @{ childCount = 1 }; specialFolder = @{ name = 'recordings' } }
+        $Result = Start-CIPPOneDriveCopyToUser @script:Params
+        $Result.RootItemCount | Should -Be 4
+        Should -Invoke Invoke-CIPPSharePointCreateCopyJobs -Times 1 -Exactly -ParameterFilter {
+            @($ExportObjectUris).Where({ $_ -like '*/Shortcuts' }).Count -eq 0 -and @($ExportObjectUris).Where({ $_ -like '*/Recordings' }).Count -eq 1
+        }
+    }
+
+    Context 'free space with version history' {
+        BeforeEach {
+            # The delta above counts 1,510 bytes of current versions; the library holds 5,000 with every version.
+            Mock New-GraphGetRequest { [pscustomobject]@{ StorageMetrics = [pscustomobject]@{ TotalSize = '5000'; TotalFileStreamSize = '1510' } } } -ParameterFilter { $uri -like '*StorageMetrics*' }
+            $script:Users['bob@contoso.com'] = New-TestUser 'bob' -Remaining 3000
+        }
+
+        It 'checks recipients against the version history size from StorageMetrics' {
+            { Start-CIPPOneDriveCopyToUser @script:Params -IncludeVersionHistory $true } | Should -Throw '*needs 5000 bytes and 3000 are free*' -ExceptionType ([System.ArgumentException])
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter {
+                $uri -eq "https://contoso-my.sharepoint.com/personal/jane_contoso_com/_api/web/lists(guid'33333333-4444-5555-6666-777777777777')/RootFolder?`$select=StorageMetrics&`$expand=StorageMetrics" -and $scope -eq 'https://contoso.sharepoint.com/.default' -and $UseCertificate
+            }
+        }
+
+        It 'reports the version history size as the expected bytes' {
+            $script:Users['bob@contoso.com'] = New-TestUser 'bob'
+            $Result = Start-CIPPOneDriveCopyToUser @script:Params -IncludeVersionHistory $true
+            $Result.ExpectedBytes | Should -Be 5000
+            $Result.SourceBytes | Should -Be 1510
+            Should -Invoke Add-CIPPAzDataTableEntity -ParameterFilter { $Entity.ExpectedBytes -eq 5000 -and $Entity.SourceBytes -eq 1510 }
+        }
+
+        It 'never needs less than the current versions' {
+            Mock New-GraphGetRequest { [pscustomobject]@{ StorageMetrics = [pscustomobject]@{ TotalSize = '10' } } } -ParameterFilter { $uri -like '*StorageMetrics*' }
+            (Start-CIPPOneDriveCopyToUser @script:Params -IncludeVersionHistory $true).ExpectedBytes | Should -Be 1510
+        }
+
+        It 'falls back to current versions with a warning when the metrics cannot be read' {
+            Mock New-GraphGetRequest { throw '403 Forbidden' } -ParameterFilter { $uri -like '*StorageMetrics*' }
+            $Result = Start-CIPPOneDriveCopyToUser @script:Params -IncludeVersionHistory $true
+            $Result.ExpectedBytes | Should -Be 1510
+            $Result.Warnings | Should -Contain 'The size of the version history could not be read, so free space was checked against current versions only.'
+        }
+
+        It 'does not read the metrics without version history' {
+            $null = Start-CIPPOneDriveCopyToUser @script:Params
+            Should -Invoke New-GraphGetRequest -Times 0 -Exactly -ParameterFilter { $uri -like '*StorageMetrics*' }
+        }
+    }
+
+    Context 'document library destination' {
+        BeforeEach {
+            $script:ListId = '22222222-3333-4444-5555-666666666666'
+            $script:LibParams = @{ TenantFilter = 'contoso.com'; Leaver = 'jane@contoso.com'; StartedBy = 'admin@partner.com'; Library = @{ site = 'https://contoso.sharepoint.com/sites/HR'; library = @{ label = 'Leavers Docs'; value = $script:ListId }; folder = '/Leavers/2026/' } }
+            Mock New-GraphGetRequest { [pscustomobject]@{ id = 'lib-drive'; name = 'Leavers Docs'; webUrl = 'https://contoso.sharepoint.com/sites/HR/Leavers%20Docs'; quota = @{ remaining = 1GB } } } -ParameterFilter { $uri -like '*/lists/*/drive*' }
+            Mock New-GraphGetRequest { [pscustomobject]@{ id = 'parent'; folder = @{ childCount = 0 } } } -ParameterFilter { $uri -like '*/drives/lib-drive/root:/Leavers/2026?*' }
+            Mock New-GraphGetRequest { throw 'itemNotFound' } -ParameterFilter { $uri -like '*/drives/lib-drive/root:/Leavers/2026/*' }
+        }
+
+        It 'copies into a folder named after the leaver inside the chosen library folder, with no recipients' {
+            $Result = Start-CIPPOneDriveCopyToUser @script:LibParams
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like "https://graph.microsoft.com/v1.0/sites/contoso.sharepoint.com:/sites/HR:/lists/$($script:ListId)/drive?*" }
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter { $uri -eq 'https://graph.microsoft.com/v1.0/drives/lib-drive/root:/Leavers/2026:/children' }
+            Should -Invoke Invoke-CIPPSharePointCreateCopyJobs -ParameterFilter { $DestinationUri -eq 'https://contoso.sharepoint.com/sites/HR/Leavers%20Docs/Leavers/2026/jane%40contoso.com' }
+            @($Result.Recipients).Count | Should -Be 1
+            $Result.Recipients[0].UserPrincipalName | Should -Be 'contoso.sharepoint.com/sites/HR/Leavers Docs/Leavers/2026'
+        }
+
+        It 'addresses the root site by host only' {
+            $script:LibParams.Library.site = 'https://contoso.sharepoint.com/'
+            $script:LibParams.Library.folder = ''
+            $null = Start-CIPPOneDriveCopyToUser @script:LibParams
+            Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like "https://graph.microsoft.com/v1.0/sites/contoso.sharepoint.com/lists/$($script:ListId)/drive?*" }
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter { $uri -eq 'https://graph.microsoft.com/v1.0/drives/lib-drive/root/children' }
+        }
+
+        It 'copies to recipients and the library in one operation' {
+            $script:LibParams.Recipients = @('bob@contoso.com')
+            $Result = Start-CIPPOneDriveCopyToUser @script:LibParams
+            @($Result.Recipients.UserPrincipalName) | Should -Be @('bob@contoso.com', 'contoso.sharepoint.com/sites/HR/Leavers Docs/Leavers/2026')
+            Should -Invoke Set-CIPPSharePointLibraryCopyOperation -Times 2 -Exactly
+        }
+
+        It 'refuses <Case> before writing anything' -ForEach @(
+            @{ Case = 'a site that is not an https URL'; Library = @{ site = 'contoso.sharepoint.com/sites/HR'; library = '22222222-3333-4444-5555-666666666666' }; Message = '*not a SharePoint site URL*' }
+            @{ Case = 'a library id that is not a GUID'; Library = @{ site = 'https://contoso.sharepoint.com/sites/HR'; library = "x' or 1" }; Message = '*not a document library id*' }
+            @{ Case = 'a folder path that climbs out'; Library = @{ site = 'https://contoso.sharepoint.com/sites/HR'; library = '22222222-3333-4444-5555-666666666666'; folder = 'Leavers/../Secret' }; Message = '*not a valid folder path*' }
+        ) {
+            { Start-CIPPOneDriveCopyToUser -TenantFilter 'contoso.com' -Leaver 'jane@contoso.com' -Library $Library } | Should -Throw $Message -ExceptionType ([System.ArgumentException])
+            Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
+
+        It 'refuses a library that does not exist' {
+            Mock New-GraphGetRequest { throw 'itemNotFound: The resource could not be found.' } -ParameterFilter { $uri -like '*/lists/*/drive*' }
+            { Start-CIPPOneDriveCopyToUser @script:LibParams } | Should -Throw '*was not found on https://contoso.sharepoint.com/sites/HR*' -ExceptionType ([System.ArgumentException])
+            Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
+        }
+
+        It 'names the folder when the library exists but the folder does not' {
+            Mock New-GraphGetRequest { throw 'itemNotFound' } -ParameterFilter { $uri -like '*/drives/lib-drive/root:/Leavers/2026?*' }
+            { Start-CIPPOneDriveCopyToUser @script:LibParams } | Should -Throw "*The folder 'Leavers/2026' was not found in the document library https://contoso.sharepoint.com/sites/HR/Leavers Docs*" -ExceptionType ([System.ArgumentException])
+        }
+
+        It 'refuses a library whose site has too little space' {
+            Mock New-GraphGetRequest { [pscustomobject]@{ id = 'lib-drive'; webUrl = 'https://contoso.sharepoint.com/sites/HR/Leavers%20Docs'; quota = @{ remaining = 100 } } } -ParameterFilter { $uri -like '*/lists/*/drive*' }
+            { Start-CIPPOneDriveCopyToUser @script:LibParams } | Should -Throw '*does not have enough space*' -ExceptionType ([System.ArgumentException])
+        }
+
+        It 'still needs recipients or a library' {
+            { Start-CIPPOneDriveCopyToUser -TenantFilter 'contoso.com' -Leaver 'jane@contoso.com' } | Should -Throw '*At least one recipient or a document library*'
+        }
     }
 
     Context 'operation id chosen by the offboarding job' {
@@ -183,7 +300,7 @@ Describe 'Start-CIPPOneDriveCopyToUser' {
             $TableName -eq 'OneDriveCopyToUser' -and $OperationId -like '*-r0' -and $Entity.JobHandleCount -eq 3 -and $Entity.StartedBy -eq 'admin@partner.com'
         }
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
-            $Entity.Kind -eq 'Operation' -and $Entity.PartitionKey -eq 'contoso.com' -and $Entity.LeaverUPN -eq 'jane@contoso.com' -and $Entity.StartedBy -eq 'admin@partner.com' -and
+            $Entity.Kind -eq 'Operation' -and $Entity.PartitionKey -eq 'contoso.com' -and $Entity.LeaverUPN -eq 'jane@contoso.com' -and $Entity.State -eq 'Queued' -and $Entity.RecipientSummary -like '*"UserPrincipalName":"bob@contoso.com","State":"Queued"*' -and $Entity.StartedBy -eq 'admin@partner.com' -and
             $Entity.SourceFileCount -eq 5 -and $Entity.SourceBytes -eq 1510 -and $Entity.RootItemCount -eq 3 -and -not $Entity.ContainsKey('RootItemEmpty')
         }
         Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter {
@@ -281,9 +398,10 @@ Describe 'Start-CIPPOneDriveCopyToUser' {
         @{ Case = 'the leaver as recipient'; Setup = {}; Recipients = @('jane@contoso.com'); Message = '*is the leaver*' }
         @{ Case = 'an unknown recipient among good ones'; Setup = {}; Recipients = @('bob@contoso.com', 'ghost@contoso.com'); Message = "*'ghost@contoso.com' was not found*" }
         @{ Case = 'an empty leaver OneDrive'; Setup = { $script:Children = @() }; Recipients = @('bob@contoso.com'); Message = '*has nothing to copy*' }
+        @{ Case = 'a OneDrive holding only the Shortcuts folder (seen live)'; Setup = { $script:Children = @([pscustomobject]@{ id = 's'; name = 'Shortcuts'; size = 0; folder = @{ childCount = 2 }; specialFolder = @{ name = 'shortcuts' } }) }; Recipients = @('bob@contoso.com'); Message = '*has nothing to copy*' }
         @{ Case = 'more than 1,000 root items'; Setup = { $script:Children = @(1..1001 | ForEach-Object { [pscustomobject]@{ name = "f$_"; size = 1; file = @{} } }) }; Recipients = @('bob@contoso.com'); Message = '*1001 items at its root*' }
         @{ Case = 'more than 100,000 files and folders in the OneDrive'; Setup = { $File = New-DeltaFile 'x.txt' 1; $script:DeltaPages = New-DeltaPages (@($File) * 100001) 1000 }; Recipients = @('bob@contoso.com'); Message = '*more than 100000 files and folders*' }
-        @{ Case = 'no recipients'; Setup = {}; Recipients = @(' '); Message = 'At least one recipient is required.' }
+        @{ Case = 'no recipients'; Setup = {}; Recipients = @(' '); Message = 'At least one recipient or a document library is required.' }
         @{ Case = 'too many recipients'; Setup = {}; Recipients = @(1..11 | ForEach-Object { "u$_@contoso.com" }); Message = 'At most 10 recipients*' }
         @{ Case = 'a guest recipient among good ones'; Setup = { Mock Get-CIPPOneDriveCopyUser { throw [System.ArgumentException]::new('Recipient g_x.com#EXT#@contoso.com is a guest. Only members of the tenant can receive the copy.') } -ParameterFilter { $UserId -like 'g_*' } }; Recipients = @('bob@contoso.com', 'g_x.com#EXT#@contoso.com'); Message = '*is a guest*' }
     ) {

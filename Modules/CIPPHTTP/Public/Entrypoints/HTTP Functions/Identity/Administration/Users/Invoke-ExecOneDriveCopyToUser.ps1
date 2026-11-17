@@ -7,7 +7,7 @@ function Invoke-ExecOneDriveCopyToUser {
     .SYNOPSIS
         Copy a leaver's OneDrive to other users
     .DESCRIPTION
-        Copies a leaver's OneDrive root contents into a folder named after the leaver's UPN at the root of each recipient's OneDrive, without overwriting anything already there (KeepBoth on name conflicts). The leaver must already be blocked from signing in. The leaver and recipients must be in tenantFilter; each recipient needs a OneDrive licence, a provisioned OneDrive and enough free space. Returns 202 with an OperationId; check ListOneDriveCopyToUser with it until State is Completed before removing the leaver's licences.
+        Copies a leaver's OneDrive root contents into a folder named after the leaver's UPN at the root of each recipient's OneDrive and/or in a SharePoint document library, without overwriting anything already there (KeepBoth on name conflicts). The leaver must already be blocked from signing in. The leaver and recipients must be in tenantFilter; each recipient needs a OneDrive licence, a provisioned OneDrive and enough free space. Returns 202 with an OperationId; check ListOneDriveCopyToUser with it until State is Completed before removing the leaver's licences. CIPP does not copy the files itself: it starts SharePoint copy jobs and reports what SharePoint returns, so the copy's speed and any file SharePoint fails to copy are outside CIPP's control. Shortcuts to other people's files are not copied.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -23,7 +23,17 @@ function Invoke-ExecOneDriveCopyToUser {
             $Value = $Recipient.value ?? $Recipient
             if ($Value -is [string] -and -not [string]::IsNullOrWhiteSpace($Value)) { $Value.Trim() }
         })
-    # Copy every version of each file. Off by default: only current versions count towards the free-space check.
+    # A SharePoint document library to copy into as well as, or instead of, recipients.
+    $LibraryInput = $Request.Body.library
+    $Library = @{
+        # URL of the SharePoint site or subsite holding the library.
+        site    = $LibraryInput.site.value ?? $LibraryInput.site
+        # List id of the document library.
+        library = $LibraryInput.library.value ?? $LibraryInput.library
+        # Optional existing folder in the library, e.g. Leavers/2026; the copy goes in a folder named after the leaver inside it.
+        folder  = $LibraryInput.folder
+    }
+    # Copy every version of each file. Off by default; when on, the free-space check counts the version history too.
     $IncludeVersionHistory = [bool]$Request.Body.includeVersionHistory
 
     if (-not $Request.Body.tenantFilter) {
@@ -32,15 +42,18 @@ function Invoke-ExecOneDriveCopyToUser {
     if (-not $Request.Body.leaver) {
         return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'leaver is required (UPN or object id).' } })
     }
-    if (-not $Request.Body.recipients) {
-        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'recipients is required (one or more UPNs or object ids).' } })
+    if ($Recipients.Count -eq 0 -and -not $Library.library) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'Give recipients (UPNs or object ids), a document library, or both.' } })
     }
-    if ($TenantFilter -eq 'AllTenants' -or $Leaver -isnot [string] -or $Recipients.Count -eq 0) {
-        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'tenantFilter must name one tenant, and leaver and recipients must be UPNs or object ids.' } })
+    if ($TenantFilter -eq 'AllTenants' -or $Leaver -isnot [string]) {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'tenantFilter must name one tenant, and leaver must be a UPN or object id.' } })
     }
 
     try {
-        $Result = Start-CIPPOneDriveCopyToUser -TenantFilter $TenantFilter -Leaver $Leaver -Recipients $Recipients -IncludeVersionHistory $IncludeVersionHistory -Headers $Headers -APIName $APIName
+        $Result = Start-CIPPOneDriveCopyToUser -TenantFilter $TenantFilter -Leaver $Leaver -Recipients $Recipients -Library $Library -IncludeVersionHistory $IncludeVersionHistory -Headers $Headers -APIName $APIName
+        $Problems = @(@(@($Result.Recipients).Where({ $_.State -eq 'Failed' }) | ForEach-Object { "$($_.UserPrincipalName): $($_.Message)" }) + @($Result.Warnings).Where({ $_ }))
+        $Result | Add-Member -NotePropertyName resultText -NotePropertyValue ((@($Result.Message) + $Problems) -join ' ')
+        $Result | Add-Member -NotePropertyName state -NotePropertyValue $(if ($Problems.Count -gt 0) { 'warning' } else { 'success' })
         $StatusCode = [HttpStatusCode]::Accepted
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

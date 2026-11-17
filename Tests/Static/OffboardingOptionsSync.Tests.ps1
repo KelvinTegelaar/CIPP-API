@@ -25,7 +25,7 @@ BeforeAll {
     # Per-run choices that are not saved as defaults.
     $script:DefaultKeys = @($script:BooleanActions | Where-Object { $_ -notin @('disableForwarding') })
     # Non-action inputs the job and the defaults also carry.
-    $script:Companions = @('KeepCopy', 'NewGroupOwner', 'OOO', 'forward')
+    $script:Companions = @('KeepCopy', 'NewGroupOwner', 'OOO', 'forward', 'OneDriveCopyLibrary')
 
     $script:Job = & $Read 'backend/Modules/CIPPCore/Public/Invoke-CIPPOffboardingJob.ps1'
     if (Test-Path (Join-Path $RepoRoot 'frontend/src')) {

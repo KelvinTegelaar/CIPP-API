@@ -43,7 +43,7 @@ function Invoke-EditTenantOffboardingDefaults {
 
     try {
         # Convert the offboarding defaults to JSON string and ensure it's treated as a string
-        $jsonValue = [string]($offboardingDefaults | ConvertTo-Json -Compress)
+        $jsonValue = [string]([CIPP.CippJson]::ToJson($offboardingDefaults, 10) ?? (ConvertTo-Json -InputObject $offboardingDefaults -Compress -Depth 10))
 
         if ($jsonValue -and $jsonValue -ne '{}' -and $jsonValue -ne 'null' -and $jsonValue -ne '') {
             # Save offboarding defaults
