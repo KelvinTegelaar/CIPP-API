@@ -257,7 +257,7 @@ function Invoke-ExecCippReplacemap {
             'Delete' {
                 $VariableName = $Request.Body.RowKey
 
-                $VariableEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId' and RowKey eq '$VariableName'" -ErrorAction Stop
+                $VariableEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $VariableName -Type String)'" -ErrorAction Stop
                 if ($VariableEntity) {
                     Remove-CIPPAzDataTableEntity @Table -Entity $VariableEntity -Force
                     $Result = "Variable '$VariableName' deleted successfully"

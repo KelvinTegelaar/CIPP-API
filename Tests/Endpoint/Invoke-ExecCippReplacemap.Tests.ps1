@@ -44,6 +44,7 @@ BeforeAll {
     . (Join-Path (Split-Path -Parent $FunctionPath) 'Invoke-ExecCippGlobalReplacemap.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Select-CippAllowedTenantData.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
 
     function New-SaveRequest {
         param(
@@ -302,6 +303,24 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
 
             $Response.StatusCode | Should -Be 200
             $script:RemovedEntity.RowKey | Should -Be 'wallpaperpath'
+        }
+        It 'cannot widen the delete filter to another partition through the name' {
+            $script:RowsByFilter = @{}
+            $script:ExistingEntity = $null
+            $Name = "x' or PartitionKey eq 'other-tenant' and RowKey eq 'secret"
+            $Request = [pscustomobject]@{
+                Params  = @{ CIPPEndpoint = 'ExecCippReplacemap' }
+                Headers = @{}
+                Query   = @{}
+                Body    = [pscustomobject]@{ Action = 'Delete'; tenantId = 'contoso.onmicrosoft.com'; RowKey = $Name }
+            }
+            Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { param($Filter) $script:LastFilter = $Filter }
+
+            $Response = Invoke-ExecCippReplacemap -Request $Request
+
+            $script:LastFilter | Should -BeExactly "PartitionKey eq '11111111-1111-1111-1111-111111111111' and RowKey eq 'x'' or PartitionKey eq ''other-tenant'' and RowKey eq ''secret'"
+            $Response.StatusCode | Should -Be 404
+            $script:RemovedEntity | Should -BeNullOrEmpty
         }
     }
 }
