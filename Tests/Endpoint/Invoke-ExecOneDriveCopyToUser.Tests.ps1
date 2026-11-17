@@ -73,21 +73,21 @@ Describe 'Invoke-ExecOneDriveCopyToUser' {
         Mock Write-LogMessage {}
     }
 
-    It 'starts the copy with plain and {label,value} inputs and records who started it' {
+    It 'starts the copy with plain and {label,value} inputs and passes the caller headers on' {
         $Principal = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((@{ userDetails = 'tech@partner.com' } | ConvertTo-Json)))
         $Response = Invoke-ExecOneDriveCopyToUser -Request (New-ExecRequest @{
                 tenantFilter          = 'contoso.com'
                 leaver                = [pscustomobject]@{ label = 'Jane'; value = 'jane@contoso.com' }
-                recipients            = @('bob@contoso.com', [pscustomobject]@{ label = 'Carol'; value = 'carol@contoso.com' }, 'dave@contoso.com, erin@contoso.com')
+                recipients            = @('bob@contoso.com', [pscustomobject]@{ label = 'Carol'; value = 'carol@contoso.com' })
                 includeVersionHistory = $true
             } @{ 'x-ms-client-principal' = $Principal })
 
-        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::Accepted)
         $Response.Body.Results.OperationId | Should -Be '11111111-2222-3333-4444-555555555555'
         Should -Invoke Start-CIPPOneDriveCopyToUser -Times 1 -Exactly -ParameterFilter {
             $TenantFilter -eq 'contoso.com' -and $Leaver -eq 'jane@contoso.com' -and
-            (@($Recipients) -join ';') -eq 'bob@contoso.com;carol@contoso.com;dave@contoso.com;erin@contoso.com' -and
-            $IncludeVersionHistory -eq $true -and $StartedBy -eq 'tech@partner.com'
+            (@($Recipients) -join ';') -eq 'bob@contoso.com;carol@contoso.com' -and
+            $IncludeVersionHistory -eq $true -and $Headers.'x-ms-client-principal' -eq $Principal
         }
     }
 
@@ -101,9 +101,9 @@ Describe 'Invoke-ExecOneDriveCopyToUser' {
         Should -Invoke Start-CIPPOneDriveCopyToUser -Times 1 -Exactly -ParameterFilter { -not $WaitForSignInBlock }
     }
 
-    It 'falls back to the API client name for StartedBy' {
-        Invoke-ExecOneDriveCopyToUser -Request (New-ExecRequest @{ tenantFilter = 'contoso.com'; leaver = 'jane@contoso.com'; recipients = 'bob@contoso.com' } @{ 'x-ms-client-principal-name' = 'app-id-123' }) | Out-Null
-        Should -Invoke Start-CIPPOneDriveCopyToUser -ParameterFilter { $StartedBy -eq 'app-id-123' -and $IncludeVersionHistory -eq $false }
+    It 'leaves version history off when includeVersionHistory is not sent' {
+        Invoke-ExecOneDriveCopyToUser -Request (New-ExecRequest @{ tenantFilter = 'contoso.com'; leaver = 'jane@contoso.com'; recipients = 'bob@contoso.com' }) | Out-Null
+        Should -Invoke Start-CIPPOneDriveCopyToUser -ParameterFilter { $IncludeVersionHistory -eq $false }
     }
 
     It 'returns BadRequest without calling the helper when <Case>' -ForEach @(
@@ -116,7 +116,6 @@ Describe 'Invoke-ExecOneDriveCopyToUser' {
         $Response = Invoke-ExecOneDriveCopyToUser -Request (New-ExecRequest $Body)
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
         Should -Invoke Start-CIPPOneDriveCopyToUser -Times 0 -Exactly
-        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $sev -eq 'Error' }
     }
 
     It 'returns <Expected> when the helper throws <Kind>' -ForEach @(

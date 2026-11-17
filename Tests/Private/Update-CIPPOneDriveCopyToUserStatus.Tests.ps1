@@ -702,16 +702,6 @@ Describe 'Update-CIPPOneDriveCopyToUserStatus' {
             Should -Invoke Get-CIPPSharePointCopyJobProgress -ParameterFilter { $TenantFilter -eq $Poll }
         }
 
-        It 'keeps polling a copy stored under the raw tenantFilter before keys were normalised' {
-            $script:Store[$script:OpId].PartitionKey = 'Contoso.com'
-            $Result = Update-CIPPOneDriveCopyToUserStatus -TenantFilter 'Contoso.com' -OperationId $script:OpId -MinimumIntervalSeconds 0
-            $Result.State | Should -Be 'Completed'
-            Should -Invoke Get-CIPPSharePointLibraryCopyOperation -ParameterFilter { $TenantFilter -ceq 'Contoso.com' }
-            @($script:Store.Values | Where-Object { $_.RowKey -like "$($script:OpId)-js-*" } | ForEach-Object { $_.PartitionKey } | Sort-Object -Unique) | Should -Be @('Contoso.com')
-            # A second check reads those job states back from the same partition.
-            (Update-CIPPOneDriveCopyToUserStatus -TenantFilter 'Contoso.com' -OperationId $script:OpId -MinimumIntervalSeconds 3600).State | Should -Be 'Completed'
-        }
-
         It 'does not find a copy of another tenant' {
             $script:Store[$script:OpId].PartitionKey = 'dddddddd-1111-2222-3333-444444444444'
             { Update-CIPPOneDriveCopyToUserStatus -TenantFilter 'contoso.com' -OperationId $script:OpId } | Should -Throw -ExceptionType ([System.Management.Automation.ItemNotFoundException])

@@ -3,24 +3,10 @@ function Remove-CIPPLicenseAfterOneDriveCopy {
     .SYNOPSIS
         Removes a leaver's licences only once their OneDrive copy has completed.
     .DESCRIPTION
-        Used by the offboarding job in place of Remove-CIPPLicense when "Copy OneDrive to user(s)" is
-        selected, because removing the licence starts the countdown to the OneDrive being deleted.
-
-        Offboarding run (no OperationId): checks once the copy the same offboarding started, named by
-        CopyOperationId (chosen by Invoke-CIPPOffboardingJob and given to the copy step). Any other copy
-        of the same user, started by someone else or another run, is never taken for it.
-          - Completed: hands over to Remove-CIPPLicense -Schedule, exactly as the normal step does.
-          - Still queued or in progress: schedules itself as a recurring task (every 30 minutes) that
-            checks again and removes the licences when the copy completes.
-          - Failed, or no copy found (the copy step failed or was skipped): licences are NOT removed;
-            the step fails with the reason. This is also what happens on a Craft host too old to run
-            offboarding steps in order: if this step runs before the copy has started, it finds no copy
-            and keeps the licences.
-
-        Scheduled run (OperationId given): Completed removes the licences directly and ends the
-        recurrence; Failed, an unknown operation, or passing Deadline ends the recurrence without
-        removing them; otherwise it waits for the next check. Every outcome that leaves the licences in
-        place is logged as an error, so it shows in the CIPP log and alerts.
+        Offboarding run (CopyOperationId): Completed hands over to Remove-CIPPLicense -Schedule; still running
+        schedules a 30-minute recurring check of itself; Failed or not found keeps the licences and throws.
+        Scheduled run (OperationId): Completed removes the licences and ends the recurrence; Failed, not found or
+        past Deadline ends it and keeps them.
     .FUNCTIONALITY
         Internal
     #>
@@ -68,18 +54,12 @@ function Remove-CIPPLicenseAfterOneDriveCopy {
 
     if (-not $Scheduled) { $OperationId = $CopyOperationId }
 
-    # The operation must exist and be a copy of this user's OneDrive; otherwise a copy of someone else
-    # (or a stale id) could release this user's licences.
+    # Only a copy of this user's OneDrive may release their licences.
     $Operation = $null
     if ($OperationId -match $GuidPattern) {
         $Table = Get-CIPPTable -TableName 'OneDriveCopyToUser'
-        # Keyed by the tenant's customerId; copies started before that are under the raw tenantFilter.
-        foreach ($ReadKey in (Get-CIPPOneDriveCopyTenantKey -TenantFilter $TenantFilter).ReadKeys) {
-            $SafeKey = $ReadKey -replace "'", "''"
-            $Operation = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeKey' and RowKey eq '$OperationId'") |
-                Where-Object { $_.Kind -eq 'Operation' -and [string]$_.LeaverId -eq $userid } | Select-Object -First 1
-            if ($Operation) { break }
-        }
+        $SafeKey = (Get-CIPPOneDriveCopyTenantKey -TenantFilter $TenantFilter) -replace "'", "''"
+        $Operation = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeKey' and RowKey eq '$OperationId'").Where({ $_.Kind -eq 'Operation' -and [string]$_.LeaverId -eq $userid }, 'First')[0]
     }
     if (-not $Operation) {
         $Reason = if ($Scheduled) { "OneDrive copy $OperationId could not be found for this user." } else { 'the OneDrive copy step did not start a copy.' }
@@ -144,9 +124,7 @@ function Remove-CIPPLicenseAfterOneDriveCopy {
         PostExecution = @{ Webhook = $false; Email = $false; PSA = $false }
         Reference     = "OneDriveCopy-$OperationId"
     }
-    # Add-CIPPScheduledTask reports most failures (a check for this user already pending, a storage
-    # error) as an 'Error - ...' string rather than throwing; without the follow-up nothing would ever
-    # remove the licences, so the step must fail rather than claim the removal is deferred.
+    # Add-CIPPScheduledTask reports most failures as an 'Error - ...' string rather than throwing.
     $TaskResult = @(Add-CIPPScheduledTask -Task $ScheduledTask -hidden $false -DisallowDuplicateName $true) -join ' '
     if ($TaskResult -like 'Error*') {
         $Message = & $KeptMessage "the follow-up check for OneDrive copy $OperationId could not be scheduled ($TaskResult)."

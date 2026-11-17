@@ -1,5 +1,5 @@
 # Pester tests for Get-CIPPOneDriveCopyTenantKey: OneDriveCopyToUser rows are keyed by the tenant's
-# customerId whatever form of the tenant the caller used, and old rows under the raw value stay readable.
+# customerId whatever form of the tenant the caller used.
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -25,14 +25,7 @@ Describe 'Get-CIPPOneDriveCopyTenantKey' {
         @{ Given = 'C0FFEE00-1111-2222-3333-444444444444' }
         @{ Given = ' contoso.com ' }
     ) {
-        $Keys = Get-CIPPOneDriveCopyTenantKey -TenantFilter $Given
-        $Keys.Key | Should -BeExactly $script:CustomerId
-        $Keys.ReadKeys[0] | Should -BeExactly $script:CustomerId
-    }
-
-    It 'still reads rows written under the raw tenantFilter, after the customerId' {
-        (Get-CIPPOneDriveCopyTenantKey -TenantFilter 'Contoso.COM').ReadKeys | Should -Be @($script:CustomerId, 'Contoso.COM')
-        (Get-CIPPOneDriveCopyTenantKey -TenantFilter $script:CustomerId).ReadKeys | Should -Be @($script:CustomerId)
+        Get-CIPPOneDriveCopyTenantKey -TenantFilter $Given | Should -BeExactly $script:CustomerId
     }
 
     It 'asks Get-Tenants with the lower-cased value, because its table lookups are case-sensitive' {
@@ -41,9 +34,7 @@ Describe 'Get-CIPPOneDriveCopyTenantKey' {
     }
 
     It 'keys a tenant Get-Tenants does not know by its lower-cased tenantFilter' {
-        $Keys = Get-CIPPOneDriveCopyTenantKey -TenantFilter 'Unknown.example'
-        $Keys.Key | Should -BeExactly 'unknown.example'
-        $Keys.ReadKeys | Should -Be @('unknown.example', 'Unknown.example')
+        Get-CIPPOneDriveCopyTenantKey -TenantFilter 'Unknown.example' | Should -BeExactly 'unknown.example'
     }
 
     It 'lets a tenant cache failure through rather than guessing a key' {

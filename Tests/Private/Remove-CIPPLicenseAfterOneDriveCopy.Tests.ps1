@@ -209,11 +209,6 @@ Describe 'Remove-CIPPLicenseAfterOneDriveCopy' {
             Remove-CIPPLicenseAfterOneDriveCopy @script:Base -CopyOperationId $script:OpId | Should -Be 'Scheduled license removal for pat@contoso.com.'
         }
 
-        It 'finds a copy stored under the raw tenantFilter before keys were normalised' {
-            $script:Rows = @([pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = $script:OpId; Kind = 'Operation'; LeaverId = $script:UserId })
-            Remove-CIPPLicenseAfterOneDriveCopy @script:Base -CopyOperationId $script:OpId | Should -Be 'Scheduled license removal for pat@contoso.com.'
-        }
-
         It 'still refuses a copy of another user under either key' {
             $script:Rows = @(
                 [pscustomobject]@{ PartitionKey = $script:CustomerId; RowKey = $script:OpId; Kind = 'Operation'; LeaverId = 'bbbbbbbb-1111-2222-3333-444444444444' }

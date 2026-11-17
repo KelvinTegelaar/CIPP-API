@@ -143,16 +143,16 @@ Describe 'Start-CIPPOneDriveCopyToUser' {
             Should -Invoke Get-CIPPOneDriveCopyUser -ParameterFilter { $TenantFilter -ceq 'Contoso.com' }
             Should -Invoke Invoke-CIPPSharePointCreateCopyJobs -ParameterFilter { $TenantFilter -ceq 'Contoso.com' }
         }
+    }
 
-        It 'refuses an id already used under the old raw-tenantFilter key' {
-            $Id = '11111111-2222-3333-4444-555555555555'
-            Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ RowKey = $Id; Kind = 'Operation' } } -ParameterFilter { $Filter -ceq "PartitionKey eq 'Contoso.com' and RowKey eq '$Id'" }
-            $Params = $script:Params.Clone()
-            $Params.TenantFilter = 'Contoso.com'
-            { Start-CIPPOneDriveCopyToUser @Params -OperationId $Id } | Should -Throw '*already exists*'
-            Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $Filter -ceq "PartitionKey eq '$($script:CustomerId)' and RowKey eq '$Id'" }
-            Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
-        }
+    It 'records <Expected> as the starter when StartedBy is not given and the headers carry <Case>' -ForEach @(
+        @{ Case = 'a signed-in user'; Headers = @{ 'x-ms-client-principal' = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"userDetails":"tech@partner.com"}')) }; Expected = 'tech@partner.com' }
+        @{ Case = 'an API client'; Headers = @{ 'x-ms-client-principal-name' = 'app-id-123' }; Expected = 'app-id-123' }
+        @{ Case = 'nothing'; Headers = $null; Expected = 'CIPP' }
+    ) {
+        $Params = $script:Params.Clone()
+        $Params.Remove('StartedBy')
+        (Start-CIPPOneDriveCopyToUser @Params -Headers $Headers).StartedBy | Should -Be $Expected
     }
 
     It 'creates the UPN folder and submits KeepBoth copy jobs for every root item into it' {

@@ -34,12 +34,7 @@ function Invoke-CIPPOffboardingJob {
             $OooMessage = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Options.OOO
         }
 
-        # Copy OneDrive to recipients. When licences are also being removed, the licence step waits for
-        # the copy (Remove-CIPPLicenseAfterOneDriveCopy) instead of removing them straight away; with the
-        # option off, both steps are exactly as before.
-        # The copy's operation id is chosen once the batch is built (below) and handed to both steps, so
-        # the licence step waits for exactly the copy this offboarding started, never another copy of the
-        # same user.
+        # With a OneDrive copy, the licence step waits for it (Remove-CIPPLicenseAfterOneDriveCopy).
         $OneDriveCopySelected = @($Options.OneDriveCopyTo | Where-Object { $_ }).Count -gt 0
 
         # Build dynamic batch of offboarding tasks based on selected options
@@ -467,14 +462,7 @@ function Invoke-CIPPOffboardingJob {
 
         Write-Information "Built batch of $($Batch.Count) offboarding tasks for $Username"
 
-        # OneDrive copy operation id. It is stored on the offboarding's own scheduled task, so a re-run of
-        # only the licence step waits for the copy this offboarding started:
-        #   - a run that includes the copy step starts a NEW copy under a new id (an id that already has a
-        #     copy is refused by Start-CIPPOneDriveCopyToUser) and saves it, replacing the previous one, so
-        #     a later licence-step re-run waits for the newest copy;
-        #   - a re-run of the licence step without the copy step reuses the saved id. With none saved, the
-        #     licence step finds no copy and keeps the licences.
-        # Never "the latest copy of this user": a copy someone else started must not release the licences.
+        # The copy's id is saved on the offboarding task so a licence-step-only re-run waits for this offboarding's copy, never another.
         $CopyStepIndex = -1
         $GateStepIndex = -1
         for ($i = 0; $i -lt $Batch.Count; $i++) {
@@ -493,15 +481,13 @@ function Invoke-CIPPOffboardingJob {
                         $TaskTable = Get-CippTable -tablename 'ScheduledTasks'
                         $null = Update-AzDataTableEntity -Force @TaskTable -Entity @{ PartitionKey = 'ScheduledTask'; RowKey = [string]$OwnerTaskId; OneDriveCopyOperationId = $OneDriveCopyOperationId }
                     } catch {
-                        # This run's licence step still gets the id; only a later licence-step re-run would
-                        # find no copy, and that keeps the licences.
                         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Could not record OneDrive copy $OneDriveCopyOperationId on the offboarding task for $Username; re-running only the licence step will not find it: $($_.Exception.Message)" -sev Warning
                     }
                 }
             } elseif ($RunsGateStep -and $OwnerTaskId) {
                 $TaskTable = Get-CippTable -tablename 'ScheduledTasks'
                 $SafeOwnerTaskId = ([string]$OwnerTaskId) -replace "'", "''"
-                $OwnerTask = Get-CIPPAzDataTableEntity @TaskTable -Filter "PartitionKey eq 'ScheduledTask' and RowKey eq '$SafeOwnerTaskId'" | Select-Object -First 1
+                $OwnerTask = @(Get-CIPPAzDataTableEntity @TaskTable -Filter "PartitionKey eq 'ScheduledTask' and RowKey eq '$SafeOwnerTaskId'")[0]
                 $OwnerUsername = try { ([string]$OwnerTask.Parameters | ConvertFrom-Json).Username } catch { $null }
                 # Only an id this offboarding (same task, tenant and user) recorded.
                 if ($OwnerTask -and $OwnerTask.Command -eq 'Invoke-CIPPOffboardingJob' -and [string]$OwnerTask.Tenant -eq $TenantFilter -and [string]$OwnerUsername -eq $Username -and
@@ -564,9 +550,7 @@ function Invoke-CIPPOffboardingJob {
         # order. Start-CIPPOrchestrator probes the Craft bridge arity, so on a Craft too old to know
         # Sequential it logs a warning and falls back to fan-out rather than failing — safe here because the
         # grant steps are already idempotent (they read the ACE back), so the ordering is belt-and-suspenders.
-        # The OneDrive copy is the exception: on fan-out the copy can start before Disable sign in shows
-        # (the copy step then waits up to ~45 s, and refuses after that), and the licence step can run
-        # before the copy's row exists. Both fail closed: the licences are kept and an error is logged.
+        # On fan-out the OneDrive copy and its licence step can run out of order; both fail closed and keep the licences.
         $InputObject = [PSCustomObject]@{
             OrchestratorName = "OffboardingUser_$($Username)_$TenantFilter"
             Batch            = @($Batch)

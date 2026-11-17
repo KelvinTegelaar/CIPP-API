@@ -3,10 +3,7 @@ function Get-CIPPOneDriveCopyUser {
     .SYNOPSIS
         Resolves a user and their OneDrive for a OneDrive-to-OneDrive copy.
     .DESCRIPTION
-        Looks the user up in the given tenant (so a user from another tenant is never found), then
-        their OneDrive, its root and its quota. Refusals (unknown user, no OneDrive, recipient without
-        a OneDrive licence) throw ArgumentException so the endpoint answers 400; anything else, such as
-        throttling or an outage, is let through untyped.
+        Refusals throw ArgumentException (400); upstream failures are let through untyped.
     .FUNCTIONALITY
         Internal
     #>
@@ -19,8 +16,7 @@ function Get-CIPPOneDriveCopyUser {
         [Parameter(Mandatory = $true)]
         [string]$UserId,
 
-        # A recipient also needs an enabled SharePoint/OneDrive service plan; a leaver does not,
-        # because their OneDrive stays readable for a while after the licence is gone.
+        # Only a recipient needs a OneDrive plan: a leaver's OneDrive stays readable after the licence is gone.
         [ValidateSet('Leaver', 'Recipient')]
         [string]$Kind = 'Recipient'
     )
@@ -50,11 +46,7 @@ function Get-CIPPOneDriveCopyUser {
     }
     $Upn = [string]$User.userPrincipalName
 
-    # A guest is a person outside the organisation; the leaver's files must not be handed to one.
-    # A guest leaver is still allowed.
-    # userType alone is not enough: an invited B2B user can be made a Member (userType Member, still an
-    # outside identity), and userType can be null on older accounts. An outside identity keeps '#EXT#'
-    # in its UPN and/or an externalUserState, so either one also marks the recipient as a guest.
+    # userType alone misses B2B users converted to Member; '#EXT#' or externalUserState still marks them.
     $IsExternal = [string]$User.userType -eq 'Guest' -or $Upn -match '#EXT#@' -or -not [string]::IsNullOrWhiteSpace([string]$User.externalUserState)
     if ($Kind -eq 'Recipient' -and $IsExternal) {
         $Why = if ([string]$User.userType -eq 'Guest') { 'is a guest' } else { 'is an account from another organisation (an invited user, or one synced in from another tenant)' }

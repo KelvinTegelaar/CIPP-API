@@ -21,7 +21,7 @@ Describe 'Invoke-CIPPOffboardingOneDriveCopy' {
             -Recipients @(@{ label = 'Bob'; value = 'bob-id' }, [pscustomobject]@{ value = 'carol-id' }, 'dave@contoso.com', $null)
         $Result | Should -BeLike 'Started OneDrive copy op-1 of pat@contoso.com into folder pat@contoso.com for bob@contoso.com*'
         Should -Invoke Start-CIPPOneDriveCopyToUser -Times 1 -Exactly -ParameterFilter {
-            $Leaver -eq 'pat@contoso.com' -and (@($Recipients) -join ';') -eq 'bob-id;carol-id;dave@contoso.com' -and $StartedBy -eq 'tech@partner.com' -and $WaitForSignInBlock
+            $Leaver -eq 'pat@contoso.com' -and (@($Recipients) -join ';') -eq 'bob-id;carol-id;dave@contoso.com' -and $Headers.'x-ms-client-principal' -eq $Principal -and $WaitForSignInBlock
         }
     }
 

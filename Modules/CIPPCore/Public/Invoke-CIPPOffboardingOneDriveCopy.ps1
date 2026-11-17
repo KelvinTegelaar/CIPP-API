@@ -3,10 +3,7 @@ function Invoke-CIPPOffboardingOneDriveCopy {
     .SYNOPSIS
         Offboarding step: starts a copy of the leaver's OneDrive into each recipient's OneDrive.
     .DESCRIPTION
-        Thin wrapper over Start-CIPPOneDriveCopyToUser (the same core the ExecOneDriveCopyToUser
-        endpoint uses) that accepts the wizard's {label,value} recipients and returns one line of text
-        for the offboarding results. It only starts the copy; when the offboarding also removes licences,
-        Remove-CIPPLicenseAfterOneDriveCopy waits for it to complete.
+        Accepts the wizard's {label,value} recipients and returns one line of text for the offboarding results.
     .FUNCTIONALITY
         Internal
     #>
@@ -38,16 +35,10 @@ function Invoke-CIPPOffboardingOneDriveCopy {
         throw 'No OneDrive copy recipients were given.'
     }
 
-    $Principal = try {
-        [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json
-    } catch { $null }
-    $StartedBy = $Principal.userDetails ?? $Headers.'x-ms-client-principal-name' ?? 'CIPP offboarding'
-
     $StartParams = @{
         TenantFilter = $TenantFilter
         Leaver       = $Username
         Recipients   = $RecipientIds
-        StartedBy    = $StartedBy
         Headers      = $Headers
         APIName      = $APIName
         # Disable sign in ran a step earlier; give Graph a moment to show the account as blocked.
