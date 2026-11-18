@@ -36,10 +36,18 @@ function Set-CIPPAssignedApplication {
             }
         }
 
+        # Only these app types have an assignment settings type in Graph; any other (MSI line-of-business,
+        # web link, Office, Edge) is rejected with "Invalid OData type" and must be sent without settings.
+        $SettingsAppTypes = [System.Collections.Generic.HashSet[string]]::new(
+            [string[]]@('androidManagedStore', 'iosDdmLob', 'iosDdmStore', 'iosDdmVpp', 'iosLob', 'iosStore', 'iosVpp', 'macOsDdmVpp', 'macOsLob', 'macOsVpp', 'microsoftStoreForBusiness', 'win32Catalog', 'win32Lob', 'winGet', 'windowsAppX', 'windowsAutoUpdateCatalog', 'windowsUniversalAppX'),
+            [System.StringComparer]::OrdinalIgnoreCase
+        )
         $assignmentSettings = $null
-        if ($AppType) {
+        $SettingsAppType = $null
+        # TryGetValue returns the list's spelling: Graph type names are case-sensitive (macOSLobApp -> macOsLob).
+        if ($AppType -and $SettingsAppTypes.TryGetValue([string]$AppType, [ref]$SettingsAppType)) {
             $assignmentSettings = @{
-                '@odata.type' = "#microsoft.graph.$($AppType)AppAssignmentSettings"
+                '@odata.type' = "#microsoft.graph.$($SettingsAppType)AppAssignmentSettings"
             }
 
             switch ($AppType) {

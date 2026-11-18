@@ -79,4 +79,28 @@ Describe 'Set-CIPPAssignedApplication include target' {
             }
         }
     }
+
+    Context 'assignment settings by app type' {
+        It 'sends no settings for an app type Graph has no settings type for (MSI line-of-business)' {
+            $null = Set-CIPPAssignedApplication -GroupName 'AllDevices' -ApplicationId 'app-1' -Intent 'Uninstall' -AppType 'windowsMobileMSI' -TenantFilter $script:Tenant -AssignmentMode 'replace'
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $null -eq ($body | ConvertFrom-Json).mobileAppAssignments.settings
+            }
+        }
+
+        It 'sends the Win32 settings with notifications hidden' {
+            $null = Set-CIPPAssignedApplication -GroupName 'AllDevices' -ApplicationId 'app-1' -Intent 'Uninstall' -AppType 'win32Lob' -TenantFilter $script:Tenant -AssignmentMode 'replace'
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $Settings = ($body | ConvertFrom-Json).mobileAppAssignments.settings
+                $Settings.'@odata.type' -ceq '#microsoft.graph.win32LobAppAssignmentSettings' -and $Settings.notifications -eq 'hideAll'
+            }
+        }
+
+        It 'uses the Graph spelling of the type name' {
+            $null = Set-CIPPAssignedApplication -GroupName 'AllDevices' -ApplicationId 'app-1' -Intent 'Required' -AppType 'macOSLob' -TenantFilter $script:Tenant -AssignmentMode 'replace'
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                ($body | ConvertFrom-Json).mobileAppAssignments.settings.'@odata.type' -ceq '#microsoft.graph.macOsLobAppAssignmentSettings'
+            }
+        }
+    }
 }
