@@ -22,6 +22,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "DefaultAccessLevel": "%accessLevel%"
+    },
     "addedComponent": [
       {
         "name": "standards.ActiveSyncDefaultAccessLevel.accessLevel",
@@ -67,6 +71,13 @@
       "CIS"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_1_3_2"
+    ],
+    "secureScoreImpact": 1,
+    "expected": {
+      "timeout": "%timeout%"
+    },
     "addedComponent": [
       {
         "name": "standards.ActivityBasedTimeout.timeout",
@@ -119,6 +130,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": []
   },
   {
@@ -143,6 +160,10 @@
       "Microsoft"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_2_1_10"
+    ],
+    "secureScoreImpact": 0,
     "addedComponent": [
       {
         "name": "standards.AddDMARCToMOERA.RecordValue",
@@ -171,6 +192,14 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "EIDSCAAP01",
+      "ZTNA21842"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "allowedToUseSSPR": "%allowSSPR%"
+    },
     "addedComponent": [
       {
         "name": "standards.AdminSSPR.allowSSPR",
@@ -197,6 +226,10 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "displayConcealedNames": false
+    },
     "addedComponent": []
   },
   {
@@ -238,6 +271,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CIS_2_1_7"
+    ],
+    "secureScoreImpact": 72,
     "addedComponent": [
       {
         "name": "standards.AntiPhishPolicy.name",
@@ -510,6 +547,13 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CIS_2_1_13"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "EnableSafeList": "%enableSafeList%"
+    },
     "addedComponent": [
       {
         "name": "standards.AntiSpamSafeList.enableSafeList",
@@ -535,6 +579,12 @@
     "recommendedBy": [],
     "requiredCapabilities": [],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.AppDeploy.mode",
@@ -594,6 +644,12 @@
     "powershellEquivalent": "Update-MgPolicyDefaultAppManagementPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.AppManagementPolicy.passwordCredentialsPasswordAddition",
@@ -664,6 +720,12 @@
       "MICROSOFTINTUNEPLAN1"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.AppleEnrollmentTypeProfile.DisplayName",
@@ -753,6 +815,12 @@
       "MICROSOFTINTUNEPLAN1"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.AssignmentFilterTemplate.assignmentFilterTemplate",
@@ -812,6 +880,16 @@
         "THREAT_INTELLIGENCE_GOV"
       ]
     ],
+    "appliesToTest": [
+      "CIS_2_1_5",
+      "ORCA225"
+    ],
+    "secureScoreImpact": 10,
+    "expected": {
+      "EnableATPForSPOTeamsODB": true,
+      "EnableSafeDocs": true,
+      "AllowSafeDocsOpen": "%AllowSafeDocsOpen%"
+    },
     "addedComponent": [
       {
         "name": "standards.AtpPolicyForO365.AllowSafeDocsOpen",
@@ -853,6 +931,14 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CISAMSEXO171",
+      "CIS_3_1_1"
+    ],
+    "secureScoreImpact": 3,
+    "expected": {
+      "UnifiedAuditLogIngestionEnabled": "%enabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.AuditLog.enabled",
@@ -880,6 +966,18 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "EIDSCAAG01"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "policyMigrationState": {
+        "$anyOf": [
+          "%migrationState%",
+          null
+        ]
+      }
+    },
     "addedComponent": [
       {
         "name": "standards.AuthMethodsPolicyMigration.migrationState",
@@ -919,6 +1017,21 @@
     "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_2_3_6",
+      "EIDSCAAG02",
+      "EIDSCAAG03",
+      "ZTNA21841"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "reportSuspiciousActivitySettings": {
+        "state": "%reportSuspiciousActivity%"
+      },
+      "systemCredentialPreferences": {
+        "state": "%systemCredential%"
+      }
+    },
     "addedComponent": [
       {
         "name": "standards.AuthMethodsSettings.reportSuspiciousActivity",
@@ -982,6 +1095,12 @@
     "powershellEquivalent": "Set-CIPPAuthenticationPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.AuthenticationMethods.MicrosoftAuthenticatorEnabled",
@@ -1495,6 +1614,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": []
   },
   {
@@ -1517,6 +1640,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "AutoArchivingThresholdPercentage": "%threshold%"
+    },
     "addedComponent": [
       {
         "name": "standards.AutoArchive.threshold",
@@ -1556,6 +1683,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "AutoEnableArchiveMailbox": "%enabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.AutoArchiveMailbox.enabled",
@@ -1585,6 +1716,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "AutoExpandingArchiveEnabled": true
+    },
     "addedComponent": []
   },
   {
@@ -1608,6 +1743,12 @@
       "MICROSOFTINTUNEPLAN1"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.AutopilotProfile.DisplayName",
@@ -1759,6 +1900,7 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
     "addedComponent": [
       {
         "name": "standards.AutopilotStatusPage.TimeOutInMinutes",
@@ -1835,6 +1977,14 @@
     "powershellEquivalent": "Update-MgBetaPolicyAuthorizationPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_1_4_6",
+      "ZTNA21954"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "allowedToReadBitLockerKeysForOwnedDevice": "%allowed%"
+    },
     "addedComponent": [
       {
         "name": "standards.BitLockerKeysForOwnedDevice.allowed",
@@ -1865,6 +2015,11 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "windowsPolicy": "Deployed",
+      "macosPolicy": "Deployed"
+    },
     "addedComponent": [
       {
         "name": "standards.BlockUnapprovedRMM.allowedTools",
@@ -3062,6 +3217,13 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CIS_1_3_9"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "BookingsEnabled": "%enabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.Bookings.enabled",
@@ -3090,6 +3252,36 @@
       "AAD_PREMIUM_P2",
       "OFFICE_BUSINESS"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "signInPageText": "%signInPageText%",
+      "usernameHintText": "%usernameHintText%",
+      "loginPageTextVisibilitySettings": {
+        "hideAccountResetCredentials": "%hideAccountResetCredentials%",
+        "hideForgotMyPassword": "%hideForgotMyPassword%",
+        "hideCannotAccessYourAccount": "%hideCannotAccessYourAccount%",
+        "hideResetItNow": "%hideResetItNow%",
+        "hideTermsOfUse": "%hideTermsOfUse%",
+        "hidePrivacyAndCookies": "%hidePrivacyAndCookies%"
+      },
+      "loginPageLayoutConfiguration": {
+        "layoutTemplateType": "%layoutTemplateType%",
+        "isHeaderShown": "%isHeaderShown%",
+        "isFooterShown": "%isFooterShown%"
+      },
+      "isKeepMeSignedInDisabled": "%isKeepMeSignedInDisabled%",
+      "backgroundColor": "%backgroundColor%",
+      "headerBackgroundColor": "%headerBackgroundColor%",
+      "customAccountResetCredentialsUrl": "%customAccountResetCredentialsUrl%",
+      "customForgotMyPasswordText": "%customForgotMyPasswordText%",
+      "customResetItNowText": "%customResetItNowText%",
+      "customCannotAccessYourAccountText": "%customCannotAccessYourAccountText%",
+      "customCannotAccessYourAccountUrl": "%customCannotAccessYourAccountUrl%",
+      "customTermsOfUseText": "%customTermsOfUseText%",
+      "customTermsOfUseUrl": "%customTermsOfUseUrl%",
+      "customPrivacyAndCookiesText": "%customPrivacyAndCookiesText%",
+      "customPrivacyAndCookiesUrl": "%customPrivacyAndCookiesUrl%"
+    },
     "addedComponent": [
       {
         "name": "standards.Branding.signInPageText",
@@ -3289,6 +3481,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "MessageRecallEnabled": "%enabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.CloudMessageRecall.enabled",
@@ -3317,6 +3513,12 @@
     "powershellEquivalent": "Graph: PATCH policies/b2bManagementPolicies",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.CollaborationDomainRestriction.allowedDomains",
@@ -3346,6 +3548,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.ColleagueImpersonationAlert.disclaimerHtml",
@@ -3429,6 +3637,45 @@
       "AAD_PREMIUM_P2"
     ],
     "multiple": true,
+    "appliesToTest": [
+      "CIS_5_2_2_1",
+      "CIS_5_2_2_10",
+      "CIS_5_2_2_11",
+      "CIS_5_2_2_12",
+      "CIS_5_2_2_2",
+      "CIS_5_2_2_3",
+      "CIS_5_2_2_4",
+      "CIS_5_2_2_5",
+      "CIS_5_2_2_6",
+      "CIS_5_2_2_7",
+      "CIS_5_2_2_8",
+      "CIS_5_2_2_9",
+      "SMB1001_2_5",
+      "SMB1001_2_6",
+      "SMB1001_2_9",
+      "ZTNA21783",
+      "ZTNA21786",
+      "ZTNA21806",
+      "ZTNA21808",
+      "ZTNA21824",
+      "ZTNA21825",
+      "ZTNA21828",
+      "ZTNA21830",
+      "ZTNA21883",
+      "ZTNA21892",
+      "ZTNA21941",
+      "ZTNA24827"
+    ],
+    "secureScoreImpact": 30,
+    "expected": {
+      "displayName": "%caTemplate%",
+      "state": "%state%"
+    },
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.ConditionalAccessTemplate.caTemplate",
@@ -3519,6 +3766,7 @@
       "AAD_PREMIUM_P2"
     ],
     "multiple": true,
+    "secureScoreImpact": 30,
     "addedComponent": [
       {
         "name": "standards.ConditionalAccessTemplatePackage.caTemplatePackage",
@@ -3597,6 +3845,11 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "EIDSCACP03",
+      "EIDSCACP04"
+    ],
+    "secureScoreImpact": 0,
     "addedComponent": [
       {
         "name": "standards.ConsentPolicySettings.BlockUserConsentForRiskyApps",
@@ -3628,6 +3881,14 @@
     "powershellEquivalent": "Graph API: PATCH /beta/copilot/admin/policySettings/{id}",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "copilotChatPinning": "%copilotChatPinning%",
+      "blockAccessToOpenFiles": "%blockAccessToOpenFiles%",
+      "imageGeneration": "%imageGeneration%",
+      "allowWebSearch": "%allowWebSearch%",
+      "allowInAdminCenters": "%allowInAdminCenters%"
+    },
     "addedComponent": [
       {
         "name": "standards.CopilotSettings.copilotChatPinning",
@@ -3771,6 +4032,12 @@
       "EXCHANGE_LITE"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.CreateSharedMailbox.primarySmtpAddress",
@@ -3808,6 +4075,12 @@
       "AAD_PREMIUM",
       "AAD_PREMIUM_P2"
     ],
+    "secureScoreImpact": 5,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.CustomBannedPasswordList.BannedWords",
@@ -3840,6 +4113,7 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
     "addedComponent": [
       {
         "name": "standards.DefaultPlatformRestrictions.platformAndroidForWorkBlocked",
@@ -4046,6 +4320,15 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "appliesToTest": [
+      "CIS_7_2_11",
+      "CIS_7_2_7"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "DefaultSharingLinkType": "%sharingLinkType%",
+      "DefaultLinkPermission": 1
+    },
     "addedComponent": [
       {
         "name": "standards.DefaultSharingLink.sharingLinkType",
@@ -4092,6 +4375,21 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "EIDSCAAP05",
+      "EIDSCAAP06",
+      "EIDSCAAP09",
+      "EIDSCAAP14"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "allowedToSignUpEmailBasedSubscriptions": "%allowedToSignUpEmailBasedSubscriptions%",
+      "allowEmailVerifiedUsersToJoinOrganization": "%allowEmailVerifiedUsersToJoinOrganization%",
+      "allowUserConsentForRiskyApps": "%allowUserConsentForRiskyApps%",
+      "defaultUserRolePermissions": {
+        "allowedToReadOtherUsers": "%allowedToReadOtherUsers%"
+      }
+    },
     "addedComponent": [
       {
         "name": "standards.DefaultUserPermissions.allowedToSignUpEmailBasedSubscriptions",
@@ -4161,6 +4459,12 @@
     "powershellEquivalent": "Graph API - deviceManagement/configurationPolicies",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 162,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.DefenderASRPolicy.Mode",
@@ -4373,6 +4677,12 @@
     "powershellEquivalent": "Graph API - deviceManagement/configurationPolicies",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 50,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.DefenderAVPolicy.ScanArchives",
@@ -4772,6 +5082,12 @@
     "powershellEquivalent": "Graph API - deviceManagement/mobileThreatDefenseConnectors",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.DefenderCompliancePolicy.ConnectAndroid",
@@ -4919,6 +5235,12 @@
     "powershellEquivalent": "Graph API - deviceManagement/configurationPolicies",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 9,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.DefenderEDRPolicy.Config",
@@ -4975,6 +5297,12 @@
     "powershellEquivalent": "Graph API - deviceManagement/configurationPolicies",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.DefenderExclusionPolicy.excludedExtensions",
@@ -5041,6 +5369,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.DelegateSentItems.IncludeUserMailboxes",
@@ -5074,6 +5406,11 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "appliesToTest": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "OrphanedPersonalSitesRetentionPeriod": "%days%"
+    },
     "addedComponent": [
       {
         "name": "standards.DeletedUserRentention.days",
@@ -5156,6 +5493,12 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.DeployCheckChromeExtension.showNotifications",
@@ -5359,6 +5702,12 @@
       "EXCHANGE_LITE"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.DeployContactTemplates.contactTemplate",
@@ -5397,6 +5746,13 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "DisplayName": "%DisplayName%",
+      "ExternalEmailAddress": "%ExternalEmailAddress%",
+      "FirstName": "%FirstName%",
+      "LastName": "%LastName%"
+    },
     "addedComponent": [
       {
         "name": "standards.DeployMailContact.ExternalEmailAddress",
@@ -5448,6 +5804,7 @@
       "AAD_PREMIUM",
       "AAD_PREMIUM_P2"
     ],
+    "secureScoreImpact": 0,
     "addedComponent": []
   },
   {
@@ -5475,6 +5832,7 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
     "addedComponent": []
   },
   {
@@ -5498,6 +5856,12 @@
       "MICROSOFTINTUNEPLAN1"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.DevicePrepProfile.ProfileName",
@@ -5640,6 +6004,10 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "DisableAddToOneDrive": "%disableAddToOneDrive%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableAddShortcutsToOneDrive.disableAddToOneDrive",
@@ -5677,6 +6045,13 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CIS_6_5_3"
+    ],
+    "secureScoreImpact": 5,
+    "expected": {
+      "AdditionalStorageProvidersAvailable": "%storageProvidersAvailable%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableAdditionalStorageProviders.storageProvidersAvailable",
@@ -5710,6 +6085,11 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "allowedToCreateAgentIdentityBlueprints": "%allowAgentBlueprintCreation%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableAgentBlueprintCreation.allowAgentBlueprintCreation",
@@ -5752,6 +6132,15 @@
       "SMB1001"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_1_2_2",
+      "EIDSCAAP10",
+      "SMB1001_2_8"
+    ],
+    "secureScoreImpact": 5,
+    "expected": {
+      "allowedToCreateApps": "%allowAppCreation%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableAppCreation.allowAppCreation",
@@ -5791,6 +6180,15 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CISAMSEXO51",
+      "CIS_6_5_4"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "SmtpClientAuthenticationDisabled": "%disabled%",
+      "UsersWithSmtpAuthEnabled": []
+    },
     "addedComponent": [
       {
         "name": "standards.DisableBasicAuthSMTP.disabled",
@@ -5826,6 +6224,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "EwsEnabled": "%ewsEnabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableEWS.ewsEnabled",
@@ -5858,6 +6260,14 @@
     "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_2_3_7",
+      "SMB1001_2_5_L4"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "state": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableEmail.state",
@@ -5910,6 +6320,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": []
   },
   {
@@ -5939,6 +6353,14 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CISAMSEXO62",
+      "CIS_1_3_3"
+    ],
+    "secureScoreImpact": 5,
+    "expected": {
+      "Enabled": "%externalCalendarSharingEnabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableExternalCalendarSharing.externalCalendarSharingEnabled",
@@ -5976,6 +6398,15 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_1_6_2",
+      "EIDSCAAP07",
+      "ZTNA21792"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "guestUserRoleId": "%guestUserRoleId%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableGuestDirectory.guestUserRoleId",
@@ -6025,6 +6456,13 @@
       "AAD_PREMIUM",
       "AAD_PREMIUM_P2"
     ],
+    "appliesToTest": [
+      "ZTNA21858"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.DisableGuests.days",
@@ -6074,6 +6512,10 @@
       "AAD_PREMIUM",
       "AAD_PREMIUM_P2"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.DisableInactiveApps.days",
@@ -6123,6 +6565,10 @@
       "AAD_PREMIUM",
       "AAD_PREMIUM_P2"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.DisableInactiveUsers.days",
@@ -6168,6 +6614,12 @@
     "powershellEquivalent": "Graph: PATCH settings (Group.Unified)",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.DisableM365GroupUsers.AllowedGroupName",
@@ -6210,6 +6662,14 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CIS_6_3_2"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "PersonalAccountsEnabled": "%personalAccountsEnabled%",
+      "PersonalAccountCalendarsEnabled": "%personalAccountCalendarsEnabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableOWAPersonalAccounts.personalAccountsEnabled",
@@ -6251,6 +6711,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 3,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": []
   },
   {
@@ -6271,6 +6737,10 @@
     "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "state": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableQRCodePin.state",
@@ -6324,6 +6794,13 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "appliesToTest": [
+      "CIS_7_2_5"
+    ],
+    "secureScoreImpact": 3,
+    "expected": {
+      "PreventExternalUsersFromResharing": true
+    },
     "addedComponent": []
   },
   {
@@ -6356,6 +6833,13 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "SMB1001_2_3"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": []
   },
   {
@@ -6384,6 +6868,15 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_2_3_5",
+      "EIDSCAAS04",
+      "SMB1001_2_5_L4"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "state": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableSMS.state",
@@ -6428,6 +6921,14 @@
     "powershellEquivalent": "Update-MgBetaPolicyAuthorizationPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_1_3_1",
+      "SMB1001_2_8"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "allowedToCreateSecurityGroups": "%allowSecurityGroupCreation%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableSecurityGroupUsers.allowSecurityGroupCreation",
@@ -6452,6 +6953,12 @@
     "powershellEquivalent": "Update-MSCommerceProductPolicy -PolicyId AllowSelfServicePurchase -Value Disabled",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.DisableSelfServiceLicenses.Exclusions",
@@ -6500,6 +7007,13 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "appliesToTest": [
+      "CIS_7_2_1"
+    ],
+    "secureScoreImpact": 1,
+    "expected": {
+      "LegacyAuthProtocolsEnabled": "%legacyAuthEnabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableSharePointLegacyAuth.legacyAuthEnabled",
@@ -6538,6 +7052,14 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_1_2_2",
+      "SMB1001_2_3"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": []
   },
   {
@@ -6562,6 +7084,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "TNEFEnabled": "%tnefEnabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableTNEF.tnefEnabled",
@@ -6599,6 +7125,15 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_1_2_3",
+      "SMB1001_2_8",
+      "ZTNA21787"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "allowedToCreateTenants": "%allowTenantCreation%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableTenantCreation.allowTenantCreation",
@@ -6638,6 +7173,12 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "appliesToTest": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "isSiteCreationEnabled": false,
+      "isSiteCreationUIEnabled": false
+    },
     "addedComponent": []
   },
   {
@@ -6654,6 +7195,10 @@
     "powershellEquivalent": "Set-UserBriefingConfig",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "isEnabledInOrganization": false
+    },
     "addedComponent": []
   },
   {
@@ -6682,6 +7227,15 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_2_3_5",
+      "EIDSCAAV01",
+      "SMB1001_2_5_L4"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "state": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.DisableVoice.state",
@@ -6716,6 +7270,10 @@
     "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "state": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.Disablex509Certificate.state",
@@ -6755,6 +7313,12 @@
     "recommendedBy": [],
     "requiredCapabilities": [],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.DlpCompliancePolicyTemplate.dlpCompliancePolicyTemplate",
@@ -6791,6 +7355,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "DlpViaDcsEnabled": "%dlpViaDcsEnabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.DlpViaDcsEnabled.dlpViaDcsEnabled",
@@ -6820,6 +7388,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.EWSAllowedAppIds.presets",
@@ -6909,6 +7483,13 @@
     "powershellEquivalent": "Set-OrganizationConfig -RejectDirectSend $true/$false",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_6_5_5"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "RejectDirectSend": "%rejectDirectSend%"
+    },
     "addedComponent": [
       {
         "name": "standards.EXODirectSend.rejectDirectSend",
@@ -6951,6 +7532,13 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CIS_6_2_1"
+    ],
+    "secureScoreImpact": 6,
+    "expected": {
+      "AutoForwardingMode": "%autoForwardingMode%"
+    },
     "addedComponent": [
       {
         "name": "standards.EXODisableAutoForwarding.autoForwardingMode",
@@ -7006,6 +7594,16 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CIS_2_1_15"
+    ],
+    "secureScoreImpact": 4,
+    "expected": {
+      "RecipientLimitExternalPerHour": "%recipientLimitExternalPerHour%",
+      "RecipientLimitInternalPerHour": "%recipientLimitInternalPerHour%",
+      "RecipientLimitPerDay": "%recipientLimitPerDay%",
+      "ActionWhenThresholdReached": "%actionWhenThresholdReached%"
+    },
     "addedComponent": [
       {
         "name": "standards.EXOOutboundSpamLimits.recipientLimitExternalPerHour",
@@ -7065,6 +7663,12 @@
     "powershellEquivalent": "Update-MgPolicyHomeRealmDiscoveryPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.EmailAsAlternateLoginId.Enabled",
@@ -7101,6 +7705,13 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CIS_2_1_12"
+    ],
+    "secureScoreImpact": 1,
+    "expected": {
+      "IPAllowList": []
+    },
     "addedComponent": [
       {
         "name": "standards.EmptyFilterIPAllowList."
@@ -7128,6 +7739,12 @@
       "CIS"
     ],
     "requiredCapabilities": [],
+    "secureScoreImpact": 5,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.EnableAppConsentRequests.ReviewerRoles",
@@ -7178,6 +7795,13 @@
       "LOCKBOX_ENTERPRISE_GOV",
       "CustomerLockboxA_Enterprise"
     ],
+    "appliesToTest": [
+      "CIS_1_3_6"
+    ],
+    "secureScoreImpact": 1,
+    "expected": {
+      "CustomerLockBoxEnabled": "%enabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.EnableCustomerLockbox.enabled",
@@ -7210,6 +7834,10 @@
       "EXCHANGE_S_STANDARD_GOV",
       "EXCHANGE_S_ENTERPRISE_GOV"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.EnableExchangeCloudManagement.state",
@@ -7263,6 +7891,17 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "EIDSCAAF01",
+      "EIDSCAAF02",
+      "EIDSCAAF03",
+      "ZTNA21838",
+      "ZTNA21839"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "state": "enabled"
+    },
     "addedComponent": []
   },
   {
@@ -7285,6 +7924,11 @@
     "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "state": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.EnableHardwareOAuth.state",
@@ -7327,6 +7971,13 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "SMB1001_3_1"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.EnableLitigationHold.days",
@@ -7363,6 +8014,16 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CIS_6_5_2"
+    ],
+    "secureScoreImpact": 3,
+    "expected": {
+      "MailTipsAllTipsEnabled": "%mailTipsEnabled%",
+      "MailTipsExternalRecipientsTipsEnabled": "%mailTipsEnabled%",
+      "MailTipsGroupMetricsEnabled": "%mailTipsEnabled%",
+      "MailTipsLargeAudienceThreshold": "%largeAudienceThreshold%"
+    },
     "addedComponent": [
       {
         "name": "standards.EnableMailTips.mailTipsEnabled",
@@ -7416,6 +8077,16 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CISAMSEXO131",
+      "CIS_6_1_1",
+      "CIS_6_1_2",
+      "CIS_6_1_3"
+    ],
+    "secureScoreImpact": 3,
+    "expected": {
+      "AuditDisabled": "%auditDisabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.EnableMailboxAuditing.auditDisabled",
@@ -7441,6 +8112,10 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "isEnabledInOrganization": true
+    },
     "addedComponent": []
   },
   {
@@ -7467,6 +8142,11 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": []
   },
   {
@@ -7482,6 +8162,10 @@
     "powershellEquivalent": "Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:$true",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "isEnabledInOrganization": true
+    },
     "addedComponent": []
   },
   {
@@ -7514,6 +8198,13 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "appliesToTest": [
+      "CIS_1_2_1"
+    ],
+    "secureScoreImpact": 3,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.EnforcePrivateGroups.ExcludedGroupNames",
@@ -7550,6 +8241,12 @@
       "MICROSOFTINTUNEPLAN1"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.EnrollmentRestrictionTemplate.enrollmentRestrictionTemplate",
@@ -7590,6 +8287,7 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
     "addedComponent": [
       {
         "name": "standards.EnrollmentWindowsHelloForBusinessConfiguration.state",
@@ -7799,6 +8497,12 @@
       "EXCHANGE_LITE"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.ExchangeConnectorTemplate.exConnectorTemplate",
@@ -7836,6 +8540,12 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.ExcludedfileExt.ext",
@@ -7862,6 +8572,12 @@
       "AAD_PREMIUM",
       "AAD_PREMIUM_P2"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.ExternalComplianceTrusted.state",
@@ -7889,6 +8605,12 @@
       "AAD_PREMIUM",
       "AAD_PREMIUM_P2"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.ExternalMFATrusted.state",
@@ -7922,6 +8644,12 @@
       "AAD_PREMIUM",
       "AAD_PREMIUM_P2"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.FIDO2PasskeyProfiles.PasskeyTypes",
@@ -8459,6 +9187,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "FocusedInboxOn": "%enabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.FocusedInbox.enabled",
@@ -8492,6 +9224,13 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_1_3_5"
+    ],
+    "secureScoreImpact": 6,
+    "expected": {
+      "isInOrgFormsPhishingScanEnabled": true
+    },
     "addedComponent": []
   },
   {
@@ -8514,6 +9253,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.GlobalQuarantineNotifications.NotificationInterval",
@@ -8558,6 +9303,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.GlobalQuarantineSettings.SenderName",
@@ -8627,6 +9378,12 @@
         "MICROSOFTINTUNEPLAN1"
       ]
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.GlobalSecureAccessCompliantNetwork.deployWindows",
@@ -8763,6 +9520,7 @@
         "Entra_Premium_Internet_Access"
       ]
     ],
+    "secureScoreImpact": 0,
     "addedComponent": [
       {
         "name": "standards.GlobalSecureAccessInternetAccess.profileState",
@@ -8903,6 +9661,7 @@
         "AAD_PREMIUM_P2"
       ]
     ],
+    "secureScoreImpact": 0,
     "addedComponent": [
       {
         "name": "standards.GlobalSecureAccessM365Profile.profileState",
@@ -8984,6 +9743,7 @@
       ]
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
     "addedComponent": [
       {
         "name": "standards.GlobalSecureAccessProfileTemplate.profileTemplate",
@@ -9020,6 +9780,16 @@
         "AAD_PREMIUM_P2"
       ]
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "onboardingStatus": {
+        "$anyOf": [
+          "onboarded",
+          "onboardingInProgress"
+        ]
+      },
+      "signalingStatus": "%signalingStatus%"
+    },
     "addedComponent": [
       {
         "name": "standards.GlobalSecureAccessSetup.signalingStatus",
@@ -9056,6 +9826,12 @@
     "recommendedBy": [],
     "requiredCapabilities": [],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.GroupTemplate.groupTemplate",
@@ -9097,6 +9873,15 @@
     "powershellEquivalent": "Graph API",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_1_6_3",
+      "EIDSCAAP04",
+      "ZTNA21791"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "allowInvitesFrom": "%allowInvitesFrom%"
+    },
     "addedComponent": [
       {
         "name": "standards.GuestInvite.allowInvitesFrom",
@@ -9145,6 +9930,12 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.IntuneAppTemplateDeploy.templateIds",
@@ -9188,6 +9979,14 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "appliesToTest": [
+      "CIS_4_1"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "secureByDefault": "%secureByDefault%",
+      "deviceComplianceCheckinThresholdDays": "%deviceComplianceCheckinThresholdDays%"
+    },
     "addedComponent": [
       {
         "name": "standards.IntuneComplianceSettings.secureByDefault",
@@ -9234,6 +10033,10 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.IntuneMinimumOSVersion.cadenceDays",
@@ -9356,6 +10159,47 @@
       "MICROSOFTINTUNEPLAN1"
     ],
     "multiple": true,
+    "appliesToTest": [
+      "SMB1001_1_10",
+      "SMB1001_1_2",
+      "SMB1001_1_3",
+      "SMB1001_1_4",
+      "SMB1001_1_8",
+      "SMB1001_1_9",
+      "SMB1001_2_2",
+      "SMB1001_4_7",
+      "ZTNA24540",
+      "ZTNA24541",
+      "ZTNA24542",
+      "ZTNA24543",
+      "ZTNA24545",
+      "ZTNA24547",
+      "ZTNA24548",
+      "ZTNA24549",
+      "ZTNA24550",
+      "ZTNA24552",
+      "ZTNA24553",
+      "ZTNA24564",
+      "ZTNA24568",
+      "ZTNA24569",
+      "ZTNA24572",
+      "ZTNA24574",
+      "ZTNA24575",
+      "ZTNA24576",
+      "ZTNA24784",
+      "ZTNA24839",
+      "ZTNA24840",
+      "ZTNA24870"
+    ],
+    "secureScoreImpact": 20,
+    "expected": {
+      "displayName": "%intuneTemplate%"
+    },
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.IntuneTemplate.intuneTemplate",
@@ -9477,6 +10321,7 @@
       "MICROSOFTINTUNEPLAN1"
     ],
     "multiple": true,
+    "secureScoreImpact": 20,
     "addedComponent": [
       {
         "name": "standards.IntuneTemplatePackage.intuneTemplatePackage",
@@ -9587,6 +10432,11 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "areDataProcessorServiceForWindowsFeaturesEnabled": "%areDataProcessorServiceForWindowsFeaturesEnabled%",
+      "hasValidWindowsLicense": "%hasValidWindowsLicense%"
+    },
     "addedComponent": [
       {
         "name": "standards.IntuneWindowsDiagnostic.areDataProcessorServiceForWindowsFeaturesEnabled",
@@ -9618,6 +10468,10 @@
       "Microsoft"
     ],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": []
   },
   {
@@ -9642,6 +10496,11 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "EIDSCAST08",
+      "EIDSCAST09"
+    ],
+    "secureScoreImpact": 0,
     "addedComponent": [
       {
         "name": "standards.M365GroupGuestSettings.AllowGuestsToBeGroupOwner",
@@ -9679,6 +10538,10 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "isMdmEnrollmentDuringRegistrationDisabled": "%disableEnrollment%"
+    },
     "addedComponent": [
       {
         "name": "standards.MDMEnrollmentDuringRegistration.disableEnrollment",
@@ -9708,6 +10571,12 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.MDMScope.appliesTo",
@@ -9752,6 +10621,12 @@
     "powershellEquivalent": "Update-MgServicePrincipal",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.MFAPushApps.Enabled",
@@ -9775,6 +10650,12 @@
     "powershellEquivalent": "Graph: PATCH organization",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.MailContacts.GeneralContact",
@@ -9826,6 +10707,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": []
   },
   {
@@ -9850,6 +10735,11 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": [],
+      "planIssues": []
+    },
     "addedComponent": [
       {
         "name": "standards.MailboxRecipientLimits.RecipientLimit",
@@ -9903,6 +10793,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CIS_2_1_2"
+    ],
+    "secureScoreImpact": 11,
     "addedComponent": [
       {
         "name": "standards.MalwareFilterPolicy.name",
@@ -10002,6 +10896,16 @@
     ],
     "requiredCapabilities": [],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "expected": {
+      "completed": true
+    },
+    "manual": {
+      "taskName": "%taskName%",
+      "instructions": "%instructions%",
+      "documentationUrl": "%documentationUrl%",
+      "reopen": "%recurrence%"
+    },
     "addedComponent": [
       {
         "name": "standards.ManualTask.taskName",
@@ -10078,6 +10982,21 @@
         "RMS_S_ENTERPRISE_GOV"
       ]
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "AzureRMSLicensingEnabled": true,
+      "SimplifiedClientAccessEnabled": true,
+      "EnablePdfEncryption": "%EnablePdfEncryption%",
+      "DecryptAttachmentForEncryptOnly": "%DecryptAttachmentForEncryptOnly%",
+      "SimplifiedClientAccessDoNotForwardDisabled": "%SimplifiedClientAccessDoNotForwardDisabled%",
+      "SimplifiedClientAccessEncryptOnlyDisabled": "%SimplifiedClientAccessEncryptOnlyDisabled%",
+      "TransportDecryptionSetting": "%TransportDecryptionSetting%"
+    },
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.MessageEncryption.EnablePdfEncryption",
@@ -10223,6 +11142,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "MessageExpiration": "%messageExpiration%"
+    },
     "addedComponent": [
       {
         "name": "standards.MessageExpiration.messageExpiration",
@@ -10260,6 +11183,10 @@
       "SHAREPOINTENTERPRISE_GOV",
       "ONEDRIVEENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": []
   },
   {
@@ -10282,6 +11209,12 @@
       "AAD_PREMIUM",
       "AAD_PREMIUM_P2"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.NudgeMFA.state",
@@ -10363,6 +11296,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.OMEBranding.BackgroundColor",
@@ -10514,6 +11453,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "ConditionalAccessPolicy": "%ConditionalAccessPolicy%"
+    },
     "addedComponent": [
       {
         "name": "standards.OWAAttachmentRestrictions.ConditionalAccessPolicy",
@@ -10555,6 +11498,12 @@
     "powershellEquivalent": "Graph: PATCH policies/authorizationPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.OauthConsent.AllowedApps",
@@ -10586,6 +11535,12 @@
     "powershellEquivalent": "Update-MgPolicyAuthorizationPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 4,
+    "expected": {
+      "permissionGrantPolicyIdsAssignedToDefaultUserRole": [
+        "ManagePermissionGrantsForSelf.microsoft-user-default-low"
+      ]
+    },
     "addedComponent": []
   },
   {
@@ -10607,6 +11562,15 @@
       "SHAREPOINTENTERPRISE_GOV",
       "ONEDRIVEENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": []
   },
   {
@@ -10640,6 +11604,13 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "appliesToTest": [
+      "CIS_7_2_4"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "ODBSharingCapability": "%sharingCapability%"
+    },
     "addedComponent": [
       {
         "name": "standards.OneDriveSharingCapability.sharingCapability",
@@ -10696,6 +11667,17 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CIS_2_1_6"
+    ],
+    "secureScoreImpact": 3,
+    "expected": {
+      "NotifyOutboundSpam": "%NotifyOutboundSpam%",
+      "NotifyOutboundSpamRecipients": [
+        "%OutboundSpamContact%"
+      ],
+      "BccSuspiciousOutboundMail": "%BccSuspiciousOutboundMail%"
+    },
     "addedComponent": [
       {
         "name": "standards.OutBoundSpamAlert.NotifyOutboundSpam",
@@ -10747,6 +11729,12 @@
       "AAD_PREMIUM_P2"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.PIMRoleSettings.TemplateList",
@@ -10786,6 +11774,13 @@
     "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_2_3_10"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "state": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.PWcompanionAppAllowedState.state",
@@ -10838,6 +11833,21 @@
       "CIS"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_2_3_1",
+      "EIDSCAAM01",
+      "EIDSCAAM06",
+      "EIDSCAAM07"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "state": "enabled",
+      "featureSettings": {
+        "displayAppInformationRequiredState": {
+          "state": "enabled"
+        }
+      }
+    },
     "addedComponent": []
   },
   {
@@ -10854,6 +11864,11 @@
     "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "allowPasswordChangeAfterSecureSignIn": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.PasswordChangeAfterSecureSignIn.state",
@@ -10883,6 +11898,14 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_1_3_1",
+      "ZTNA21811"
+    ],
+    "secureScoreImpact": 8,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": []
   },
   {
@@ -10914,6 +11937,15 @@
     "powershellEquivalent": "Graph API",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "SMB1001_2_5",
+      "SMB1001_2_6",
+      "SMB1001_2_9"
+    ],
+    "secureScoreImpact": 19,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": []
   },
   {
@@ -10937,6 +11969,12 @@
       "AAD_PREMIUM_P2",
       "OFFICE_BUSINESS"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": true,
+      "warn": true,
+      "remediate": false
+    },
     "addedComponent": []
   },
   {
@@ -10959,6 +11997,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.PhishSimSpoofIntelligence.AllowedDomains",
@@ -10996,6 +12040,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.PhishingSimulations.Domains",
@@ -11045,6 +12095,10 @@
     "requiredCapabilities": [
       "PROJECTWORKMANAGEMENT"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.PlannerBlockTaskDelete.includeGroups",
@@ -11084,6 +12138,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.ProfilePhotos.state",
@@ -11124,6 +12184,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "NotifyUserPresent": true
+    },
     "addedComponent": [
       {
         "name": "standards.QuarantineRequestAlert.State",
@@ -11187,6 +12251,12 @@
       "EXCHANGE_LITE"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.QuarantineTemplate.displayName",
@@ -11263,6 +12333,10 @@
     "powershellEquivalent": "Graph API: PATCH https://graph.microsoft.com/beta/directory/recommendationConfiguration",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "isNotificationEnabled": "%sendEmails%"
+    },
     "addedComponent": [
       {
         "name": "standards.RecommendationEmailNotifications.sendEmails",
@@ -11298,6 +12372,12 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": []
   },
   {
@@ -11315,6 +12395,12 @@
     "recommendedBy": [],
     "requiredCapabilities": [],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.RetentionCompliancePolicyTemplate.retentionCompliancePolicyTemplate",
@@ -11351,6 +12437,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.RetentionPolicyTag.AgeLimitForRetention",
@@ -11381,6 +12473,12 @@
       "MICROSOFTINTUNEPLAN1"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.ReusableSettingsTemplate.reusableSettingsTemplate",
@@ -11427,6 +12525,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": []
   },
   {
@@ -11461,6 +12565,12 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "RequireAnonymousLinksExpireInDays": "%days%",
+      "FileAnonymousLinkType": "%linkPermission%",
+      "FolderAnonymousLinkType": "%linkPermission%"
+    },
     "addedComponent": [
       {
         "name": "standards.SPAnonymousLinkExpiration.days",
@@ -11526,6 +12636,13 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "appliesToTest": [
+      "CIS_7_2_2"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "EnableAzureADB2BIntegration": true
+    },
     "addedComponent": []
   },
   {
@@ -11553,6 +12670,12 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": []
   },
   {
@@ -11581,6 +12704,10 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "CustomScriptsRestrictMode": true
+    },
     "addedComponent": []
   },
   {
@@ -11606,6 +12733,12 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "StopNew2010Workflows": true,
+      "StopNew2013Workflows": true,
+      "DisableBackToClassic": true
+    },
     "addedComponent": []
   },
   {
@@ -11634,6 +12767,10 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "DisableSharePointStoreAccess": true
+    },
     "addedComponent": []
   },
   {
@@ -11666,6 +12803,13 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "appliesToTest": [
+      "CIS_7_3_1"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "DisallowInfectedFileDownload": true
+    },
     "addedComponent": []
   },
   {
@@ -11694,6 +12838,14 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "appliesToTest": [
+      "CIS_7_2_10"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "EmailAttestationRequired": true,
+      "EmailAttestationReAuthDays": "%days%"
+    },
     "addedComponent": [
       {
         "name": "standards.SPEmailAttestation.days",
@@ -11732,6 +12884,14 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "appliesToTest": [
+      "CIS_7_2_9"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "ExternalUserExpirationRequired": true,
+      "ExternalUserExpireInDays": "%days%"
+    },
     "addedComponent": [
       {
         "name": "standards.SPExternalUserExpiration.days",
@@ -11775,6 +12935,13 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "CoreRequestFilesLinkEnabled": "%state%",
+      "OneDriveRequestFilesLinkEnabled": "%state%",
+      "CoreRequestFilesLinkExpirationInDays": "%expirationDays%",
+      "OneDriveRequestFilesLinkExpirationInDays": "%expirationDays%"
+    },
     "addedComponent": [
       {
         "name": "standards.SPFileRequests.state",
@@ -11824,6 +12991,10 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.SPGuestPeoplePicker.showGuests",
@@ -11854,6 +13025,12 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.SPOVersionControl.EnableAutoTrim",
@@ -11901,6 +13078,10 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "HideSyncButtonOnDocLib": "%hideSyncButton%"
+    },
     "addedComponent": [
       {
         "name": "standards.SPSyncButtonState.hideSyncButton",
@@ -11951,6 +13132,11 @@
         "THREAT_INTELLIGENCE_GOV"
       ]
     ],
+    "appliesToTest": [
+      "CIS_2_1_4",
+      "ORCA227"
+    ],
+    "secureScoreImpact": 13,
     "addedComponent": [
       {
         "name": "standards.SafeAttachmentPolicy.name",
@@ -12062,6 +13248,10 @@
         "THREAT_INTELLIGENCE_GOV"
       ]
     ],
+    "appliesToTest": [
+      "CIS_2_1_1"
+    ],
+    "secureScoreImpact": 12,
     "addedComponent": [
       {
         "name": "standards.SafeLinksPolicy.name",
@@ -12133,6 +13323,12 @@
       ]
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.SafeLinksTemplatePolicy.safeLinksTemplate",
@@ -12174,6 +13370,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "state": "This is a remediate only standard. This means we cannot read the status, and always resolve it for all items"
+    },
     "addedComponent": []
   },
   {
@@ -12190,6 +13390,12 @@
     "powershellEquivalent": "Graph: PATCH security/secureScoreControlProfiles",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.SecureScoreRemediation.Default",
@@ -12268,6 +13474,15 @@
     "powershellEquivalent": "[Read more here](https://www.cyberdrain.com/automating-with-powershell-enabling-secure-defaults-and-sd-explained/)",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "SMB1001_2_5",
+      "SMB1001_2_6",
+      "SMB1001_2_9"
+    ],
+    "secureScoreImpact": 8,
+    "expected": {
+      "isEnabled": true
+    },
     "addedComponent": []
   },
   {
@@ -12292,6 +13507,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "SendFromAliasEnabled": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.SendFromAlias.state",
@@ -12322,6 +13541,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.SendReceiveLimitTenant.SendLimit",
@@ -12352,6 +13577,12 @@
     "recommendedBy": [],
     "requiredCapabilities": [],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.SensitiveInfoTypeTemplate.sensitiveInfoTypeTemplate",
@@ -12389,6 +13620,12 @@
     "recommendedBy": [],
     "requiredCapabilities": [],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.SensitivityLabelTemplate.sensitivityLabelTemplate",
@@ -12426,6 +13663,11 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": [],
+      "unreadable": []
+    },
     "addedComponent": [
       {
         "name": "standards.SetDefaultMailboxFont.DefaultFontName",
@@ -12535,6 +13777,12 @@
     "requiredCapabilities": [
       "RMS_S_PREMIUM2"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "Threshold": "%Threshold%",
+      "TimeWindow": "%TimeWindow%",
+      "NotifyUser": "%NotifyUser%"
+    },
     "addedComponent": [
       {
         "name": "standards.SharePointMassDeletionAlert.Threshold",
@@ -12577,6 +13825,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "ShortenEventScopeDefault": "%ShortenEventScopeDefault%",
+      "DefaultMinutesToReduceShortEventsBy": "%DefaultMinutesToReduceShortEventsBy%",
+      "DefaultMinutesToReduceLongEventsBy": "%DefaultMinutesToReduceLongEventsBy%"
+    },
     "addedComponent": [
       {
         "name": "standards.ShortenMeetings.ShortenEventScopeDefault",
@@ -12640,6 +13894,19 @@
       "AAD_PREMIUM",
       "AAD_PREMIUM_P2"
     ],
+    "appliesToTest": [
+      "EIDSCAPR01",
+      "EIDSCAPR02",
+      "EIDSCAPR03",
+      "EIDSCAPR05",
+      "EIDSCAPR06"
+    ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.SmartLockout.LockoutDurationInSeconds",
@@ -12739,6 +14006,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CIS_2_1_6"
+    ],
+    "secureScoreImpact": 28,
     "addedComponent": [
       {
         "name": "standards.SpamFilterPolicy.name",
@@ -13156,6 +14427,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "appliesToTest": [
+      "CISAMSEXO71",
+      "CIS_6_2_3",
+      "ORCA240"
+    ],
+    "secureScoreImpact": 0,
     "addedComponent": [
       {
         "name": "standards.SpoofWarn.externalWarningEnabled",
@@ -13195,6 +14472,10 @@
     "powershellEquivalent": "Remove-MgDevice, Update-MgDevice or Graph API",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.StaleEntraDevices.deviceAgeThreshold",
@@ -13239,6 +14520,21 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "EIDSCAAT01",
+      "EIDSCAAT02",
+      "ZTNA21845",
+      "ZTNA21846"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "state": "enabled",
+      "isUsableOnce": "%isUsableOnce%",
+      "minimumLifetimeInMinutes": "%MinimumLifetime%",
+      "maximumLifetimeInMinutes": "%MaximumLifetime%",
+      "defaultLifetimeInMinutes": "%DefaultLifetime%",
+      "defaultLength": "%TAPLength%"
+    },
     "addedComponent": [
       {
         "name": "standards.TAP.isUsableOnce",
@@ -13357,6 +14653,15 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "appliesToTest": [
+      "CIS_8_4_1"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "DefaultCatalogAppsType": "%DefaultCatalogAppsType%",
+      "GlobalCatalogAppsType": "%GlobalCatalogAppsType%",
+      "PrivateCatalogAppsType": "%PrivateCatalogAppsType%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsAppPermissionPolicy.DefaultCatalogAppsType",
@@ -13438,6 +14743,13 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "appliesToTest": [
+      "CIS_8_2_4"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "ExternalAccessWithTrialTenants": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsBlockTrialTenants.state",
@@ -13484,6 +14796,11 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "FileTypeCheck": "%FileTypeCheck%",
+      "UrlReputationCheck": "%UrlReputationCheck%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsChatProtection.FileTypeCheck",
@@ -13550,6 +14867,10 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": []
   },
   {
@@ -13576,6 +14897,13 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "appliesToTest": [
+      "CIS_8_1_2"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "AllowEmailIntoChannel": "%AllowEmailIntoChannel%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsEmailIntegration.AllowEmailIntoChannel",
@@ -13606,6 +14934,10 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "EnrollUserOverride": "%EnrollUserOverride%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsEnrollUser.EnrollUserOverride",
@@ -13652,6 +14984,17 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "appliesToTest": [
+      "CIS_8_2_1",
+      "CIS_8_2_2",
+      "CIS_8_2_3"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "EnableFederationAccess": "%EnableFederationAccess%",
+      "EnableTeamsConsumerAccess": "%EnableTeamsConsumerAccess%",
+      "EnableTeamsConsumerInbound": "%EnableTeamsConsumerInbound%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsExternalAccessPolicy.EnableFederationAccess",
@@ -13705,6 +15048,10 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "UseB2BInvitesToAddExternalUsers": "%UseB2BInvitesToAddExternalUsers%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsExternalChatWithAnyone.UseB2BInvitesToAddExternalUsers",
@@ -13741,6 +15088,17 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "appliesToTest": [
+      "CIS_8_1_1"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "AllowGoogleDrive": "%AllowGoogleDrive%",
+      "AllowShareFile": "%AllowShareFile%",
+      "AllowBox": "%AllowBox%",
+      "AllowDropBox": "%AllowDropBox%",
+      "AllowEgnyte": "%AllowEgnyte%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsExternalFileSharing.AllowGoogleDrive",
@@ -13803,6 +15161,12 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsFederationConfiguration.DomainControl",
@@ -13871,6 +15235,12 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "FileSharingInChatsWithExternalUsers": "%FileSharingInChatsWithExternalUsers%",
+      "NativeFileEntryPoints": "%NativeFileEntryPoints%",
+      "SPChannelFilesTab": "%SPChannelFilesTab%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsFilesPolicy.FileSharingInChatsWithExternalUsers",
@@ -13981,6 +15351,32 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "appliesToTest": [
+      "CIS_8_5_1",
+      "CIS_8_5_2",
+      "CIS_8_5_3",
+      "CIS_8_5_4",
+      "CIS_8_5_5",
+      "CIS_8_5_6",
+      "CIS_8_5_7",
+      "CIS_8_5_8",
+      "CIS_8_5_9"
+    ],
+    "secureScoreImpact": 8,
+    "expected": {
+      "AllowAnonymousUsersToJoinMeeting": "%AllowAnonymousUsersToJoinMeeting%",
+      "AllowAnonymousUsersToStartMeeting": "%AllowAnonymousUsersToStartMeeting%",
+      "AutoAdmittedUsers": "%AutoAdmittedUsers%",
+      "AllowPSTNUsersToBypassLobby": "%AllowPSTNUsersToBypassLobby%",
+      "MeetingChatEnabledType": "%MeetingChatEnabledType%",
+      "DesignatedPresenterRoleMode": "%DesignatedPresenterRoleMode%",
+      "AllowExternalParticipantGiveRequestControl": "%AllowExternalParticipantGiveRequestControl%",
+      "AllowParticipantGiveRequestControl": "%AllowParticipantGiveRequestControl%",
+      "AllowExternalNonTrustedMeetingChat": "%AllowExternalNonTrustedMeetingChat%",
+      "AllowCloudRecording": "%AllowCloudRecording%",
+      "AllowTranscription": "%AllowTranscription%",
+      "ExternalBotAccessMode": "%ExternalBotAccessMode%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsGlobalMeetingPolicy.DesignatedPresenterRoleMode",
@@ -14208,6 +15604,10 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "AllowGuestUser": "%AllowGuestUser%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsGuestAccess.AllowGuestUser",
@@ -14237,6 +15637,10 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "NewMeetingRecordingExpirationDays": "%ExpirationDays%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsMeetingRecordingExpiration.ExpirationDays",
@@ -14268,6 +15672,10 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "CaptchaVerificationForMeetingJoin": "%CaptchaVerificationForMeetingJoin%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsMeetingVerification.CaptchaVerificationForMeetingJoin",
@@ -14307,6 +15715,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "OnlineMeetingsByDefaultEnabled": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsMeetingsByDefault.state",
@@ -14338,6 +15750,22 @@
       "TEAMS1",
       "Teams_Room_Standard"
     ],
+    "appliesToTest": [
+      "CIS_8_6_1"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "AllowOwnerDeleteMessage": "%AllowOwnerDeleteMessage%",
+      "AllowUserDeleteMessage": "%AllowUserDeleteMessage%",
+      "AllowUserEditMessage": "%AllowUserEditMessage%",
+      "AllowUserDeleteChat": "%AllowUserDeleteChat%",
+      "ReadReceiptsEnabledType": "%ReadReceiptsEnabledType%",
+      "CreateCustomEmojis": "%CreateCustomEmojis%",
+      "DeleteCustomEmojis": "%DeleteCustomEmojis%",
+      "AllowSecurityEndUserReporting": "%AllowSecurityEndUserReporting%",
+      "AllowCommunicationComplianceEndUserReporting": "%AllowCommunicationComplianceEndUserReporting%",
+      "AutoShareFilesInExternalChats": "%AutoShareFilesInExternalChats%"
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsMessagingPolicy.AllowOwnerDeleteMessage",
@@ -14468,6 +15896,13 @@
         "THREAT_INTELLIGENCE_GOV"
       ]
     ],
+    "appliesToTest": [
+      "CIS_2_4_4"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "ZapEnabled": true
+    },
     "addedComponent": [
       {
         "name": "standards.TeamsZAP."
@@ -14495,6 +15930,12 @@
       "EXCHANGE_LITE"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.TenantAllowBlockListTemplate.tenantAllowBlockListTemplate",
@@ -14532,6 +15973,10 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "tenantDefaultTimezone": "%Timezone%"
+    },
     "addedComponent": [
       {
         "name": "standards.TenantDefaultTimezone.Timezone",
@@ -14991,8 +16436,8 @@
     "name": "standards.TransportRuleTemplate",
     "cat": "Templates",
     "tag": [],
-    "helpText": "Deploy transport rules to manage email flow. Compares presence by name; an existing rule is only rewritten when overwrite is on.",
-    "docsDescription": "Deploys a transport rule from a CIPP template. The standard grades whether the rule exists by name - it does not diff rule bodies, matching the classic standard.",
+    "helpText": "Deploy transport rules to manage email flow. Compares presence by name; with overwrite on, every run reapplies the template to the existing rule.",
+    "docsDescription": "Deploys a transport rule from a CIPP template. The standard grades whether the rule exists by name - it does not diff rule bodies, so with overwrite on the full template is reapplied on every remediation run, matching the classic standard.",
     "executiveText": "Deploys standardized email flow rules that automatically manage how emails are processed, filtered, and routed within the organization. These templates ensure consistent email security policies, compliance requirements, and business rules are applied across all email communications.",
     "label": "Transport Rule Template",
     "impact": "Medium Impact",
@@ -15008,6 +16453,12 @@
       "EXCHANGE_LITE"
     ],
     "multiple": true,
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": true,
+      "warn": true,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.TransportRuleTemplate.transportRuleTemplate",
@@ -15050,6 +16501,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "TwoClickMailPreviewEnabled": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.TwoClickEmailProtection.state",
@@ -15072,6 +16527,12 @@
     "powershellEquivalent": "Update-MgPolicyAuthorizationPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "permissionGrantPolicyIdsAssignedToDefaultUserRole": [
+        "ManagePermissionGrantsForSelf.microsoft-user-default-legacy"
+      ]
+    },
     "addedComponent": []
   },
   {
@@ -15088,6 +16549,10 @@
     "powershellEquivalent": "Update-MgUser -UserId user@domain.com -UsageLocation 'US'",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.UsageLocation.usageLocation",
@@ -15133,6 +16598,10 @@
     "powershellEquivalent": "Update-MgUser -UserId user@domain.com -BodyParameter @{preferredLanguage='en-US'}",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.UserPreferredLanguage.preferredLanguage",
@@ -15169,6 +16638,12 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.UserSubmissions.state",
@@ -15233,6 +16708,7 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
     "addedComponent": [
       {
         "name": "standards.WindowsBackupRestore.state",
@@ -15273,6 +16749,11 @@
     "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "state": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.allowOAuthTokens.state",
@@ -15311,6 +16792,13 @@
     "powershellEquivalent": "Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "EIDSCAAM02"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "isSoftwareOathEnabled": "%isSoftwareOathEnabled%"
+    },
     "addedComponent": [
       {
         "name": "standards.allowOTPTokens.isSoftwareOathEnabled",
@@ -15341,6 +16829,10 @@
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": []
+    },
     "addedComponent": [
       {
         "name": "standards.calDefault.permissionLevel",
@@ -15417,6 +16909,10 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "BlockMacSync": true
+    },
     "addedComponent": []
   },
   {
@@ -15439,6 +16935,19 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "displayName": "%displayName%",
+      "showLogo": "%showLogo%",
+      "showDisplayNameNextToLogo": "%showDisplayNameNextToLogo%",
+      "contactITName": "%contactITName%",
+      "contactITPhoneNumber": "%contactITPhoneNumber%",
+      "contactITEmailAddress": "%contactITEmailAddress%",
+      "contactITNotes": "%contactITNotes%",
+      "onlineSupportSiteName": "%onlineSupportSiteName%",
+      "onlineSupportSiteUrl": "%onlineSupportSiteUrl%",
+      "privacyUrl": "%privacyUrl%"
+    },
     "addedComponent": [
       {
         "name": "standards.intuneBrandingProfile.displayName",
@@ -15611,6 +17120,14 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "appliesToTest": [
+      "CIS_5_1_4_2",
+      "ZTNA21837"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "userDeviceQuota": "%max%"
+    },
     "addedComponent": [
       {
         "name": "standards.intuneDeviceReg.max",
@@ -15642,6 +17159,16 @@
     "powershellEquivalent": "Update-MgBetaPolicyDeviceRegistrationPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_1_4_3",
+      "CIS_5_1_4_4",
+      "SMB1001_2_2"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "localAdminsRegisteringUsers": "%registeringUsers%",
+      "localAdminsEnableGlobalAdmins": "%enableGlobalAdmins%"
+    },
     "addedComponent": [
       {
         "name": "standards.intuneDeviceRegLocalAdmins.registeringUsers",
@@ -15691,6 +17218,12 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.intuneDeviceRetirementDays.days",
@@ -15728,6 +17261,13 @@
     "powershellEquivalent": "Update-MgBetaPolicyDeviceRegistrationPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "ZTNA21872"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "multiFactorAuthConfiguration": "%state%"
+    },
     "addedComponent": [
       {
         "name": "standards.intuneRequireMFA.state",
@@ -15772,6 +17312,13 @@
     "powershellEquivalent": "Update-MgBetaPolicyDeviceRegistrationPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_1_4_1"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "allowedToJoin": "%allowedToJoin%"
+    },
     "addedComponent": [
       {
         "name": "standards.intuneRestrictUserDeviceJoin.allowedToJoin",
@@ -15832,6 +17379,11 @@
     "powershellEquivalent": "Update-MgBetaPolicyDeviceRegistrationPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [],
+    "appliesToTest": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "allowedToRegister": "%allowedToRegister%"
+    },
     "addedComponent": [
       {
         "name": "standards.intuneRestrictUserDeviceRegistration.allowedToRegister",
@@ -15874,6 +17426,17 @@
       "CIPP"
     ],
     "requiredCapabilities": [],
+    "appliesToTest": [
+      "CIS_5_1_4_5",
+      "SMB1001_2_2",
+      "ZTNA21953",
+      "ZTNA21955",
+      "ZTNA24560"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "localAdminPasswordEnabled": true
+    },
     "addedComponent": []
   },
   {
@@ -15910,6 +17473,14 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "appliesToTest": [
+      "CIS_7_2_3",
+      "CIS_7_2_4"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "SharingCapability": "%sharingCapability%"
+    },
     "addedComponent": [
       {
         "name": "standards.sharingCapability.sharingCapability",
@@ -15964,6 +17535,12 @@
       "ONEDRIVE_BASIC",
       "ONEDRIVE_ENTERPRISE"
     ],
+    "secureScoreImpact": 3,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
     "addedComponent": [
       {
         "name": "standards.sharingDomainRestriction.Mode",
@@ -16024,6 +17601,11 @@
       "SCCM",
       "MICROSOFTINTUNEPLAN1"
     ],
+    "appliesToTest": [],
+    "secureScoreImpact": 0,
+    "expected": {
+      "ConditionalAccessPolicy": "%conditionalAccessPolicy%"
+    },
     "addedComponent": [
       {
         "name": "standards.unmanagedSync.conditionalAccessPolicy",
