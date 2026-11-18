@@ -15,11 +15,12 @@ Describe 'Remove-CIPPUnusedAppPackage' {
         Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ JSON = '{"Apps":[{"config":"{\"packageId\":\"still-used\"}"}]}' } }
     }
 
-    It 'deletes the payload and metadata of a package no template uses' {
+    It 'deletes every blob of a package no template uses' {
         Remove-CIPPUnusedAppPackage -PackageIds @('orphaned')
 
-        Should -Invoke New-CIPPAzStorageRequest -Times 1 -Exactly -ParameterFilter { $Method -eq 'DELETE' -and $Resource -eq 'app-packages/orphaned/IntunePackage.intunewin' }
-        Should -Invoke New-CIPPAzStorageRequest -Times 1 -Exactly -ParameterFilter { $Method -eq 'DELETE' -and $Resource -eq 'app-packages/orphaned/metadata.json' }
+        foreach ($Blob in 'IntunePackage.intunewin', 'metadata.json', 'installer', 'packaged.json') {
+            Should -Invoke New-CIPPAzStorageRequest -Times 1 -Exactly -ParameterFilter { $Method -eq 'DELETE' -and $Resource -eq "app-packages/orphaned/$Blob" }
+        }
     }
 
     It 'keeps a package another template still references' {

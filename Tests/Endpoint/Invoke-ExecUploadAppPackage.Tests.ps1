@@ -12,6 +12,7 @@ BeforeAll {
 
     function Write-LogMessage { param($headers, $API, $message, $Sev, $LogData) }
     function New-CIPPAzStorageRequest { param($Service, $Resource, $Component, $Method, $QueryParams, $ContentType, $Body) }
+    function Add-CippQueueMessage { param($Cmdlet, $Parameters) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
 
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Endpoint/Applications/Invoke-ExecUploadAppPackage.ps1'
@@ -21,6 +22,10 @@ BeforeAll {
     function New-BlockRequest {
         param($Index = 0, $Bytes = [byte[]](1..16), $PackageId = $script:PackageId)
         [pscustomobject]@{ Query = @{ packageId = $PackageId; index = "$Index" }; RawBody = $Bytes; Body = $null; Headers = @{}; Params = @{ CIPPEndpoint = 'ExecUploadAppPackage' } }
+    }
+    function New-JsonRequest {
+        param($Body)
+        [pscustomobject]@{ Query = @{}; RawBody = $null; Body = [pscustomobject]$Body; Headers = @{}; Params = @{ CIPPEndpoint = 'ExecUploadAppPackage' } }
     }
 }
 
@@ -90,5 +95,62 @@ Describe 'Invoke-ExecUploadAppPackage' {
         $Response = Invoke-ExecUploadAppPackage -Request (New-BlockRequest -Index 3) -TriggerMetadata $null
 
         $Response.StatusCode | Should -Be ([HttpStatusCode]::InternalServerError)
+    }
+
+    It 'writes an installer block under the installer blob' {
+        $Request = New-BlockRequest -Index 4
+        $Request.Query.installer = 'true'
+
+        $null = Invoke-ExecUploadAppPackage -Request $Request -TriggerMetadata $null
+
+        $script:Calls.Where({ $_.QueryParams.comp -eq 'block' })[0].Resource | Should -Be "app-packages/$($script:PackageId)/installer"
+    }
+
+    It 'commits an uploaded installer and queues it for packaging' {
+        Mock Add-CippQueueMessage { $true }
+
+        $Response = Invoke-ExecUploadAppPackage -Request (New-JsonRequest @{ packageId = $script:PackageId; package = [pscustomobject]@{ setupFile = 'Setup v2.exe'; blockCount = 3 } }) -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be ([HttpStatusCode]::OK)
+        $Commit = $script:Calls.Where({ $_.QueryParams.comp -eq 'blocklist' })[0]
+        $Commit.Resource | Should -Be "app-packages/$($script:PackageId)/installer"
+        ([regex]::Matches($Commit.Body, '<Latest>')).Count | Should -Be 3
+        Should -Invoke Add-CippQueueMessage -Times 1 -Exactly -ParameterFilter { $Cmdlet -eq 'New-CIPPIntuneWinPackage' -and $Parameters.PackageId -eq $script:PackageId -and $Parameters.SetupFile -eq 'Setup v2.exe' }
+    }
+
+    It 'refuses to package <Case>' -ForEach @(
+        @{ Case = 'a file that is not an installer'; Package = @{ setupFile = 'script.ps1'; blockCount = 1 } }
+        @{ Case = 'a setup file name with a path'; Package = @{ setupFile = '..\setup.exe'; blockCount = 1 } }
+        @{ Case = 'an installer past the 4 GB cap'; Package = @{ setupFile = 'setup.msi'; blockCount = 513 } }
+    ) {
+        Mock Add-CippQueueMessage { $true }
+
+        $Response = Invoke-ExecUploadAppPackage -Request (New-JsonRequest @{ packageId = $script:PackageId; package = [pscustomobject]$Package }) -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be ([HttpStatusCode]::BadRequest)
+        $script:Calls.Count | Should -Be 0
+        Should -Invoke Add-CippQueueMessage -Times 0
+    }
+
+    It 'reports a packaging job that could not be queued as an error' {
+        Mock Add-CippQueueMessage { $false }
+
+        $Response = Invoke-ExecUploadAppPackage -Request (New-JsonRequest @{ packageId = $script:PackageId; package = [pscustomobject]@{ setupFile = 'setup.msi'; blockCount = 1 } }) -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be ([HttpStatusCode]::InternalServerError)
+    }
+
+    It 'reports <Case>' -ForEach @(
+        @{ Case = 'a package still being built'; Stored = $null; Field = 'packaging'; Expected = $true }
+        @{ Case = 'a finished package'; Stored = '{"blockCount":2,"metadata":{"SetupFile":"setup.exe"}}'; Field = 'blockCount'; Expected = 2 }
+        @{ Case = 'a failed package'; Stored = '{"error":"Could not package setup.exe: boom"}'; Field = 'error'; Expected = 'Could not package setup.exe: boom' }
+    ) {
+        Mock New-CIPPAzStorageRequest { if ($Stored) { [pscustomobject]@{ Bytes = [Text.Encoding]::UTF8.GetBytes($Stored) } } }
+
+        $Response = Invoke-ExecUploadAppPackage -Request (New-JsonRequest @{ packageId = $script:PackageId; status = $true }) -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be ([HttpStatusCode]::OK)
+        $Response.Body.Results.$Field | Should -Be $Expected
+        Should -Invoke New-CIPPAzStorageRequest -Times 1 -Exactly -ParameterFilter { $Resource -eq "app-packages/$($script:PackageId)/packaged.json" }
     }
 }

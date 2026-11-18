@@ -16,7 +16,7 @@ function Remove-CIPPUnusedAppPackage {
     $TemplateJson = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppTemplate'").JSON -join "`n"
     foreach ($PackageId in $Candidates) {
         if ($TemplateJson.Contains($PackageId) -or -not $PSCmdlet.ShouldProcess($PackageId, 'Remove app package')) { continue }
-        foreach ($Blob in 'IntunePackage.intunewin', 'metadata.json') {
+        foreach ($Blob in 'IntunePackage.intunewin', 'metadata.json', 'installer', 'packaged.json') {
             $null = New-CIPPAzStorageRequest -Service blob -Resource "app-packages/$PackageId/$Blob" -Method DELETE -ErrorAction SilentlyContinue
         }
     }

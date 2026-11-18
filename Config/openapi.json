@@ -45315,12 +45315,12 @@
     },
     "/api/ExecUploadAppPackage": {
       "post": {
-        "summary": "Uploads one block of an app package's encrypted payload to CIPP storage.",
+        "summary": "Uploads one block of an app package or installer to CIPP storage, and packages uploaded installers.",
         "operationId": "ExecUploadAppPackage",
         "tags": [
           "Endpoint > Applications"
         ],
-        "description": "The browser sends the encrypted payload in blocks of at most 8 MB. When the host passes raw request\nbodies through ($Request.RawBody), a block is an application/octet-stream body with packageId and\nindex in the query string; otherwise it is JSON with the block base64-encoded in 'data'. A request with\n'capabilities' reports which of the two this host supports. Saving the application template assembles\nthe blocks; blocks that are never saved expire from storage on their own.",
+        "description": "The browser sends the encrypted payload in blocks of at most 8 MB. When the host passes raw request\nbodies through ($Request.RawBody), a block is an application/octet-stream body with packageId and\nindex in the query string; otherwise it is JSON with the block base64-encoded in 'data'. A request with\n'capabilities' reports which of the two this host supports. Saving the application template assembles\nthe blocks; blocks that are never saved expire from storage on their own.\nAn .exe or .msi is uploaded the same way with 'installer' set, then 'package' (the setup file name and\nblock count) queues a background job that builds the encrypted payload, and 'status' returns its result:\nthe block count and metadata to save the template with, or the error.",
         "requestBody": {
           "required": false,
           "content": {
@@ -45339,7 +45339,27 @@
                     "type": "string",
                     "description": "Zero-based block number; packages are capped below 4 GiB, 512 blocks of 8 MB"
                   },
+                  "installer": {
+                    "type": "string",
+                    "description": "True when the block belongs to an .exe or .msi installer that CIPP packages"
+                  },
+                  "package": {
+                    "type": "object",
+                    "properties": {
+                      "blockCount": {
+                        "type": "integer"
+                      },
+                      "setupFile": {
+                        "type": "string",
+                        "description": "The uploaded installer's file name, which becomes the package's setup file"
+                      }
+                    },
+                    "description": "The uploaded installer's file name, which becomes the package's setup file"
+                  },
                   "packageId": {
+                    "type": "string"
+                  },
+                  "status": {
                     "type": "string"
                   }
                 }
@@ -45360,6 +45380,15 @@
             "name": "index",
             "in": "query",
             "description": "Zero-based block number; packages are capped below 4 GiB, 512 blocks of 8 MB",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "installer",
+            "in": "query",
+            "description": "True when the block belongs to an .exe or .msi installer that CIPP packages",
             "required": false,
             "schema": {
               "type": "string"
