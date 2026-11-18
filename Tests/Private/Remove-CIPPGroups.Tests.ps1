@@ -115,18 +115,33 @@ Describe 'Remove-CIPPGroups' {
             Should -Invoke New-GraphBulkRequest -Times 1 -Exactly -ParameterFilter { $Requests[0].method -eq 'DELETE' }
         }
 
-        It 'removes a distribution list membership through Exchange, addressed by display name' {
+        It 'removes a distribution list membership through Exchange, addressed by group ID' {
             Set-Groups -Groups @(New-Group -Id 'group-dl' -DisplayName 'All Office' -MailEnabled $true)
 
             $Result = Remove-CIPPGroups -Username 'sseck@contoso.com' -TenantFilter 'contoso.com'
 
             Should -Invoke New-ExoBulkRequest -Times 1 -Exactly -ParameterFilter {
                 $cmdletArray[0].CmdletInput.CmdletName -eq 'Remove-DistributionGroupMember' -and
-                $cmdletArray[0].CmdletInput.Parameters.Identity -eq 'All Office' -and
+                $cmdletArray[0].CmdletInput.Parameters.Identity -eq 'group-dl' -and
                 $cmdletArray[0].CmdletInput.Parameters.Member -eq 'user-guid' -and
                 $cmdletArray[0].CmdletInput.Parameters.BypassSecurityGroupManagerCheck -eq $true
             }
             $Result | Should -Contain 'Successfully removed sseck@contoso.com from group All Office'
+        }
+
+        It 'addresses two distribution lists that share a display name by their own IDs' {
+            Set-Groups -Groups @(
+                New-Group -Id 'group-dl-1' -DisplayName 'All Office' -MailEnabled $true
+                New-Group -Id 'group-dl-2' -DisplayName 'All Office' -MailEnabled $true
+            )
+
+            $null = Remove-CIPPGroups -Username 'sseck@contoso.com' -TenantFilter 'contoso.com'
+
+            Should -Invoke New-ExoBulkRequest -Times 1 -Exactly -ParameterFilter {
+                $cmdletArray.Count -eq 2 -and
+                $cmdletArray[0].CmdletInput.Parameters.Identity -eq 'group-dl-1' -and
+                $cmdletArray[1].CmdletInput.Parameters.Identity -eq 'group-dl-2'
+            }
         }
 
         It 'splits a mixed membership set across both APIs' {

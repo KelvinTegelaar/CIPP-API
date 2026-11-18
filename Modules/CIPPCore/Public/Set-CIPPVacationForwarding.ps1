@@ -6,6 +6,7 @@ function Set-CIPPVacationForwarding {
         [object[]]$Users,
         [ValidateSet('internalAddress', 'ExternalAddress')] [string]$ForwardOption,
         [string]$ForwardInternal,
+        [string]$ForwardInternalDisplayName,
         [string]$ForwardExternal,
         [bool]$KeepCopy,
         [string]$APIName = 'Forwarding Vacation Mode',
@@ -28,7 +29,7 @@ function Set-CIPPVacationForwarding {
                             throw 'ForwardInternal is required for internal forwarding.'
                         }
 
-                        $result = Set-CIPPForwarding -UserID $upn -Username $upn -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Forward $ForwardInternal -KeepCopy $KeepCopy
+                        $result = Set-CIPPForwarding -UserID $upn -Username $upn -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Forward $ForwardInternal -ForwardDisplayName $ForwardInternalDisplayName -KeepCopy $KeepCopy
                     }
                     'ExternalAddress' {
                         if ([string]::IsNullOrWhiteSpace($ForwardExternal)) {

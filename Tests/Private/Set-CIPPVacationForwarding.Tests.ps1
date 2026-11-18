@@ -15,7 +15,7 @@ BeforeAll {
     if (-not $FunctionPath) { throw 'Could not locate Set-CIPPVacationForwarding.ps1 under Modules/' }
 
     function Set-CIPPForwarding {
-        param($UserID, $Username, $TenantFilter, $Headers, $APIName, $Forward, $ForwardingSMTPAddress, $KeepCopy, $Disable)
+        param($UserID, $Username, $TenantFilter, $Headers, $APIName, $Forward, $ForwardDisplayName, $ForwardingSMTPAddress, $KeepCopy, $Disable)
     }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
     function Get-CippException { param($Exception) @{ NormalizedError = "$Exception" } }

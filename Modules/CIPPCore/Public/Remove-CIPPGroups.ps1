@@ -95,7 +95,7 @@ function Remove-CIPPGroups {
                     # alone cannot tell one group's removal from another's.
                     $OperationGuid = [Guid]::NewGuid().ToString()
                     $Params = @{
-                        Identity                        = $GroupName
+                        Identity                        = $Group.id
                         Member                          = $UserID
                         BypassSecurityGroupManagerCheck = $true
                     }

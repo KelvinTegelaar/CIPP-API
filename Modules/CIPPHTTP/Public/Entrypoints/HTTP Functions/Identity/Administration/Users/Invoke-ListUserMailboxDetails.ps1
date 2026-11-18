@@ -160,6 +160,7 @@ function Invoke-ListUserMailboxDetails {
 
     # Get forwarding address - lazy load contacts only if needed
     $ForwardingAddress = $null
+    $ForwardingContact = $null
     if ($MailboxDetailedRequest.ForwardingSmtpAddress) {
         # External forwarding
         $ForwardingAddress = $MailboxDetailedRequest.ForwardingSmtpAddress -replace '^smtp:', ''
@@ -186,12 +187,13 @@ function Invoke-ListUserMailboxDetails {
                     $escapedAddress = $rawAddress -replace "'", "''"
                     $escapedNickname = $rawAddress -replace "'", "''" -replace ' ', ''
                     $filterQuery = "displayName eq '$escapedAddress' or mailNickname eq '$escapedNickname'"
-                    $contactUri = "https://graph.microsoft.com/beta/contacts?`$filter=$filterQuery&`$select=displayName,mail,mailNickname"
+                    $contactUri = "https://graph.microsoft.com/beta/contacts?`$filter=$filterQuery&`$select=id,displayName,mail,mailNickname"
 
                     $matchedContacts = New-GraphGetRequest -tenantid $TenantFilter -uri $contactUri
 
                     if ($matchedContacts -and $matchedContacts.Count -gt 0) {
                         $ForwardingAddress = $matchedContacts[0].mail
+                        $ForwardingContact = $matchedContacts[0] | Select-Object id, displayName, mail
                     } else {
                         $ForwardingAddress = $rawAddress
                     }
@@ -261,6 +263,7 @@ function Invoke-ListUserMailboxDetails {
     $GraphRequest = [ordered]@{
         ForwardAndDeliver                = $MailboxDetailedRequest.DeliverToMailboxAndForward
         ForwardingAddress                = $ForwardingAddress
+        ForwardingContact                = $ForwardingContact
         LitigationHold                   = $MailboxDetailedRequest.LitigationHoldEnabled
         RetentionHold                    = $MailboxDetailedRequest.RetentionHoldEnabled
         ComplianceTagHold                = $MailboxDetailedRequest.ComplianceTagHoldApplied

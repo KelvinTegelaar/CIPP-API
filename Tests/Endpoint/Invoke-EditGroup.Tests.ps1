@@ -299,6 +299,56 @@ Describe 'Invoke-EditGroup - membership' {
         }
     }
 
+    Context 'Removing contacts' {
+        It 'removes a contact from a <GroupType> by its object ID' -ForEach @(
+            @{ GroupType = 'Distribution List' }
+            @{ GroupType = 'Mail-Enabled Security' }
+        ) {
+            $Request = New-GroupRequest -GroupType $GroupType -Body @{
+                RemoveContact = @([pscustomobject]@{
+                        label       = 'Ann Contact (ann@gmail.com)'
+                        value       = 'ann@gmail.com'
+                        addedFields = [pscustomobject]@{ id = '6f1c2f4e-0d3b-4c3a-9a51-6f0f1d2b9c11' }
+                    })
+            }
+
+            $Response = Invoke-EditGroup -Request $Request
+
+            Should -Invoke New-ExoBulkRequest -Times 1 -Exactly -ParameterFilter {
+                $cmdletArray[0].CmdletInput.CmdletName -eq 'Remove-DistributionGroupMember' -and
+                $cmdletArray[0].CmdletInput.Parameters.Identity -eq 'group-guid' -and
+                $cmdletArray[0].CmdletInput.Parameters.Member -eq '6f1c2f4e-0d3b-4c3a-9a51-6f0f1d2b9c11' -and
+                $cmdletArray[0].CmdletInput.Parameters.BypassSecurityGroupManagerCheck -eq $true
+            }
+            $Response.Body.Results | Should -Contain 'Success - Removed contact ann@gmail.com from All Office group'
+        }
+
+        It 'falls back to the address when the option carries no object ID' {
+            $Request = New-GroupRequest -GroupType 'Distribution List' -Body @{
+                RemoveContact = @([pscustomobject]@{ label = 'ann@gmail.com'; value = 'ann@gmail.com' })
+            }
+
+            $Response = Invoke-EditGroup -Request $Request
+
+            Should -Invoke New-ExoBulkRequest -Times 1 -Exactly -ParameterFilter {
+                $cmdletArray[0].CmdletInput.Parameters.Member -eq 'ann@gmail.com'
+            }
+            $Response.Body.Results | Should -Contain 'Success - Removed contact ann@gmail.com from All Office group'
+        }
+
+        It 'refuses to remove a contact from a security group' {
+            $Request = New-GroupRequest -GroupType 'Security' -Body @{
+                RemoveContact = @([pscustomobject]@{ value = 'ann@gmail.com'; addedFields = [pscustomobject]@{ id = 'contact-guid' } })
+            }
+
+            $Response = Invoke-EditGroup -Request $Request
+
+            Should -Invoke New-ExoBulkRequest -Times 0 -Exactly
+            $Response.Body.Results | Should -Contain 'You cannot remove a contact from a Security Group'
+            Should -Invoke Write-LogMessage -ParameterFilter { $API -eq 'EditGroup' -and $message -eq 'You cannot remove a contact from a Security Group' }
+        }
+    }
+
     Context 'Devices' {
         It 'refuses to add a device to a <GroupType> instead of sending a doomed request' -ForEach @(
             @{ GroupType = 'Distribution List' }

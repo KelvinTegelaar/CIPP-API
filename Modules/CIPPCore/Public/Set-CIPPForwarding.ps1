@@ -25,7 +25,12 @@ function Set-CIPPForwarding {
     Name of the API executing the command.
 
     .PARAMETER Forward
-    Forwarding address.
+    Forwarding address. Any recipient identity Exchange accepts: an address, a UPN or, preferably,
+    an object ID - addresses can match more than one recipient (e.g. a contact and a guest user).
+
+    .PARAMETER ForwardDisplayName
+    Readable name of the internal forwarding target, shown in result and log messages alongside Forward
+    (the caller supplies it, so the real target is always logged too).
 
     .PARAMETER KeepCopy
     Keep a copy of the email.
@@ -43,6 +48,7 @@ function Set-CIPPForwarding {
         $Headers,
         [string]$APIName = 'Forwarding',
         [string]$Forward,
+        [string]$ForwardDisplayName,
         $KeepCopy,
         [bool]$Disable
     )
@@ -57,7 +63,8 @@ function Set-CIPPForwarding {
                 $Message = "Successfully disabled forwarding for $Username"
             } elseif ($Forward) {
                 $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $UserID; ForwardingSMTPAddress = $null; ForwardingAddress = $Forward ; DeliverToMailboxAndForward = $KeepCopy } -Anchor $Username
-                $Message = "Successfully set forwarding for $Username to Internal Address $Forward with keeping a copy set to $KeepCopy"
+                $ForwardTarget = if ($ForwardDisplayName) { "$ForwardDisplayName ($Forward)" } else { $Forward }
+                $Message = "Successfully set forwarding for $Username to Internal Address $ForwardTarget with keeping a copy set to $KeepCopy"
             } elseif ($forwardingSMTPAddress) {
                 $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $UserID; ForwardingSMTPAddress = $ForwardingSMTPAddress; ForwardingAddress = $null ; DeliverToMailboxAndForward = $KeepCopy } -Anchor $Username
                 $Message = "Successfully set forwarding for $Username to External Address $ForwardingSMTPAddress with keeping a copy set to $KeepCopy"

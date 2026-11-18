@@ -220,7 +220,7 @@ function Invoke-EditGroup {
         if ($RemoveContact) {
             $RemoveContact | ForEach-Object {
                 $Member = $_.addedFields.userPrincipalName ?? $_.value
-                $MemberID = $_.value
+                $MemberID = $_.addedFields.id ?? $_.value
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
                     $RemoveContactGuid = [Guid]::NewGuid().ToString()
                     $Params = @{ Identity = $GroupId; Member = $MemberID ; BypassSecurityGroupManagerCheck = $true }
@@ -237,7 +237,7 @@ function Invoke-EditGroup {
                             OperationGuid = $RemoveContactGuid
                         })
                 } else {
-                    Write-LogMessage -API $APIName-tenant $TenantId -headers $Headers -message 'You cannot remove a contact from a Security Group' -Sev 'Error'
+                    Write-LogMessage -API $APIName -tenant $TenantId -headers $Headers -message 'You cannot remove a contact from a Security Group' -Sev 'Error'
                     $Results.Add('You cannot remove a contact from a Security Group')
                 }
             }
