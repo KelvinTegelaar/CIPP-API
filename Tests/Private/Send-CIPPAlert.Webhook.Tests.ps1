@@ -12,8 +12,10 @@ BeforeAll {
     function Invoke-CIPPRestMethod {
         param($Uri, $Method, $Body, $Headers, $ContentType, $StatusCodeVariable, $ResponseHeadersVariable, [switch]$SkipHttpErrorCheck, $MaximumRedirection)
         $script:Sent.Add([pscustomobject]@{ Uri = $Uri; Method = $Method; Body = $Body; Headers = $Headers; MaximumRedirection = $MaximumRedirection })
+        $Status = if ($script:Statuses.Count) { $script:Statuses.Dequeue() } else { 200 }
+        if ($Status -is [System.Exception]) { throw $Status }
         $Next = $script:Redirects[$Uri]
-        Set-Variable -Name $StatusCodeVariable -Value $(if ($Next) { $script:RedirectStatus } else { 200 }) -Scope 1
+        Set-Variable -Name $StatusCodeVariable -Value $(if ($Next) { $script:RedirectStatus } else { $Status }) -Scope 1
         Set-Variable -Name $ResponseHeadersVariable -Value $(if ($Next) { @{ Location = $Next } } else { @{} }) -Scope 1
     }
 
@@ -25,7 +27,9 @@ Describe 'Send-CIPPAlert -Type webhook' {
     BeforeEach {
         Mock Get-CIPPTable { @{ Context = 'ctx' } }
         Mock Write-LogMessage { }
+        Mock Start-Sleep { }
         $script:Sent = [System.Collections.Generic.List[object]]::new()
+        $script:Statuses = [System.Collections.Generic.Queue[object]]::new()
         $script:Redirects = @{}
         $script:RedirectStatus = 307
         $script:Config = [pscustomobject]@{
@@ -134,6 +138,24 @@ Describe 'Send-CIPPAlert -Type webhook' {
         $script:Config = [pscustomobject]@{ webhook = 'https://8.8.8.8/hook'; webhookAuthType = 'bearer'; webhookAuthToken = 'stored-token' }
         Send-CIPPAlert -Type 'webhook' -Title 'T' -JSONContent '{"a":1}' -TenantFilter 'contoso.onmicrosoft.com' -altWebhook 'https://8.8.8.8/hook' | Out-Null
         $script:Sent[0].Headers.Authorization | Should -Be 'Bearer stored-token'
+    }
+
+    It 'retries after a 500 answer' {
+        $script:Statuses.Enqueue(500)
+        Send-CIPPAlert -Type 'webhook' -Title 'T' -JSONContent '{"a":1}' -TenantFilter 'contoso.onmicrosoft.com' | Should -Match 'status code: 200'
+        $script:Sent.Count | Should -Be 2
+    }
+
+    It 'retries after a failed connection' {
+        $script:Statuses.Enqueue([System.Net.Http.HttpRequestException]::new('No such host is known.'))
+        Send-CIPPAlert -Type 'webhook' -Title 'T' -JSONContent '{"a":1}' -TenantFilter 'contoso.onmicrosoft.com' | Should -Match 'status code: 200'
+        $script:Sent.Count | Should -Be 2
+    }
+
+    It 'does not retry a response without a status code' {
+        $script:Statuses.Enqueue($null)
+        $null = Send-CIPPAlert -Type 'webhook' -Title 'T' -JSONContent '{"a":1}' -TenantFilter 'contoso.onmicrosoft.com'
+        $script:Sent.Count | Should -Be 1
     }
 }
 

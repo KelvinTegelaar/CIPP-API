@@ -345,73 +345,80 @@ function Send-CIPPAlert {
                     $RetryCount = 0
                     $RequestSuccessful = $false
                     do {
-                        switch -wildcard ($webhook) {
-                            '*webhook.office.com*' {
-                                if ($UseStandardizedWebhookSchema) {
-                                    $RestMethod['Body'] = $ReplacedContent
-                                    $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
-                                } else {
-                                    $TeamsBody = [PSCustomObject]@{
-                                        text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$ReplacedContent"
-                                    } | ConvertTo-Json -Compress
-                                    $RestMethod['Body'] = $TeamsBody
-                                    $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
-                                }
-                            }
-                            '*discord.com*' {
-                                if ($UseStandardizedWebhookSchema) {
-                                    $RestMethod['Body'] = $ReplacedContent
-                                    $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
-                                } else {
-                                    $DiscordBody = [PSCustomObject]@{
-                                        content = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
-                                    } | ConvertTo-Json -Compress
-                                    $RestMethod['Body'] = $DiscordBody
-                                    $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
-                                }
-                            }
-                            '*slack.com*' {
-                                if ($UseStandardizedWebhookSchema) {
-                                    $RestMethod['Body'] = $ReplacedContent
-                                    $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
-                                } else {
-                                    $SlackBlocks = Get-SlackAlertBlocks -JSONBody $JSONContent
-                                    if ($SlackBlocks.blocks) {
-                                        $SlackBody = $SlackBlocks | ConvertTo-Json -Depth 10 -Compress
+                        $ConnectionFailed = $false
+                        try {
+                            switch -wildcard ($webhook) {
+                                '*webhook.office.com*' {
+                                    if ($UseStandardizedWebhookSchema) {
+                                        $RestMethod['Body'] = $ReplacedContent
+                                        $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
                                     } else {
-                                        $SlackBody = [PSCustomObject]@{
-                                            text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
+                                        $TeamsBody = [PSCustomObject]@{
+                                            text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$ReplacedContent"
                                         } | ConvertTo-Json -Compress
+                                        $RestMethod['Body'] = $TeamsBody
+                                        $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
                                     }
-                                    $RestMethod['Body'] = $SlackBody
+                                }
+                                '*discord.com*' {
+                                    if ($UseStandardizedWebhookSchema) {
+                                        $RestMethod['Body'] = $ReplacedContent
+                                        $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
+                                    } else {
+                                        $DiscordBody = [PSCustomObject]@{
+                                            content = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
+                                        } | ConvertTo-Json -Compress
+                                        $RestMethod['Body'] = $DiscordBody
+                                        $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
+                                    }
+                                }
+                                '*slack.com*' {
+                                    if ($UseStandardizedWebhookSchema) {
+                                        $RestMethod['Body'] = $ReplacedContent
+                                        $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
+                                    } else {
+                                        $SlackBlocks = Get-SlackAlertBlocks -JSONBody $JSONContent
+                                        if ($SlackBlocks.blocks) {
+                                            $SlackBody = $SlackBlocks | ConvertTo-Json -Depth 10 -Compress
+                                        } else {
+                                            $SlackBody = [PSCustomObject]@{
+                                                text = "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. ``````$ReplacedContent``````"
+                                            } | ConvertTo-Json -Compress
+                                        }
+                                        $RestMethod['Body'] = $SlackBody
+                                        $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
+                                    }
+                                }
+                                default {
+                                    $RestMethod['Body'] = $ReplacedContent
                                     $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
                                 }
                             }
-                            default {
-                                $RestMethod['Body'] = $ReplacedContent
-                                $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
+                            # Like the HTTP client would, 301-303 continue as a GET and 307/308 repeat the POST.
+                            while ($WebhookStatusCode -in 301, 302, 303, 307, 308 -and $RedirectCount -lt 3 -and ($RedirectTo = [string]($WebhookResponseHeaders.Location | Select-Object -First 1))) {
+                                $RedirectCount++
+                                $RestMethod.Uri = [uri]::new([uri]$RestMethod.Uri, $RedirectTo).AbsoluteUri
+                                Assert-CIPPWebhookDestination -Uri $RestMethod.Uri
+                                if ($WebhookStatusCode -in 307, 308) {
+                                    $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
+                                } else {
+                                    $FollowUp = @{} + $RestMethod
+                                    $FollowUp.Method = 'GET'
+                                    $FollowUp.Remove('Body')
+                                    $FollowUp.Remove('ContentType')
+                                    $WebhookResponse = Invoke-CIPPRestMethod @FollowUp
+                                }
                             }
+                        } catch [System.Net.Http.HttpRequestException] {
+                            if ($RetryCount -ge $MaxRetries) { throw }
+                            $ConnectionFailed = $true
+                            $WebhookStatusCode = $null
                         }
-                        # Like the HTTP client would, 301-303 continue as a GET and 307/308 repeat the POST.
-                        while ($WebhookStatusCode -in 301, 302, 303, 307, 308 -and $RedirectCount -lt 3 -and ($RedirectTo = [string]($WebhookResponseHeaders.Location | Select-Object -First 1))) {
-                            $RedirectCount++
-                            $RestMethod.Uri = [uri]::new([uri]$RestMethod.Uri, $RedirectTo).AbsoluteUri
-                            Assert-CIPPWebhookDestination -Uri $RestMethod.Uri
-                            if ($WebhookStatusCode -in 307, 308) {
-                                $WebhookResponse = Invoke-CIPPRestMethod @RestMethod
-                            } else {
-                                $FollowUp = @{} + $RestMethod
-                                $FollowUp.Method = 'GET'
-                                $FollowUp.Remove('Body')
-                                $FollowUp.Remove('ContentType')
-                                $WebhookResponse = Invoke-CIPPRestMethod @FollowUp
-                            }
-                        }
-                        if ($WebhookStatusCode -eq 429) {
+                        if ($ConnectionFailed -or $WebhookStatusCode -eq 429 -or $WebhookStatusCode -ge 500) {
                             $RetryCount++
                             if ($RetryCount -le $MaxRetries) {
                                 $WaitSeconds = Get-Random -Minimum 2 -Maximum 5
-                                Write-LogMessage -API 'Webhook Alerts' -message "Webhook rate limited (429) for $webhook, retrying in $WaitSeconds seconds (attempt $RetryCount/$MaxRetries)" -tenant $TenantFilter -sev warning
+                                Write-LogMessage -API 'Webhook Alerts' -message "Webhook to $webhook failed with $($WebhookStatusCode ?? 'no response'), retrying in $WaitSeconds seconds (attempt $RetryCount/$MaxRetries)" -tenant $TenantFilter -sev warning
                                 Start-Sleep -Seconds $WaitSeconds
                             }
                         } else {
