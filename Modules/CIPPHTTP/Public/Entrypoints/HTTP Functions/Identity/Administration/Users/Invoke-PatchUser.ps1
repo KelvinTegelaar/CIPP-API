@@ -70,15 +70,51 @@ function Invoke-PatchUser {
                 $UsersWithSponsor = $TenantUsers | Where-Object { -not [string]::IsNullOrWhiteSpace($_.sponsor) }
                 $SponsorGroups = $UsersWithSponsor | Group-Object -Property sponsor
 
+                # Tenant and custom %variables% are replaced first; any %token% left is filled from each
+                # user's own properties, read in one batch.
+                $PatchBodies = @{}
+                $TenantText = [System.Collections.Generic.Dictionary[string, string]]::new()
+                $TokenReads = [System.Collections.Generic.List[object]]::new()
+                foreach ($User in $TenantUsers) {
+                    # Remove routing and relationship properties from the body since they're not normal PATCH properties.
+                    $PatchBodies[$User.id] = $User | Select-Object -Property * -ExcludeProperty id, tenantFilter, manager, sponsor
+                    $Referenced = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                    foreach ($Property in $PatchBodies[$User.id].PSObject.Properties.Where({ $_.Value -is [string] -and $_.Value.Contains('%') })) {
+                        if (-not $TenantText.ContainsKey($Property.Value)) {
+                            $TenantText[$Property.Value] = Get-CIPPTextReplacement -TenantFilter $tenantFilter -Text $Property.Value
+                        }
+                        $Property.Value = $TenantText[$Property.Value]
+                        foreach ($Name in (Resolve-CIPPUserPropertyText -Text $Property.Value)) { [void]$Referenced.Add($Name) }
+                    }
+                    if ($Referenced.Count -gt 0) {
+                        $TokenReads.Add(@{ id = $User.id; method = 'GET'; url = "users/$($User.id)?`$select=$(@($Referenced) -join ',')" })
+                    }
+                }
+                if ($TokenReads.Count -gt 0) {
+                    $ReadResults = @{}
+                    foreach ($Read in @(New-GraphBulkRequest -tenantid $tenantFilter -Requests ($TokenReads.ToArray()))) { $ReadResults[$Read.id] = $Read }
+                    foreach ($Read in $TokenReads) {
+                        $Body = $PatchBodies[$Read.id]
+                        $Source = $ReadResults[$Read.id]
+                        try {
+                            if ($Source.status -ne 200) { throw ($Source.body.error.message ?? "could not read the user (status $($Source.status))") }
+                            foreach ($Property in $Body.PSObject.Properties.Where({ $_.Value -is [string] -and $_.Value.Contains('%') })) {
+                                $Property.Value = Resolve-CIPPUserPropertyText -Text $Property.Value -User $Source.body
+                            }
+                        } catch {
+                            $PatchBodies.Remove($Read.id)
+                            [void]$AllErrorMessages.Add("Failed to patch user $($Read.id) in tenant $($tenantFilter): $($_.Exception.Message)")
+                        }
+                    }
+                }
+
                 # Build bulk requests for this tenant
                 $int = 0
                 $BulkRequests = [System.Collections.Generic.List[object]]::new()
                 $BulkRequestUsers = [System.Collections.Generic.List[object]]::new()
                 foreach ($User in $TenantUsers) {
-                    # Remove routing and relationship properties from the body since they're not normal PATCH properties.
-                    $PatchBody = $User | Select-Object -Property * -ExcludeProperty id, tenantFilter, manager, sponsor
-
-                    if (@($PatchBody.PSObject.Properties).Count -eq 0) {
+                    $PatchBody = $PatchBodies[$User.id]
+                    if (-not $PatchBody -or @($PatchBody.PSObject.Properties).Count -eq 0) {
                         continue
                     }
 
