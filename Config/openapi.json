@@ -10133,6 +10133,9 @@
                         "addedFields": {
                           "type": "object",
                           "properties": {
+                            "id": {
+                              "type": "string"
+                            },
                             "userPrincipalName": {
                               "type": "string"
                             }
