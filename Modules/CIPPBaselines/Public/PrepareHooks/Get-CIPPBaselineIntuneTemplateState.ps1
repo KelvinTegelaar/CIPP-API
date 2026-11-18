@@ -208,8 +208,6 @@ function Get-CIPPBaselineIntuneTemplateState {
     # Assignment verification: target types compare from the CACHED assignments (pure);
     # custom group / filter names resolve via two small Graph reads only when configured.
     # An unknown result ($null, e.g. Graph error) counts as not-assigned, like V2.
-    # Note remediation ASSIGNS in append mode - an extra portal-added assignment reports
-    # as drift here but is never removed automatically.
     $StrictCompare = $null
     if ((& $Unwrap $Variables.verifyAssignments) -eq $true) {
         $Expected | Add-Member -NotePropertyName 'isAssigned' -NotePropertyValue $true -Force

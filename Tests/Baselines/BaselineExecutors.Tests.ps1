@@ -622,3 +622,31 @@ Describe 'Invoke-CIPPBaselineQuarantineRequestAlert' {
         Should -Invoke New-ExoRequest -Times 0 -ParameterFilter { $cmdlet -eq 'Remove-ProtectionAlert' }
     }
 }
+
+Describe 'Invoke-CIPPBaselineIntuneTemplate assignment mode' {
+    BeforeAll {
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Executors/Invoke-CIPPBaselineIntuneTemplate.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneAssignTarget.ps1')
+        function Get-CippTable { param($tablename) @{} }
+        function Get-CIPPAzDataTableEntity { param($Filter) [PSCustomObject]@{ RowKey = 'tpl1'; JSON = '{"Displayname":"T","Description":"","Type":"Catalog","RAWJson":"{}"}' } }
+        function Repair-CIPPIntuneTemplateNesting { param($Template, $Table) $Template }
+        function Get-CIPPIntuneTemplateType { param($Type, $RawJson) 'Catalog' }
+        function Sync-CIPPReusablePolicySettings { param($TemplateInfo, $Tenant) $null }
+        function Get-CIPPTextReplacement { param($TenantFilter, $Text, [switch]$EscapeForJson) $Text }
+        function Set-CIPPIntunePolicy { param($TemplateType, $Description, $DisplayName, $RawJSON, $AssignTo, $ExcludeGroup, $tenantFilter, $AssignmentMode, $AssignmentFilterName, $AssignmentFilterType, $LevenshteinDistance) }
+    }
+    BeforeEach { Mock Set-CIPPIntunePolicy {} }
+
+    It 'replaces assignments when the template names a target' -ForEach @(
+        @{ Spec = @{ intuneTemplate = 'tpl1'; assignTo = 'AllDevices' } }
+        @{ Spec = @{ intuneTemplate = 'tpl1'; assignTo = 'customGroup'; customGroup = 'Sales' } }
+    ) {
+        Invoke-CIPPBaselineIntuneTemplate -Remediate ($Spec | ConvertTo-Spec) -TenantFilter $script:Tenant -Current $null
+        Should -Invoke Set-CIPPIntunePolicy -Times 1 -ParameterFilter { $AssignmentMode -eq 'replace' }
+    }
+
+    It 'leaves existing assignments alone for Do not assign' {
+        Invoke-CIPPBaselineIntuneTemplate -Remediate (@{ intuneTemplate = 'tpl1'; assignTo = 'On' } | ConvertTo-Spec) -TenantFilter $script:Tenant -Current $null
+        Should -Invoke Set-CIPPIntunePolicy -Times 1 -ParameterFilter { -not $AssignmentMode }
+    }
+}

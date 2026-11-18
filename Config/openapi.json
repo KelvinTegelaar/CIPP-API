@@ -8117,6 +8117,9 @@
                   "country": {
                     "type": "string"
                   },
+                  "cspLicense": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
                   "customData": {
                     "type": "string"
                   },
@@ -12727,6 +12730,9 @@
                   },
                   "country": {
                     "type": "string"
+                  },
+                  "cspLicense": {
+                    "$ref": "#/components/schemas/LabelValue"
                   },
                   "customData": {
                     "type": "string"
@@ -21144,7 +21150,13 @@
                 "type": "object",
                 "properties": {
                   "Action": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "Add",
+                      "Cancel",
+                      "NewSub",
+                      "Remove"
+                    ]
                   },
                   "Add": {
                     "type": "string"
@@ -25013,7 +25025,7 @@
         "tags": [
           "CIPP > Extensions"
         ],
-        "description": "Tests the stored credentials for a configured third-party integration and reports whether CIPP can connect. extensionName selects which one: HaloPSA, Syncro, Gradient, NinjaOne, PWPush, Hudu, Sherweb, HIBP or GitHub.",
+        "description": "Tests the stored credentials for a configured third-party integration and reports whether CIPP can connect. extensionName selects which one: HaloPSA, Syncro, Gradient, NinjaOne, PWPush, Hudu, Sherweb, ExternalCSP, HIBP or GitHub.",
         "parameters": [
           {
             "name": "extensionName",
@@ -25023,6 +25035,7 @@
               "type": "string",
               "enum": [
                 "CIPP-API",
+                "ExternalCSP",
                 "GitHub",
                 "Gradient",
                 "HaloPSA",
@@ -33716,6 +33729,14 @@
                   "forward": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
+                  "OneDriveCopyLibrary": {
+                    "type": "object",
+                    "properties": {
+                      "library": {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    }
+                  },
                   "OneDriveCopyTo": {
                     "type": "string"
                   },
@@ -34038,12 +34059,12 @@
     },
     "/api/ExecOneDriveCopyToUser": {
       "post": {
-        "summary": "ExecOneDriveCopyToUser",
+        "summary": "Copy a leaver's OneDrive to other users",
         "operationId": "ExecOneDriveCopyToUser",
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Copies a leaver's OneDrive root contents into a folder named after the leaver's UPN at the root of each recipient's OneDrive, without overwriting anything already there (KeepBoth on name conflicts). The leaver must already be blocked from signing in. The leaver and recipients must be in tenantFilter; each recipient needs a OneDrive licence, a provisioned OneDrive and enough free space. Returns an OperationId; poll ListOneDriveCopyToUser with it until State is Completed before removing the leaver's licences.",
+        "description": "Copies a leaver's OneDrive root contents into a folder named after the leaver's UPN at the root of each recipient's OneDrive and/or in a SharePoint document library, without overwriting anything already there (KeepBoth on name conflicts). The leaver must already be blocked from signing in. The leaver and recipients must be in tenantFilter; each recipient needs a OneDrive licence, a provisioned OneDrive and enough free space. Returns 202 with an OperationId; check ListOneDriveCopyToUser with it until State is Completed before removing the leaver's licences. CIPP does not copy the files itself: it starts SharePoint copy jobs and reports what SharePoint returns, so the copy's speed and any file SharePoint fails to copy are outside CIPP's control. Shortcuts to other people's files are not copied.",
         "requestBody": {
           "required": true,
           "content": {
@@ -34053,8 +34074,7 @@
                 "properties": {
                   "includeVersionHistory": {
                     "type": "boolean",
-                    "default": false,
-                    "description": "Copy every version of each file. Off by default: only the current version is copied, which is what the free-space check counts. When on, Completed needs at least SourceBytes copied rather than exactly SourceBytes."
+                    "description": "Copy every version of each file. Off by default; when on, the free-space check counts the version history too."
                   },
                   "leaver": {
                     "allOf": [
@@ -34062,47 +34082,49 @@
                         "$ref": "#/components/schemas/LabelValue"
                       }
                     ],
-                    "description": "UPN or object id of the user whose OneDrive is copied. The account must already be blocked from signing in (accountEnabled false). A string or a {label,value} object.",
-                    "oneOf": [
-                      {
-                        "type": "string"
+                    "description": "UPN or object id of the user whose OneDrive is copied. The account must already be blocked from signing in."
+                  },
+                  "library": {
+                    "type": "object",
+                    "properties": {
+                      "folder": {
+                        "type": "string",
+                        "description": "Optional existing folder in the library, e.g. Leavers/2026; the copy goes in a folder named after the leaver inside it."
                       },
-                      {
-                        "$ref": "#/components/schemas/LabelValue"
+                      "library": {
+                        "allOf": [
+                          {
+                            "$ref": "#/components/schemas/LabelValue"
+                          }
+                        ],
+                        "description": "List id of the document library."
+                      },
+                      "site": {
+                        "allOf": [
+                          {
+                            "$ref": "#/components/schemas/LabelValue"
+                          }
+                        ],
+                        "description": "URL of the SharePoint site or subsite holding the library."
                       }
-                    ]
+                    },
+                    "description": "A SharePoint document library to copy into as well as, or instead of, recipients."
                   },
                   "recipients": {
-                    "type": "string",
-                    "description": "UPNs or object ids of the users who receive the copy (at most 10, members only; guests are refused). An array of strings or {label,value} objects, or one comma-separated string. Each recipient needs a OneDrive licence, a provisioned OneDrive and free space for the leaver's files.",
-                    "oneOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "array",
-                        "items": {
-                          "oneOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "$ref": "#/components/schemas/LabelValue"
-                            }
-                          ]
-                        }
-                      }
-                    ]
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "UPNs or object ids of up to 10 member users who receive the copy, as strings or {label, value} objects."
                   },
                   "tenantFilter": {
                     "type": "string",
-                    "description": "The tenant's default domain or tenant ID. Must name one tenant; the leaver and every recipient are looked up in it. Use the same value when polling ListOneDriveCopyToUser."
+                    "description": "One tenant (default domain or tenant id); the leaver and every recipient are looked up in it."
                   }
                 },
                 "required": [
-                  "tenantFilter",
                   "leaver",
-                  "recipients"
+                  "tenantFilter"
                 ]
               }
             }
@@ -34110,124 +34132,26 @@
         },
         "responses": {
           "200": {
-            "description": "Copy started. The leaver's root items are copied into /<leaver UPN> at the root of each recipient's OneDrive; existing files are kept and copies are renamed on conflict. Root items are submitted to SharePoint in batches of 100, and SharePoint bundles each batch into one or more copy jobs (it does not say which items a job holds), so JobCount is usually lower than RootItemCount.",
+            "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StandardResults",
-                  "type": "object",
-                  "properties": {
-                    "Results": {
-                      "type": "object",
-                      "properties": {
-                        "OperationId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "description": "Pass to ListOneDriveCopyToUser."
-                        },
-                        "Leaver": {
-                          "type": "string"
-                        },
-                        "FolderName": {
-                          "type": "string",
-                          "description": "The leaver's UPN; the folder created (or reused) at each recipient's OneDrive root."
-                        },
-                        "RootItemCount": {
-                          "type": "integer",
-                          "description": "Files and folders at the root of the leaver's OneDrive (at most 1,000). These are what is submitted to SharePoint."
-                        },
-                        "SourceFileCount": {
-                          "type": "integer",
-                          "format": "int64",
-                          "description": "Files in the whole of the leaver's OneDrive when the copy started, at any depth (folders and deleted items not counted). Each recipient's copy must create exactly this many files to be Completed."
-                        },
-                        "SourceBytes": {
-                          "type": "integer",
-                          "format": "int64",
-                          "description": "Total size of those files (current versions). Used for the free-space check, and each recipient's copy must process exactly this many bytes (at least this many with version history) to be Completed."
-                        },
-                        "ExpectedBytes": {
-                          "type": "integer",
-                          "format": "int64",
-                          "description": "Same as SourceBytes; kept for compatibility."
-                        },
-                        "StartedBy": {
-                          "type": "string"
-                        },
-                        "StartedUtc": {
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "Recipients": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "UserPrincipalName": {
-                                "type": "string"
-                              },
-                              "FolderCreated": {
-                                "type": "boolean",
-                                "description": "False when the folder already existed and was reused."
-                              },
-                              "State": {
-                                "type": "string",
-                                "enum": [
-                                  "Queued",
-                                  "Failed"
-                                ]
-                              },
-                              "JobCount": {
-                                "type": "integer",
-                                "description": "Copy jobs SharePoint created for this recipient: between 1 and RootItemCount. No jobs, or more jobs than root items, makes the recipient Failed."
-                              },
-                              "Message": {
-                                "type": "string"
-                              }
-                            }
-                          }
-                        },
-                        "Warnings": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        },
-                        "Message": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/StandardResults"
                 }
               }
             }
+          },
+          "202": {
+            "description": "Accepted - work was queued and runs asynchronously"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "400": {
-            "description": "Refused before anything was written: missing or malformed input, a user not found in the tenant, a leaver who can still sign in (block sign-in first), a leaver without a OneDrive or with nothing to copy, more than 1,000 root items, more than 100,000 files and folders in the leaver's whole OneDrive (counted with Graph delta before anything is written), a guest recipient or one from another organisation (invited, or synced in from another tenant), a recipient without a OneDrive licence or OneDrive, a recipient without enough free space, a recipient in another tenant, or a recipient who already has a file (not a folder) named after the leaver's UPN at the root of their OneDrive. Results is a string naming every problem. No folder is created and no copy is started for anyone.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StandardResults"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Graph or SharePoint failed, or the copy could not start for any recipient. Results is a string.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StandardResults"
-                }
-              }
-            }
           }
         },
         "security": [
@@ -52745,7 +52669,7 @@
         "tags": [
           "Tenant > Reports"
         ],
-        "description": "Lists CSP (Cloud Solution Provider) license subscriptions for a tenant via the Sherweb integration.",
+        "description": "Lists CSP (Cloud Solution Provider) license subscriptions for a tenant via the enabled CSP integration (Sherweb or External CSP).",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"
@@ -52760,27 +52684,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
-                    "properties": {
-                      "commitmentTerm.renewalConfiguration.renewalDate": {
-                        "x-cipp-field-source": "frontend"
-                      },
-                      "productName": {
-                        "x-cipp-field-source": "frontend"
-                      },
-                      "purchaseDate": {
-                        "x-cipp-field-source": "frontend"
-                      },
-                      "quantity": {
-                        "x-cipp-field-source": "frontend"
-                      },
-                      "sku": {
-                        "x-cipp-field-source": "frontend"
-                      },
-                      "TermInfo": {
-                        "x-cipp-field-source": "frontend"
-                      }
-                    }
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                   }
                 }
               }
@@ -52811,7 +52715,7 @@
         "tags": [
           "Tenant > Reports"
         ],
-        "description": "Lists available CSP SKUs and current subscriptions for a tenant via the Sherweb integration.",
+        "description": "Lists available CSP SKUs and current subscriptions for a tenant via the enabled CSP integration (Sherweb or External CSP).",
         "parameters": [
           {
             "name": "currentSkuOnly",
@@ -54112,7 +54016,7 @@
         "tags": [
           "Endpoint > Applications"
         ],
-        "description": "Lists Intune-managed devices that have a specific detected application installed, identified by App ID.",
+        "description": "Lists Intune-managed devices that have a specific detected application installed, identified by App ID. Supports UseReportDB=true to read the device list from the DetectedApps cache, where AppID is the id from the cached ListDetectedApps rows. Devices are filled in with Entra device ID, compliance state and last sync from the ManagedDevices cache when it has them.",
         "parameters": [
           {
             "name": "AppID",
@@ -54124,6 +54028,15 @@
           },
           {
             "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "UseReportDB",
+            "in": "query",
+            "description": "Read the device list from the reporting database cache instead of live Graph.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -54135,35 +54048,52 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the Microsoft Graph entity it queries. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the fields written into the storage table it reads, and the fields the endpoint selects onto each record. The fields taken from Graph are the ones this endpoint selects, so they are what the response actually carries.",
                     "properties": {
-                      "deviceCount": {
-                        "type": "integer",
-                        "x-cipp-field-source": "graph-entity"
+                      "azureADDeviceId": {
+                        "x-cipp-field-source": "backend"
                       },
-                      "displayName": {
+                      "complianceState": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Data": {
                         "type": "string",
-                        "x-cipp-field-source": "graph-entity"
+                        "x-cipp-field-source": "storage"
+                      },
+                      "deviceName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ETag": {
+                        "x-cipp-field-source": "storage"
                       },
                       "id": {
                         "type": "string",
-                        "x-cipp-field-source": "graph-entity"
+                        "x-cipp-field-source": "graph,backend"
                       },
-                      "platform": {
-                        "type": "object",
-                        "x-cipp-field-source": "graph-entity"
+                      "lastSyncDateTime": {
+                        "x-cipp-field-source": "backend"
                       },
-                      "publisher": {
+                      "operatingSystem": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "osVersion": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "RowKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Timestamp": {
                         "type": "string",
-                        "x-cipp-field-source": "graph-entity"
+                        "x-cipp-field-source": "storage"
                       },
-                      "sizeInByte": {
-                        "type": "integer",
-                        "x-cipp-field-source": "graph-entity"
+                      "Type": {
+                        "x-cipp-field-source": "storage"
                       },
-                      "version": {
-                        "type": "string",
-                        "x-cipp-field-source": "graph-entity"
+                      "userPrincipalName": {
+                        "x-cipp-field-source": "backend"
                       }
                     }
                   }
@@ -54180,8 +54110,8 @@
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
           },
-          "500": {
-            "description": "Internal server error"
+          "404": {
+            "description": "Not found"
           }
         },
         "security": [
@@ -54189,7 +54119,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Identity.Device.Read"
+        "x-cipp-role": "Endpoint.MEM.Read"
       }
     },
     "/api/ListDetectedApps": {
@@ -54199,7 +54129,7 @@
         "tags": [
           "Endpoint > Applications"
         ],
-        "description": "Lists applications detected on Intune-managed devices in a tenant, optionally including device associations.",
+        "description": "Lists applications detected on Intune-managed devices in a tenant, one row per app name and version with the number of devices it is on, optionally including device associations. Supports UseReportDB=true to read the DetectedApps cache in the reporting database; AllTenants always reads the cache. Cached rows leave out the device list: ListDetectedAppDevices returns it per app.",
         "parameters": [
           {
             "name": "DeviceID",
@@ -54219,7 +54149,51 @@
             }
           },
           {
-            "$ref": "#/components/parameters/tenantFilter"
+            "name": "manualPagination",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Cached rows per page, clamped between 250 and 10000. Defaults to 5000. Pages hold whole tenants.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "Target tenant: the tenant's default domain, its tenant ID, or 'AllTenants'. Required unless tenantGroup is sent instead; never send both.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantGroup"
+          },
+          {
+            "name": "UseReportDB",
+            "in": "query",
+            "description": "Serve from the reporting database cache instead of live Graph. Required for AllTenants.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -54231,11 +54205,55 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "complianceState": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "deviceCount": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "deviceName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "displayName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "lastSyncDateTime": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "operatingSystem": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "osVersion": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "platform": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "publisher": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Tenant": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "userPrincipalName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "version": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
                   }
                 }
               }
             }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -54252,7 +54270,8 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Identity.Device.Read"
+        "x-cipp-role": "Endpoint.MEM.Read",
+        "x-cipp-tenant-group": true
       }
     },
     "/api/ListDeviceDetails": {
@@ -65268,21 +65287,20 @@
     },
     "/api/ListOneDriveCopyToUser": {
       "get": {
-        "summary": "ListOneDriveCopyToUser",
+        "summary": "OneDrive copies and their status",
         "operationId": "ListOneDriveCopyToUser",
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Returns the state of a OneDrive copy started by ExecOneDriveCopyToUser: overall and per recipient (Queued, InProgress, Completed or Failed), with the number of files and bytes copied and any errors. Completed and Failed are final. SharePoint is checked at most once a minute per operation and for at most 100 unfinished copy jobs per call; within that minute the stored state is returned. Remove the leaver's licences only once State is Completed.",
+        "description": "Without OperationId, lists the tenant's OneDrive copies with their last known state, without contacting SharePoint. With OperationId, returns that copy's state overall and per recipient (Queued, InProgress, Completed or Failed), with files and bytes copied and any errors; SharePoint is checked at most once every 30 minutes per copy, otherwise the stored state is returned. Completed and Failed are final. Remove the leaver's licences only once State is Completed.",
         "parameters": [
           {
             "name": "OperationId",
             "in": "query",
-            "required": true,
-            "description": "OperationId returned by ExecOneDriveCopyToUser.",
+            "description": "The OperationId returned by ExecOneDriveCopyToUser. Omit it to list every copy in the tenant.",
+            "required": false,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             }
           },
           {
@@ -65291,181 +65309,65 @@
         ],
         "responses": {
           "200": {
-            "description": "Current state. Completed and Failed are final; remove the leaver's licences only when State is Completed (AllCompleted is true). SharePoint is checked at most once a minute per operation and at most 100 jobs per call, so a large copy needs several calls to reach Completed; poll until it does.",
+            "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StandardResults",
-                  "type": "object",
-                  "properties": {
-                    "Results": {
-                      "type": "object",
-                      "properties": {
-                        "OperationId": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "Leaver": {
-                          "type": "string"
-                        },
-                        "StartedBy": {
-                          "type": "string"
-                        },
-                        "StartedUtc": {
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "State": {
-                          "type": "string",
-                          "enum": [
-                            "Queued",
-                            "InProgress",
-                            "Completed",
-                            "Failed"
-                          ],
-                          "description": "Completed when every recipient is Completed; Failed when every recipient is final and at least one Failed."
-                        },
-                        "IsComplete": {
-                          "type": "boolean",
-                          "description": "State is Completed or Failed."
-                        },
-                        "AllCompleted": {
-                          "type": "boolean",
-                          "description": "State is Completed."
-                        },
-                        "RootItemCount": {
-                          "type": "integer"
-                        },
-                        "SourceFileCount": {
-                          "type": [
-                            "integer",
-                            "null"
-                          ],
-                          "format": "int64",
-                          "description": "Files counted in the leaver's whole OneDrive when the copy started. Null for a copy started before this was recorded; such a copy is never Completed."
-                        },
-                        "SourceBytes": {
-                          "type": [
-                            "integer",
-                            "null"
-                          ],
-                          "format": "int64",
-                          "description": "Total size of those files (current versions)."
-                        },
-                        "ExpectedBytes": {
-                          "type": "integer",
-                          "format": "int64",
-                          "description": "Same as SourceBytes; kept for compatibility."
-                        },
-                        "Recipients": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "UserPrincipalName": {
-                                "type": "string"
-                              },
-                              "FolderName": {
-                                "type": "string"
-                              },
-                              "State": {
-                                "type": "string",
-                                "enum": [
-                                  "Queued",
-                                  "InProgress",
-                                  "Completed",
-                                  "Failed"
-                                ],
-                                "description": "Completed needs all of: every copy job (SharePoint bundles root items into 1..RootItemCount jobs) polled and confirmed finished by SharePoint; no errors reported in any check; each job processed at least one object and at least as many as it expected; and at least SourceFileCount files created across the jobs. When every file is accounted for, more files than SourceFileCount, or bytes processed that differ from SourceBytes, still give Completed, with the difference in Warnings and Message ('Copy completed with warnings: ...'). Failed is final: the copy never started, SharePoint returned no jobs or more jobs than root items, or every job has finished and at least one reported errors, failed to report progress five times in a row, or finished without processing everything it expected, or fewer files than SourceFileCount were copied (for example 'copied 6 of 7 files')."
-                              },
-                              "IsComplete": {
-                                "type": "boolean"
-                              },
-                              "JobsComplete": {
-                                "type": "integer"
-                              },
-                              "JobsTotal": {
-                                "type": "integer",
-                                "description": "Copy jobs SharePoint created for this recipient (not one per root item: SharePoint bundles items)."
-                              },
-                              "ItemsCopied": {
-                                "type": "integer",
-                                "format": "int64",
-                                "description": "Files created in the recipient's folder (the highest count each job has reported, summed). A copy renamed on a name conflict counts as created."
-                              },
-                              "ObjectsProcessed": {
-                                "type": "integer",
-                                "format": "int64",
-                                "description": "Files and folders processed, as SharePoint reports them."
-                              },
-                              "TotalExpectedObjects": {
-                                "type": [
-                                  "integer",
-                                  "null"
-                                ],
-                                "format": "int64"
-                              },
-                              "BytesCopied": {
-                                "type": "integer",
-                                "format": "int64",
-                                "description": "Bytes processed (the highest count each job has reported, summed)."
-                              },
-                              "ErrorCount": {
-                                "type": "integer",
-                                "format": "int64",
-                                "description": "Highest error count each job has reported, summed; a failed job without a count adds one."
-                              },
-                              "Errors": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string"
-                                },
-                                "description": "Every distinct error reported across checks (up to 25 per job, 50 per recipient). Sanitised: URLs, paths and file names are redacted."
-                              },
-                              "Warnings": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string"
-                                },
-                                "description": "Warnings from SharePoint, and on a Completed copy any difference between the totals copied and those counted at the start."
-                              },
-                              "Message": {
-                                "type": "string"
-                              }
-                            }
-                          }
-                        },
-                        "CheckedSharePoint": {
-                          "type": "boolean",
-                          "description": "False when SharePoint was checked for this operation less than 60 seconds ago; the stored state is returned instead."
-                        },
-                        "JobsPolled": {
-                          "type": "integer",
-                          "description": "Copy jobs polled by this call (at most 100, least recently polled first, so every job is reached over successive calls)."
-                        },
-                        "LastCheckedUtc": {
-                          "type": [
-                            "string",
-                            "null"
-                          ],
-                          "format": "date-time",
-                          "description": "When SharePoint was last checked for this operation."
-                        },
-                        "NextCheckAfterUtc": {
-                          "type": [
-                            "string",
-                            "null"
-                          ],
-                          "format": "date-time",
-                          "description": "A call before this time returns stored state without checking SharePoint."
-                        },
-                        "LastUpdatedUtc": {
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "Message": {
-                          "type": "string"
-                        }
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "BytesCopied": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Destination": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Destinations": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "ItemsCopied": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "JobsComplete": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "JobsTotal": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "LastCheckedUtc": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "Leaver": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "Message": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "OperationId": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Recipients": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "RootItemCount": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "SourceBytes": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "SourceFileCount": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "StartedBy": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "StartedUtc": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "State": {
+                        "x-cipp-field-source": "backend,frontend"
                       }
                     }
                   }
@@ -65473,31 +65375,14 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "400": {
-            "description": "tenantFilter or OperationId missing, or OperationId malformed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StandardResults"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such operation in this tenant (or it has been removed).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StandardResults"
-                }
-              }
-            }
           }
         },
         "security": [

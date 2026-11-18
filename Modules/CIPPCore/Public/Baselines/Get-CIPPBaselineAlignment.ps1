@@ -323,13 +323,35 @@ function Get-CIPPBaselineAlignment {
 
             # Every standard rolled out to this tenant (current + previous stages) that the
             # engine has not resolved yet appears as a 'No Data' row.
-            foreach ($StageDef in ($Baseline.stages | Select-Object -First $State.currentStage)) {
+            $RolledOutStages = @($Baseline.stages | Select-Object -First $State.currentStage)
+            # The engine runs a template configured in several stages once, from the latest stage, so
+            # earlier copies never get a result. Same identity rule as Get-CIPPBaselineWorkItems.
+            $IdentityOf = {
+                param($Config)
+                $Key = "$($Config.instance ?? $Config.standard)"
+                $Base = ($Key -split '#')[0]
+                $IdentityName = ($Definitions | Where-Object { $_.name -eq $Base } | Select-Object -First 1).instanceIdentity
+                if ($IdentityName) {
+                    $IdentityValue = $Config.variables.$IdentityName
+                    $IdentityValue = $IdentityValue.value ?? $IdentityValue
+                    if ("$IdentityValue") { return ('{0}#{1}' -f $Base, $IdentityValue) }
+                }
+                $Key
+            }
+            $LastStageFor = @{}
+            for ($Index = 0; $Index -lt $RolledOutStages.Count; $Index++) {
+                foreach ($Config in @($RolledOutStages[$Index].standardsConfig)) { if ($Config) { $LastStageFor[(& $IdentityOf $Config)] = $Index } }
+            }
+            $StageIndex = -1
+            foreach ($StageDef in $RolledOutStages) {
+                $StageIndex++
                 foreach ($StageInstanceKey in @($StageDef.standards)) {
                     if ($KnownStandards -contains $StageInstanceKey) { continue }
+                    $StageConfig = $StageDef.standardsConfig | Where-Object { ($_.instance ?? $_.standard) -eq $StageInstanceKey } | Select-Object -First 1
+                    if ($StageConfig -and $LastStageFor[(& $IdentityOf $StageConfig)] -gt $StageIndex) { continue }
                     $KnownStandards.Add($StageInstanceKey)
                     $StageBaseName = ($StageInstanceKey -split '#')[0]
                     $StageDefinition = $Definitions | Where-Object { $_.name -eq $StageBaseName } | Select-Object -First 1
-                    $StageConfig = $StageDef.standardsConfig | Where-Object { ($_.instance ?? $_.standard) -eq $StageInstanceKey } | Select-Object -First 1
                     # Package standards never resolve under their own key: synthesize one
                     # row per MEMBER, with the same derived instance keys the work-item
                     # resolver produces - pre-run 'No Data' rows then meld into the

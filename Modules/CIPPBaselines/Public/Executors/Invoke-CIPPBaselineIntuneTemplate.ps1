@@ -55,6 +55,8 @@ function Invoke-CIPPBaselineIntuneTemplate {
         ExcludeGroup = "$($Remediate.excludeGroup)"
         tenantFilter = $TenantFilter
     }
+    # A named target owns the assignments and drift checks the exact set, so appending could never clear it.
+    if ("$($Remediate.customGroup)" -or (Get-CIPPIntuneAssignTarget -AssignTo $Remediate.assignTo).Managed) { $PolicyParams.AssignmentMode = 'replace' }
     if ("$($Remediate.assignmentFilter)") {
         $PolicyParams.AssignmentFilterName = "$($Remediate.assignmentFilter)"
         $PolicyParams.AssignmentFilterType = $(if ("$($Remediate.assignmentFilterType)" -eq 'exclude') { 'exclude' } else { 'include' })
