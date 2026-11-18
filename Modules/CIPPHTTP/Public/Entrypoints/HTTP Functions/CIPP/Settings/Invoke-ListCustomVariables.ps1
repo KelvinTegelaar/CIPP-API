@@ -240,7 +240,8 @@ function Invoke-ListCustomVariables {
         # be selected. Values are deliberately not returned here: they differ per tenant, so there is
         # no single correct one to show. Only names from tenants the caller's roles cover are listed.
         if ($Request.Query.allTenants -eq $true) {
-            $EveryCustomVariable = Get-CIPPAzDataTableEntity @ReplaceTable | Select-CippAllowedTenantData -TenantProperty 'PartitionKey'
+            $AllCustomRows = @(Get-CIPPAzDataTableEntity @ReplaceTable)
+            $EveryCustomVariable = @($AllCustomRows.Where({ $_.PartitionKey -like 'group:*' })) + @($AllCustomRows.Where({ $_.PartitionKey -notlike 'group:*' }) | Select-CippAllowedTenantData -TenantProperty 'PartitionKey')
             foreach ($Variable in $EveryCustomVariable) {
                 if (-not $Variable.RowKey -or -not $Variable.Value) { continue }
                 # Names already added as reserved or global keep their own description and value.
@@ -266,6 +267,21 @@ function Invoke-ListCustomVariables {
             try {
                 $Tenant = Get-Tenants -TenantFilter $TenantFilter
                 $CustomerId = $Tenant.customerId
+
+                # Tenant group values sit between global and tenant; groups that disagree leave the global value.
+                foreach ($Entry in $(if ($CustomerId) { (Get-CIPPTenantGroupVariables -CustomerId $CustomerId).GetEnumerator() })) {
+                    if ($Entry.Value.Conflict -or -not $Entry.Value.Value) { continue }
+                    $VariableMap[$Entry.Key] = @{
+                        Name         = $Entry.Key
+                        Variable     = "%$($Entry.Key)%"
+                        Description  = "Tenant group custom variable ($($Entry.Value.Groups -join ', '))"
+                        Value        = $Entry.Value.Value
+                        Type         = 'custom'
+                        VariableType = $Entry.Value.VariableType ?? 'string'
+                        Category     = 'group'
+                        Scope        = $TenantFilter
+                    }
+                }
 
                 # Get variables by customerId
                 $TenantVariables = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$CustomerId'"

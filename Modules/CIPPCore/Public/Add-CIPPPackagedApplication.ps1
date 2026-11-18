@@ -71,7 +71,7 @@ function Add-CIPPPackagedApplication {
     $NewApp = New-GraphPostRequest -Uri $BaseUri -Body ($AppBody | ConvertTo-Json) -Type POST -tenantid $TenantFilter
 
     # Upload intunewin content
-    Add-CIPPWin32LobAppContent -AppId $NewApp.id -FilePath $FilePath -FileName $FileName -UnencryptedSize $UnencryptedSize -EncryptionInfo $EncryptionInfo -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
+    $null = Add-CIPPWin32LobAppContent -AppId $NewApp.id -FilePath $FilePath -FileName $FileName -UnencryptedSize $UnencryptedSize -EncryptionInfo $EncryptionInfo -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
 
     return $NewApp
 }

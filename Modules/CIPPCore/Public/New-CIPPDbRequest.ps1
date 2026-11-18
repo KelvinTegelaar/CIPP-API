@@ -63,6 +63,9 @@ function New-CIPPDbRequest {
         [Parameter(Mandatory = $false)]
         [string[]]$Fields,
 
+        # With -Type: read only the rows for these item ids (RowKey '<Type>-<id>') instead of the whole type
+        [string[]]$Id,
+
         # Rows already read by an AllTenants caller; parsed instead of querying again
         [Parameter(DontShow = $true)]
         [object[]]$Rows,
@@ -115,7 +118,7 @@ function New-CIPPDbRequest {
         }
 
         $Projection = if ($Fields) { [string[]]$Fields } else { $null }
-        if ($PageSize -and $Type -and -not $PSBoundParameters.ContainsKey('Rows')) {
+        if ($PageSize -and $Type -and -not $PSBoundParameters.ContainsKey('Rows') -and -not $PSBoundParameters.ContainsKey('Id')) {
             $Token = $null
             do {
                 $Page = Get-CIPPPagedTableRows -Table $Table -PartitionKeys @($Tenant) -RowKeyGe "$Type-" -RowKeyLt "$Type." -PageSize $PageSize -ContinuationToken $Token
@@ -133,7 +136,20 @@ function New-CIPPDbRequest {
             return
         }
 
-        $Results = if ($PSBoundParameters.ContainsKey('Rows')) { $Rows } else { Get-CIPPAzDataTableEntity @Table -Filter $Filter }
+        $Results = if ($PSBoundParameters.ContainsKey('Rows')) {
+            $Rows
+        } elseif ($PSBoundParameters.ContainsKey('Id')) {
+            if (-not $Type) { throw 'Type is required with Id.' }
+            # Azure Table allows 15 comparisons per filter: the partition plus 14 row keys
+            for ($i = 0; $i -lt $Id.Count; $i += 14) {
+                $Keys = foreach ($ItemId in $Id[$i..([Math]::Min($i + 13, $Id.Count - 1))]) {
+                    "RowKey eq '{0}'" -f (ConvertTo-CIPPODataFilterValue -Value "$Type-$ItemId" -Type String)
+                }
+                Get-CIPPAzDataTableEntity @Table -Filter ("PartitionKey eq '{0}' and ({1})" -f $SafeTenantFilter, ($Keys -join ' or '))
+            }
+        } else {
+            Get-CIPPAzDataTableEntity @Table -Filter $Filter
+        }
 
         # CippJson replaces `$Results.Data | ConvertFrom-Json`. A row whose Data is a JSON array
         # returns object[], which PowerShell unrolls into the output stream — the same shape the

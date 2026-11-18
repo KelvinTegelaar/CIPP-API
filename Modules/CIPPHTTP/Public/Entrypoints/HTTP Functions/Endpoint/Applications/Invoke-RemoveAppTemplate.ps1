@@ -25,6 +25,8 @@ function Invoke-RemoveAppTemplate {
         $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         if ($Entity) {
             Remove-CIPPAzDataTableEntity @Table -Entity $Entity
+            $PackageIds = [regex]::Matches([string]$Entity.JSON, 'packageId\\?"\s*:\s*\\?"([0-9a-fA-F-]{36})').ForEach({ $_.Groups[1].Value })
+            Remove-CIPPUnusedAppPackage -PackageIds $PackageIds
             $Result = 'Successfully removed app template'
             Write-LogMessage -headers $Headers -API $APIName -message "Removed app template $ID" -Sev 'Info'
         } else {

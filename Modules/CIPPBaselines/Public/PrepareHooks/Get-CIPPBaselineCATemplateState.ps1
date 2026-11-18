@@ -84,12 +84,6 @@ function Get-CIPPBaselineCATemplateState {
         if ($Strength.id -and $Strength.displayName) { $StrengthNameById["$($Strength.id)"] = "$($Strength.displayName)" }
     }
     $UserNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-    foreach ($Directory in @('Users', 'Groups')) {
-        foreach ($Entry in @($(try { New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Directory } catch { $null }) | Where-Object { $_ })) {
-            if ($Directory -eq 'Users' -and $Entry.displayName) { $null = $UserNames.Add("$($Entry.displayName)") }
-            if ($Entry.id -and $Entry.displayName -and -not $NameById.ContainsKey("$($Entry.id)")) { $NameById["$($Entry.id)"] = "$($Entry.displayName)" }
-        }
-    }
 
     $TranslateSet = {
         param($Values)
@@ -173,6 +167,37 @@ function Get-CIPPBaselineCATemplateState {
         Write-Information "Baselines: $($Live.Count) CA policies named '$($Template.displayName)' exist on $TenantFilter - comparing the first."
     }
     $Live = $Live | Select-Object -First 1
+
+    # Only ids the two policies reference are ever looked up, so read just those Users/Groups rows. The full user
+    # list is needed only when the template names users, to drop the names that match no user in the tenant.
+    $Guid = [guid]::Empty
+    $NeedsUserNames = $false
+    if ($Template.conditions.users) {
+        foreach ($Side in @('includeUsers', 'excludeUsers')) {
+            $Values = $Template.conditions.users.$Side
+            if ($null -eq $Values) { continue }
+            if ($Values -isnot [array] -or $Values.Where({ "$_" -notin 'All', 'None', 'GuestsOrExternalUsers' -and -not [guid]::TryParse("$_", [ref]$Guid) }).Count -gt 0) { $NeedsUserNames = $true }
+        }
+    }
+    $DirectoryIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($Policy in @($Template, $Live)) {
+        foreach ($Value in @($Policy.conditions.users.includeUsers) + @($Policy.conditions.users.excludeUsers) + @($Policy.conditions.users.includeGroups) +
+            @($Policy.conditions.users.excludeGroups) + @($Policy.conditions.locations.includeLocations) + @($Policy.conditions.locations.excludeLocations)) {
+            if ($Value -and [guid]::TryParse("$Value", [ref]$Guid) -and -not $NameById.ContainsKey("$Value")) { $null = $DirectoryIds.Add("$Value".ToLowerInvariant()) }
+        }
+    }
+    foreach ($Directory in @('Users', 'Groups')) {
+        $ReadAll = $Directory -eq 'Users' -and $NeedsUserNames
+        $Read = @{ TenantFilter = $TenantFilter; Type = $Directory; Fields = @('id', 'displayName') }
+        if (-not $ReadAll) {
+            $Read.Id = @($DirectoryIds.Where({ -not $NameById.ContainsKey($_) }))
+            if ($Read.Id.Count -eq 0) { continue }
+        }
+        foreach ($Entry in @($(try { New-CIPPDbRequest @Read } catch { $null })).Where({ $_ })) {
+            if ($ReadAll -and $Entry.displayName) { $null = $UserNames.Add("$($Entry.displayName)") }
+            if ($Entry.id -and $Entry.displayName -and -not $NameById.ContainsKey("$($Entry.id)")) { $NameById["$($Entry.id)"] = "$($Entry.displayName)" }
+        }
+    }
 
     # The Users/Groups caches lag the CA cache (groups created by a deploy or vacation mode are
     # missing until the next collection), so resolve leftover user/group ids live in one call.

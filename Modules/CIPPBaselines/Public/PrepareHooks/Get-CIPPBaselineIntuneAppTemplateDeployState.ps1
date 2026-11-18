@@ -26,10 +26,14 @@ function Get-CIPPBaselineIntuneAppTemplateDeployState {
     if ($TemplateIds.Count -eq 0) { return @{ Current = $null } }
 
     $CurrentAppNames = @($Apps | ForEach-Object { "$($_.displayName)" })
+    # Uploaded packages are only current when an app with the name carries the template's package marker.
+    $CurrentPackageNotes = @{}
+    foreach ($App in $Apps) { $CurrentPackageNotes["$($App.displayName)"] = "$($CurrentPackageNotes["$($App.displayName)"]) $($App.notes)" }
     $OfficeDeployed = @($Apps | Where-Object { "$($_.'@odata.type')" -eq '#microsoft.graph.officeSuiteApp' }).Count -gt 0
 
     $Table = Get-CIPPTable -TableName 'templates'
     $MissingApps = [System.Collections.Generic.List[object]]::new()
+    $OutdatedApps = [System.Collections.Generic.List[string]]::new()
     foreach ($TemplateId in $TemplateIds) {
         $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppTemplate' and RowKey eq '$TemplateId'"
         if (-not $Entity) { continue }
@@ -50,6 +54,10 @@ function Get-CIPPBaselineIntuneAppTemplateDeployState {
                 continue
             }
             $IsDeployed = if ($AppType -eq 'officeApp') { $OfficeDeployed } else { $DisplayName -in $CurrentAppNames }
+            if ($IsDeployed -and $AppType -in @('win32PackageApp', 'macOSPackageApp') -and $CurrentPackageNotes[$DisplayName] -notlike "*Package: $($Config.packageId)*") {
+                $OutdatedApps.Add($DisplayName)
+                $IsDeployed = $false
+            }
             if (-not $IsDeployed) {
                 $MissingApps.Add([PSCustomObject]@{
                         TemplateId   = "$TemplateId"
@@ -63,13 +71,14 @@ function Get-CIPPBaselineIntuneAppTemplateDeployState {
     }
 
     $Current = [PSCustomObject]@{
-        missingApps = @($MissingApps | ForEach-Object { "$($_.AppName)" } | Sort-Object)
+        missingApps  = @($MissingApps | Where-Object { $_.AppName -notin $OutdatedApps } | ForEach-Object { "$($_.AppName)" } | Sort-Object)
+        outdatedApps = @($OutdatedApps | Sort-Object)
     }
     # Carried for the executor.
     $Current | Add-Member -NotePropertyName 'missingAppObjects' -NotePropertyValue @($MissingApps)
 
     @{
-        Expected = [PSCustomObject]@{ missingApps = @() }
+        Expected = [PSCustomObject]@{ missingApps = @(); outdatedApps = @() }
         Current  = $Current
     }
 }

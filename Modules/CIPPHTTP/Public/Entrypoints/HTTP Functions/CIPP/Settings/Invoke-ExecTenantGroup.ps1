@@ -170,6 +170,11 @@ function Invoke-ExecTenantGroup {
             $GroupEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $groupId)'"
             if ($GroupEntity) {
                 Remove-CIPPAzDataTableEntity @Table -Entity $GroupEntity -Force
+                $VariablesTable = Get-CippTable -tablename 'CippReplacemap'
+                $GroupVariables = @(Get-CIPPAzDataTableEntity @VariablesTable -Filter "PartitionKey eq 'group:$(ConvertTo-CIPPODataFilterValue -Value $groupId)'")
+                if ($GroupVariables.Count -gt 0) {
+                    Remove-CIPPAzDataTableEntity @VariablesTable -Entity $GroupVariables -Force
+                }
                 $Result = "Group '$($GroupEntity.Name)' deleted successfully"
                 Write-LogMessage -API 'TenantGroups' -tenant 'Global' -headers $Request.Headers -message $Result -Sev 'Info'
                 $Body = @{ Results = $Result }

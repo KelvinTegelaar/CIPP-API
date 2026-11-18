@@ -127,6 +127,8 @@ function New-CIPPIntuneAppDeployment {
     $ApplicationList = switch ($AppType) {
         'OfficeApp' { New-GraphGetRequest -Uri $BaseUri -tenantid $TenantFilter | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.officeSuiteApp' } }
         'EdgeApp' { New-GraphGetRequest -Uri $BaseUri -tenantid $TenantFilter | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.windowsMicrosoftEdgeApp' } }
+        # Uploaded packages decide create/update/supersede themselves below.
+        { $_ -in @('Win32PackageApp', 'MacOSPackageApp') } { @() }
         default { New-GraphGetRequest -Uri $BaseUri -tenantid $TenantFilter | Where-Object { $_.DisplayName -eq $AppConfig.Applicationname } }
     }
     if ($ApplicationList.displayname.count -ge 1) {
@@ -221,6 +223,165 @@ function New-CIPPIntuneAppDeployment {
             }
             $NewApp = New-GraphPostRequest -Uri $BaseUri -tenantid $TenantFilter -Body (ConvertTo-Json -InputObject $ObjBody -Depth 10) -Type POST
         }
+        { $_ -in @('Win32PackageApp', 'MacOSPackageApp') } {
+            $PackageId = [guid]::Empty
+            if (-not [guid]::TryParse([string]$AppConfig.packageId, [ref]$PackageId)) { throw "'$($AppConfig.Applicationname)' has no uploaded package." }
+            $PackageMetadata = New-CIPPAzStorageRequest -Service blob -Resource "app-packages/$PackageId/metadata.json" -ErrorAction SilentlyContinue
+            if (-not $PackageMetadata.Bytes) { throw "The package for '$($AppConfig.Applicationname)' is no longer in CIPP storage. Upload it again in the application template." }
+            $Package = [System.Text.Encoding]::UTF8.GetString($PackageMetadata.Bytes) | ConvertFrom-Json
+            $Marker = "Package: $PackageId"
+
+            if ($AppType -eq 'MacOSPackageApp') {
+                $LobType = if ($Package.FileName -match '\.dmg$') { 'macOSDmgApp' } else { 'macOSPkgApp' }
+                # One app per line: '<bundle id> <version>'
+                $IncludedApps = @(([string]$AppConfig.includedApps -split "`n").ForEach({ $_.Trim() }).Where({ $_ }).ForEach({
+                            $Parts = $_ -split '\s+', 2
+                            @{ '@odata.type' = '#microsoft.graph.macOSIncludedApp'; bundleId = $Parts[0]; bundleVersion = "$($Parts[1])" }
+                        }))
+                $PrimaryBundleId = $AppConfig.primaryBundleId ?? $IncludedApps[0].bundleId
+                $PrimaryBundleVersion = $AppConfig.primaryBundleVersion ?? $IncludedApps[0].bundleVersion
+                if (-not $PrimaryBundleId) { throw "'$($AppConfig.Applicationname)' needs the app's bundle ID." }
+                if ($IncludedApps.Where({ $_.bundleId -eq $PrimaryBundleId }).Count -eq 0) {
+                    $IncludedApps = @(@{ '@odata.type' = '#microsoft.graph.macOSIncludedApp'; bundleId = $PrimaryBundleId; bundleVersion = "$PrimaryBundleVersion" }; $IncludedApps)
+                }
+                $MinimumOS = $AppConfig.minimumMacOS.value ?? $AppConfig.minimumMacOS ?? 'v12_0'
+                $AppBody = [ordered]@{
+                    '@odata.type'                   = "#microsoft.graph.$LobType"
+                    displayName                     = "$($AppConfig.Applicationname)"
+                    description                     = "$($AppConfig.description)"
+                    publisher                       = "$($AppConfig.publisher)"
+                    notes                           = $Marker
+                    fileName                        = $Package.FileName
+                    primaryBundleId                 = $PrimaryBundleId
+                    primaryBundleVersion            = "$PrimaryBundleVersion"
+                    includedApps                    = $IncludedApps
+                    ignoreVersionDetection          = [bool]$AppConfig.ignoreVersionDetection
+                    minimumSupportedOperatingSystem = @{ '@odata.type' = '#microsoft.graph.macOSMinimumOperatingSystem'; $MinimumOS = $true }
+                }
+                if ($LobType -eq 'macOSPkgApp') {
+                    foreach ($Script in 'preInstallScript', 'postInstallScript') {
+                        if ($AppConfig.$Script) { $AppBody[$Script] = @{ '@odata.type' = '#microsoft.graph.macOSAppScript'; scriptContent = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([string]$AppConfig.$Script)) } }
+                    }
+                }
+            } else {
+                $LobType = 'win32LobApp'
+                $Detection = switch ([string]$AppConfig.detectionType) {
+                    'msi' {
+                        $ProductCode = $AppConfig.msiProductCode ?? $Package.MsiInfo.MsiProductCode
+                        @{ '@odata.type' = '#microsoft.graph.win32LobAppProductCodeRule'; ruleType = 'detection'; productCode = $ProductCode
+                            productVersionOperator = $AppConfig.msiProductVersion ? 'greaterThanOrEqual' : 'notConfigured'; productVersion = $AppConfig.msiProductVersion
+                        }
+                    }
+                    'registry' {
+                        @{ '@odata.type' = '#microsoft.graph.win32LobAppRegistryRule'; ruleType = 'detection'; keyPath = $AppConfig.registryKeyPath; valueName = $AppConfig.registryValueName
+                            check32BitOn64System = [bool]$AppConfig.check32BitOn64System; operationType = $AppConfig.registryValue ? 'version' : 'exists'
+                            operator = $AppConfig.registryValue ? 'greaterThanOrEqual' : 'notConfigured'; comparisonValue = $AppConfig.registryValue
+                        }
+                    }
+                    'script' {
+                        @{ '@odata.type' = '#microsoft.graph.win32LobAppPowerShellScriptRule'; ruleType = 'detection'; enforceSignatureCheck = [bool]$AppConfig.enforceSignatureCheck
+                            runAs32Bit = [bool]$AppConfig.runAs32Bit; operationType = 'notConfigured'; operator = 'notConfigured'
+                            scriptContent = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes([string]$AppConfig.detectionScript))
+                        }
+                    }
+                    default {
+                        @{ '@odata.type' = '#microsoft.graph.win32LobAppFileSystemRule'; ruleType = 'detection'; path = $AppConfig.detectionPath; fileOrFolderName = $AppConfig.detectionFile
+                            check32BitOn64System = [bool]$AppConfig.check32BitOn64System; operationType = $AppConfig.fileVersion ? 'version' : 'exists'
+                            operator = $AppConfig.fileVersion ? 'greaterThanOrEqual' : 'notConfigured'; comparisonValue = $AppConfig.fileVersion
+                        }
+                    }
+                }
+                $Architectures = @(@($AppConfig.architectures).ForEach({ "$($_.value ?? $_)" }).Where({ $_ }))
+                if ($Architectures.Count -eq 0) { $Architectures = @('x64', 'x86') }
+                # 'code=type' pairs, e.g. '0=success, 3010=softReboot'
+                $ReturnCodes = @(([string]$AppConfig.returnCodes -split ',').Where({ $_ -match '^\s*(-?\d+)\s*=\s*(success|softReboot|hardReboot|retry|failed)\s*$' }).ForEach({
+                            $Pair = $_ -split '='
+                            @{ returnCode = [int]$Pair[0].Trim(); type = $Pair[1].Trim() }
+                        }))
+                if ($ReturnCodes.Count -eq 0) {
+                    $ReturnCodes = @(@{ returnCode = 0; type = 'success' }, @{ returnCode = 1707; type = 'success' }, @{ returnCode = 3010; type = 'softReboot' }, @{ returnCode = 1641; type = 'hardReboot' }, @{ returnCode = 1618; type = 'retry' })
+                }
+                $AppBody = [ordered]@{
+                    '@odata.type'                  = '#microsoft.graph.win32LobApp'
+                    displayName                    = "$($AppConfig.Applicationname)"
+                    description                    = "$($AppConfig.description)"
+                    publisher                      = "$($AppConfig.publisher ?? $Package.MsiInfo.MsiPublisher)"
+                    displayVersion                 = $AppConfig.displayVersion ?? $Package.MsiInfo.MsiProductVersion
+                    notes                          = $Marker
+                    fileName                       = $Package.FileName
+                    setupFilePath                  = $Package.SetupFile
+                    installCommandLine             = $AppConfig.installCommandLine
+                    uninstallCommandLine           = $AppConfig.uninstallCommandLine
+                    allowAvailableUninstall        = [bool]($AppConfig.allowAvailableUninstall ?? $true)
+                    minimumSupportedWindowsRelease = $AppConfig.minimumSupportedWindowsRelease.value ?? $AppConfig.minimumSupportedWindowsRelease ?? '1607'
+                    installExperience              = @{
+                        runAsAccount          = $AppConfig.runAsAccount.value ?? $AppConfig.runAsAccount ?? 'system'
+                        deviceRestartBehavior = $AppConfig.deviceRestartBehavior.value ?? $AppConfig.deviceRestartBehavior ?? 'basedOnReturnCode'
+                        maxRunTimeInMinutes   = [int]($AppConfig.maxRunTimeInMinutes ?? 60)
+                    }
+                    rules                          = @($Detection)
+                    returnCodes                    = $ReturnCodes
+                }
+                # arm64 is only expressible through allowedArchitectures
+                if ('arm64' -in $Architectures) { $AppBody.applicableArchitectures = 'none'; $AppBody.allowedArchitectures = $Architectures -join ',' } else { $AppBody.applicableArchitectures = $Architectures -join ',' }
+                if ($Package.MsiInfo.MsiProductCode) {
+                    $AppBody.msiInformation = @{
+                        productCode    = $Package.MsiInfo.MsiProductCode; productVersion = $Package.MsiInfo.MsiProductVersion; upgradeCode = $Package.MsiInfo.MsiUpgradeCode
+                        requiresReboot = $Package.MsiInfo.MsiRequiresReboot -eq 'true'; publisher = $Package.MsiInfo.MsiPublisher; productName = $Package.Name
+                        packageType    = switch ($Package.MsiInfo.MsiExecutionContext) { 'User' { 'perUser' } 'Any' { 'dualPurpose' } default { 'perMachine' } }
+                    }
+            }
+            }
+            if ($AppConfig.largeIcon) { $AppBody.largeIcon = @{ '@odata.type' = '#microsoft.graph.mimeContent'; type = $AppConfig.largeIconType ?? 'image/png'; value = $AppConfig.largeIcon } }
+
+            $EncryptionInfo = @{}
+            foreach ($Property in $Package.EncryptionInfo.PSObject.Properties) { $EncryptionInfo[$Property.Name] = $Property.Value }
+            $ContentParams = @{
+                BlobPath = "app-packages/$PackageId/IntunePackage.intunewin"; EncryptedSize = [int64]$Package.EncryptedSize; FileName = $Package.FileName
+                UnencryptedSize = [int64]$Package.UnencryptedContentSize; EncryptionInfo = $EncryptionInfo; TenantFilter = $TenantFilter; APIName = $APIName; AppType = $LobType
+            }
+
+            $Existing = @(New-GraphGetRequest -Uri "$BaseUri`?`$filter=isof('microsoft.graph.$LobType')&`$select=id,displayName,notes,createdDateTime" -tenantid $TenantFilter).Where({ $_.displayName -eq $AppConfig.Applicationname })
+            if ($Existing.Where({ "$($_.notes)" -like "*$Marker*" }).Count -gt 0) {
+                Write-LogMessage -API $APIName -tenant $TenantFilter -message "$($AppConfig.Applicationname) is already on this package. Skipping this application" -Sev 'Info'
+                return $null
+            }
+            $Previous = @($Existing | Sort-Object -Property createdDateTime -Descending)[0]
+
+            # Supersedence exists only for Win32 apps; macOS packages always update in place.
+            if ($Previous -and ($AppConfig.updateMode -ne 'supersede' -or $LobType -ne 'win32LobApp')) {
+                # In place: new content version on the same app keeps its id, assignments and install history.
+                $PreviousApp = New-GraphGetRequest -Uri "$BaseUri/$($Previous.id)" -tenantid $TenantFilter
+                # Intune updates a macOS app only with the bundle ID it was created with.
+                if ($LobType -ne 'win32LobApp' -and $PreviousApp.primaryBundleId -and $PreviousApp.primaryBundleId -ne $AppBody.primaryBundleId) {
+                    throw "'$($AppConfig.Applicationname)' already exists for bundle ID $($PreviousApp.primaryBundleId), but this package is $($AppBody.primaryBundleId). Intune can only update a macOS app with the same bundle ID; give the template app a different name to deploy it as a new app."
+                }
+                $AppProperties = @{}
+                foreach ($Key in $AppBody.Keys) { $AppProperties[$Key] = $AppBody[$Key] }
+                if (-not $AppProperties.largeIcon -and $PreviousApp.largeIcon.value) {
+                    $AppProperties.largeIcon = @{ '@odata.type' = '#microsoft.graph.mimeContent'; type = $PreviousApp.largeIcon.type; value = $PreviousApp.largeIcon.value }
+                }
+                $null = Add-CIPPWin32LobAppContent -AppId $Previous.id @ContentParams -AppProperties $AppProperties
+                Write-LogMessage -API $APIName -tenant $TenantFilter -message "Updated $($AppConfig.Applicationname) to package $PackageId" -Sev 'Info'
+                return $Previous
+            }
+
+            $NewApp = New-GraphPostRequest -Uri $BaseUri -tenantid $TenantFilter -Body (ConvertTo-Json -InputObject $AppBody -Depth 10) -Type POST
+            try {
+                $null = Add-CIPPWin32LobAppContent -AppId $NewApp.id @ContentParams
+            } catch {
+                # An app without committed content cannot be installed or edited; do not leave it behind.
+                $null = New-GraphPostRequest -Uri "$BaseUri/$($NewApp.id)" -tenantid $TenantFilter -Type DELETE -Body ''
+                throw
+            }
+            if ($Previous) {
+                $Relationship = @{ relationships = @(@{ '@odata.type' = '#microsoft.graph.mobileAppSupersedence'; supersedenceType = $AppConfig.supersedenceType ?? 'update'; targetId = $Previous.id }) }
+                $null = New-GraphPostRequest -Uri "$BaseUri/$($NewApp.id)/updateRelationships" -tenantid $TenantFilter -Type POST -Body (ConvertTo-Json -InputObject $Relationship -Depth 5)
+                # The superseding app takes over targeting; leaving the old assignments would keep installing it.
+                $null = New-GraphPostRequest -Uri "$BaseUri/$($Previous.id)/assign" -tenantid $TenantFilter -Type POST -Body '{"mobileAppAssignments":[]}'
+                Write-LogMessage -API $APIName -tenant $TenantFilter -message "$($AppConfig.Applicationname) package $PackageId supersedes app $($Previous.id) ($($Relationship.relationships[0].supersedenceType))" -Sev 'Info'
+            }
+        }
         default {
             throw "Unsupported app type: $AppType"
         }
@@ -237,6 +398,7 @@ function New-CIPPIntuneAppDeployment {
                 'WinGetNew' { 'WinGet' }
                 'OfficeApp' { $null }
                 'EdgeApp' { $null }
+                'MacOSPackageApp' { $null }
                 default { 'Win32Lob' }
             }
             Start-Sleep -Milliseconds 200

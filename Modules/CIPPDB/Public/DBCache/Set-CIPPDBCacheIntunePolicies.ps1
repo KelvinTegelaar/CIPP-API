@@ -54,7 +54,7 @@ function Set-CIPPDBCacheIntunePolicies {
                 [PSCustomObject]@{ Type = 'DeviceEnrollmentConfigurations'; CacheType = 'IntuneDeviceEnrollmentConfigurations'; Uri = '/deviceManagement/deviceEnrollmentConfigurations?$top=999'; FetchAssignments = $true }
                 [PSCustomObject]@{ Type = 'AppleUserInitiatedEnrollmentProfiles'; CacheType = 'IntuneAppleUserInitiatedEnrollmentProfiles'; Uri = '/deviceManagement/appleUserInitiatedEnrollmentProfiles?$top=999'; FetchAssignments = $true }
                 [PSCustomObject]@{ Type = 'DeviceManagementScripts'; CacheType = 'IntuneDeviceManagementScripts'; Uri = '/deviceManagement/deviceManagementScripts?$top=999&$expand=assignments' }
-                [PSCustomObject]@{ Type = 'MobileApps'; CacheType = 'IntuneMobileApps'; Uri = '/deviceAppManagement/mobileApps?$top=999&$select=id,displayName,description,publisher,isAssigned,createdDateTime,lastModifiedDateTime'; FetchAssignments = $true }
+                [PSCustomObject]@{ Type = 'MobileApps'; CacheType = 'IntuneMobileApps'; Uri = '/deviceAppManagement/mobileApps?$top=999&$select=id,displayName,description,publisher,isAssigned,createdDateTime,lastModifiedDateTime,notes,microsoft.graph.win32LobApp/displayVersion'; FetchAssignments = $true }
             )) {
             $PolicyTypes.Add($LegacyType)
         }

@@ -59,6 +59,7 @@ BeforeAll {
     } | Import-Module -Force
 
     . (Resolve-CippFunctionFile -Name 'Get-CIPPTextReplacement.ps1')
+    function Get-CIPPTenantGroupVariables { param($CustomerId) @{} }
     . (Resolve-CippFunctionFile -Name 'Remove-CIPPStandardSettingsRawData.ps1')
     . (Resolve-CippFunctionFile -Name 'Push-CIPPStandard.ps1')
 

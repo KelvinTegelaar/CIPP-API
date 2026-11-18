@@ -29,6 +29,9 @@ BeforeAll {
         [pscustomobject]@{ NormalizedError = "$Exception" }
     }
 
+    function New-CIPPAzStorageRequest { param($Service, $Resource, $Method, $QueryParams, $ContentType, $Body) $script:StorageCalls.Add([pscustomobject]@{ Resource = $Resource; QueryParams = $QueryParams; Body = $Body }) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
+
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Endpoint/Applications/Invoke-AddAppTemplate.ps1'
     $EndpointScript = [ScriptBlock]::Create("using namespace System.Net`n" + (Get-Content -LiteralPath $EndpointPath -Raw))
     . $EndpointScript
@@ -62,6 +65,7 @@ BeforeAll {
 Describe 'Invoke-AddAppTemplate' {
     BeforeEach {
         $script:LastEntity = $null
+        $script:StorageCalls = [System.Collections.Generic.List[object]]::new()
     }
 
     It 'rejects an app whose config holds a Graph body with an id' {
@@ -184,5 +188,49 @@ Describe 'Invoke-AddAppTemplate' {
 
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
         $script:LastEntity.JSON | Should -Match '"firefox"'
+    }
+
+    Context 'uploaded Win32 packages' {
+        BeforeAll {
+            $script:PackageId = '6f1c2a3b-1111-2222-3333-444455556666'
+            $script:Metadata = @{ FileName = 'IntunePackage.intunewin'; SetupFile = 'setup.exe'; UnencryptedContentSize = 100; EncryptedSize = 160; EncryptionInfo = @{ EncryptionKey = 'a2V5'; MacKey = 'bWFj' } }
+        }
+
+        It 'refuses a package app with no uploaded package as bad input' {
+            $Request = New-TemplateRequest -Apps @([pscustomobject]@{ appType = 'win32PackageApp'; appName = 'Agent'; config = (@{ applicationName = 'Agent' } | ConvertTo-Json -Compress) })
+
+            $Response = Invoke-AddAppTemplate -Request $Request -TriggerMetadata $null
+
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+            $Response.Body.Results | Should -Match 'Upload the .intunewin package'
+            $script:LastEntity | Should -BeNullOrEmpty
+        }
+
+        It 'assembles a fresh upload, stores its metadata beside it and keeps only the package id in the template' {
+            $Config = @{ applicationName = 'Agent'; packageId = $script:PackageId; packageUpload = @{ blockCount = 3; metadata = $script:Metadata } }
+            $Request = New-TemplateRequest -Apps @([pscustomobject]@{ appType = 'win32PackageApp'; appName = 'Agent'; config = ($Config | ConvertTo-Json -Depth 10 -Compress) })
+
+            $Response = Invoke-AddAppTemplate -Request $Request -TriggerMetadata $null
+
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+            $BlockList = $script:StorageCalls.Where({ $_.QueryParams.comp -eq 'blocklist' })
+            $BlockList.Resource | Should -Be "app-packages/$($script:PackageId)/IntunePackage.intunewin"
+            ([regex]::Matches($BlockList.Body, '<Latest>')).Count | Should -Be 3
+            $Stored = $script:StorageCalls.Where({ $_.Resource -like '*/metadata.json' })
+            ($Stored.Body | ConvertFrom-Json).EncryptionInfo.EncryptionKey | Should -Be 'a2V5'
+            $script:LastEntity.JSON | Should -Match $script:PackageId
+            $script:LastEntity.JSON | Should -Not -Match 'packageUpload'
+            $script:LastEntity.JSON | Should -Not -Match 'a2V5'
+        }
+
+        It 'refuses an upload larger than the 4 GB cap' {
+            $Config = @{ applicationName = 'Agent'; packageId = $script:PackageId; packageUpload = @{ blockCount = 513; metadata = $script:Metadata } }
+            $Request = New-TemplateRequest -Apps @([pscustomobject]@{ appType = 'win32PackageApp'; appName = 'Agent'; config = ($Config | ConvertTo-Json -Depth 10 -Compress) })
+
+            $Response = Invoke-AddAppTemplate -Request $Request -TriggerMetadata $null
+
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+            $script:StorageCalls.Count | Should -Be 0
+        }
     }
 }

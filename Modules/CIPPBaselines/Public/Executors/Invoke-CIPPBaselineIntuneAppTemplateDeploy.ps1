@@ -30,6 +30,8 @@ function Invoke-CIPPBaselineIntuneAppTemplateDeploy {
                 'win32ScriptApp' { 'Win32ScriptApp' }
                 'mspApp' { 'MSPApp' }
                 'officeApp' { 'OfficeApp' }
+                'win32PackageApp' { 'Win32PackageApp' }
+                'macOSPackageApp' { 'MacOSPackageApp' }
                 default { "$($App.AppType)" }
             }
             $DeployConfig = $App.Config | ConvertTo-Json -Depth 100 | ConvertFrom-Json -Depth 100

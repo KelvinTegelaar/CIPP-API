@@ -349,6 +349,40 @@ Describe 'Get-CIPPBaselineIntuneAppTemplateDeployState' {
         Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $message -like '*no name*' }
     }
 
+    It 'an uploaded package on an older version is outdated drift, carried to the executor' {
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ JSON = (@{ Displayname = 'Agents'; Apps = @(
+                        @{ appType = 'win32PackageApp'; appName = 'Contoso Agent'; config = @{ applicationName = 'Contoso Agent'; packageId = 'new-package' } }
+                    ) } | ConvertTo-Json -Depth 10) } }
+        Mock New-CIPPDbRequest { @((@{ displayName = 'Contoso Agent'; '@odata.type' = '#microsoft.graph.win32LobApp'; notes = 'Package: old-package' } | ConvertTo-Cached)) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ templateIds = @('t-agents') } }
+        $Prepared = Get-CIPPBaselineIntuneAppTemplateDeployState -Item $Item -TenantFilter $script:Tenant
+        @($Prepared.Current.outdatedApps) | Should -Be @('Contoso Agent')
+        @($Prepared.Current.missingApps).Count | Should -Be 0
+        @($Prepared.Current.missingAppObjects)[0].AppType | Should -Be 'win32PackageApp'
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'an uploaded package already on the template version has no drift' {
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ JSON = (@{ Displayname = 'Agents'; Apps = @(
+                        @{ appType = 'win32PackageApp'; appName = 'Contoso Agent'; config = @{ applicationName = 'Contoso Agent'; packageId = 'new-package' } }
+                    ) } | ConvertTo-Json -Depth 10) } }
+        Mock New-CIPPDbRequest { @((@{ displayName = 'Contoso Agent'; '@odata.type' = '#microsoft.graph.win32LobApp'; notes = 'Package: new-package' } | ConvertTo-Cached)) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ templateIds = @('t-agents') } }
+        $Prepared = Get-CIPPBaselineIntuneAppTemplateDeployState -Item $Item -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'the executor queues uploaded packages as Win32PackageApp' {
+        Mock New-CIPPIntuneAppDeployment { }
+        $Current = [PSCustomObject]@{ missingAppObjects = @(
+                [PSCustomObject]@{ TemplateId = 't-agents'; TemplateName = 'Agents'; AppName = 'Contoso Agent'; AppType = 'win32PackageApp'; Config = [PSCustomObject]@{ AssignTo = 'AllDevices'; packageId = 'new-package' } }
+                [PSCustomObject]@{ TemplateId = 't-agents'; TemplateName = 'Agents'; AppName = 'Dialog'; AppType = 'macOSPackageApp'; Config = [PSCustomObject]@{ AssignTo = 'AllDevices'; packageId = 'mac-package' } }
+            ) }
+        Invoke-CIPPBaselineIntuneAppTemplateDeploy -Remediate ([PSCustomObject]@{}) -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-CIPPIntuneAppDeployment -Times 1 -Exactly -ParameterFilter { $AppConfig.type -eq 'Win32PackageApp' -and $AppConfig.packageId -eq 'new-package' }
+        Should -Invoke New-CIPPIntuneAppDeployment -Times 1 -Exactly -ParameterFilter { $AppConfig.type -eq 'MacOSPackageApp' -and $AppConfig.packageId -eq 'mac-package' }
+    }
+
     It 'the executor maps template types to queue types and continues past per-app failures' {
         Mock New-CIPPIntuneAppDeployment { if ($AppConfig.Applicationname -eq 'BadApp') { throw 'upload refused' } }
         $Current = [PSCustomObject]@{ missingAppObjects = @(

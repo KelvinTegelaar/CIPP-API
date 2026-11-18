@@ -54,4 +54,5 @@ function Initialize-CippRequestContext {
     $script:CippRealtimeUser = $null
     $script:CippApiClientMemo = $null
     $script:CippAuthorisedTenantMemo = $null
+    $script:CIPPVariableMemo = $null
 }

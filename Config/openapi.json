@@ -576,9 +576,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -19180,6 +19177,85 @@
           }
         ],
         "x-cipp-role": "Tenant.GlobalVariables.ReadWrite"
+      }
+    },
+    "/api/ExecCippGroupReplacemap": {
+      "post": {
+        "summary": "Lists, adds, edits or deletes a tenant group's custom variables.",
+        "operationId": "ExecCippGroupReplacemap",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "Group variables apply to every tenant in the group, between global and per-tenant values. They are part\nof the group, so they are managed with the tenant group permission rather than the per-tenant one.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "description": "List, AddEdit or Delete."
+                  },
+                  "tenantId": {
+                    "type": "string",
+                    "description": "The group, as group:<groupId>."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "description": "List, AddEdit or Delete.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "description": "The group, as group:<groupId>.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Groups.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecCippLogsSas": {
@@ -45235,6 +45311,97 @@
           }
         ],
         "x-cipp-role": "Tenant.Administration.ReadWrite"
+      }
+    },
+    "/api/ExecUploadAppPackage": {
+      "post": {
+        "summary": "Uploads one block of an app package's encrypted payload to CIPP storage.",
+        "operationId": "ExecUploadAppPackage",
+        "tags": [
+          "Endpoint > Applications"
+        ],
+        "description": "The browser sends the encrypted payload in blocks of at most 8 MB. When the host passes raw request\nbodies through ($Request.RawBody), a block is an application/octet-stream body with packageId and\nindex in the query string; otherwise it is JSON with the block base64-encoded in 'data'. A request with\n'capabilities' reports which of the two this host supports. Saving the application template assembles\nthe blocks; blocks that are never saved expire from storage on their own.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "capabilities": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "string",
+                    "description": "Base64 of the block, when it is not sent as a raw body"
+                  },
+                  "index": {
+                    "type": "string",
+                    "description": "Zero-based block number; packages are capped below 4 GiB, 512 blocks of 8 MB"
+                  },
+                  "packageId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "capabilities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "index",
+            "in": "query",
+            "description": "Zero-based block number; packages are capped below 4 GiB, 512 blocks of 8 MB",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "packageId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.Application.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecUserBookmarks": {

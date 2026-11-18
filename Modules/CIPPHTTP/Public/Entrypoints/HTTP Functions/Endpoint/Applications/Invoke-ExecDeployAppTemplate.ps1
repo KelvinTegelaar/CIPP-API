@@ -88,6 +88,22 @@ function Invoke-ExecDeployAppTemplate {
                     'win32ScriptApp' { Invoke-AddWin32ScriptApp -Request $MockRequest -TriggerMetadata $null }
                     'mspApp'         { Invoke-AddMSPApp -Request $MockRequest -TriggerMetadata $null }
                     'edgeApp'        { Invoke-AddEdgeApp -Request $MockRequest -TriggerMetadata $null }
+                    { $_ -in @('win32PackageApp', 'macOSPackageApp') } {
+                        $QueueTable = Get-CippTable -tablename 'apps'
+                        $QueueTable.Force = $true
+                        $RequestBody | Add-Member -Force -NotePropertyMembers ([ordered]@{
+                                type            = $AppType -eq 'macOSPackageApp' ? 'MacOSPackageApp' : 'Win32PackageApp'
+                                Applicationname = "$($RequestBody.applicationName ?? $App.appName)"
+                                assignTo        = $RequestBody.AssignTo -eq 'customGroup' ? $RequestBody.CustomGroup : $RequestBody.AssignTo
+                                tenant          = $null
+                            })
+                        $Queued = foreach ($Tenant in (Resolve-CippBulkSelectedTenant -Request $MockRequest -SelectedTenants $SelectedTenants).defaultDomainName) {
+                            $RequestBody.tenant = $Tenant
+                            Add-CIPPAzDataTableEntity @QueueTable -Entity @{ JSON = [string]($RequestBody | ConvertTo-Json -Depth 15 -Compress); RowKey = [string](New-Guid); PartitionKey = 'apps'; status = 'Not Deployed yet' }
+                            "Queued '$($App.appName)' for $Tenant"
+                        }
+                        [PSCustomObject]@{ StatusCode = [HttpStatusCode]::OK; Body = @{ Results = @($Queued) } }
+                    }
                     default          { throw "Unknown app type: $AppType" }
                 }
 

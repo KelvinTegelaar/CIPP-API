@@ -6,6 +6,7 @@ BeforeAll {
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPTextReplacement.ps1')
+    function Get-CIPPTenantGroupVariables { param($CustomerId) @{} }
     . (Join-Path $RepoRoot 'Modules/CIPPBaselines/Public/PrepareHooks/Get-CIPPBaselineCATemplateState.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPBaselines/Public/Helpers/Get-CIPPBaselineCacheRows.ps1')
     function Get-CIPPBaselineCommand { param($Name) }
@@ -29,17 +30,20 @@ BeforeAll {
     }
     function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
     function New-CIPPDbRequest {
-        param($TenantFilter, $Type, $Fields)
+        param($TenantFilter, $Type, $Fields, [string[]]$Id)
+        $script:DbReads.Add(@{ Type = $Type; Id = $Id })
         switch ($Type) {
             'NamedLocations' { $script:TenantLocations ?? [pscustomobject]@{ id = $script:SiteAId; displayName = 'Site A' } }
-            'Users' { [pscustomobject]@{ id = $script:UserId; displayName = 'Break Glass' } }
-            'Groups' { $script:CachedGroups }
+            'Users' { @($script:CachedUsers).Where({ $null -eq $Id -or $_.id -in $Id }) }
+            'Groups' { @($script:CachedGroups).Where({ $null -eq $Id -or $_.id -in $Id }) }
             'ConditionalAccessPolicies' { $script:LivePolicy | ConvertTo-Json -Depth 20 | ConvertFrom-Json }
             'NetworkAccessFiltering' { $script:FilteringRows }
         }
     }
 
     $script:CachedGroups = @()
+    $script:CachedUsers = @([pscustomobject]@{ id = $script:UserId; displayName = 'Break Glass' })
+    $script:DbReads = [System.Collections.Generic.List[object]]::new()
     $script:GraphLookups = [System.Collections.Generic.List[object]]::new()
     $script:LiveDirectory = @()
     function New-GraphPOSTRequest {
@@ -195,6 +199,30 @@ Describe 'Get-CIPPBaselineCATemplateState' {
             $script:GraphLookups.Count | Should -Be 0
         }
 
+        It 'reads only the referenced directory rows, and the whole Users cache only when the template names users' {
+            $script:CachedGroups = @([pscustomobject]@{ id = $script:GroupA; displayName = 'Exclude A' }, [pscustomobject]@{ id = $script:GroupB; displayName = 'Exclude B' })
+            $script:LivePolicy = [pscustomobject]@{
+                displayName = 'Variable test policy'
+                state       = 'disabled'
+                conditions  = [pscustomobject]@{ users = [pscustomobject]@{ includeUsers = @('All'); excludeUsers = @($script:UserId); excludeGroups = @($script:GroupA.ToUpper()) } }
+            }
+            $script:TemplateJSON = '{"displayName":"Variable test policy","state":"disabled","conditions":{"users":{"includeUsers":["All"],"excludeGroups":["Exclude A"]}}}'
+            $script:DbReads.Clear()
+            $State = Get-CIPPBaselineCATemplateState -Item @{ Variables = @{ caTemplate = 'tpl-1'; state = 'donotchange' } } -TenantFilter 'customer.example.com'
+
+            @($State.Current.conditions.users.excludeGroups) | Should -Be @('Exclude A')
+            @($State.Current.conditions.users.excludeUsers) | Should -Be @('Break Glass')
+            $Directory = @($script:DbReads.Where({ $_.Type -in 'Users', 'Groups' }))
+            $Directory.Where({ $null -eq $_.Id }).Count | Should -Be 0
+            @($Directory.Where({ $_.Type -eq 'Users' })[0].Id) | Should -Be @($script:UserId, $script:GroupA)
+            @($Directory.Where({ $_.Type -eq 'Groups' })[0].Id) | Should -Be @($script:GroupA)
+
+            $script:TemplateJSON = '{"displayName":"Variable test policy","state":"disabled","conditions":{"users":{"includeUsers":["All"],"excludeUsers":["Break Glass"],"excludeGroups":["Exclude A"]}}}'
+            $script:DbReads.Clear()
+            $null = Get-CIPPBaselineCATemplateState -Item @{ Variables = @{ caTemplate = 'tpl-1'; state = 'donotchange' } } -TenantFilter 'customer.example.com'
+            $script:DbReads.Where({ $_.Type -eq 'Users' -and $null -eq $_.Id }).Count | Should -Be 1
+        }
+
         It 'ignores Vacation Exclusion groups in a template captured from a policy that had them' {
             $script:CachedGroups = @(
                 [pscustomobject]@{ id = $script:GroupA; displayName = 'Exclude A' }
@@ -231,6 +259,7 @@ Describe 'Get-CIPPBaselineCATemplateState' {
             }
             $script:Countries = [pscustomobject]@{ '@odata.type' = '#microsoft.graph.countryNamedLocation'; id = 'loc-countries'; displayName = 'Allowed Countries'; countriesAndRegions = @('BE', 'NL'); includeUnknownCountriesAndRegions = $false; countryLookupMethod = 'clientIpAddress' }
             function Set-Variables($OfficeIps = '["203.0.113.0/24","198.51.100.10/32"]', $ClientAllow = '[]') {
+                $script:CIPPVariableMemo = $null
                 $script:VariableRows = @(
                     [pscustomobject]@{ RowKey = 'officeips'; Value = $OfficeIps; VariableType = 'list' }
                     [pscustomobject]@{ RowKey = 'allowedcountries'; Value = '["NL","BE"]'; VariableType = 'list' }

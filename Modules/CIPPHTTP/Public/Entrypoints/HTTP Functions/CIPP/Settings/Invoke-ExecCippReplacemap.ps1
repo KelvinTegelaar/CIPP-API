@@ -21,8 +21,11 @@ function Invoke-ExecCippReplacemap {
         # resolved, and needs no tenantId.
         if ($Action -eq 'Usage') {
             $AllRows = @(Get-CIPPAzDataTableEntity @Table -ErrorAction Stop)
-            # Global rows apply to every tenant; a tenant's own rows only reach callers whose roles cover it.
-            $AllRows = @($AllRows.Where({ $_.PartitionKey -eq 'AllTenants' })) + @($AllRows.Where({ $_.PartitionKey -ne 'AllTenants' }) | Select-CippAllowedTenantData -TenantProperty 'PartitionKey')
+            # Global and group rows apply across tenants; a tenant's own rows only reach callers whose roles cover it.
+            $AllRows = @($AllRows.Where({ $_.PartitionKey -eq 'AllTenants' -or $_.PartitionKey -like 'group:*' })) + @($AllRows.Where({ $_.PartitionKey -ne 'AllTenants' -and $_.PartitionKey -notlike 'group:*' }) | Select-CippAllowedTenantData -TenantProperty 'PartitionKey')
+            $GroupTable = Get-CIPPTable -tablename 'TenantGroups'
+            $GroupNames = @{}
+            foreach ($Group in @(Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup'")) { $GroupNames["group:$($Group.RowKey)"] = $Group.Name }
 
             $TenantLookup = @{}
             foreach ($KnownTenant in (Get-Tenants -IncludeAll)) {
@@ -39,16 +42,19 @@ function Invoke-ExecCippReplacemap {
                 }
 
                 $IsGlobal = $Row.PartitionKey -eq 'AllTenants'
-                $KnownTenant = if ($IsGlobal) { $null } else { $TenantLookup[$Row.PartitionKey] }
+                $IsGroup = $Row.PartitionKey -like 'group:*'
+                $KnownTenant = if ($IsGlobal -or $IsGroup) { $null } else { $TenantLookup[$Row.PartitionKey] }
 
                 $ByName[$Row.RowKey].Add([pscustomobject]@{
-                        Scope        = if ($IsGlobal) { 'Global' } else { 'Tenant' }
+                        Scope        = if ($IsGlobal) { 'Global' } elseif ($IsGroup) { 'Group' } else { 'Tenant' }
                         TenantId     = if ($IsGlobal) { 'AllTenants' } else { $Row.PartitionKey }
                         # Rows written before the customerId convention key on a domain name, and a
                         # tenant that has since been removed will not resolve at all. Fall back to the
                         # raw partition key so the row is still identifiable rather than blank.
                         TenantName   = if ($IsGlobal) {
                             'All Tenants'
+                        } elseif ($IsGroup -and $GroupNames[$Row.PartitionKey]) {
+                            "Group: $($GroupNames[$Row.PartitionKey])"
                         } elseif ($KnownTenant.displayName) {
                             $KnownTenant.displayName
                         } else {
@@ -61,7 +67,7 @@ function Invoke-ExecCippReplacemap {
             }
 
             $Usage = foreach ($Name in ($ByName.Keys | Sort-Object)) {
-                $Definitions = @($ByName[$Name] | Sort-Object -Property @{ Expression = { $_.Scope -ne 'Global' } }, TenantName)
+                $Definitions = @($ByName[$Name] | Sort-Object -Property @{ Expression = { @('Global', 'Group', 'Tenant').IndexOf($_.Scope) } }, TenantName)
                 $Types = @($Definitions | ForEach-Object { $_.VariableType } | Sort-Object -Unique)
                 $GlobalDefinition = $Definitions | Where-Object { $_.Scope -eq 'Global' } | Select-Object -First 1
 
@@ -78,6 +84,7 @@ function Invoke-ExecCippReplacemap {
                     }
                     HasGlobal       = [bool]$GlobalDefinition
                     TenantCount     = @($Definitions | Where-Object { $_.Scope -eq 'Tenant' }).Count
+                    GroupCount      = @($Definitions | Where-Object { $_.Scope -eq 'Group' }).Count
                     # The same name typed differently in different tenants substitutes differently in
                     # each, which is drift worth surfacing rather than silently reconciling.
                     TypesConsistent = ($Types.Count -le 1)
@@ -102,6 +109,13 @@ function Invoke-ExecCippReplacemap {
 
         if ($TenantId -eq 'AllTenants') {
             $customerId = $TenantId
+        } elseif ($TenantId -like 'group:*') {
+            # A tenant group's variables apply to every tenant in it, between global and per-tenant values.
+            $GroupTable = Get-CIPPTable -tablename 'TenantGroups'
+            $GroupId = $TenantId.Substring(6)
+            if (Get-CIPPAzDataTableEntity @GroupTable -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $GroupId)'" -ErrorAction Stop) {
+                $customerId = "group:$GroupId"
+            }
         } else {
             # ensure we use a consistent id for the table storage
             $Tenant = Get-Tenants -TenantFilter $TenantId
@@ -122,38 +136,54 @@ function Invoke-ExecCippReplacemap {
                     Body       = @{ Results = 'Changing global variables requires the Tenant.GlobalVariables.ReadWrite permission.' }
                 })
         }
+        # Same rule as managing the group itself in ExecTenantGroup.
+        if ($customerId -like 'group:*' -and $Action -in @('AddEdit', 'Delete') -and ($AllowedPermissions -notcontains 'Tenant.Groups.ReadWrite' -or (Test-CippAccess -Request $Request -GroupList) -notcontains 'AllGroups')) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ Results = 'Changing tenant group variables requires permission to manage tenant groups.' }
+                })
+        }
 
         $StatusCode = [HttpStatusCode]::OK
         switch ($Action) {
             'List' {
-                $Variables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId'" -ErrorAction Stop | ForEach-Object {
-                    $_ | Add-Member -NotePropertyName 'Scope' -NotePropertyValue $(if ($customerId -eq 'AllTenants') { 'Global' } else { 'Tenant' }) -PassThru
+                $Variables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $customerId)'" -ErrorAction Stop | ForEach-Object {
+                    $_ | Add-Member -NotePropertyName 'Scope' -NotePropertyValue $(if ($customerId -eq 'AllTenants') { 'Global' } elseif ($customerId -like 'group:*') { 'Group' } else { 'Tenant' }) -PassThru
                 }
                 if (!$Variables) {
                     $Variables = @()
                 }
                 # Also return the AllTenants-scoped variables alongside this tenant's own.
                 $IncludeGlobal = ($Request.Query.includeGlobal -eq $true) -or ($Request.Body.includeGlobal -eq $true)
-                if ($IncludeGlobal -and $customerId -ne 'AllTenants') {
-                    $GlobalVariables = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AllTenants'" -ErrorAction Stop | ForEach-Object {
-                        $_ | Add-Member -NotePropertyName 'Scope' -NotePropertyValue 'Global' -PassThru
-                    }
-                    if ($GlobalVariables) {
-                        # A tenant value that shadows a global one is not simply 'Tenant'. Removing it
-                        # restores the global value rather than deleting the variable, so the row is
-                        # marked for what it is - the shadowed global is then dropped from the list
-                        # below, which would otherwise leave no trace that it is being overridden.
-                        $GlobalVarNames = @($GlobalVariables | ForEach-Object { $_.RowKey })
-                        foreach ($Variable in $Variables) {
-                            if ($Variable.RowKey -in $GlobalVarNames) {
-                                $Variable.Scope = 'Overridden'
+                if ($IncludeGlobal -and $customerId -ne 'AllTenants' -and $customerId -notlike 'group:*') {
+                    $GlobalVariables = @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AllTenants'" -ErrorAction Stop | ForEach-Object {
+                            $_ | Add-Member -NotePropertyName 'Scope' -NotePropertyValue 'Global' -PassThru
+                        })
+                    # Groups that disagree resolve to the global value, so a conflict is listed without hiding it.
+                    $GroupVariables = @(foreach ($Entry in (Get-CIPPTenantGroupVariables -CustomerId $customerId).GetEnumerator()) {
+                            [pscustomobject]@{
+                                RowKey       = $Entry.Key
+                                Value        = $Entry.Value.Value
+                                VariableType = $Entry.Value.VariableType
+                                Description  = if ($Entry.Value.Conflict) { 'These groups set different values, so the global value applies. Override it on this tenant to choose one.' } else { $Entry.Value.Description }
+                                Scope        = if ($Entry.Value.Conflict) { 'Conflict' } else { 'Group' }
+                                Groups       = $Entry.Value.Groups -join ', '
                             }
+                        })
+                    # A tenant value that shadows an inherited one is not simply 'Tenant': removing it
+                    # restores the inherited value rather than deleting the variable.
+                    $InheritedNames = @(($GlobalVariables + $GroupVariables).RowKey)
+                    foreach ($Variable in $Variables) {
+                        if ($Variable.RowKey -in $InheritedNames) {
+                            $Variable.Scope = 'Overridden'
                         }
-
-                        $TenantVarNames = @($Variables | ForEach-Object { $_.RowKey })
-                        $GlobalVariables = @($GlobalVariables | Where-Object { $_.RowKey -notin $TenantVarNames })
-                        $Variables = @($Variables) + @($GlobalVariables)
                     }
+
+                    $TenantVarNames = @($Variables | ForEach-Object { $_.RowKey })
+                    $GroupVariables = @($GroupVariables.Where({ $_.RowKey -notin $TenantVarNames }))
+                    $GroupVarNames = @($GroupVariables.Where({ $_.Scope -eq 'Group' }).RowKey)
+                    $GlobalVariables = @($GlobalVariables.Where({ $_.RowKey -notin $TenantVarNames -and $_.RowKey -notin $GroupVarNames }))
+                    $Variables = @($Variables) + $GroupVariables + $GlobalVariables
                 }
                 $Body = @{ Results = @($Variables) }
             }
@@ -264,7 +294,7 @@ function Invoke-ExecCippReplacemap {
             'Delete' {
                 $VariableName = $Request.Body.RowKey
 
-                $VariableEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$customerId' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $VariableName -Type String)'" -ErrorAction Stop
+                $VariableEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $customerId)' and RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $VariableName -Type String)'" -ErrorAction Stop
                 if ($VariableEntity) {
                     Remove-CIPPAzDataTableEntity @Table -Entity $VariableEntity -Force
                     $Result = "Variable '$VariableName' deleted successfully"

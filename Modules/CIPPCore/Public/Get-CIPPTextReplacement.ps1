@@ -150,39 +150,60 @@ function Get-CIPPTextReplacement {
     $Tenant = Get-Tenants -TenantFilter $TenantFilter
     $CustomerId = if ($Tenant.customerId) { $Tenant.customerId } else { $TenantFilter }
 
-    #connect to table, get replacement map. The replacement map will allow users to create custom vars that get replaced by the actual values per tenant. Example:
-    # %WallPaperPath% gets replaced by RowKey WallPaperPath which is set to C:\Wallpapers for tenant 1, and D:\Wallpapers for tenant 2
+    # One read per tenant serves every substitution in this invocation; Initialize-CippRequestContext clears it per request.
+    $script:CIPPVariableMemo ??= @{}
+    $Memo = $script:CIPPVariableMemo[$CustomerId]
+    if (-not $Memo) {
+        # Values are kept unescaped here and escaped at substitution time, so every token - custom and
+        # built-in alike - goes through one code path. A typed variable is rendered from the raw value
+        # too: escaping is a no-op for a number, and would break a JSON one.
+        $Vars = @{}
+        $VarTypes = @{}
+        $GroupConflicts = @{}
 
-    # Global Variables
-    $ReplaceTable = Get-CIPPTable -tablename 'CippReplacemap'
-    $GlobalMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq 'AllTenants'"
-    # Values are kept unescaped here and escaped at substitution time, so every token - custom and
-    # built-in alike - goes through one code path. A typed variable is rendered from the raw value
-    # too: escaping is a no-op for a number, and would break a JSON one.
-    $Vars = @{}
-    $VarTypes = @{}
-    if ($GlobalMap) {
-        foreach ($Var in $GlobalMap) {
-            if (-not $Var.PSObject.Properties['Value']) { continue }
+        # Global and tenant rows in one query. Rows keyed on the domain predate the customerId convention
+        # and only count when the tenant has none under its id.
+        $ReplaceTable = Get-CIPPTable -tablename 'CippReplacemap'
+        $Partitions = @('AllTenants'; if ($Tenant) { $CustomerId; $Tenant.defaultDomainName })
+        $Rows = @(Get-CIPPAzDataTableEntity @ReplaceTable -Filter (@($Partitions.Where({ $_ }).ForEach({ "PartitionKey eq '$_'" })) -join ' or '))
+        $TenantRows = @()
+        if ($Tenant) {
+            $TenantRows = @($Rows.Where({ $_.PartitionKey -eq $CustomerId }))
+            if ($TenantRows.Count -eq 0) { $TenantRows = @($Rows.Where({ $_.PartitionKey -eq $Tenant.defaultDomainName })) }
+        }
+        foreach ($Var in $Rows) {
+            if (-not $Var.PSObject.Properties['Value'] -or ($Tenant -and $Var.PartitionKey -in @($CustomerId, $Tenant.defaultDomainName))) { continue }
             $Vars[$Var.RowKey] = $Var.Value
             $VarTypes[$Var.RowKey] = $Var.VariableType
         }
-    }
 
-    if ($Tenant) {
-        # Tenant Specific Variables
-        $ReplaceMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$CustomerId'"
-        # If no results found by customerId, try by defaultDomainName
-        if (!$ReplaceMap) {
-            $ReplaceMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$($Tenant.defaultDomainName)'"
-        }
-        if ($ReplaceMap) {
-            foreach ($Var in $ReplaceMap) {
+        if ($Tenant) {
+            # Tenant group variables sit between global and tenant. Groups that disagree leave the global value in place.
+            foreach ($Entry in (Get-CIPPTenantGroupVariables -CustomerId $CustomerId).GetEnumerator()) {
+                if ($Entry.Value.Conflict) {
+                    $GroupConflicts[$Entry.Key] = $Entry.Value.Groups
+                    continue
+                }
+                $Vars[$Entry.Key] = $Entry.Value.Value
+                $VarTypes[$Entry.Key] = $Entry.Value.VariableType
+            }
+            foreach ($Var in $TenantRows) {
                 if (-not $Var.PSObject.Properties['Value']) { continue }
                 $Vars[$Var.RowKey] = $Var.Value
                 $VarTypes[$Var.RowKey] = $Var.VariableType
+                $GroupConflicts.Remove($Var.RowKey)
             }
         }
+        $Memo = @{ Vars = $Vars; VarTypes = $VarTypes; GroupConflicts = $GroupConflicts }
+        $script:CIPPVariableMemo[$CustomerId] = $Memo
+    }
+    $Vars = $Memo.Vars
+    $VarTypes = $Memo.VarTypes
+    $GroupConflicts = $Memo.GroupConflicts
+    foreach ($Conflict in $GroupConflicts.GetEnumerator()) {
+        if (-not $Text.Contains("%$($Conflict.Key)%", [System.StringComparison]::OrdinalIgnoreCase)) { continue }
+        $Fallback = if ($Vars.ContainsKey($Conflict.Key)) { 'the global value was used' } else { 'it was left unresolved' }
+        Write-LogMessage -API 'CustomVariables' -tenant $Tenant.defaultDomainName -message "%$($Conflict.Key)% is set to different values by the tenant groups $($Conflict.Value -join ', '), so $Fallback. Set it on the tenant, or on only one of these groups." -sev 'Warning'
     }
     # Replace custom variables. A second pass lets one variable reference another whatever order they enumerate in; nesting stops there.
     for ($Pass = 0; $Pass -lt 2; $Pass++) {

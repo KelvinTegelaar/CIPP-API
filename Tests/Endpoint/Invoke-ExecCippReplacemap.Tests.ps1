@@ -36,12 +36,16 @@ BeforeAll {
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) $script:SavedEntity = $Entity }
     function Remove-CIPPAzDataTableEntity { param($Entity, [switch]$Force) $script:RemovedEntity = $Entity }
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
+    function Get-CIPPTenantGroupVariables { param($CustomerId) if ($script:GroupVariables) { $script:GroupVariables } else { @{} } }
+    $script:AllowedGroups = @('AllGroups')
+    function Test-CippAccess { param($Request, [switch]$GroupList) , @($script:AllowedGroups) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
     $script:CallerPermissions = @('Tenant.Config.ReadWrite', 'Tenant.GlobalVariables.ReadWrite')
     function Get-CippRequestAllowedPermissions { , @($script:CallerPermissions) }
 
     . $FunctionPath
     . (Join-Path (Split-Path -Parent $FunctionPath) 'Invoke-ExecCippGlobalReplacemap.ps1')
+    . (Join-Path (Split-Path -Parent $FunctionPath) 'Invoke-ExecCippGroupReplacemap.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Select-CippAllowedTenantData.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
@@ -544,6 +548,95 @@ Describe 'Invoke-ExecCippReplacemap - List marks overridden variables' {
     It 'reports every row on the global page as Global' {
         $Response = Invoke-ExecCippReplacemap -Request (New-ListRequest -TenantId 'AllTenants')
         @($Response.Body.Results | Where-Object { $_.Scope -ne 'Global' }).Count | Should -Be 0
+    }
+}
+
+Describe 'Invoke-ExecCippReplacemap - tenant group variables' {
+    BeforeEach {
+        $script:SavedEntity = $null
+        $script:ExistingEntity = $null
+        $script:AllRows = @()
+        $script:GroupVariables = $null
+        $script:AllowedGroups = @('AllGroups')
+        $script:CallerPermissions = @('Tenant.Groups.ReadWrite')
+        $script:RowsByFilter = @{
+            "PartitionKey eq 'TenantGroup' and RowKey eq 'g1'" = [pscustomobject]@{ PartitionKey = 'TenantGroup'; RowKey = 'g1'; Name = 'Allow OneDrive' }
+            "PartitionKey eq 'AllTenants'"                     = @(
+                [pscustomobject]@{ PartitionKey = 'AllTenants'; RowKey = 'onedrive'; Value = 'block' }
+                [pscustomobject]@{ PartitionKey = 'AllTenants'; RowKey = 'aiblock'; Value = 'global' }
+            )
+            "PartitionKey eq 'contoso-id'"                     = @([pscustomobject]@{ PartitionKey = 'contoso-id'; RowKey = 'tenantwins'; Value = 'local' })
+            "PartitionKey eq 'group:g1'"                       = @([pscustomobject]@{ PartitionKey = 'group:g1'; RowKey = 'onedrive'; Value = 'allow' })
+        }
+        Mock -CommandName Get-CIPPTable -MockWith { @{} }
+        Mock -CommandName Get-Tenants -MockWith { [pscustomobject]@{ customerId = 'contoso-id' } }
+    }
+    AfterEach {
+        $script:GroupVariables = $null
+        $script:RowsByFilter = $null
+        $script:AllowedGroups = @('AllGroups')
+        $script:CallerPermissions = @('Tenant.Config.ReadWrite', 'Tenant.GlobalVariables.ReadWrite')
+    }
+
+    It 'saves a variable to the group partition with the tenant group permission alone' {
+        $Response = Invoke-ExecCippGroupReplacemap -Request (New-SaveRequest -TenantId 'group:g1')
+        $Response.StatusCode | Should -Be 200
+        $script:SavedEntity.PartitionKey | Should -Be 'group:g1'
+    }
+
+    It 'keeps ExecCippGroupReplacemap to group variables' {
+        $Response = Invoke-ExecCippGroupReplacemap -Request (New-SaveRequest -TenantId 'contoso.onmicrosoft.com')
+        $Response.StatusCode | Should -Be 400
+        $script:SavedEntity | Should -BeNullOrEmpty
+    }
+
+    It 'returns 404 for a group that does not exist' {
+        $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -TenantId 'group:missing')
+        $Response.StatusCode | Should -Be 404
+        $script:SavedEntity | Should -BeNullOrEmpty
+    }
+
+    It 'needs Tenant.Groups.ReadWrite to change a group variable' {
+        $script:CallerPermissions = @('Tenant.Config.ReadWrite', 'Tenant.GlobalVariables.ReadWrite')
+        $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -TenantId 'group:g1')
+        $Response.StatusCode | Should -Be 403
+        $script:SavedEntity | Should -BeNullOrEmpty
+    }
+
+    It 'refuses a role scoped to particular tenant groups, as managing the group does' {
+        $script:AllowedGroups = @('g1')
+        $Response = Invoke-ExecCippGroupReplacemap -Request (New-SaveRequest -TenantId 'group:g1')
+        $Response.StatusCode | Should -Be 403
+        $script:SavedEntity | Should -BeNullOrEmpty
+    }
+
+    It 'lists a group page as Group' {
+        $Response = Invoke-ExecCippReplacemap -Request (New-ListRequest -TenantId 'group:g1' -IncludeGlobal $false)
+        @($Response.Body.Results).RowKey | Should -Be @('onedrive')
+        @($Response.Body.Results).Scope | Should -Be @('Group')
+    }
+
+    It 'shows a tenant the group value in place of the global one' {
+        $script:GroupVariables = @{ onedrive = @{ Value = 'allow'; VariableType = 'string'; Groups = [System.Collections.Generic.List[string]]@('Allow OneDrive'); Conflict = $false } }
+        $Rows = @((Invoke-ExecCippReplacemap -Request (New-ListRequest)).Body.Results | Where-Object { $_.RowKey -eq 'onedrive' })
+        $Rows.Count | Should -Be 1
+        $Rows[0].Scope | Should -Be 'Group'
+        $Rows[0].Value | Should -Be 'allow'
+        $Rows[0].Groups | Should -Be 'Allow OneDrive'
+    }
+
+    It 'lists a conflict next to the global value it falls back to' {
+        $script:GroupVariables = @{ aiblock = @{ Value = 'a'; VariableType = 'string'; Groups = [System.Collections.Generic.List[string]]@('One', 'Two'); Conflict = $true } }
+        $Rows = @((Invoke-ExecCippReplacemap -Request (New-ListRequest)).Body.Results | Where-Object { $_.RowKey -eq 'aiblock' })
+        @($Rows.Scope | Sort-Object) | Should -Be @('Conflict', 'Global')
+    }
+
+    It 'marks a tenant value that shadows a group one as Overridden' {
+        $script:GroupVariables = @{ tenantwins = @{ Value = 'group'; VariableType = 'string'; Groups = [System.Collections.Generic.List[string]]@('One'); Conflict = $false } }
+        $Rows = @((Invoke-ExecCippReplacemap -Request (New-ListRequest)).Body.Results | Where-Object { $_.RowKey -eq 'tenantwins' })
+        $Rows.Count | Should -Be 1
+        $Rows[0].Scope | Should -Be 'Overridden'
+        $Rows[0].Value | Should -Be 'local'
     }
 }
 

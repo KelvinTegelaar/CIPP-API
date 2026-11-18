@@ -15,6 +15,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Filter) }
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Get-CIPPTextReplacement.ps1')
+    function Get-CIPPTenantGroupVariables { param($CustomerId) @{} }
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/AppPermissions/Get-CIPPVendorTenantMap.ps1')
     . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/PrepareHooks/Get-CIPPBaselineDisableInactiveAppsState.ps1')
 
@@ -71,6 +72,7 @@ Describe 'Get-CIPPBaselineDisableInactiveAppsState' {
         $script:CollectedDaysAgo = 0
         $script:Audits = @()
         $script:Variables = @()
+        $script:CIPPVariableMemo = $null
         Mock New-CIPPDbRequest { $script:Apps }
         Mock Get-CIPPBaselineCacheRows { $script:Activity }
         Mock Get-CIPPDbItem { if ($null -ne $script:CollectedDaysAgo) { [pscustomobject]@{ Timestamp = [datetimeoffset]$script:Now.AddDays(-$script:CollectedDaysAgo) } } }

@@ -156,7 +156,7 @@ function Add-CIPPW32ScriptApplication {
     Start-Sleep -Milliseconds 200
 
     # Upload the Chocolatey intunewin content
-    Add-CIPPWin32LobAppContent -AppId $NewApp.id -FilePath $IntuneWinFile -FileName $FileName -UnencryptedSize $UnencryptedSize -EncryptionInfo $EncryptionInfo -TenantFilter $TenantFilter
+    $null = Add-CIPPWin32LobAppContent -AppId $NewApp.id -FilePath $IntuneWinFile -FileName $FileName -UnencryptedSize $UnencryptedSize -EncryptionInfo $EncryptionInfo -TenantFilter $TenantFilter
 
     # Upload PowerShell scripts via the scripts endpoint (newer method)
     $InstallScriptId = $null

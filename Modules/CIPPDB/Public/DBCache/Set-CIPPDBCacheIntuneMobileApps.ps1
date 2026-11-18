@@ -32,7 +32,7 @@ function Set-CIPPDBCacheIntuneMobileApps {
         }
 
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Intune mobile apps' -sev Debug
-        $Apps = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps?$top=999&$select=id,displayName,description,publisher,isAssigned,createdDateTime,lastModifiedDateTime' -tenantid $TenantFilter
+        $Apps = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps?$top=999&$select=id,displayName,description,publisher,isAssigned,createdDateTime,lastModifiedDateTime,notes,microsoft.graph.win32LobApp/displayVersion' -tenantid $TenantFilter
         if (-not $Apps) { $Apps = @() }
 
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'IntuneMobileApps' -Data @($Apps) -AddCount -ClearOnEmpty

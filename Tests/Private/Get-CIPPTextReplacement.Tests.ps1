@@ -19,6 +19,8 @@ BeforeAll {
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
     function Get-CIPPSchemaExtensions { }
     function New-CIPPDbRequest { param($TenantFilter, $Type, $Fields) }
+    function Get-CIPPTenantGroupVariables { param($CustomerId) $script:GroupVariables }
+    function Write-LogMessage { param($API, $tenant, $message, $sev) }
 
     . $FunctionPath
     . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Tools/Convert-AzureAdObjectIdToSid.ps1')
@@ -43,6 +45,13 @@ BeforeAll {
         try { $null = $Text | ConvertFrom-Json -ErrorAction Stop; return $true } catch { return $false }
     }
 
+    # Tenant rows come back under the first tenant partition the query names, as the table would return them.
+    function Get-MockVariableRows {
+        param($Filter)
+        $Partition = @([regex]::Matches($Filter, "PartitionKey eq '([^']+)'").ForEach({ $_.Groups[1].Value }).Where({ $_ -ne 'AllTenants' }))[0]
+        @($script:GlobalRows) + @(if ($Partition) { $script:TenantRows | ForEach-Object { $_ | Add-Member -NotePropertyName PartitionKey -NotePropertyValue $Partition -Force -PassThru } })
+    }
+
     # A row written before the Value column existed, or one saved empty.
     function New-ValuelessRow {
         param([Parameter(Mandatory = $true)][string]$Name)
@@ -54,6 +63,8 @@ Describe 'Get-CIPPTextReplacement' {
     BeforeEach {
         $script:GlobalRows = @()
         $script:TenantRows = @()
+        $script:GroupVariables = @{}
+        $script:CIPPVariableMemo = $null
 
         Mock -CommandName Get-CIPPTable -MockWith { @{} }
         Mock -CommandName Get-Tenants -MockWith {
@@ -64,10 +75,10 @@ Describe 'Get-CIPPTextReplacement' {
                 displayName       = 'Contoso Ltd'
             }
         }
+        # One query returns every partition; the function splits global from tenant rows by PartitionKey.
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
             param($Filter)
-            if ($Filter -match "PartitionKey eq 'AllTenants'") { return $script:GlobalRows }
-            return $script:TenantRows
+            Get-MockVariableRows -Filter $Filter
         }
     }
 
@@ -299,6 +310,60 @@ Describe 'Get-CIPPTextReplacement' {
                 Should -Be '{"v":900}'
         }
 
+        It 'lets a tenant group variable override a global one' {
+            $script:GlobalRows = @(New-VariableRow -Name 'onedrive' -Value 'block')
+            $script:GroupVariables = @{ onedrive = @{ Value = 'allow'; VariableType = 'string'; Groups = @('Allow OneDrive'); Conflict = $false } }
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%onedrive%' | Should -Be 'allow'
+        }
+
+        It 'lets a tenant variable override a tenant group one' {
+            $script:GroupVariables = @{ onedrive = @{ Value = 'allow'; VariableType = 'string'; Groups = @('Allow OneDrive'); Conflict = $false } }
+            $script:TenantRows = @(New-VariableRow -Name 'onedrive' -Value 'tenant')
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%onedrive%' | Should -Be 'tenant'
+        }
+
+        It 'keeps the global value and warns when tenant groups disagree' {
+            Mock -CommandName Write-LogMessage
+            $script:GlobalRows = @(New-VariableRow -Name 'aiblock' -Value 'global')
+            $script:GroupVariables = @{ aiblock = @{ Value = 'a'; VariableType = 'string'; Groups = @('One', 'Two'); Conflict = $true } }
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%aiblock%' | Should -Be 'global'
+            Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $message -match '%aiblock%.*One, Two' }
+        }
+
+        It 'does not warn about a conflict the tenant has overridden or the text does not use' {
+            Mock -CommandName Write-LogMessage
+            $script:GroupVariables = @{
+                aiblock = @{ Value = 'a'; VariableType = 'string'; Groups = @('One', 'Two'); Conflict = $true }
+                unused  = @{ Value = 'a'; VariableType = 'string'; Groups = @('One', 'Two'); Conflict = $true }
+            }
+            $script:TenantRows = @(New-VariableRow -Name 'aiblock' -Value 'tenant')
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%aiblock%' | Should -Be 'tenant'
+            Should -Invoke Write-LogMessage -Times 0 -Exactly
+        }
+
+        It 'reads the variables once per tenant for repeated substitutions' {
+            Mock -CommandName Get-CIPPTenantGroupVariables -MockWith { @{} }
+            $script:GlobalRows = @(New-VariableRow -Name 'site' -Value 'HQ')
+
+            1..3 | ForEach-Object { Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%site%' | Should -Be 'HQ' }
+
+            Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly
+            Should -Invoke Get-CIPPTenantGroupVariables -Times 1 -Exactly
+        }
+
+        It 'keeps each tenant to its own variables' {
+            $script:TenantRows = @(New-VariableRow -Name 'site' -Value 'Contoso HQ')
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%site%' | Should -Be 'Contoso HQ'
+
+            Mock -CommandName Get-Tenants -MockWith { [pscustomobject]@{ customerId = '22222222-2222-2222-2222-222222222222'; defaultDomainName = 'fabrikam.onmicrosoft.com' } }
+            $script:TenantRows = @(New-VariableRow -Name 'site' -Value 'Fabrikam HQ')
+            Get-CIPPTextReplacement -TenantFilter 'fabrikam.onmicrosoft.com' -Text '%site%' | Should -Be 'Fabrikam HQ'
+        }
+
         It 'still replaces reserved variables' {
             Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text 'Welcome to %tenantname% (%tenantid%)' |
                 Should -Be 'Welcome to Contoso Ltd (11111111-1111-1111-1111-111111111111)'
@@ -513,8 +578,7 @@ Describe 'Get-CIPPTextReplacement' {
             Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
                 param($Filter)
                 if ($Filter -match 'InstanceProperties') { return $script:ConfigRow }
-                if ($Filter -match "PartitionKey eq 'AllTenants'") { return $script:GlobalRows }
-                return $script:TenantRows
+                Get-MockVariableRows -Filter $Filter
             }
             Mock -CommandName Get-CIPPSchemaExtensions -MockWith {
                 @(
@@ -625,10 +689,8 @@ Describe 'Get-CIPPTextReplacement' {
             # Rows written before the customerId convention are keyed on the domain name.
             Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
                 param($Filter)
-                if ($Filter -match "PartitionKey eq 'AllTenants'") { return @() }
-                if ($Filter -match "PartitionKey eq '11111111") { return @() }
                 if ($Filter -match "PartitionKey eq 'contoso.onmicrosoft.com'") {
-                    return @([pscustomobject]@{ RowKey = 'sitecode'; Value = 'LEGACY01' })
+                    return @([pscustomobject]@{ PartitionKey = 'contoso.onmicrosoft.com'; RowKey = 'sitecode'; Value = 'LEGACY01' })
                 }
                 return @()
             }

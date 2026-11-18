@@ -9,6 +9,7 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Format-CIPPNamedLocationRange.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Tools/Remove-ODataProperties.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPTextReplacement.ps1')
+    function Get-CIPPTenantGroupVariables { param($CustomerId) @{} }
 
     $script:UserId = '10000000-0000-0000-0000-000000000001'
     $script:UserId2 = '10000000-0000-0000-0000-000000000002'

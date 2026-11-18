@@ -605,8 +605,28 @@ function New-CIPPAzStorageRequest {
         # For Blob binary downloads, use Invoke-WebRequest and return bytes (memory stream, no filesystem)
         $UseInvokeWebRequest = $true
     }
+    # Blob payload reads and byte[] writes go through the pooled client: Invoke-WebRequest opens a connection
+    # per call and builds the whole body as a string (RawContent), ~14x the payload in allocations.
+    $UsePooledClient = $Service -eq 'blob' -and $null -ne ('CIPP.CIPPConcurrentRequest' -as [type]) -and (
+        ($Method -eq 'PUT' -and $Body -is [byte[]]) -or
+        ($UseInvokeWebRequest -and $Method -eq 'GET'))
     do {
         try {
+            if ($UsePooledClient) {
+                $PooledHeaders = [System.Collections.Generic.Dictionary[string, string]]::new()
+                foreach ($Key in $RequestHeaders.Keys) { $PooledHeaders[$Key] = [string]$RequestHeaders[$Key] }
+                $PooledRequest = [CIPP.CIPPConcurrentRequest]@{ Uri = $Uri.AbsoluteUri; Method = $Method; Headers = $PooledHeaders; ContentType = $ContentType; TimeoutSec = 300 }
+                if ($Body -is [byte[]]) { $PooledRequest.BodyBytes = $Body }
+                $Pooled = [CIPP.CIPPRestClient]::SendConcurrent([CIPP.CIPPConcurrentRequest[]]@($PooledRequest), 1, $MaxRetries, $global:CraftPipelineStopToken)[0]
+                # 429/5xx were already retried by the pooled client; the catch below reports the failure once.
+                if (-not $Pooled.IsSuccess) { throw "Status $($Pooled.StatusCode) $($Pooled.Error)`nResponse: $($Pooled.Result.Content)" }
+                $RequestSuccessful = $true
+                if ($Method -ne 'GET') { return }
+                $bytes = $Pooled.Result.ContentBytes ?? [byte[]]::new(0)
+                $hdrHash = @{}
+                foreach ($Header in $Pooled.Result.ResponseHeaders.GetEnumerator()) { $hdrHash[$Header.Key] = $Header.Value -join ',' }
+                return [PSCustomObject]@{ Bytes = $bytes; Length = $bytes.Length; Headers = $hdrHash; Uri = $Uri.AbsoluteUri }
+            }
             # Blob: binary GET returns bytes from RawContentStream
             if ($UseInvokeWebRequest -and $Service -eq 'blob' -and $Method -eq 'GET' -and -not (($Component -eq 'list') -or ($Uri.Query -match 'comp=list') -or ($Uri.Query -match 'comp=metadata') -or ($Uri.Query -match 'comp=properties'))) {
                 Write-Verbose 'Processing Blob binary download'
