@@ -79,6 +79,31 @@ Describe 'Push-DomainAnalyserDomain' {
         $Result.MaximumScore | Should -Be 160
     }
 
+    It 'accounts for every lost point in the findings (<Name>)' -ForEach @(
+        @{ Name = 'default'; Dmarc = $null; Sts = $null; Row = 'contoso.com' }
+        @{ Name = 'p=none, no reporting, pct 50'; Dmarc = @{ Record = 'v=DMARC1; p=none; pct=50'; Policy = 'none'; SubdomainPolicy = 'none'; Percent = 50; ReportingEmails = @() }; Sts = $null; Row = 'contoso.com' }
+        @{ Name = 'p=quarantine'; Dmarc = @{ Record = 'v=DMARC1; p=quarantine'; Policy = 'quarantine'; SubdomainPolicy = 'quarantine'; Percent = 100; ReportingEmails = @('a@contoso.com') }; Sts = $null; Row = 'contoso.com' }
+        @{ Name = 'p=reject, sp=none'; Dmarc = @{ Record = 'v=DMARC1; p=reject; sp=none'; Policy = 'reject'; SubdomainPolicy = 'none'; Percent = 100; ReportingEmails = @('a@contoso.com') }; Sts = $null; Row = 'contoso.com' }
+        @{ Name = 'p=reject, sp=quarantine'; Dmarc = @{ Record = 'v=DMARC1; p=reject; sp=quarantine'; Policy = 'reject'; SubdomainPolicy = 'quarantine'; Percent = 100; ReportingEmails = @('a@contoso.com') }; Sts = $null; Row = 'contoso.com' }
+        @{ Name = 'no DMARC'; Dmarc = @{ Record = ''; Policy = ''; SubdomainPolicy = ''; Percent = 100; ReportingEmails = @() }; Sts = $null; Row = 'contoso.com' }
+        @{ Name = 'MTA-STS testing'; Dmarc = $null; Sts = 'testing'; Row = 'contoso.com' }
+        @{ Name = 'onmicrosoft.com'; Dmarc = $null; Sts = $null; Row = 'contoso.onmicrosoft.com' }
+    ) {
+        $script:RowKey = $Row
+        if ($Dmarc) { $script:Dmarc = [pscustomobject]($Dmarc + @{ ValidationFails = @() }); Mock Read-DmarcPolicy { $script:Dmarc } }
+        if ($Sts) { Mock Test-MtaSts { New-MtaSts -Record 'v=STSv1; id=1' -Mode 'testing' -Valid $true } }
+        $Result = Push-DomainAnalyserDomain -Item @{ RowKey = $Row }
+        $Result.Score + (@($Result.ScoreExplanation.Points) | Measure-Object -Sum).Sum | Should -Be $Result.MaximumScore
+    }
+
+    It 'stores each finding as a check and finding pair' {
+        $null = Push-DomainAnalyserDomain -Item @{ RowKey = 'contoso.com' }
+        $Stored = ($script:Saved.DomainAnalyser | ConvertFrom-Json).ScoreExplanation
+        @($Stored)[0].Check | Should -Be 'DNSSEC'
+        @($Stored)[0].Finding | Should -Be 'DNSSEC Not Configured or Enabled'
+        @($Stored.Check) | Should -Contain 'MTA-STS'
+    }
+
     It 'scores MTA-STS <status> as <score> of 160 for a custom domain' -ForEach @(
         @{ status = 'Not configured'; record = ''; mode = ''; valid = $false; score = 140 }
         @{ status = 'Enforced'; record = 'v=STSv1; id=1'; mode = 'enforce'; valid = $true; score = 150 }
@@ -95,8 +120,8 @@ Describe 'Push-DomainAnalyserDomain' {
     It 'gives a fully configured custom domain a high score without DNSSEC or MTA-STS' {
         $Result = Push-DomainAnalyserDomain -Item @{ RowKey = 'contoso.com' }
         $Result.ScorePercentage | Should -Be 88
-        $Result.ScoreExplanation | Should -Match 'DNSSEC Not Configured'
-        $Result.ScoreExplanation | Should -Match 'MTA-STS not configured'
+        $Result.ScoreExplanation | Where-Object Check -EQ 'DNSSEC' | ForEach-Object Finding | Should -Be 'DNSSEC Not Configured or Enabled'
+        $Result.ScoreExplanation.Finding | Should -Contain 'MTA-STS not configured'
     }
 
     It 'leaves DNSSEC and MTA-STS out of the score for a Microsoft-managed onmicrosoft.com domain' {
@@ -106,7 +131,8 @@ Describe 'Push-DomainAnalyserDomain' {
         $Result.Score | Should -Be 140
         $Result.ScorePercentage | Should -Be 100
         $Result.MTASTS | Should -Be 'Not applicable'
-        $Result.ScoreExplanation | Should -Not -Match 'DNSSEC|MTA-STS'
+        $Result.ScoreExplanation.Check | Should -Not -Contain 'DNSSEC'
+        $Result.ScoreExplanation.Check | Should -Not -Contain 'MTA-STS'
         Should -Invoke Test-MtaSts -Times 0 -Exactly
     }
 
@@ -121,5 +147,43 @@ Describe 'Push-DomainAnalyserDomain' {
         $Result.Score | Should -Be 110
         $Result.SPFPassAll | Should -BeFalse
         ($script:Saved.DomainAnalyserChecks | ConvertFrom-Json).PSObject.Properties.Name | Should -Not -Contain 'SPF'
+    }
+
+    Context 'DMARC subdomain policy' {
+        BeforeAll {
+            function New-Dmarc($Record, $Policy, $Subdomain) {
+                [pscustomobject]@{ Record = $Record; Policy = $Policy; SubdomainPolicy = $Subdomain; Percent = 100; ReportingEmails = @('a@contoso.com'); ValidationPasses = @('parent pass'); ValidationFails = @() }
+            }
+        }
+
+        It 'explains a subdomain policy of <sp> under p=reject' -ForEach @(
+            @{ sp = 'none'; Label = 'None'; Text = 'DMARC subdomain policy is none, so any subdomain can be spoofed' }
+            @{ sp = 'quarantine'; Label = 'Quarantine'; Text = 'DMARC subdomain policy is only quarantine' }
+        ) {
+            Mock Read-DmarcPolicy { New-Dmarc "v=DMARC1; p=reject; sp=$sp" 'reject' $sp }
+            $Result = Push-DomainAnalyserDomain -Item @{ RowKey = 'contoso.com' }
+            $Result.DMARCSubdomainPolicy | Should -Be $Label
+            $Result.ScoreExplanation | Where-Object { $_.Check -eq 'DMARC' -and $_.Finding -like "$Text*" } | Should -HaveCount 1
+        }
+
+        It 'adds no subdomain warning when sp is reject' {
+            $Result = Push-DomainAnalyserDomain -Item @{ RowKey = 'contoso.com' }
+            $Result.DMARCSubdomainPolicy | Should -Be 'Reject'
+            $Result.ScoreExplanation.Finding | Where-Object { $_ -match 'subdomain policy' } | Should -BeNullOrEmpty
+        }
+
+        It 'scores a policy inherited from the parent domain like the domain''s own' {
+            $script:RowKey = 'mail.contoso.com'
+            Mock Read-DmarcPolicy {
+                $Dmarc = New-Dmarc 'v=DMARC1; p=reject; sp=quarantine' 'quarantine' 'quarantine'
+                $Dmarc | Add-Member -NotePropertyName InheritedFrom -NotePropertyValue 'contoso.com'
+                $Dmarc
+            }
+            $Result = Push-DomainAnalyserDomain -Item @{ RowKey = 'mail.contoso.com' }
+            $Result.DMARCPresent | Should -BeTrue
+            $Result.DMARCActionPolicy | Should -Be 'Quarantine'
+            $Result.ScoreExplanation.Finding | Should -Not -Contain 'No DMARC Records Found'
+            Should -Invoke Read-DmarcPolicy -Times 1 -Exactly
+        }
     }
 }

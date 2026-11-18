@@ -79,7 +79,7 @@ function Build-CippDomainReportTree {
         $Graded = @(
             @{ Name = 'DMARC'; Tone = $DmarcTone; Fix = $DmarcAdvice; Derived = $DmarcFinding; Action = 'Bring DMARC to an enforcing policy.' }
             @{ Name = 'SPF'; Tone = $(if ($Result.SPFPassAll -eq $true) { 'pass' } else { 'fail' }); Action = 'Publish a valid SPF record.'
-                Fix = $(if ($Result.ScoreExplanation -match 'Multiple SPF') { 'Combine the SPF records into one.' } else { 'Publish a single valid SPF record covering every service that sends mail.' })
+                Fix = $(if ((@($Result.ScoreExplanation | ForEach-Object { $_.Finding ?? $_ }) -join ', ') -match 'Multiple SPF') { 'Combine the SPF records into one.' } else { 'Publish a single valid SPF record covering every service that sends mail.' })
             }
             @{ Name = 'DKIM'; Tone = $(if ([string]::IsNullOrEmpty($Result.DKIMEnabled)) { 'muted' } elseif ($Result.DKIMEnabled -eq $true) { 'pass' } else { 'fail' }); Action = 'Enable DKIM signing.'
                 Fix = 'Enable DKIM signing for every service that sends mail.'
