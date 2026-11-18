@@ -13,6 +13,34 @@ function Set-CIPPSponsor {
         return @()
     }
 
+    if ($Sponsor.Contains('%')) {
+        $Expression = $Sponsor
+        $Status = 400
+        $Reason = "$Expression has no value for $TenantFilter"
+        try {
+            $Sponsor = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Expression
+        } catch {
+            $Sponsor = ''
+            $Status = 500
+            $Reason = "could not resolve $Expression for $($TenantFilter): $($_.Exception.Message)"
+        }
+        if ([string]::IsNullOrWhiteSpace($Sponsor) -or $Sponsor.Contains('%')) {
+            $Results = foreach ($User in $Users) {
+                $Result = "Failed to set $User's sponsor: $Reason"
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error'
+
+                [pscustomobject]@{
+                    User    = $User
+                    Sponsor = $Expression
+                    Success = $false
+                    Result  = $Result
+                    Status  = $Status
+                }
+            }
+            return @($Results)
+        }
+    }
+
     $RequestId = 0
     $Requests = foreach ($User in $Users) {
         @{

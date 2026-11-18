@@ -13,6 +13,34 @@ function Set-CIPPManager {
         return @()
     }
 
+    if ($Manager.Contains('%')) {
+        $Expression = $Manager
+        $Status = 400
+        $Reason = "$Expression has no value for $TenantFilter"
+        try {
+            $Manager = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Expression
+        } catch {
+            $Manager = ''
+            $Status = 500
+            $Reason = "could not resolve $Expression for $($TenantFilter): $($_.Exception.Message)"
+        }
+        if ([string]::IsNullOrWhiteSpace($Manager) -or $Manager.Contains('%')) {
+            $Results = foreach ($User in $Users) {
+                $Result = "Failed to set $User's manager: $Reason"
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error'
+
+                [pscustomobject]@{
+                    User    = $User
+                    Manager = $Expression
+                    Success = $false
+                    Result  = $Result
+                    Status  = $Status
+                }
+            }
+            return @($Results)
+        }
+    }
+
     $RequestId = 0
     $Requests = foreach ($User in $Users) {
         @{
