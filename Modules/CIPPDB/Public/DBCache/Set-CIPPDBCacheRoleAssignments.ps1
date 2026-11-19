@@ -29,7 +29,7 @@ function Set-CIPPDBCacheRoleAssignments {
 
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching role assignments' -sev Debug
-        $Assignments = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?$select=id,principalId,roleDefinitionId,directoryScopeId&$top=999' -tenantid $TenantFilter)
+        $Assignments = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?$select=id,principalId,principalOrganizationId,roleDefinitionId,directoryScopeId&$top=999' -tenantid $TenantFilter)
 
         # getByIds returns in milliseconds where $expand=principal costs seconds.
         $Principals = @{}
@@ -53,10 +53,16 @@ function Set-CIPPDBCacheRoleAssignments {
             }
         }
 
+        # Principals in another tenant (partner GDAP groups) are classified and named here, so a
+        # cache read needs no Graph call for them.
+        $Foreign = try { Get-CIPPForeignPrincipalInfo -TenantFilter $TenantFilter -Assignments $Assignments } catch { @{} }
+
         $Records = foreach ($Assignment in $Assignments) {
             [PSCustomObject]@{
                 id                      = $Assignment.id
                 principalId             = $Assignment.principalId
+                principalOrganizationId = $Assignment.principalOrganizationId
+                foreignPrincipal        = $Foreign[[string]$Assignment.principalId]
                 roleDefinitionId        = $Assignment.roleDefinitionId
                 directoryScopeId        = $Assignment.directoryScopeId
                 principal               = $Principals[$Assignment.principalId]

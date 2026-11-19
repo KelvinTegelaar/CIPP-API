@@ -23,6 +23,11 @@ function Get-CIPPPIMRoleAssignments {
         MemberType 'Group' rows are inherited through a role-assignable group: the principal shown
         is the member, and the assignment to act on belongs to the group.
 
+        PrincipalType 'Partner (GDAP)' and 'Foreign (likely GDAP)' rows are held by a principal in
+        another tenant (see Get-CIPPForeignPrincipalInfo): PrincipalTenantId carries the owning
+        tenant and PrincipalDisplayName its name, or 'Group (Tenant)' for a readable partner group.
+        A cache read shows what the cache writer resolved.
+
     .PARAMETER PrincipalId
         Restrict to one principal (pushed into the Graph filter - cheap for the user page).
 
@@ -107,6 +112,7 @@ function Get-CIPPPIMRoleAssignments {
             PrincipalUserPrincipalName = $Principal.userPrincipalName
             PrincipalType              = $Type
             PrincipalAppId             = $Principal.appId
+            PrincipalTenantId          = $null
             RoleDefinitionId           = $RoleId
             RoleDisplayName            = $RoleNames[$RoleId] ?? $RoleId
             RoleDescription            = $null
@@ -236,7 +242,7 @@ function Get-CIPPPIMRoleAssignments {
             $Eligibilities = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleEligibilitySchedules?`$expand=principal$FilterClause" -tenantid $TenantFilter -AsApp $true)
             Add-EligibilityRows -Schedules $Eligibilities
         } else {
-            $Assignments = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$select=id,principalId,roleDefinitionId,directoryScopeId&`$top=999$FilterClause" -tenantid $TenantFilter)
+            $Assignments = @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$select=id,principalId,principalOrganizationId,roleDefinitionId,directoryScopeId&`$top=999$FilterClause" -tenantid $TenantFilter)
             # Resolve principals in bulk; getByIds returns in milliseconds where $expand costs seconds.
             $Principals = @{}
             $PrincipalIds = @($Assignments.principalId | Where-Object { $_ } | Sort-Object -Unique)
@@ -250,6 +256,38 @@ function Get-CIPPPIMRoleAssignments {
                 $Principal = $Principals[$Assignment.principalId] ?? [PSCustomObject]@{ displayName = $null; userPrincipalName = $null; '@odata.type' = $null; appId = $null }
                 $Rows.Add((ConvertTo-Row -Principal $Principal -PrincipalObjectId $Assignment.principalId -RoleId $Assignment.roleDefinitionId -AssignmentType 'Permanent' -MemberType 'Direct' -ScopeId $Assignment.directoryScopeId -Start $null -End $null -Source 'Direct' -ScheduleId $null -RoleAssignmentId $Assignment.id -PIMCapable $false))
             }
+        }
+    }
+
+    # Foreign principals: a partner's GDAP group holds the role but lives in the partner tenant, so
+    # it never resolves here. A cache read takes what the cache writer stored (no Graph calls, and
+    # nothing per tenant on AllTenants); a live read classifies and names them now.
+    $Unresolved = @($Rows | Where-Object { $_.PrincipalType -eq 'Unknown' -and $_.PrincipalId })
+    if ($Unresolved.Count -gt 0) {
+        try {
+            $Foreign = @{}
+            if ($FromCache.IsPresent) {
+                $CachedAssignments ??= @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'RoleAssignments' -Fields 'principalId', 'foreignPrincipal')
+                foreach ($Item in $CachedAssignments) {
+                    if ($Item.principalId -and $Item.foreignPrincipal) { $Foreign[$Item.principalId] = $Item.foreignPrincipal }
+                }
+            } else {
+                $OrgSource = if ($PIMCapable) {
+                    @(New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?`$select=principalId,principalOrganizationId&`$top=999$FilterClause" -tenantid $TenantFilter)
+                } else {
+                    $Assignments
+                }
+                $Foreign = Get-CIPPForeignPrincipalInfo -TenantFilter $TenantFilter -Assignments $OrgSource
+            }
+            foreach ($Row in $Unresolved) {
+                $Info = $Foreign[$Row.PrincipalId]
+                if (-not $Info) { continue }
+                $Row.PrincipalType = $Info.Type
+                $Row.PrincipalTenantId = $Info.TenantId
+                $Row.PrincipalDisplayName = $Info.Name
+            }
+        } catch {
+            Write-Information "Could not resolve foreign principals for $TenantFilter`: $($_.Exception.Message)"
         }
     }
 
