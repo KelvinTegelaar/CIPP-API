@@ -28,6 +28,16 @@ Describe 'Resolve-CIPPTransportRuleTemplate' {
         $Result.SentTo[0] | Should -Be 'a@Contoso(contoso.com)'
     }
 
+    It 'unwraps SCL parameters saved as lists to a single value' {
+        $Template = '{"SetSCL":["-1"],"SCLOver":["5","6"],"ExceptIfSCLOver":"3","SenderIpRanges":["1.2.3.4"]}' | ConvertFrom-Json
+        $Result = Resolve-CIPPTransportRuleTemplate -Template $Template -TenantFilter 'contoso.com'
+        , $Result.SetSCL | Should -BeOfType [string]
+        $Result.SetSCL | Should -Be '-1'
+        $Result.SCLOver | Should -Be '5'
+        $Result.ExceptIfSCLOver | Should -Be '3'
+        , $Result.SenderIpRanges | Should -BeOfType [array]
+    }
+
     It 'returns a copy and leaves the source template untouched' {
         $Template = '{"name":"%tenantname% rule"}' | ConvertFrom-Json
         $null = Resolve-CIPPTransportRuleTemplate -Template $Template -TenantFilter 'contoso.com'
