@@ -233,6 +233,16 @@
     "IsSystem": true
   },
   {
+    "Id": "7ba13614-dee9-4175-8b00-3fdc12b4c940",
+    "Command": "Start-AppPackageCleanup",
+    "Description": "Timer to delete uploaded app packages no application template uses",
+    "Cron": "0 30 1 * * *",
+    "JitterMinutes": 15,
+    "Priority": 22,
+    "RunOnProcessor": true,
+    "IsSystem": true
+  },
+  {
     "Id": "9792e664-002b-475e-a1c2-fd5d04b19a3f",
     "Command": "Start-ReportAttachmentRetentionCleanup",
     "Description": "Timer to cleanup report attachments uploaded to blob storage based on retention policy",

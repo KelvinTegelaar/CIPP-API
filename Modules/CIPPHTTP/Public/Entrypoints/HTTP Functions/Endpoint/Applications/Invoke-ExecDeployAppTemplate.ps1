@@ -33,12 +33,18 @@ function Invoke-ExecDeployAppTemplate {
         $AppNames = @($AppsRaw.appName)
         $AppConfigs = @($AppsRaw.config)
 
+        # Deploys only the application with this name instead of the whole template
+        $OnlyApp = [string]$Request.Body.appName
         for ($i = 0; $i -lt $AppTypes.Count; $i++) {
+            if ($OnlyApp -and [string]$AppNames[$i] -ne $OnlyApp) { continue }
             $Apps.Add([PSCustomObject]@{
                 appType = [string]$AppTypes[$i]
                 appName = [string]$AppNames[$i]
                 config  = [string]$AppConfigs[$i]
             })
+        }
+        if ($Apps.Count -eq 0) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::NotFound; Body = @{ Results = @("Failed to deploy app template: '$OnlyApp' is not in the template") } })
         }
 
         $SelectedTenants = @($Request.Body.selectedTenants | ForEach-Object {
@@ -70,6 +76,10 @@ function Invoke-ExecDeployAppTemplate {
                     $RequestProps['AssignTo'] = $OverrideAssignTo
                     if ($OverrideAssignTo -eq 'customGroup' -and $OverrideCustomGroup) {
                         $RequestProps['CustomGroup'] = $OverrideCustomGroup
+                    }
+                    # Groups picked by id from a single tenant, and exclusions, sent with the override replace the template's
+                    foreach ($Field in 'GroupIds', 'excludeGroup', 'ExcludeGroupIds') {
+                        if ($Request.Body.$Field) { $RequestProps[$Field] = $Request.Body.$Field }
                     }
                 }
                 $RequestBody | Add-Member -NotePropertyMembers $RequestProps -Force

@@ -65,21 +65,9 @@ function Get-CIPPAzStorageQueueMessage {
             }
         }
 
-        $response = New-CIPPAzStorageRequest -Service 'queue' -Resource "$Name/messages" -QueryParams @{
+        @(New-CIPPAzStorageRequest -Service 'queue' -Resource "$Name/messages" -QueryParams @{
             peekonly      = 'true'
             numofmessages = $count
-        } -ConnectionString $ConnectionString -Method 'GET'
-
-        if (-not $response) { return @() }
-
-        # New-CIPPAzStorageRequest parses //QueueMessage nodes into PSObjects.
-        # If the queue was empty the response may be an XmlDocument or XmlNode (empty QueueMessagesList).
-        if ($response -is [System.Xml.XmlDocument] -or $response -is [System.Xml.XmlNode]) {
-            Write-Verbose "Queue '$Name' returned no messages."
-            return @()
-        }
-
-        # Ensure array output even for a single message
-        @($response)
+        } -ConnectionString $ConnectionString -Method 'GET')
     }
 }
