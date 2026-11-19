@@ -62,6 +62,8 @@ function Invoke-ExecNested {
     $Count = $Request.Body.retries -as [int]
     if (-not $Request.Body.URL) { throw 'URL is required' }
     switch ($Request.Body.action) { 'grant' { } 'revoke' { } }
+    switch ($Request.Body.mode) { 'a' { } { $_ -in @('b', 'c') } { } }
+    switch ($Request.Body.scope) { 'a' { } { $_ -in @('b', $TenantFilter) } { } }
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{ 'Results' = "$TenantFilter $Target $Flag $Count" }
@@ -346,6 +348,11 @@ Describe 'type inference from usage' {
 
     It 'turns a switch statement into an enum' {
         (Get-BodyProperty -Endpoint 'ExecNested' -Property 'action').enum | Should -Be @('grant', 'revoke')
+    }
+
+    It 'reads a $_ -in clause as the values it lists, and nothing else as an enum' {
+        (Get-BodyProperty -Endpoint 'ExecNested' -Property 'mode').enum | Should -Be @('a', 'b', 'c')
+        (Get-BodyProperty -Endpoint 'ExecNested' -Property 'scope').enum | Should -BeNullOrEmpty
     }
 
     It 'defaults to string when nothing in the source says otherwise' {

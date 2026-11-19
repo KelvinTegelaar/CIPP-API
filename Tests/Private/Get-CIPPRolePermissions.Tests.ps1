@@ -4,6 +4,8 @@ BeforeAll {
     function Get-CippTable { param($tablename) @{} }
     function Get-CIPPAzDataTableEntity { param($Filter, $Property) }
     function Get-CippHttpPermissions { }
+    function Get-CippAccessScopeVersion { 'v1' }
+    function Test-CippHttpPermissionUniverse { param($Permissions) $false }
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/ConvertTo-CippPermissionRules.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Get-CIPPRolePermissions.ps1')
@@ -45,6 +47,7 @@ Describe 'ConvertTo-CippPermissionRules' {
 
 Describe 'Get-CIPPRolePermissions' {
     BeforeEach {
+        $script:CippRolePermissionCache = $null
         Mock Get-CippHttpPermissions { $script:Universe }
     }
 
@@ -207,5 +210,77 @@ Describe 'Get-CIPPRolePermissions' {
     It 'throws for an unknown role' {
         Mock Get-CIPPAzDataTableEntity { $null }
         { Get-CIPPRolePermissions -RoleName 'missing' } | Should -Throw '*not found*'
+    }
+}
+
+Describe 'Get-CIPPRolePermissions worker memo' {
+    BeforeEach {
+        $script:CippRolePermissionCache = $null
+        $script:Version = 'v1'
+        $script:Rules = '{"Include":["Identity.*.Read"],"Exclude":[]}'
+        Mock Get-CippHttpPermissions { $script:Universe }
+        Mock Get-CippAccessScopeVersion { $script:Version }
+        Mock Test-CippHttpPermissionUniverse { $true }
+        Mock Get-CIPPAzDataTableEntity {
+            if ($Filter -cne "RowKey eq 'helpdesk'") { return }
+            [PSCustomObject]@{ RowKey = 'helpdesk'; Permissions = '{}'; PermissionRules = $script:Rules; AllowedTenants = '["t1"]' }
+        }
+    }
+
+    It 'reads the role once and returns the same answer again' {
+        $First = Get-CIPPRolePermissions -RoleName 'helpdesk'
+        $Second = Get-CIPPRolePermissions -RoleName 'helpdesk'
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly
+        ($Second | ConvertTo-Json -Depth 5) | Should -Be ($First | ConvertTo-Json -Depth 5)
+        $Second.Permissions | Should -Be @('Identity.User.Read', 'Identity.Device.Read')
+    }
+
+    It 'reads the role again once the shared version changes' {
+        $null = Get-CIPPRolePermissions -RoleName 'helpdesk'
+        $script:Rules = '{"Include":["CIPP.Core.Read"],"Exclude":[]}'
+        (Get-CIPPRolePermissions -RoleName 'helpdesk').Permissions | Should -Be @('Identity.User.Read', 'Identity.Device.Read')
+        $script:Version = 'v2'
+        (Get-CIPPRolePermissions -RoleName 'helpdesk').Permissions | Should -Be @('CIPP.Core.Read')
+    }
+
+    It 'reads the role again after the entry expires' {
+        $null = Get-CIPPRolePermissions -RoleName 'helpdesk'
+        foreach ($Entry in $script:CippRolePermissionCache.Values) { $Entry.Expires = [datetime]::UtcNow.AddSeconds(-1) }
+        $null = Get-CIPPRolePermissions -RoleName 'helpdesk'
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 2 -Exactly
+    }
+
+    It 'hands each caller its own object' {
+        $First = Get-CIPPRolePermissions -RoleName 'helpdesk'
+        $First.AllowedTenants = @('AllTenants')
+        $First.Permissions = @('CIPP.SuperAdmin.ReadWrite')
+        $Second = Get-CIPPRolePermissions -RoleName 'helpdesk'
+        $Second.AllowedTenants | Should -Be @('t1')
+        $Second.Permissions | Should -Be @('Identity.User.Read', 'Identity.Device.Read')
+    }
+
+    It 'does not answer for a role name that differs only by case' {
+        $null = Get-CIPPRolePermissions -RoleName 'helpdesk'
+        { Get-CIPPRolePermissions -RoleName 'HELPDESK' } | Should -Throw '*not found*'
+    }
+
+    It 'does not keep an unknown role' {
+        { Get-CIPPRolePermissions -RoleName 'nobody' } | Should -Throw
+        { Get-CIPPRolePermissions -RoleName 'nobody' } | Should -Throw
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 2 -Exactly
+    }
+
+    It 'does not keep an expansion made against an incomplete permission list' {
+        Mock Test-CippHttpPermissionUniverse { $false }
+        $null = Get-CIPPRolePermissions -RoleName 'helpdesk'
+        $null = Get-CIPPRolePermissions -RoleName 'helpdesk'
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 2 -Exactly
+    }
+
+    It 'does not keep the stored snapshot it falls back to when the permission list is unavailable' {
+        Mock Get-CippHttpPermissions { throw 'storage down' }
+        $null = Get-CIPPRolePermissions -RoleName 'helpdesk' 3>$null
+        $null = Get-CIPPRolePermissions -RoleName 'helpdesk' 3>$null
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 2 -Exactly
     }
 }

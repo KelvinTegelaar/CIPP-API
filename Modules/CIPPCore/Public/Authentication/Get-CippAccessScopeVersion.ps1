@@ -42,7 +42,12 @@ function Get-CippAccessScopeVersion {
     try {
         $Table = Get-CIPPTable -tablename 'CacheVersions'
         $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'CacheVersion' and RowKey eq 'AccessScope'"
-        $Version = if ($Entity.Version) { [string]$Entity.Version } else { 'initial' }
+        # No stamp yet, or the table was cleared: write a new one. A fixed placeholder would be
+        # reused after every cache clear and match entries stored under it earlier.
+        $Version = if ($Entity.Version) { [string]$Entity.Version } else { [string][guid]::NewGuid() }
+        if (-not $Entity.Version) {
+            Add-CIPPAzDataTableEntity @Table -Entity @{ PartitionKey = 'CacheVersion'; RowKey = 'AccessScope'; Version = $Version } -Force | Out-Null
+        }
     } catch {
         Write-Warning "Could not read the access scope cache version, forcing a recompute. $($_.Exception.Message)"
         return [string][guid]::NewGuid()

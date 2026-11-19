@@ -29,6 +29,8 @@ function Remove-CIPPCache {
             }
         }
 
+        Clear-CippAccessScopeCache
+
         'Clearing Intune policy tracking data'
         $TrackingTableContext = Get-CIPPTable -TableName 'IntunePolicyTypeTracking'
         Remove-AzDataTable @TrackingTableContext

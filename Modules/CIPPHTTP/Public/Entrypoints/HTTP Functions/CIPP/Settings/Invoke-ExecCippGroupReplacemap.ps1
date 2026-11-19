@@ -15,12 +15,12 @@ function Invoke-ExecCippGroupReplacemap {
 
     # The group, as group:<groupId>.
     $TenantId = $Request.Query.tenantId ?? $Request.Body.tenantId
-    # List, AddEdit or Delete.
+    # List, AddEdit, PreviewValue or Delete.
     $Action = $Request.Query.Action ?? $Request.Body.Action
-    if ($TenantId -notlike 'group:*' -or $Action -notin @('List', 'AddEdit', 'Delete')) {
+    if ($TenantId -notlike 'group:*' -or $Action -notin @('List', 'AddEdit', 'PreviewValue', 'Delete')) {
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
-                Body       = @{ Results = 'This endpoint only manages tenant group variables: send tenantId group:<groupId> and Action List, AddEdit or Delete.' }
+                Body       = @{ Results = 'This endpoint only manages tenant group variables: send tenantId group:<groupId> and Action List, AddEdit, PreviewValue or Delete.' }
             })
     }
 

@@ -158,8 +158,21 @@ function Invoke-CIPPBaselineStandard {
                     }
                 }
             }
+            # A one-entry multi-select arrives unwrapped to a plain string, so the declaration decides it is a list.
+            $MultipleVariables = @(($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties.Where({ $_.Value.multiple -eq $true }).Name)
             foreach ($VariableProperty in $Normalized.PSObject.Properties) {
-                if ($VariableProperty.Value -is [string] -and $VariableProperty.Value.Contains('%')) {
+                $HasToken = $VariableProperty.Value -is [string] -and $VariableProperty.Value.Contains('%')
+                if ($VariableProperty.Value -is [array] -or ($HasToken -and $MultipleVariables -contains $VariableProperty.Name)) {
+                    # Resolved as a JSON array element so a list variable expands to one entry per item.
+                    $VariableProperty.Value = @(foreach ($Entry in @($VariableProperty.Value)) {
+                            $EntryText = $Entry.value ?? $Entry
+                            if ($EntryText -is [string] -and $EntryText.Contains('%')) {
+                                Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text (ConvertTo-Json -Compress -InputObject @($EntryText)) -EscapeForJson | ConvertFrom-Json
+                            } else {
+                                $Entry
+                            }
+                        })
+                } elseif ($HasToken) {
                     $VariableProperty.Value = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $VariableProperty.Value
                 }
                 # A switch bound to a custom variable resolves to text; compare and writes are type-strict, so make it a bool.

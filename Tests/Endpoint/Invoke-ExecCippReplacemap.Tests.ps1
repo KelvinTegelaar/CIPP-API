@@ -174,6 +174,14 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
             $script:SavedEntity.Value | Should -Be '["Site A","Site, B","Site \"C\""]'
         }
 
+        It 'stores a collection typed one value per line as a JSON array' {
+            $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'tenants' -Value "tenant-a`ntenant-b" -VariableType 'collection')
+
+            $Response.StatusCode | Should -Be 200
+            $script:SavedEntity.VariableType | Should -Be 'collection'
+            $script:SavedEntity.Value | Should -Be '["tenant-a","tenant-b"]'
+        }
+
         It 'stores a single line as a one item list' {
             $null = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'sites' -Value 'Site A' -VariableType 'list')
             $script:SavedEntity.Value | Should -Be '["Site A"]'
@@ -716,5 +724,70 @@ Describe 'Invoke-ExecCippReplacemap - Preview' {
 
         $Response.StatusCode | Should -Be 400
         Should -Invoke Get-CIPPTextReplacement -Times 0
+    }
+}
+
+Describe 'Invoke-ExecCippReplacemap - PreviewValue' {
+    BeforeAll {
+        . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPTextReplacement.ps1')
+        function New-PreviewValueRequest {
+            param([string]$TenantId = 'AllTenants', $Value, $VariableType)
+            [pscustomobject]@{
+                Params  = @{ CIPPEndpoint = 'ExecCippReplacemap' }
+                Headers = @{}
+                Query   = @{}
+                Body    = [pscustomobject]@{ Action = 'PreviewValue'; tenantId = $TenantId; RowKey = 'partners'; Value = $Value; VariableType = $VariableType }
+            }
+        }
+        function Get-PreviewResult {
+            param($Response, [string]$Usage)
+            @($Response.Body.Results).Where({ $_.Usage -eq $Usage })[0].Result
+        }
+    }
+
+    BeforeEach {
+        $script:SavedEntity = $null
+        $script:ExistingEntity = $null
+        $script:RowsByFilter = @{}
+        $script:CIPPVariableMemo = $null
+        # Only the tenant group lookup finds a row; the variable table is empty.
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { param($Filter) if ($Filter -like "*'TenantGroup'*") { [pscustomobject]@{ RowKey = 'g1'; Name = 'Group 1' } } }
+        Mock -CommandName Get-Tenants -MockWith {
+            [pscustomobject]@{ customerId = '11111111-1111-1111-1111-111111111111'; defaultDomainName = 'contoso.onmicrosoft.com'; displayName = 'Contoso' }
+        }
+    }
+
+    It 'shows a collection typed one per line in every position, without saving it' {
+        $Response = Invoke-ExecCippReplacemap -Request (New-PreviewValueRequest -Value "a`nb" -VariableType 'collection')
+
+        $Response.StatusCode | Should -Be 200
+        Get-PreviewResult $Response 'A field' | Should -Be '["a","b"]'
+        Get-PreviewResult $Response 'A list entry' | Should -Be '["a","b"]'
+        Get-PreviewResult $Response 'An Intune list entry' | Should -Be '[{"value":"a"},{"value":"b"}]'
+        Get-PreviewResult $Response 'Inside text' | Should -Be '"Text a, b text"'
+        $script:SavedEntity | Should -BeNullOrEmpty
+    }
+
+    It 'shows a list nesting the array inside an Intune list entry' {
+        $Response = Invoke-ExecCippReplacemap -Request (New-PreviewValueRequest -Value "a`nb" -VariableType 'list')
+
+        Get-PreviewResult $Response 'An Intune list entry' | Should -Be '[{"value":["a","b"]}]'
+    }
+
+    It 'resolves tenant tokens on a tenant, and leaves them as typed on <Name>' -ForEach @(
+        @{ Name = 'global variables'; TenantId = 'AllTenants'; Expected = '"%tenantid%"' }
+        @{ Name = 'a tenant group'; TenantId = 'group:g1'; Expected = '"%tenantid%"' }
+        @{ Name = 'a tenant'; TenantId = 'contoso.onmicrosoft.com'; Expected = '"11111111-1111-1111-1111-111111111111"' }
+    ) {
+        $Response = Invoke-ExecCippReplacemap -Request (New-PreviewValueRequest -TenantId $TenantId -Value '%tenantid%' -VariableType 'string')
+
+        Get-PreviewResult $Response 'A field' | Should -Be $Expected
+    }
+
+    It 'rejects a value that does not match its type, as saving would' {
+        $Response = Invoke-ExecCippReplacemap -Request (New-PreviewValueRequest -Value 'abc' -VariableType 'integer')
+
+        $Response.StatusCode | Should -Be 400
+        $Response.Body.Results | Should -BeLike "*not a whole number*"
     }
 }

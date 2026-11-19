@@ -136,6 +136,8 @@ function Invoke-ExecRestoreBackup {
         $body = [pscustomobject]@{'Results' = "Backup restore failed: $($_.Exception.Message)" }
     }
 
+    # A restore can replace role definitions and IP ranges
+    if ($RestoredCount) { Clear-CippAccessScopeCache }
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode

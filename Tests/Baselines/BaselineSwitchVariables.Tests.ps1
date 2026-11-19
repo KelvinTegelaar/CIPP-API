@@ -35,6 +35,7 @@ BeforeAll {
         variables = [PSCustomObject]@{
             Enabled = [PSCustomObject]@{ type = 'switch'; label = 'Enabled'; default = $false }
             Name    = [PSCustomObject]@{ type = 'textField'; label = 'Name'; omitWhenBlank = $true }
+            Names   = [PSCustomObject]@{ type = 'autoComplete'; label = 'Names'; multiple = $true }
         }
         expected  = [PSCustomObject]@{ enabled = '%Enabled%' }
         prepare   = 'Get-CIPPBaselineSwitchProbeState'
@@ -101,5 +102,35 @@ Describe 'Engine: switch variables bound to a custom variable' {
         $null = Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare'
 
         $script:HookName | Should -BeOfType ([string])
+    }
+}
+
+Describe 'Engine: custom variables inside a multi-select variable' {
+    BeforeEach {
+        Mock Get-CIPPBaselineDefinition { $script:Definition }
+        Mock Get-CIPPAzDataTableEntity { @() }
+        Mock Set-CIPPBaselineResult {}
+        Mock Add-CIPPBaselineHistoryEvent {}
+        Mock Send-CIPPBaselineAlert {}
+        Mock Write-LogMessage {}
+        Mock Get-CIPPTenantCapabilities { [PSCustomObject]@{ SHAREPOINTENTERPRISE = $true } }
+        Mock Get-CIPPTextReplacement { $Text.Replace('"%Domains%"', '"a.com","b.com"').Replace('%Single%', 'c.com') }
+        Mock Get-CIPPBaselineSwitchProbeState {
+            $script:HookNames = $Item.Variables.Names
+            @{ Expected = [PSCustomObject]@{ enabled = $true }; Current = [PSCustomObject]@{ enabled = $true } }
+        }
+    }
+
+    It 'hands the hook a list of resolved entries for <Shape>' -ForEach @(
+        @{ Shape = 'one picked variable'; Value = @([PSCustomObject]@{ label = '%Domains%'; value = '%Domains%' }); Expected = @('a.com', 'b.com') }
+        @{ Shape = 'mixed entries'; Value = @([PSCustomObject]@{ label = '%Domains%'; value = '%Domains%' }, '%Single%', 'd.com'); Expected = @('a.com', 'b.com', 'c.com', 'd.com') }
+    ) {
+        $Item = New-EngineItem $true
+        $Item.Variables | Add-Member -NotePropertyName Names -NotePropertyValue $Value
+
+        $null = Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare'
+
+        , $script:HookNames | Should -BeOfType ([array])
+        $script:HookNames | Should -Be $Expected
     }
 }

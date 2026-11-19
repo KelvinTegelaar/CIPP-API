@@ -199,8 +199,10 @@ function Invoke-ExecCippReplacemap {
                     $Body = @{ Results = Get-CIPPTextReplacement -TenantFilter $customerId -Text $Text -EscapeForJson:$IsJson }
                 }
             }
-            'AddEdit' {
+            # PreviewValue validates an unsaved variable exactly as AddEdit would, then shows it resolved instead of saving it.
+            { $_ -in @('AddEdit', 'PreviewValue') } {
                 $VariableName = [string]$Request.Body.RowKey
+                if ($Action -eq 'PreviewValue' -and [string]::IsNullOrWhiteSpace($VariableName)) { $VariableName = 'variable' }
                 # Same rule as the variables page: an empty name would make %% a token and rewrite every %% in a script.
                 if ([string]::IsNullOrWhiteSpace($VariableName) -or $VariableName -match '[\s~`!#$%^&*+=\[\]\\'';,/{}|":<>?-]') {
                     return ([HttpResponseContext]@{
@@ -223,10 +225,10 @@ function Invoke-ExecCippReplacemap {
                 $VariableType = $Request.Body.VariableType.value ?? $Request.Body.VariableType
                 if ([string]::IsNullOrWhiteSpace($VariableType)) { $VariableType = 'string' }
 
-                if ($VariableType -notin @('string', 'integer', 'boolean', 'json', 'list')) {
+                if ($VariableType -notin @('string', 'integer', 'boolean', 'json', 'list', 'collection')) {
                     return ([HttpResponseContext]@{
                             StatusCode = [HttpStatusCode]::BadRequest
-                            Body       = @{ Results = "'$VariableType' is not a valid variable type. Use string, integer, boolean, json, or list." }
+                            Body       = @{ Results = "'$VariableType' is not a valid variable type. Use string, integer, boolean, json, list, or collection." }
                         })
                 }
 
@@ -261,7 +263,7 @@ function Invoke-ExecCippReplacemap {
                                 })
                         }
                     }
-                    'list' {
+                    { $_ -in @('list', 'collection') } {
                         # One value per line is stored as the JSON array the substitution reads.
                         # A line may start with '[' ('[HQ] Office'), so only parseable or JSON-looking values count as JSON.
                         $IsJsonArray = $TrimmedValue.StartsWith('[') -and (Test-Json -Json $TrimmedValue -ErrorAction SilentlyContinue)
@@ -272,10 +274,29 @@ function Invoke-ExecCippReplacemap {
                         if (-not $TrimmedValue.StartsWith('[') -or -not (Test-Json -Json $TrimmedValue -ErrorAction SilentlyContinue)) {
                             return ([HttpResponseContext]@{
                                     StatusCode = [HttpStatusCode]::BadRequest
-                                    Body       = @{ Results = "Variable '$VariableName' is typed as list, but its value is not a JSON array such as [""Site A"",""Site B""]." }
+                                    Body       = @{ Results = "Variable '$VariableName' is typed as $VariableType, but its value is not a JSON array such as [""Site A"",""Site B""]." }
                                 })
                         }
                     }
+                }
+
+                if ($Action -eq 'PreviewValue') {
+                    $Token = '"%{0}%"' -f $VariableName
+                    $PreviewVariable = @{ Name = $VariableName; Value = $VariableValue; VariableType = $VariableType }
+                    $PreviewTenant = if ($customerId -ne 'AllTenants' -and $customerId -notlike 'group:*') { $customerId } else { '' }
+                    $Samples = [ordered]@{
+                        'A field'               = $Token
+                        'A list entry'          = '[{0}]' -f $Token
+                        'An Intune list entry'  = '[{{"value":{0}}}]' -f $Token
+                        'Inside text'           = '"Text {0} text"' -f $Token.Trim('"')
+                    }
+                    $Body = @{
+                        Results = @(foreach ($Sample in $Samples.GetEnumerator()) {
+                                $Resolved = Get-CIPPTextReplacement -TenantFilter $PreviewTenant -Text ('{{"v":{0}}}' -f $Sample.Value) -EscapeForJson -PreviewVariable $PreviewVariable
+                                @{ Usage = $Sample.Key; Template = $Sample.Value; Result = $Resolved.Substring(5, $Resolved.Length - 6) }
+                            })
+                    }
+                    break
                 }
 
                 $VariableEntity = @{

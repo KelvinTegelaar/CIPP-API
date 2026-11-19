@@ -21,6 +21,7 @@ BeforeAll {
     function Test-CIPPAccessUserRole { param($User) $User }
     function Get-CippRequestAllowedPermissions { }
     function Test-CIPPAccess { param($Request, [switch]$TenantList) }
+    function Clear-CippAccessScopeCache { }
 
     . $FunctionPath
 

@@ -232,9 +232,61 @@ Describe 'Get-CIPPTextReplacement' {
                 Should -Be '{"v":"sites: Site A, Site \"B\""}'
         }
 
+        It 'writes the array into an array entry object rather than repeating it' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":[{"value":"%sites%"}]}' -EscapeForJson |
+                Should -Be '{"v":[{"value":["Site A","Site \"B\""]}]}'
+        }
+
         It 'falls back to a string when the value is not a JSON array' {
             Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":["%broken%"]}' -EscapeForJson |
                 Should -Be '{"v":["Site A, Site B"]}'
+        }
+    }
+
+    Context 'a collection variable repeats the array entry holding it' {
+        BeforeEach {
+            $script:GlobalRows = @(
+                New-VariableRow -Name 'tenants' -Value '["Site A","Site \"B\""]' -VariableType 'collection'
+                New-VariableRow -Name 'none' -Value '[]' -VariableType 'collection'
+            )
+        }
+
+        It 'repeats a settings catalog collection entry once per item' {
+            $Item = '{"@odata.type":"#microsoft.graph.deviceManagementConfigurationStringSettingValue","settingValueTemplateReference":null,"value":"%TENANTS%"}'
+            $Fixed = $Item.Replace('%TENANTS%', 'fixed')
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text ('{{"simpleSettingCollectionValue": [ {0}, {1} ]}}' -f $Fixed, $Item) -EscapeForJson |
+                Should -Be ('{{"simpleSettingCollectionValue": [ {0}, {1},{2} ]}}' -f $Fixed, $Item.Replace('"%TENANTS%"', '"Site A"'), $Item.Replace('"%TENANTS%"', '"Site \"B\""'))
+        }
+
+        It 'fills every property of the entry that holds it' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"values":[{"name":"%tenants%","value":"%tenants%"}]}' -EscapeForJson |
+                Should -Be '{"values":[{"name":"Site A","value":"Site A"},{"name":"Site \"B\"","value":"Site \"B\""}]}'
+        }
+
+        It 'removes the entry when the list is empty' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":[{"value":"x"}, {"value":"%none%"}]}' -EscapeForJson |
+                Should -Be '{"v":[{"value":"x"}]}'
+        }
+
+        It 'behaves as a list everywhere else' {
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"a":["x", "%tenants%"],"b":"%tenants%","c":"sites: %tenants%"}' -EscapeForJson |
+                Should -Be '{"a":["x", "Site A","Site \"B\""],"b":["Site A","Site \"B\""],"c":"sites: Site A, Site \"B\""}'
+        }
+    }
+
+    Context 'an unsaved preview variable' {
+        It 'resolves for this call only, over the stored value' {
+            $script:GlobalRows = @(New-VariableRow -Name 'site' -Value 'Stored')
+            $Preview = @{ Name = 'site'; Value = 'Unsaved'; VariableType = 'string' }
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%site%' -PreviewVariable $Preview | Should -Be 'Unsaved'
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%site%' | Should -Be 'Stored'
+        }
+
+        It 'leaves tenant tokens as typed without a tenant' {
+            $Preview = @{ Name = 'site'; Value = '%tenantid%'; VariableType = 'string' }
+            Get-CIPPTextReplacement -TenantFilter '' -Text '%site%' -PreviewVariable $Preview | Should -Be '%tenantid%'
+            Should -Invoke Get-Tenants -Times 0
         }
     }
 

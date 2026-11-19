@@ -14,7 +14,9 @@ function Get-CIPPTextReplacement {
     param (
         [string]$TenantFilter = $env:TenantID,
         $Text,
-        [switch]$EscapeForJson
+        [switch]$EscapeForJson,
+        # An unsaved variable (Name, Value, VariableType) resolved as if stored. Without a tenant, only global variables apply.
+        [hashtable]$PreviewVariable
     )
     # Escapes a replacement value so it can be safely spliced into a serialized JSON
     # string literal. Handles quotes, backslashes, newlines, tabs and control chars.
@@ -81,8 +83,9 @@ function Get-CIPPTextReplacement {
 
     # A list variable holds a JSON array. Used as an array element it is spliced in as several
     # elements; filling a whole slot it is the array; inside a longer string it is comma-joined.
+    # A collection variable is the same, except an array entry object holding it is repeated per item.
     function Expand-CIPPListToken {
-        param([string]$Text, [string]$Token, $Value, [bool]$Escape)
+        param([string]$Text, [string]$Token, $Value, [bool]$Escape, [bool]$RepeatEntries)
         try {
             $Items = @(ConvertFrom-Json -InputObject ([string]$Value) -Depth 100 -NoEnumerate -ErrorAction Stop | ForEach-Object { $_ })
         } catch {
@@ -90,6 +93,13 @@ function Get-CIPPTextReplacement {
         }
         $Quoted = [regex]::Escape('"{0}"' -f $Token)
         $Encoded = @(foreach ($Item in $Items) { ConvertTo-Json -InputObject $Item -Depth 100 -Compress })
+        if ($RepeatEntries) {
+            $Text = $Text -replace "(?<=[\[,]\s*)\{[^{}\[\]]*$Quoted[^{}\[\]]*\}(?=\s*[\],])", {
+                if ($Encoded.Count -eq 0) { return '"{0}"' -f $Token }
+                $Element = $_.Value
+                @(foreach ($Entry in $Encoded) { $Element -replace $Quoted, (ConvertTo-CIPPLiteralReplacement -Value $Entry) }) -join ','
+            }
+        }
         if ($Encoded.Count -gt 0) {
             $Text = $Text -replace "(?<=[\[,]\s*)$Quoted(?=\s*[\],])", (ConvertTo-CIPPLiteralReplacement -Value ($Encoded -join ','))
         } else {
@@ -105,7 +115,8 @@ function Get-CIPPTextReplacement {
     }
 
     # Without a tenant context, skip replacement lookups and return input as-is.
-    if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+    $NoTenant = [string]::IsNullOrWhiteSpace($TenantFilter)
+    if ($NoTenant -and -not $PreviewVariable) {
         return $Text
     }
 
@@ -147,7 +158,7 @@ function Get-CIPPTextReplacement {
     # variables and built-in tokens the same way its domain name does. When it is not in the tenant
     # cache, Get-Tenants returns nothing for the partner GUID without triggering a cache rebuild,
     # and the raw filter still serves as the partition key.
-    $Tenant = Get-Tenants -TenantFilter $TenantFilter
+    $Tenant = if (-not $NoTenant) { Get-Tenants -TenantFilter $TenantFilter }
     $CustomerId = if ($Tenant.customerId) { $Tenant.customerId } else { $TenantFilter }
 
     # One read per tenant serves every substitution in this invocation; Initialize-CippRequestContext clears it per request.
@@ -200,6 +211,12 @@ function Get-CIPPTextReplacement {
     $Vars = $Memo.Vars
     $VarTypes = $Memo.VarTypes
     $GroupConflicts = $Memo.GroupConflicts
+    if ($PreviewVariable) {
+        $Vars = $Vars.Clone()
+        $VarTypes = $VarTypes.Clone()
+        $Vars[$PreviewVariable.Name] = $PreviewVariable.Value
+        $VarTypes[$PreviewVariable.Name] = $PreviewVariable.VariableType
+    }
     foreach ($Conflict in $GroupConflicts.GetEnumerator()) {
         if (-not $Text.Contains("%$($Conflict.Key)%", [System.StringComparison]::OrdinalIgnoreCase)) { continue }
         $Fallback = if ($Vars.ContainsKey($Conflict.Key)) { 'the global value was used' } else { 'it was left unresolved' }
@@ -211,8 +228,8 @@ function Get-CIPPTextReplacement {
         foreach ($Replace in $Vars.GetEnumerator()) {
             $String = '%{0}%' -f $Replace.Key
             if ($string -notin $ReservedVariables) {
-                if ("$($VarTypes[$Replace.Key])" -eq 'list') {
-                    $Expanded = Expand-CIPPListToken -Text $Text -Token $String -Value $Replace.Value -Escape $EscapeForJson.IsPresent
+                if ("$($VarTypes[$Replace.Key])" -in @('list', 'collection')) {
+                    $Expanded = Expand-CIPPListToken -Text $Text -Token $String -Value $Replace.Value -Escape $EscapeForJson.IsPresent -RepeatEntries ("$($VarTypes[$Replace.Key])" -eq 'collection')
                     if ($null -ne $Expanded) {
                         $Text = $Expanded
                         continue
@@ -241,6 +258,8 @@ function Get-CIPPTextReplacement {
         }
         if ($Text -ceq $Before -or -not $Text.Contains('%')) { break }
     }
+    # Tenant tokens differ per tenant, so a preview with no tenant leaves them as typed.
+    if ($NoTenant) { return $Text }
     #default replacements for all tenants: %tenantid% becomes $tenant.customerId, %tenantfilter% becomes $tenant.defaultDomainName, %tenantname% becomes $tenant.displayName
     $BuiltInVars = [ordered]@{
         '%tenantid%'        = $Tenant.customerId

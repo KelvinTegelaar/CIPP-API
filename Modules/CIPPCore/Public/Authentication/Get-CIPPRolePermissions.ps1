@@ -20,6 +20,18 @@ function Get-CIPPRolePermissions {
         [string]$RoleName
     )
 
+    # Role-level data only, per worker; a role save bumps the version, the expiry is the backstop.
+    # The key is case-sensitive, as the table lookup is. Each call gets its own object.
+    $Now = [datetime]::UtcNow
+    $CacheKey = '{0}|{1}' -f (Get-CippAccessScopeVersion), $RoleName
+    if (-not $script:CippRolePermissionCache -or $script:CippRolePermissionCache.Count -gt 200) {
+        $script:CippRolePermissionCache = [System.Collections.Generic.Dictionary[string, object]]::new()
+    }
+    $Cached = $null
+    if ($script:CippRolePermissionCache.TryGetValue($CacheKey, [ref]$Cached) -and $Cached.Expires -gt $Now) {
+        return [PSCustomObject]$Cached.Role
+    }
+
     $Table = Get-CippTable -tablename 'CustomRoles'
     $Filter = "RowKey eq '$RoleName'"
     $Role = Get-CIPPAzDataTableEntity @Table -Filter $Filter
@@ -83,7 +95,7 @@ function Get-CIPPRolePermissions {
         $AllowedTenants = if ($Role.AllowedTenants) { $Role.AllowedTenants | ConvertFrom-Json } else { @() }
         $BlockedTenants = if ($Role.BlockedTenants) { $Role.BlockedTenants | ConvertFrom-Json } else { @() }
         $BlockedEndpoints = if ($Role.BlockedEndpoints) { $Role.BlockedEndpoints | ConvertFrom-Json } else { @() }
-        [PSCustomObject]@{
+        $Result = [ordered]@{
             Role             = $Role.RowKey
             Permissions      = @($Permissions)
             PermissionRules  = $Rules
@@ -93,6 +105,11 @@ function Get-CIPPRolePermissions {
             BlockAllTenants  = [bool]$Role.BlockAllTenants
             BlockTenantGroups = [bool]$Role.BlockTenantGroups
         }
+        # An expansion against an incomplete permission list is served but never kept
+        if ($Permissions -is [System.Collections.Generic.List[string]] -and (Test-CippHttpPermissionUniverse -Permissions $Universe)) {
+            $script:CippRolePermissionCache[$CacheKey] = @{ Role = $Result; Expires = $Now.AddMinutes(5) }
+        }
+        [PSCustomObject]$Result
     } else {
         throw "Role $RoleName not found."
     }

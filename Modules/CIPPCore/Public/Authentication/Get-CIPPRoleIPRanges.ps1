@@ -23,17 +23,29 @@ function Get-CIPPRoleIPRanges {
         return @('Any')
     }
 
-    $AccessIPRangeTable = Get-CippTable -tablename 'AccessIPRanges'
+    # Role-level data only, per worker; a role save bumps the version, the expiry is the backstop
+    $Now = [datetime]::UtcNow
+    $Version = Get-CippAccessScopeVersion
+    if (-not $script:CippRoleIPRangeCache -or $script:CippRoleIPRangeCache.Count -gt 200) {
+        $script:CippRoleIPRangeCache = [System.Collections.Generic.Dictionary[string, object]]::new()
+    }
+    $AccessIPRangeTable = $null
 
     foreach ($Role in $Roles) {
         try {
-            $IPRangeEntity = Get-CIPPAzDataTableEntity @AccessIPRangeTable -Filter "RowKey eq '$($Role.ToLower())'"
-            if ($IPRangeEntity -and $IPRangeEntity.IPRanges) {
-                $IPRanges = @($IPRangeEntity.IPRanges | ConvertFrom-Json)
-                foreach ($IPRange in $IPRanges) {
-                    if ($IPRange -and -not $CombinedIPRanges.Contains($IPRange)) {
-                        $CombinedIPRanges.Add($IPRange)
-                    }
+            $CacheKey = '{0}|{1}' -f $Version, $Role.ToLower()
+            $Cached = $null
+            if ($script:CippRoleIPRangeCache.TryGetValue($CacheKey, [ref]$Cached) -and $Cached.Expires -gt $Now) {
+                $IPRanges = $Cached.Ranges
+            } else {
+                $AccessIPRangeTable ??= Get-CippTable -tablename 'AccessIPRanges'
+                $IPRangeEntity = Get-CIPPAzDataTableEntity @AccessIPRangeTable -Filter "RowKey eq '$($Role.ToLower())'"
+                $IPRanges = if ($IPRangeEntity -and $IPRangeEntity.IPRanges) { @($IPRangeEntity.IPRanges | ConvertFrom-Json) } else { @() }
+                $script:CippRoleIPRangeCache[$CacheKey] = @{ Ranges = $IPRanges; Expires = $Now.AddMinutes(5) }
+            }
+            foreach ($IPRange in $IPRanges) {
+                if ($IPRange -and -not $CombinedIPRanges.Contains($IPRange)) {
+                    $CombinedIPRanges.Add($IPRange)
                 }
             }
         } catch {
@@ -42,7 +54,6 @@ function Get-CIPPRoleIPRanges {
         }
     }
 
-    # If no IP ranges were found in any role, allow all
     if ($CombinedIPRanges.Count -eq 0) {
         return @('Any')
     }
