@@ -36,8 +36,8 @@ function New-CippSandboxInitialSessionState {
 
     # CLM-safe data proxy. No script-level .NET — indexes the injected hashtable only.
     $ProxyBody = @'
-param([string]$TenantFilter, [string]$Type)
-$Key = if ($Type) { $Type } else { '' }
+param([string]$TenantFilter, [string]$Type, [string[]]$Fields)
+$Key = if ($Fields) { '{0}|{1}' -f $Type, ($Fields -join ',') } elseif ($Type) { $Type } else { '' }
 if ($CIPPSandboxData -and $CIPPSandboxData.ContainsKey($Key)) {
     return $CIPPSandboxData[$Key]
 }

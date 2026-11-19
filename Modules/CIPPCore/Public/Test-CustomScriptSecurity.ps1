@@ -155,7 +155,7 @@ function Test-CustomScriptSecurity {
         }
     }
 
-    # Require a literal -Type on Get-CIPPTestData so the sandbox can pre-fetch its data.
+    # Require a literal -Type (and -Fields, when given) on Get-CIPPTestData so the sandbox can pre-fetch its data.
     $TestDataCalls = $Ast.FindAll({
         param($node)
         $node -is [System.Management.Automation.Language.CommandAst] -and
@@ -165,17 +165,22 @@ function Test-CustomScriptSecurity {
     foreach ($call in $TestDataCalls) {
         for ($i = 0; $i -lt $call.CommandElements.Count; $i++) {
             $element = $call.CommandElements[$i]
-            if ($element -is [System.Management.Automation.Language.CommandParameterAst] -and $element.ParameterName -ieq 'Type') {
-                $value = if ($element.Argument) {
-                    $element.Argument
-                } elseif ($i + 1 -lt $call.CommandElements.Count) {
-                    $call.CommandElements[$i + 1]
-                } else {
-                    $null
-                }
-                if ($value -isnot [System.Management.Automation.Language.StringConstantExpressionAst]) {
-                    $lineNumber = $call.Extent.StartLineNumber
-                    throw "Security violation at line $lineNumber`: Get-CIPPTestData -Type must be a literal value (for example: -Type 'Users'). Dynamic or computed type names are not supported."
+            if ($element -isnot [System.Management.Automation.Language.CommandParameterAst] -or $element.ParameterName -notin 'Type', 'Fields') { continue }
+            $value = if ($element.Argument) {
+                $element.Argument
+            } elseif ($i + 1 -lt $call.CommandElements.Count) {
+                $call.CommandElements[$i + 1]
+            } else {
+                $null
+            }
+            $lineNumber = $call.Extent.StartLineNumber
+            if ($element.ParameterName -ieq 'Type' -and $value -isnot [System.Management.Automation.Language.StringConstantExpressionAst]) {
+                throw "Security violation at line $lineNumber`: Get-CIPPTestData -Type must be a literal value (for example: -Type 'Users'). Dynamic or computed type names are not supported."
+            }
+            if ($element.ParameterName -ieq 'Fields') {
+                $FieldValue = try { $value.SafeGetValue() } catch { $null }
+                if (-not $FieldValue -or @($FieldValue).Where({ $_ -isnot [string] -or [string]::IsNullOrWhiteSpace($_) }).Count) {
+                    throw "Security violation at line $lineNumber`: Get-CIPPTestData -Fields must be literal field names (for example: -Fields 'id', 'members'). Dynamic or computed field lists are not supported."
                 }
             }
         }

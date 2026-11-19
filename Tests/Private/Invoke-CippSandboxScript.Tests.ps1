@@ -128,21 +128,33 @@ Write-Output @{
         $Out.Upper | Should -Be 'B|A|A'
     }
 
+    It 'serves a -Fields read from its own key, not the default projection' {
+        $Data = @{ Groups = @([pscustomobject]@{ id = 'g' }); 'Groups|id,members' = @([pscustomobject]@{ id = 'g'; members = 'm' }) }
+        $Run = Invoke-Sandbox -Code "(Get-CIPPTestData -Type 'Groups' -Fields 'id', 'members').members; (Get-CIPPTestData -Type 'Groups').id" -Data $Data
+        @($Run.Output) -join ',' | Should -Be 'm,g'
+    }
+
     It 'runs the example scripts shown on the custom test page' {
         $Page = Join-Path (Split-Path -Parent $RepoRoot) 'frontend/src/pages/tools/custom-tests/add.jsx'
         if (-not (Test-Path $Page)) { Set-ItResult -Skipped -Because 'the frontend source is not present'; return }
         $Examples = @([regex]::Matches((Get-Content -Raw $Page), '(?s)code=\{`(.*?)`\}') | ForEach-Object { $_.Groups[1].Value })
         $Examples.Count | Should -BeGreaterThan 0
-        # Cache rows reach the sandbox as deserialised JSON objects.
-        $Data = @{}
-        @{
+        . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippSandboxData.ps1')
+        . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippTestDataFieldManifest.ps1')
+        $Rows = @{
             Users                     = @{ userPrincipalName = 'u@x'; displayName = 'U'; accountEnabled = $false; assignedLicenses = @(@{ skuId = 's1' }) }
             LicenseOverview           = @{ skuId = 's1'; License = 'E5' }
             UserRegistrationDetails   = @{ userPrincipalName = 'u@x'; userDisplayName = 'U'; isAdmin = $false; userType = 'member'; methodsRegistered = @() }
             Guests                    = @{ userPrincipalName = 'g@x'; displayName = 'G'; createdDateTime = '2020-01-01'; signInActivity = @{ lastSignInDateTime = '2020-01-01' } }
             ConditionalAccessPolicies = @{ displayName = 'P'; state = 'enabled'; createdDateTime = '2020-01-01' }
-        }.GetEnumerator() | ForEach-Object { $Data[$_.Key] = @($_.Value | ConvertTo-Json -Depth 5 | ConvertFrom-Json) }
+        }
+        # Cache rows reach the sandbox as deserialised JSON objects, projected like production.
+        function Get-CIPPTestData { param($TenantFilter, $Type, $Fields)
+            $Keep = if ($Fields) { $Fields } else { Get-CippTestDataFieldManifest -Type $Type }
+            @($Rows[$Type] | ConvertTo-Json -Depth 5 | ConvertFrom-Json | Select-Object -Property $Keep)
+        }
         foreach ($Example in $Examples) {
+            $Data = Get-CippSandboxData -ScriptContent $Example -TenantFilter 't'
             $Run = Invoke-Sandbox -Code $Example -Data $Data -Params @{ TenantFilter = 't' }
             $Run.HadErrors | Should -BeFalse -Because (@($Run.Errors) -join '; ')
             @($Run.Output | Where-Object { $null -ne $_ }).Count | Should -BeGreaterThan 0
