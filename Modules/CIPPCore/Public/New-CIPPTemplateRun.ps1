@@ -48,6 +48,8 @@ function New-CIPPTemplateRun {
     }
     if ($TemplateSettings.templateRepo) {
         Write-Information 'Grabbing data from community repo'
+        # No repository switch selected keeps the old behaviour of importing every file
+        $RepoTypes = @(foreach ($Key in 'standardsconfig', 'groupTemplates', 'policyTemplates', 'caTemplates') { if ($TemplateSettings[$Key] -eq $true) { $Key } })
         try {
             $Files = (Get-GitHubFileTree -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value).tree | Where-Object { $_.path -match '.json$' -and $_.path -notmatch 'NativeImport' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($SplatParams.FullName)/tree/$($SplatParams.Branch)/$($_.path)" } }, @{n = 'name'; e = { ($_.path -split '/')[ -1 ] -replace '\.json$', '' } }
             #if there is a migration table file, file the file. Store the file contents in $migrationtable
@@ -78,6 +80,20 @@ function New-CIPPTemplateRun {
 
                 if (!$ExistingTemplate -or $UpdateNeeded) {
                     $Template = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $File.path).content | ConvertFrom-Json
+                    if ($RepoTypes) {
+                        $FileType = if ($Template.RowKey) {
+                            switch -Wildcard ($Template.PartitionKey) {
+                                'StandardsTemplate*' { 'standardsconfig' }
+                                'GroupTemplate' { 'groupTemplates' }
+                                'IntuneTemplate' { 'policyTemplates' }
+                                'CATemplate' { 'caTemplates' }
+                            }
+                        } elseif ($Template.mailNickname) { 'groupTemplates' } elseif ($Template.'@odata.type' -like '*conditionalAccessPolicy*') { 'caTemplates' } else { 'policyTemplates' }
+                        if ($FileType -and $FileType -notin $RepoTypes) {
+                            Write-Information "Skipping template file $($File.name): its type is not selected for this library"
+                            continue
+                        }
+                    }
                     $ImportResult = Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $TemplateSettings.templateRepo.value -Path $File.path
                     if ($ImportResult) {
                         Write-Information $ImportResult

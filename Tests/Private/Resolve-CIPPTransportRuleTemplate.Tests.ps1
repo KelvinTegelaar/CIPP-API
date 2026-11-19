@@ -38,6 +38,13 @@ Describe 'Resolve-CIPPTransportRuleTemplate' {
         , $Result.SenderIpRanges | Should -BeOfType [array]
     }
 
+    It 'unwraps disclaimer location and fallback saved as label/value lists' {
+        $Template = '{"ApplyHtmlDisclaimerLocation":[{"value":"Append","label":"Append (bottom)"}],"ApplyHtmlDisclaimerFallbackAction":["Wrap"]}' | ConvertFrom-Json
+        $Result = Resolve-CIPPTransportRuleTemplate -Template $Template -TenantFilter 'contoso.com'
+        $Result.ApplyHtmlDisclaimerLocation | Should -Be 'Append'
+        $Result.ApplyHtmlDisclaimerFallbackAction | Should -Be 'Wrap'
+    }
+
     It 'returns a copy and leaves the source template untouched' {
         $Template = '{"name":"%tenantname% rule"}' | ConvertFrom-Json
         $null = Resolve-CIPPTransportRuleTemplate -Template $Template -TenantFilter 'contoso.com'

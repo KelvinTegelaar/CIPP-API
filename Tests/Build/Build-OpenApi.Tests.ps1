@@ -155,6 +155,32 @@ function Invoke-EditFixtureUser {
 }
 '@
 
+    # Queues the helper instead of calling it: a scheduled task and a step list entry
+    # both splat Parameters onto the command they name.
+    Set-Content -Path (Join-Path $AreaDir 'Invoke-ExecFixtureSchedule.ps1') -Value @'
+function Invoke-ExecFixtureSchedule {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Identity.User.ReadWrite
+    #>
+    param($Request, $TriggerMetadata)
+    $Options = $Request.Body | Select-Object * -ExcludeProperty tenantFilter
+    $Task = [pscustomobject]@{
+        Command    = @{ value = 'Set-FixtureUser' }
+        Parameters = [pscustomobject]@{ UserObj = $Options }
+    }
+    $Step = @{ Cmdlet = 'Set-FixtureUser'; Parameters = @{ UserObj = $Request.Body.delegate } }
+    if ($Request.Body.single) { $Mappings = $Request.Body | Select-Object * } else { $Mappings = $Request.Body.mappings }
+    foreach ($Mapping in $Mappings) { $null = $Mapping.roleId }
+    return ([HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @{ 'Results' = "$Task $Step" }
+        })
+}
+'@
+
     # Query-only, and a List verb so the response is an array.
     Set-Content -Path (Join-Path $FixtureRoot 'Invoke-ListThings.ps1') -Value @'
 function Invoke-ListThings {
@@ -427,6 +453,20 @@ Describe 'downstream helpers' {
 
     It 'records which helpers contributed fields' {
         $script:Spec.paths['/api/EditFixtureUser'].post.'x-cipp-reads-via' | Should -Contain 'Set-FixtureUser'
+    }
+
+    It 'follows a scheduled task into the command it names, through a Select-Object binding' {
+        (Get-BodyProperty -Endpoint 'ExecFixtureSchedule' -Property 'jobTitle') | Should -Not -BeNullOrEmpty
+        $script:Spec.paths['/api/ExecFixtureSchedule'].post.'x-cipp-reads-via' | Should -Contain 'Set-FixtureUser'
+    }
+
+    It 'follows a step list entry keyed Cmdlet' {
+        (Get-BodyProperty -Endpoint 'ExecFixtureSchedule' -Property 'delegate').properties.Keys | Should -Contain 'jobTitle'
+    }
+
+    It 'keeps the direct binding of a local that is also assigned through a pipeline' {
+        (Get-BodyProperty -Endpoint 'ExecFixtureSchedule' -Property 'mappings').items.properties.Keys | Should -Contain 'roleId'
+        $script:Spec.paths['/api/ExecFixtureSchedule'].post.requestBody.content.'application/json'.schema.type | Should -Be 'object'
     }
 
     It 'documents only the entrypoint when no modules are indexed' {

@@ -22,6 +22,11 @@ function Invoke-ListAppApprovalTemplates {
 
         $Templates = Get-CIPPAzDataTableEntity @Table -Filter $filter
 
+        # The linked permission set is the source of truth (as in Get-CIPPAppApprovalPermissions), not the copy stored on the template.
+        $PermissionsTable = Get-CIPPTable -TableName 'AppPermissions'
+        $PermissionSets = @{}
+        foreach ($Set in (Get-CIPPAzDataTableEntity @PermissionsTable -Filter "PartitionKey eq 'Templates'")) { $PermissionSets[$Set.RowKey] = $Set.Permissions }
+
         $Body = $Templates | ForEach-Object {
             try {
                 # Safely parse the JSON data - handle potential invalid JSON format
@@ -40,6 +45,10 @@ function Invoke-ListAppApprovalTemplates {
                 if ($TemplateData) {
                     foreach ($property in $TemplateData.PSObject.Properties) {
                         $templateObject | Add-Member -NotePropertyName $property.Name -NotePropertyValue $property.Value -Force
+                    }
+                    if ($TemplateData.PermissionSetId -and $PermissionSets[$TemplateData.PermissionSetId]) {
+                        $SetPermissions = $PermissionSets[$TemplateData.PermissionSetId] | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        if ($SetPermissions) { $templateObject | Add-Member -NotePropertyName 'Permissions' -NotePropertyValue $SetPermissions -Force }
                     }
                 }
 

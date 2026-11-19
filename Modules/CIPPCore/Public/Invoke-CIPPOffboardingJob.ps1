@@ -34,7 +34,7 @@ function Invoke-CIPPOffboardingJob {
             $OooMessage = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Options.OOO
         }
 
-        # With a OneDrive copy, the licence step waits for it (Remove-CIPPLicenseAfterOneDriveCopy).
+        # With a OneDrive copy, licences are removed only once the copy has finished.
         $OneDriveCopySelected = @($Options.OneDriveCopyTo | Where-Object { $_ }).Count -gt 0 -or -not [string]::IsNullOrWhiteSpace([string]($Options.OneDriveCopyLibrary.library.value ?? $Options.OneDriveCopyLibrary.library))
 
         # Build dynamic batch of offboarding tasks based on selected options

@@ -10182,6 +10182,9 @@
                             }
                           }
                         },
+                        "label": {
+                          "type": "string"
+                        },
                         "value": {
                           "type": "array",
                           "items": {
@@ -19196,7 +19199,7 @@
                 "properties": {
                   "Action": {
                     "type": "string",
-                    "description": "List, AddEdit or Delete."
+                    "description": "List, AddEdit, PreviewValue or Delete."
                   },
                   "tenantId": {
                     "type": "string",
@@ -19211,7 +19214,7 @@
           {
             "name": "Action",
             "in": "query",
-            "description": "List, AddEdit or Delete.",
+            "description": "List, AddEdit, PreviewValue or Delete.",
             "required": false,
             "schema": {
               "type": "string"
@@ -19382,7 +19385,8 @@
                 "AddEdit",
                 "Delete",
                 "List",
-                "Preview"
+                "Preview",
+                "PreviewValue"
               ]
             }
           },
@@ -27660,6 +27664,9 @@
                   "preset": {
                     "type": "object",
                     "properties": {
+                      "$select": {
+                        "$ref": "#/components/schemas/LabelValue"
+                      },
                       "endpoint": {
                         "type": "string"
                       },
@@ -28855,7 +28862,10 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Identity.Role.ReadWrite"
+        "x-cipp-role": "Identity.Role.ReadWrite",
+        "x-cipp-reads-via": [
+          "Set-CIPPUserJITAdmin"
+        ]
       }
     },
     "/api/ExecJITAdminRequestDecision": {
@@ -33798,12 +33808,48 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "AccessAutomap": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    }
+                  },
+                  "AccessNoAutomap": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    }
+                  },
+                  "AccessSendAs": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    }
+                  },
+                  "AccessSendOnBehalf": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    }
+                  },
                   "Action": {
                     "type": "string"
+                  },
+                  "ClearImmutableId": {
+                    "type": "boolean"
+                  },
+                  "ConvertToShared": {
+                    "type": "boolean"
                   },
                   "DeleteUser": {
                     "type": "boolean",
                     "description": "Deleting the user skips every other step, the copy included, and starts the OneDrive's deletion."
+                  },
+                  "disableForwarding": {
+                    "type": "boolean"
+                  },
+                  "DisableOneDriveSharing": {
+                    "type": "boolean"
                   },
                   "DisableSignIn": {
                     "type": "boolean",
@@ -33812,16 +33858,38 @@
                   "forward": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
+                  "HideFromGAL": {
+                    "type": "boolean"
+                  },
+                  "KeepCopy": {
+                    "type": "boolean"
+                  },
+                  "NewGroupOwner": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "OnedriveAccess": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "OneDriveCopyLibrary": {
                     "type": "object",
                     "properties": {
                       "library": {
-                        "$ref": "#/components/schemas/LabelValue"
+                        "allOf": [
+                          {
+                            "$ref": "#/components/schemas/LabelValue"
+                          }
+                        ],
+                        "description": "With a OneDrive copy, licences are removed only once the copy has finished."
                       }
-                    }
+                    },
+                    "description": "With a OneDrive copy, licences are removed only once the copy has finished."
                   },
                   "OneDriveCopyTo": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "With a OneDrive copy, licences are removed only once the copy has finished."
                   },
                   "OOO": {
                     "type": "string"
@@ -33848,6 +33916,45 @@
                   },
                   "reference": {
                     "type": "string"
+                  },
+                  "removeCalendarInvites": {
+                    "type": "boolean"
+                  },
+                  "removeCalendarPermissions": {
+                    "type": "boolean"
+                  },
+                  "RemoveGroupOwnership": {
+                    "type": "boolean"
+                  },
+                  "RemoveGroups": {
+                    "type": "boolean"
+                  },
+                  "RemoveLicenses": {
+                    "type": "boolean"
+                  },
+                  "RemoveMFADevices": {
+                    "type": "boolean"
+                  },
+                  "RemoveMobile": {
+                    "type": "boolean"
+                  },
+                  "removePermissions": {
+                    "type": "boolean"
+                  },
+                  "RemoveRoles": {
+                    "type": "boolean"
+                  },
+                  "RemoveRules": {
+                    "type": "boolean"
+                  },
+                  "RemoveTeamsPhoneDID": {
+                    "type": "boolean"
+                  },
+                  "ResetPass": {
+                    "type": "boolean"
+                  },
+                  "RevokeSessions": {
+                    "type": "boolean"
                   },
                   "Scheduled": {
                     "type": "object",
@@ -33887,6 +33994,9 @@
                     "items": {
                       "$ref": "#/components/schemas/LabelValue"
                     }
+                  },
+                  "WipeMobile": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -33946,6 +34056,8 @@
         ],
         "x-cipp-role": "Identity.User.ReadWrite",
         "x-cipp-reads-via": [
+          "Invoke-CIPPOffboardingJob",
+          "Set-CIPPMailboxAccess",
           "Test-CIPPOffboardingRequest"
         ]
       }
@@ -44878,7 +44990,16 @@
                 "type": "object",
                 "properties": {
                   "action": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "Accept",
+                      "AcceptPath",
+                      "Clear",
+                      "ClearPath",
+                      "CompleteTask",
+                      "Deny",
+                      "DenyPath"
+                    ]
                   },
                   "expires": {
                     "type": "string",
@@ -47528,7 +47649,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "description": "Derived from the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
                     "properties": {
                       "AppId": {
                         "x-cipp-field-source": "frontend"
@@ -47539,60 +47660,23 @@
                       "AppType": {
                         "x-cipp-field-source": "frontend"
                       },
-                      "ContentHash": {
-                        "x-cipp-field-source": "storage"
-                      },
                       "Error": {
                         "x-cipp-field-source": "backend"
                       },
-                      "ETag": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
-                      "GUID": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "JSON": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "Package": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "PartitionKey": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "Permissions": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
                       "PermissionSetName": {
                         "x-cipp-field-source": "frontend"
-                      },
-                      "RowKey": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "SHA": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
-                      "Source": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "SourcePath": {
-                        "x-cipp-field-source": "storage"
                       },
                       "TemplateId": {
                         "x-cipp-field-source": "backend"
                       },
                       "TemplateName": {
-                        "x-cipp-field-source": "storage,backend,frontend"
+                        "x-cipp-field-source": "backend,frontend"
                       },
                       "Timestamp": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage,backend,frontend"
+                        "x-cipp-field-source": "backend,frontend"
                       },
                       "UpdatedBy": {
-                        "x-cipp-field-source": "storage,frontend"
+                        "x-cipp-field-source": "frontend"
                       }
                     }
                   }

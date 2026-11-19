@@ -16,8 +16,11 @@ function Resolve-CIPPTransportRuleTemplate {
         $Copy = [ordered]@{}
         foreach ($Property in $Template.PSObject.Properties) {
             $Value = $Property.Value
-            # SCL parameters take a single value; older templates saved them as a list.
-            if ($Property.Name -in 'SetSCL', 'SCLOver', 'ExceptIfSCLOver' -and $Value -is [array]) { $Value = @($Value)[0] }
+            # These parameters take a single value; older templates saved them as a list of strings or {value,label}.
+            if ($Property.Name -in 'SetSCL', 'SCLOver', 'ExceptIfSCLOver', 'ApplyHtmlDisclaimerLocation', 'ApplyHtmlDisclaimerFallbackAction' -and $Value -is [array]) {
+                $Value = @($Value)[0]
+                if ($null -ne $Value.value) { $Value = $Value.value }
+            }
             $Copy[$Property.Name] = Resolve-CIPPTransportRuleTemplate -Template $Value -TenantFilter $TenantFilter
         }
         return [PSCustomObject]$Copy
