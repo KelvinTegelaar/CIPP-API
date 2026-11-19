@@ -147,6 +147,10 @@ Describe 'Get-CIPPBaseline empty stages' {
 
 Describe 'Get-CIPPBaseline excluded tenant group expansion' {
     BeforeEach {
+        # tenant7 is excluded in CIPP, so Get-Tenants never returns it.
+        Mock -CommandName Get-Tenants -MockWith {
+            @(1, 4, 5, 6).ForEach({ [pscustomobject]@{ customerId = "cid-$_"; defaultDomainName = "tenant$_.onmicrosoft.com" } })
+        }
         Mock -CommandName Get-TenantGroups -MockWith {
             @(
                 [pscustomobject]@{
@@ -176,6 +180,7 @@ Describe 'Get-CIPPBaseline excluded tenant group expansion' {
                     [pscustomobject]@{ scope = 'group'; scopeId = 'group-guid-1'; scopeName = 'Group A'; stage = 1; standardName = 'Standard1#1'; expectedValue = '{}'; remediateEnabled = $true }
                     [pscustomobject]@{ scope = 'tenant'; scopeId = 'tenant5.onmicrosoft.com'; scopeName = 'tenant5.onmicrosoft.com'; stage = 1; standardName = 'Standard1#1'; expectedValue = '{}'; remediateEnabled = $true }
                     [pscustomobject]@{ scope = 'tenant'; scopeId = 'tenant6.onmicrosoft.com'; scopeName = 'tenant6.onmicrosoft.com'; stage = 1; standardName = 'Standard1#1'; expectedValue = '{}'; remediateEnabled = $true }
+                    [pscustomobject]@{ scope = 'tenant'; scopeId = 'tenant7.onmicrosoft.com'; scopeName = 'tenant7.onmicrosoft.com'; stage = 1; standardName = 'Standard1#1'; expectedValue = '{}'; remediateEnabled = $true }
                 )
             } else {
                 @()
@@ -204,6 +209,11 @@ Describe 'Get-CIPPBaseline excluded tenant group expansion' {
         $Result.tenantStates.tenantFilter | Should -Not -Contain 'tenant4.onmicrosoft.com'
         $Result.tenantStates.tenantFilter | Should -Not -Contain 'tenant5.onmicrosoft.com'
         $Result.tenantStates.tenantFilter | Should -Contain 'tenant6.onmicrosoft.com'
+    }
+
+    It 'drops an individually assigned tenant that is excluded in CIPP from tenant states' {
+        $Result = Get-CIPPBaseline -ID 'baseline-6'
+        $Result.tenantStates.tenantFilter | Should -Not -Contain 'tenant7.onmicrosoft.com'
     }
 }
 

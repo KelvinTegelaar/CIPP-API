@@ -224,7 +224,7 @@ function Get-CIPPBaselineWorkItems {
     $OverrideFilter = "PartitionKey eq 'standardItem' and templateId eq '' and scope eq 'tenant'"
     $TenantLookup = Get-CIPPTenantLookup
     foreach ($Delta in @(Get-CIPPAzDataTableEntity @DeltaTable -Filter $OverrideFilter)) {
-        if (-not $Delta) { continue }
+        if (-not $Delta -or -not $TenantLookup.ContainsKey("$($Delta.scopeId)")) { continue }
         $OverrideTenant = $TenantLookup["$($Delta.scopeId)"].defaultDomainName ?? "$($Delta.scopeId)"
         if ($TenantFilter -and $OverrideTenant -notin @($TenantFilter)) { continue }
         if ($StandardName -and $Delta.standardName -notin $StandardName) { continue }

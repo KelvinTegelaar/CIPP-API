@@ -325,7 +325,7 @@ function Get-CIPPBaseline {
                     $AllTenants.defaultDomainName
                 } elseif ($Assignment.scope -eq 'group') {
                     ($Groups | Where-Object { $_.Id -eq $Assignment.scopeId } | Select-Object -First 1).Members.defaultDomainName
-                } else {
+                } elseif ($TenantLookup.ContainsKey("$($Assignment.scopeId)")) {
                     $Assignment.scopeId
                 }
             }

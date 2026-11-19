@@ -133,6 +133,7 @@ Describe 'Baseline tenant identity (#941)' {
         $script:Rollouts = @((New-Rollout 'b-left' -Stages '[{"name":"One"},{"name":"Two"}]'))
         $script:Deltas = @((New-Delta 'b-left' 'tenant' 'fabrikam.com' $false))
         $script:States = @([pscustomobject]@{ PartitionKey = 'b-left'; RowKey = $script:CustomerId; currentStage = 2 })
+        Mock Get-Tenants { @($script:Tenant, [pscustomobject]@{ customerId = '22222222-2222-2222-2222-222222222222'; defaultDomainName = 'fabrikam.com' }) }
 
         @((Get-CIPPBaseline -ID 'b-left').tenantStates).tenantFilter | Should -Be @('fabrikam.com')
         @(Get-CIPPBaselineWorkItems).TenantFilter | Should -Be @('fabrikam.com')

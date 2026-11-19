@@ -152,7 +152,7 @@ function Get-CIPPMFAState {
                 }
                 foreach ($GroupId in $ExcludeGroupsToResolve) {
                     $GroupMemberRequests.Add(@{ id = "exclude-$GroupId"; method = 'GET'; url = "groups/$($GroupId)/members?`$select=id" })
-                    $GroupDetailsRequests.Add(@{ id = "details-$GroupId"; method = 'GET'; url = "groups/$($GroupId)?`$select=id,displayName" })
+                    if (-not $GroupsToResolve.Contains($GroupId)) { $GroupDetailsRequests.Add(@{ id = "details-$GroupId"; method = 'GET'; url = "groups/$($GroupId)?`$select=id,displayName" }) }
                 }
 
                 $GroupMembersResults = New-GraphBulkRequest -Requests @($GroupMemberRequests) -tenantid $TenantFilter

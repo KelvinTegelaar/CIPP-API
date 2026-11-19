@@ -199,4 +199,19 @@ Describe 'Get-CIPPMFAState guest coverage' {
         $Result['u-extmember'].CoveredByCA | Should -Be 'Not Enforced'
         $Result['u-member'].CoveredByCA | Should -Be 'Enforced - All Apps'
     }
+
+    It 'requests group details once when a group is both included and excluded' {
+        $Policies = @(
+            New-TestPolicy -Users @{ includeGroups = @('group-x') }
+            New-TestPolicy -Users @{ includeUsers = @('All'); excludeGroups = @('group-x') }
+        )
+        $null = Get-TestMFAState -Policy $Policies
+
+        Should -Invoke New-GraphBulkRequest -Times 1 -Exactly -ParameterFilter {
+            @($Requests.id) -contains 'details-group-x' -and @($Requests.id | Select-Object -Unique).Count -eq @($Requests).Count
+        }
+        Should -Invoke New-GraphBulkRequest -Times 0 -Exactly -ParameterFilter {
+            @($Requests.id | Select-Object -Unique).Count -ne @($Requests).Count
+        }
+    }
 }

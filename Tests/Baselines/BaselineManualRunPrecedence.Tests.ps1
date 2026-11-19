@@ -6,7 +6,7 @@ BeforeAll {
 
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
     function Get-TenantGroups { @() }
-    function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) @() }
+    function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) @([PSCustomObject]@{ customerId = 'cid-contoso'; defaultDomainName = 'contoso.com' }) }
     function Get-CippTable { param($tablename) @{} }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" -replace "'", "''" }
     function Get-CIPPAzDataTableEntity { param($Filter) $script:Overrides }
@@ -81,6 +81,13 @@ Describe 'Get-CIPPBaselineWorkItems for one baseline run by hand' {
         $script:Overrides = @([PSCustomObject]@{ scopeId = 'contoso.com'; standardName = 'Compliance'; expectedValue = '{"secureByDefault":true}'; remediateEnabled = $true })
 
         @(Get-CIPPBaselineWorkItems -TemplateId 'a').Count | Should -Be 0
+    }
+
+    It 'emits no work item for an override on a tenant excluded in CIPP' {
+        $script:Baselines = @()
+        $script:Overrides = @([PSCustomObject]@{ scopeId = 'excluded.com'; standardName = 'Compliance'; expectedValue = '{"secureByDefault":true}'; remediateEnabled = $true })
+
+        @(Get-CIPPBaselineWorkItems).Count | Should -Be 0
     }
 
     It 'runs a standard two baselines set identically from either baseline' {
