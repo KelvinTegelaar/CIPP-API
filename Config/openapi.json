@@ -55486,6 +55486,9 @@
                       "DMARCPresent": {
                         "x-cipp-field-source": "frontend"
                       },
+                      "DMARCSubdomainPolicy": {
+                        "x-cipp-field-source": "frontend"
+                      },
                       "DNSSECPresent": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -55505,6 +55508,9 @@
                         "x-cipp-field-source": "frontend"
                       },
                       "MXPassTest": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "ScoreExplanation": {
                         "x-cipp-field-source": "frontend"
                       },
                       "ScorePercentage": {
