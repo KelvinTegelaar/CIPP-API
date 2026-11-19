@@ -124,7 +124,7 @@ function Test-CIPPAuditLogRules {
                         if ($HexId.Length -eq 32) {
                             # Convert hex string to GUID format
                             $Guid = "$($HexId.Substring(0,8))-$($HexId.Substring(8,4))-$($HexId.Substring(12,4))-$($HexId.Substring(16,4))-$($HexId.Substring(20,12))"
-                            Write-Information "Found partner UPN format: $PropValue with GUID: $Guid and tenant: $TenantDomain"
+                            if ($DebugPreference -ne 'SilentlyContinue') { Write-Debug "Found partner UPN format: $PropValue with GUID: $Guid and tenant: $TenantDomain" }
 
                             # O(1) hashtable lookup instead of O(n) loop
                             if ($PartnerUserLookup.ContainsKey($Guid)) {
@@ -145,7 +145,7 @@ function Test-CIPPAuditLogRules {
                         $CustomerTenantDomain = $Match.Groups[1].Value
                         $PartnerTenantGuid = $Match.Groups[2].Value
                         $ObjectGuid = $Match.Groups[3].Value
-                        Write-Information "Found partner exchange format: customer tenant $CustomerTenantDomain, partner tenant $PartnerTenantGuid, object $ObjectGuid"
+                        if ($DebugPreference -ne 'SilentlyContinue') { Write-Debug "Found partner exchange format: customer tenant $CustomerTenantDomain, partner tenant $PartnerTenantGuid, object $ObjectGuid" }
 
                         # O(1) hashtable lookup
                         if ($PartnerUserLookup.ContainsKey($ObjectGuid)) {

@@ -71,7 +71,8 @@ function New-CippCoreRequest {
             })
     }
 
-    if ($Request.Headers.'X-CIPP-Version') {
+    # The stored frontend version is kept in the process environment, shared by every worker, so a client on that version costs no table read
+    if ($Request.Headers.'X-CIPP-Version' -and $Request.Headers.'X-CIPP-Version' -ne [System.Environment]::GetEnvironmentVariable('CIPP_FRONTEND_VERSION')) {
         $Table = Get-CippTable -tablename 'Version'
         $FrontendVer = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq 'frontend'"
 
@@ -81,8 +82,12 @@ function New-CippCoreRequest {
                     RowKey       = 'frontend'
                     Version      = $Request.Headers.'X-CIPP-Version'
                 }) -Force
-        } elseif ([semver]$FrontendVer.Version -gt [semver]$Request.Headers.'X-CIPP-Version') {
-            Write-Warning "Client version $($Request.Headers.'X-CIPP-Version') is older than the current frontend version $($FrontendVer.Version)"
+            [System.Environment]::SetEnvironmentVariable('CIPP_FRONTEND_VERSION', [string]$Request.Headers.'X-CIPP-Version')
+        } else {
+            [System.Environment]::SetEnvironmentVariable('CIPP_FRONTEND_VERSION', [string]$FrontendVer.Version)
+            if ([semver]$FrontendVer.Version -gt [semver]$Request.Headers.'X-CIPP-Version') {
+                Write-Warning "Client version $($Request.Headers.'X-CIPP-Version') is older than the current frontend version $($FrontendVer.Version)"
+            }
         }
     }
 
@@ -131,7 +136,8 @@ function New-CippCoreRequest {
         # Set script scope variables for Graph API to indicate HTTP request/high priority
         $script:XMsThrottlePriority = 'high'
 
-        if ($ExecutionContext.InvokeCommand.GetCommand($FunctionName, 'Function') -or $FunctionName -eq 'Invoke-Me') {
+        # Invoke-Me is not a function: looking it up misses and searches every module on disk
+        if ($FunctionName -eq 'Invoke-Me' -or $ExecutionContext.InvokeCommand.GetCommand($FunctionName, 'Function')) {
             try {
                 $swAccess = [System.Diagnostics.Stopwatch]::StartNew()
                 $Access = Test-CIPPAccess -Request $Request
