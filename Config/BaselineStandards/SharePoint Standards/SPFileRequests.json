@@ -58,7 +58,7 @@
   },
   "writeTarget": "spoTenant",
   "remediate": {
-    "executor": "SPOTenant",
+    "executor": "SPFileRequests",
     "properties": {
       "CoreRequestFilesLinkEnabled": "%state%",
       "OneDriveRequestFilesLinkEnabled": "%state%",
