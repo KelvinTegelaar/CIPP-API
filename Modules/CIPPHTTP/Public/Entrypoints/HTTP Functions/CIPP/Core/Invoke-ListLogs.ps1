@@ -85,9 +85,7 @@ function Invoke-ListLogs {
                     $Templates = Get-CIPPAzDataTableEntity @TemplatesTable
                     Get-LogStandardInfo -Row $Row -Templates $Templates
                 } else { @{} }
-                $LogData = if ($Row.LogData -and (Test-Json -Json $Row.LogData -ErrorAction SilentlyContinue)) {
-                    $Row.LogData | ConvertFrom-Json
-                } else { $Row.LogData }
+                $LogData = if ($Row.LogData) { try { [CIPP.CippJson]::ConvertFromJson($Row.LogData) } catch { $Row.LogData } } else { $Row.LogData }
                 # Same record shape as the list paths below, except the log entry page reads
                 # the template info as 'Standard' rather than 'StandardInfo'.
                 [PSCustomObject]@{
@@ -191,16 +189,15 @@ function Invoke-ListLogs {
 
     # The row-level filters that cannot (or should not) go into the table query.
     $RowFilter = {
-        param($Row)
-        $Row.Severity -in $LogLevel -and
-        ($Username -eq '*' -or $Row.Username -like $Username) -and
-        ([string]::IsNullOrEmpty($TenantFilter) -or $TenantFilter -eq 'AllTenants' -or $Row.Tenant -like "*$TenantFilter*" -or $Row.TenantID -eq $TenantFilter) -and
-        ([string]::IsNullOrEmpty($ApiFilter) -or $Row.API -match "$ApiFilter") -and
+        $_.Severity -in $LogLevel -and
+        ($Username -eq '*' -or $_.Username -like $Username) -and
+        ([string]::IsNullOrEmpty($TenantFilter) -or $TenantFilter -eq 'AllTenants' -or $_.Tenant -like "*$TenantFilter*" -or $_.TenantID -eq $TenantFilter) -and
+        ([string]::IsNullOrEmpty($ApiFilter) -or $_.API -match "$ApiFilter") -and
         # IP is a literal substring (an address may be stored with a port); AppId is an exact match.
-        ([string]::IsNullOrEmpty($IpFilter) -or "$($Row.IP)".IndexOf($IpFilter, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) -and
-        ([string]::IsNullOrEmpty($AppIdFilter) -or "$($Row.AppId)" -eq $AppIdFilter) -and
-        ([string]::IsNullOrEmpty($SearchFilter) -or $Row.Message -match [regex]::Escape($SearchFilter)) -and
-        ($AllowedTenants -contains 'AllTenants' -or $TenantList.defaultDomainName -contains $Row.Tenant -or $Row.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $Row.TenantId)
+        ([string]::IsNullOrEmpty($IpFilter) -or "$($_.IP)".IndexOf($IpFilter, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) -and
+        ([string]::IsNullOrEmpty($AppIdFilter) -or "$($_.AppId)" -eq $AppIdFilter) -and
+        ([string]::IsNullOrEmpty($SearchFilter) -or $_.Message -match [regex]::Escape($SearchFilter)) -and
+        ($AllowedTenants -contains 'AllTenants' -or $TenantList.defaultDomainName -contains $_.Tenant -or $_.Tenant -eq 'CIPP' -or $TenantList.customerId -contains $_.TenantId)
     }
 
     # summaryOnly/countsOnly: return per-API and per-severity counts for the matching rows across the
@@ -221,7 +218,7 @@ function Invoke-ListLogs {
         $SeverityCounts = @{}
         # The split markers keep large rows reassembled, so a row whose Severity landed on a part row still counts once.
         Get-CIPPAzDataTableEntity @Table -Filter $Filter -Stream -Property PartitionKey, RowKey, OriginalEntityId, PartIndex, Severity, Username, Tenant, TenantID, API, IP, AppId, Message | ForEach-Object {
-            if (& $RowFilter $_) {
+            if (& $RowFilter) {
                 $Total++
                 $ApiCounts["$($_.API)"]++
                 $SeverityCounts["$($_.Severity)"]++
@@ -297,32 +294,28 @@ function Invoke-ListLogs {
         $Queries++
         if ($Chunk.Count -gt 0) {
             $LastRowKey = $Chunk[-1].RowKey
-            foreach ($Row in $Chunk) {
-                if (& $RowFilter $Row) {
-                    $StandardInfo = if ($ScheduledTaskFilter) { Get-LogStandardInfo -Row $Row -Templates $Templates } else { @{} }
-                    $LogData = if ($Row.LogData -and (Test-Json -Json $Row.LogData -ErrorAction SilentlyContinue)) {
-                        $Row.LogData | ConvertFrom-Json
-                    } else { $Row.LogData }
-                    $Rows.Add([PSCustomObject]@{
-                            DateTime     = $Row.Timestamp
-                            Tenant       = $Row.Tenant
-                            API          = $Row.API
-                            Message      = $Row.Message
-                            User         = $Row.Username
-                            Severity     = $Row.Severity
-                            LogData      = $LogData
-                            TenantID     = if ($null -ne $Row.TenantID) {
-                                $Row.TenantID
-                            } else {
-                                'None'
-                            }
-                            AppId        = $Row.AppId
-                            IP           = $Row.IP
-                            RowKey       = $Row.RowKey
-                            StandardInfo = $StandardInfo
-                            DateFilter   = $Row.PartitionKey
-                        })
-                }
+            foreach ($Row in $Chunk.Where($RowFilter)) {
+                $StandardInfo = if ($ScheduledTaskFilter) { Get-LogStandardInfo -Row $Row -Templates $Templates } else { @{} }
+                $LogData = if ($Row.LogData) { try { [CIPP.CippJson]::ConvertFromJson($Row.LogData) } catch { $Row.LogData } } else { $Row.LogData }
+                $Rows.Add([PSCustomObject]@{
+                        DateTime     = $Row.Timestamp
+                        Tenant       = $Row.Tenant
+                        API          = $Row.API
+                        Message      = $Row.Message
+                        User         = $Row.Username
+                        Severity     = $Row.Severity
+                        LogData      = $LogData
+                        TenantID     = if ($null -ne $Row.TenantID) {
+                            $Row.TenantID
+                        } else {
+                            'None'
+                        }
+                        AppId        = $Row.AppId
+                        IP           = $Row.IP
+                        RowKey       = $Row.RowKey
+                        StandardInfo = $StandardInfo
+                        DateFilter   = $Row.PartitionKey
+                    })
             }
         } else {
             # -First counts physical rows before split-entity reassembly, so a short

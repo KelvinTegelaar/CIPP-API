@@ -12,6 +12,7 @@ BeforeAll {
     $ConverterPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'ConvertTo-CIPPODataFilterValue.ps1' -File -ErrorAction SilentlyContinue |
         Select-Object -First 1 -ExpandProperty FullName
     if (-not $ConverterPath) { throw 'Could not locate ConvertTo-CIPPODataFilterValue.ps1 under Modules/' }
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
 
     # Azure Functions binding types do not exist outside the Functions host - fake them.
     class HttpResponseContext {
@@ -207,6 +208,26 @@ Describe 'Invoke-ListLogs pagination' {
 
         $response.Body.Results | Should -HaveCount 1
         $response.Body.Results[0].Message | Should -Be 'seq 2'
+    }
+
+    It 'applies the same filters to the counts and returns log data as an object, or as text when it is not JSON' {
+        $Base = [datetime]::new(2025, 6, 10, 12, 0, 0, [System.DateTimeKind]::Utc)
+        $script:FakeLogRows = @(
+            New-FakeLogRow $Base.AddSeconds(1) 1 'Error' 'alice@contoso.com'
+            New-FakeLogRow $Base.AddSeconds(2) 2 'Error' 'alice@contoso.com'
+            New-FakeLogRow $Base.AddSeconds(3) 3 'Error' 'bob@contoso.com'
+        )
+        $script:FakeLogRows[0].LogData = '{"id":7,"tags":["a","b"]}'
+        $script:FakeLogRows[1].LogData = 'not json'
+        $Query = @{ Filter = 'true'; StartDate = '20250610'; EndDate = '20250610'; Severity = 'Error'; User = 'alice*'; PageSize = '50' }
+
+        $Counts = Invoke-ListLogs -Request (New-LogsRequest -Query ($Query + @{ countsOnly = 'true' })) -TriggerMetadata $null
+        $Counts.Body.Total | Should -Be 2
+
+        $Rows = (Invoke-ListLogs -Request (New-LogsRequest -Query $Query) -TriggerMetadata $null).Body.Results | Sort-Object Message
+        $Rows[0].LogData.id | Should -Be 7
+        $Rows[0].LogData.tags | Should -Be @('a', 'b')
+        $Rows[1].LogData | Should -Be 'not json'
     }
 
     It 'filters by IP (part of the address, port included) and by exact AppId' {
