@@ -130,6 +130,32 @@ Describe 'Set-CIPPMCPClientApp' {
         Should -Invoke -CommandName New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter { $type -eq 'PATCH' }
     }
 
+    It 'drops a permission entry for an app that no longer exists, keeping the rest' {
+        Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*servicePrincipals*deleted-app*' } -MockWith {
+            throw "Resource 'deleted-app' does not exist or one of its queried reference-property objects are not present."
+        }
+        Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*servicePrincipals*live-app*' } -MockWith { [PSCustomObject]@{ id = 'live-sp' } }
+        Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*applications*' } -MockWith {
+            [PSCustomObject]@{
+                id                     = $script:AppObjectId
+                appId                  = $script:AppId
+                requiredResourceAccess = @(
+                    [PSCustomObject]@{ resourceAppId = 'deleted-app'; resourceAccess = @([PSCustomObject]@{ id = 'old-scope'; type = 'Scope' }) }
+                    [PSCustomObject]@{ resourceAppId = 'live-app'; resourceAccess = @([PSCustomObject]@{ id = 'live-scope'; type = 'Scope' }) }
+                )
+            }
+        }
+
+        Set-CIPPMCPClientApp -AppId $script:AppId -Headers @{}
+
+        Should -Invoke -CommandName New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+            $type -eq 'PATCH' -and $(
+                $Ids = @(($body | ConvertFrom-Json).requiredResourceAccess.resourceAppId)
+                ($Ids -notcontains 'deleted-app') -and ($Ids -contains 'live-app') -and ($Ids -contains $script:ResourceAppId)
+            )
+        }
+    }
+
     It 'does not fail the configuration when the consent grant throws' {
         Mock -CommandName Grant-CippAppGraphConsent -MockWith { throw 'Insufficient privileges' }
         $Result = Set-CIPPMCPClientApp -AppId $script:AppId -Headers @{}

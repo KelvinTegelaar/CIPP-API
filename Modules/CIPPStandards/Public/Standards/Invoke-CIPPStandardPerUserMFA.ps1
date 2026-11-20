@@ -52,13 +52,13 @@ function Invoke-CIPPStandardPerUserMFA {
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the PerUserMFA state for $Tenant. Error: $ErrorMessage" -Sev Error
         return
     }
-    $UsersWithoutMFA = $GraphRequest | Where-Object -Property perUserMfaState -NE 'enforced' | Select-Object -Property userPrincipalName, displayName, accountEnabled, perUserMfaState
+    $UsersWithoutMFA = $GraphRequest | Where-Object -Property perUserMfaState -NE 'enforced' | Select-Object -Property id, userPrincipalName, displayName, accountEnabled, perUserMfaState
 
     if ($Settings.remediate -eq $true) {
         $UpdateDB = $false
         if (($UsersWithoutMFA | Measure-Object).Count -gt 0) {
             try {
-                $MFAMessage = Set-CIPPPerUserMFA -TenantFilter $Tenant -UserId @($UsersWithoutMFA.userPrincipalName) -State 'enforced'
+                $MFAMessage = Set-CIPPPerUserMFA -TenantFilter $Tenant -UserId @($UsersWithoutMFA.id) -State 'enforced'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message $MFAMessage -sev Info
                 $UpdateDB = $true
             } catch {

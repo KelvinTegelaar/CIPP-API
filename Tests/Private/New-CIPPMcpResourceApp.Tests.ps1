@@ -76,6 +76,17 @@ Describe 'New-CIPPMcpResourceApp' {
         Should -Invoke -CommandName Add-CIPPAzDataTableEntity -Times 1 -Exactly
     }
 
+    It 'keeps trying to create the service principal and does not store the app without one' {
+        Mock -CommandName Start-Sleep -MockWith { }
+        Mock -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*servicePrincipals*' } -MockWith { $null }
+        Mock -CommandName New-GraphPOSTRequest -ParameterFilter { $uri -like '*servicePrincipals' } -MockWith { throw 'not replicated' }
+
+        { New-CIPPMcpResourceApp -Headers @{} } | Should -Throw '*enterprise application*'
+
+        Should -Invoke -CommandName New-GraphPOSTRequest -Times 6 -Exactly -ParameterFilter { $uri -like '*servicePrincipals' }
+        Should -Invoke -CommandName Add-CIPPAzDataTableEntity -Times 0 -Exactly
+    }
+
     It 'throws when WEBSITE_HOSTNAME is not set' {
         $env:WEBSITE_HOSTNAME = ''
         { New-CIPPMcpResourceApp -Headers @{} } | Should -Throw

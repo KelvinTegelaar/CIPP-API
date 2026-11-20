@@ -12,8 +12,8 @@ function Invoke-ExecPerUserMFA {
     $Headers = $Request.Headers
 
 
-    # Guest user handling
-    $UserId = $Request.Body.userPrincipalName -match '#EXT#' ? $Request.Body.userId : $Request.Body.userPrincipalName
+    # Object id, because Graph rejects a UPN that is also another user's proxy address
+    $UserId = $Request.Body.userId ?? $Request.Body.userPrincipalName
     $TenantFilter = $Request.Body.tenantFilter
     $State = $Request.Body.State.value ?  $Request.Body.State.value : $Request.Body.State
 

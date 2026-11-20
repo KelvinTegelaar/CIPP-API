@@ -306,7 +306,7 @@ function New-CIPPUserTask {
 
     try {
         if ($UserObj.perUserMfa -eq $true) {
-            $MfaResult = Set-CIPPPerUserMFA -TenantFilter $UserObj.tenantFilter -userId $CreationResults.Username -State 'enforced' -Headers $Headers -APIName $APIName
+            $MfaResult = Set-CIPPPerUserMFA -TenantFilter $UserObj.tenantFilter -userId ($CreationResults.User.id ?? $CreationResults.Username) -State 'enforced' -Headers $Headers -APIName $APIName
             $Results.Add($MfaResult)
         }
     } catch {

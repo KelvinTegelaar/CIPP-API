@@ -190,14 +190,18 @@ function New-CIPPMcpResourceApp {
             $Sp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals(appId='$($App.appId)')?`$select=id" -NoAuthCheck $true -AsApp $true
         } catch { $Sp = $null }
         if (-not $Sp.id) {
-            if ($Attempt -eq 1) {
-                try {
-                    $SpBody = @{ accountEnabled = $true; appId = $App.appId; displayName = $DisplayName; tags = @('WindowsAzureActiveDirectoryIntegratedApp') } | ConvertTo-Json -Compress
-                    $Sp = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -type POST -body $SpBody -NoAuthCheck $true -asapp $true
-                } catch { Write-Information "[MCP-Resource] Service principal create attempt failed: $($_.Exception.Message)" }
+            try {
+                $SpBody = @{ accountEnabled = $true; appId = $App.appId; displayName = $DisplayName; tags = @('WindowsAzureActiveDirectoryIntegratedApp') } | ConvertTo-Json -Compress
+                $Sp = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -type POST -body $SpBody -NoAuthCheck $true -asapp $true
+            } catch {
+                Write-Information "[MCP-Resource] Service principal create attempt $Attempt failed: $($_.Exception.Message)"
+                $Sp = $null
             }
             if (-not $Sp.id -and $Attempt -lt 6) { Start-Sleep -Seconds 3 }
         }
+    }
+    if (-not $Sp.id) {
+        throw 'The CIPP-MCP app registration exists, but its enterprise application has not been created in the tenant yet. Wait a minute, then save the API client again.'
     }
 
     $null = Add-CIPPAzDataTableEntity @Table -Entity @{

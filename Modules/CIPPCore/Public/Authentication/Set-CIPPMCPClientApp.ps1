@@ -90,6 +90,16 @@ function Set-CIPPMCPClientApp {
     $GraphSeen = $false
     $ResourceSeen = $false
     foreach ($Resource2 in @($App.requiredResourceAccess)) {
+        if ($Resource2.resourceAppId -notin @($GraphResourceId, $ResourceAppId)) {
+            # A permission on a deleted app (e.g. a replaced CIPP-MCP resource) fails the whole PATCH.
+            try {
+                $null = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals(appId='$($Resource2.resourceAppId)')?`$select=id" -NoAuthCheck $true -AsApp $true
+            } catch {
+                if ($_.Exception.Message -notmatch 'does not exist or one of its queried reference-property objects are not present') { throw }
+                Write-LogMessage -headers $Headers -API 'ExecApiClient' -message "Removed the permission entry for app $($Resource2.resourceAppId) from MCP client $AppId because that app no longer exists in this tenant." -Sev 'Warning'
+                continue
+            }
+        }
         $Access = [System.Collections.Generic.List[object]]::new()
         foreach ($A in @($Resource2.resourceAccess)) { $Access.Add(@{ id = $A.id; type = $A.type }) }
         if ($Resource2.resourceAppId -eq $GraphResourceId) {
