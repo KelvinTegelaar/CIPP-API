@@ -24,8 +24,17 @@ function Get-CIPPAuthentication {
             Write-Information "Got secrets from dev storage. ApplicationID: $env:ApplicationID"
         } else {
             $keyvaultname = Get-CippKeyVaultName
-            $Variables | ForEach-Object {
-                Set-Item -Path env:$_ -Value (Get-CippKeyVaultSecret -VaultName $keyvaultname -Name $_ -AsPlainText -ErrorAction Stop) -Force
+            foreach ($Var in $Variables) {
+                try {
+                    $Value = Get-CippKeyVaultSecret -VaultName $keyvaultname -Name $Var -AsPlainText -ErrorAction Stop
+                } catch {
+                    # Certificate auth needs no client secret, so a certificate-only install can lack one
+                    if ($Var -ne 'ApplicationSecret' -or $_.Exception.Message -notmatch '404|SecretNotFound' -or
+                        (Get-CIPPFeatureFlag -Id 'CertificateAuthentication').Enabled -ne $true) { throw }
+                    Remove-Item -Path env:ApplicationSecret -ErrorAction SilentlyContinue
+                    continue
+                }
+                Set-Item -Path env:$Var -Value $Value -Force
             }
         }
         # TenantID must be the tenant GUID: a domain name (contoso.onmicrosoft.com)
