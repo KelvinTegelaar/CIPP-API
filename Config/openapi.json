@@ -873,15 +873,7 @@
                           "type": "string"
                         },
                         "conditions": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string"
-                              }
-                            }
-                          }
+                          "type": "string"
                         },
                         "logic": {
                           "type": "string"
@@ -35086,11 +35078,11 @@
                   },
                   "userId": {
                     "type": "string",
-                    "description": "Guest user handling"
+                    "description": "Object id, because Graph rejects a UPN that is also another user's proxy address"
                   },
                   "userPrincipalName": {
                     "type": "string",
-                    "description": "Guest user handling"
+                    "description": "Object id, because Graph rejects a UPN that is also another user's proxy address"
                   }
                 },
                 "required": [
