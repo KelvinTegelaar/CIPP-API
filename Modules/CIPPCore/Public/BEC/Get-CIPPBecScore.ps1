@@ -43,10 +43,11 @@ function Get-CIPPBecScore {
     $Count = { param($Value) if ($null -eq $Value) { 0 } else { @($Value).Count } }
 
     # --- the original fifteen signals (stats derivation mirrors the report) ---
-    $NewRules = @($Results.NewRules)
+    # A disabled rule can't act on mail. It stays in the report but not in these signals.
+    $NewRules = @($Results.NewRules | Where-Object { $_.Enabled -ne $false })
     $LocationAnalysis = $Results.LocationAnalysis
     $Stats = [ordered]@{
-        NewRules                       = & $Count $Results.NewRules
+        NewRules                       = & $Count $NewRules
         InboxRuleChanges               = & $Count $Results.InboxRuleChanges
         PermissionChanges              = @($Results.MailboxPermissionChanges | Where-Object { $_ -and [string]$_.ObjectId -notmatch $SystemMailbox }).Count
         PermissionChangesTargetingUser = @($Results.MailboxPermissionChanges | Where-Object { $_.TargetsSuspect -eq $true }).Count
@@ -88,14 +89,14 @@ function Get-CIPPBecScore {
     }
 
     $Descriptions = @{
-        NewRules                       = 'Inbox rules exist on the mailbox'
-        InboxRuleChanges               = 'Inbox rules were created, changed or removed in the window'
+        NewRules                       = 'Enabled inbox rules exist on the mailbox'
+        InboxRuleChanges               = 'Inbox rules were created, changed, enabled or removed in the window'
         PermissionChangesTargetingUser = 'Mailbox permission changes targeted this mailbox'
         PermissionChanges              = 'Mailbox permission changes elsewhere in the tenant (not on system mailboxes)'
         NewApps                        = 'New service principals appeared in the tenant'
         NewUsers                       = "More than $NewUsersThreshold users were created in the window"
         SafelistChanges                = 'Trusted/blocked sender lists were changed'
-        SuspiciousRules                = 'An inbox rule forwards externally, feeds RSS, or hides mail with a reason to (all mail, sensitive keywords, blank name)'
+        SuspiciousRules                = 'An enabled inbox rule forwards externally, feeds RSS, or hides mail with a reason to (all mail, sensitive keywords, blank name)'
         MaliciousApps                  = 'Applications match the known-malicious catalog'
         ForeignSuccessfulSignIns       = 'Successful sign-ins from outside the usage location'
         ForeignActivity                = 'Rule, safelist, sharing or mail activity from outside the usage location'

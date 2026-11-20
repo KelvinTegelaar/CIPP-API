@@ -193,6 +193,17 @@ Describe 'Report tree builders' {
         (& $Rows $Full).text -match 'Completed' | Should -BeNullOrEmpty -Because 'the full report keeps the detailed table instead'
         ($Full.Blocks | Where-Object { $_.type -eq 'blank' -and $_.title -eq 'Remediation Taken' }) | Should -Not -BeNullOrEmpty
     }
+
+    It 'BEC: lists a disabled rule but does not ask for it to be disabled' {
+        $Rows = { param($r) @(($r.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[0].header -eq 'Priority' }).rows) }
+        $Rule = @{ Name = 'Old forwarder'; Enabled = $false; Suspicious = $true; ForwardTo = 'attacker@evil.example' }
+        $Disabled = Build-CippBecReportTree -TenantName 'Contoso' -UserData @{ userPrincipalName = 'alice@contoso.com' } -BecData @{ ExtractedAt = '2026-09-01T00:00:00Z'; NewRules = @($Rule) }
+        (& $Rows $Disabled | Where-Object { $_.text -like 'Disable the * inbox rule*' }) | Should -BeNullOrEmpty
+        ($Disabled.Blocks | Where-Object { $_.type -eq 'alertbox' -and $_.title -like '*Mailbox Rule(s) Found' }) | Should -Not -BeNullOrEmpty -Because 'the rule is still listed for review'
+        $Rule.Enabled = $true
+        $Enabled = Build-CippBecReportTree -TenantName 'Contoso' -UserData @{ userPrincipalName = 'alice@contoso.com' } -BecData @{ ExtractedAt = '2026-09-01T00:00:00Z'; NewRules = @($Rule) }
+        (& $Rows $Enabled | Where-Object { $_.text -like 'Disable the 1 suspicious inbox rule*' }).text | Should -Match 'Old forwarder'
+    }
 }
 
 Describe 'License report tree' {

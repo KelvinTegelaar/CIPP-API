@@ -70,6 +70,17 @@ Describe 'Get-CIPPBecScore' {
         ($Score.Breakdown | Where-Object { $_.Signal -eq 'PermissionChangesTargetingUser' }).Applied | Should -BeTrue
     }
 
+    It 'does not count disabled rules as current inbox-rule risk' {
+        $Enabled = [pscustomobject]@{ Name = 'forward'; Enabled = $true; Suspicious = $true }
+        $Disabled = [pscustomobject]@{ Name = 'old'; Enabled = $false; Suspicious = $true }
+        $Score = Get-CIPPBecScore -Results (New-Results @{ NewRules = @($Enabled, $Disabled) }) -Heuristics $script:Heuristics
+        $Score.Value | Should -Be 5 -Because 'enabled rules exist (1) plus one suspicious enabled rule (4); the disabled rule adds nothing'
+        $Rss = Get-CIPPBecScore -Results (New-Results @{ NewRules = @([pscustomobject]@{ Name = 'old'; Enabled = $false; MoveToFolder = 'RSS Feeds' }) }) -Heuristics $script:Heuristics
+        $Rss.Value | Should -Be 0 -Because 'the RSS fallback is not a current risk on a disabled rule'
+        $Legacy = Get-CIPPBecScore -Results (New-Results @{ NewRules = @([pscustomobject]@{ Name = 'legacy'; Suspicious = $true }) }) -Heuristics $script:Heuristics
+        $Legacy.Value | Should -Be 5 -Because 'a rule without an Enabled value stays eligible'
+    }
+
     It 'gives unrelated tenant permission churn +1 and a change targeting the mailbox +2, never both' {
         $Other = Get-CIPPBecScore -Results (New-Results @{ MailboxPermissionChanges = @([pscustomobject]@{ TargetsSuspect = $false }) }) -Heuristics $script:Heuristics
         $Other.Value | Should -Be 1

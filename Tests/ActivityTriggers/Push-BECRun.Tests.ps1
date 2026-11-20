@@ -543,6 +543,44 @@ Describe 'Push-BECRun' {
         $Rule.RiskReasons | Should -Contain 'Acts on all incoming mail'
     }
 
+    It 'keeps a disabled suspicious rule in the report but does not score it as a current rule' {
+        Mock New-ExoRequest {
+            switch ($cmdlet) {
+                'Get-AdminAuditLogConfig' { [pscustomobject]@{ UnifiedAuditLogIngestionEnabled = $true } }
+                'Get-InboxRule' { [pscustomobject]@{ Name = 'old forwarder'; Identity = 'r10'; Enabled = $false; ForwardTo = @('attacker@evil.example'); DeleteMessage = $true } }
+                'Get-MailboxJunkEmailConfiguration' { [pscustomobject]@{ TrustedSendersAndDomains = @(); BlockedSendersAndDomains = @() } }
+                'Get-AcceptedDomain' { [pscustomobject]@{ DomainName = 'contoso.com' } }
+                default { @() }
+            }
+        }
+        Invoke-BecRun -Item ($script:Item + @{ Scope = 'Full' })
+        $Rule = @($script:Saved.Results.NewRules)[0]
+        $Rule.Suspicious | Should -BeTrue -Because 'the content is still suspicious'
+        $Rule.Risk | Should -Be 'High' -Because 'Risk describes the content; Enabled carries the state'
+        $Rule.Enabled | Should -BeFalse
+        $R = $script:Saved.Results
+        ($R.Score.Breakdown | Where-Object { $_.Signal -eq 'SuspiciousRules' }).Applied | Should -BeFalse
+        ($R.Score.Breakdown | Where-Object { $_.Signal -eq 'NewRules' }).Applied | Should -BeFalse
+    }
+
+    It 'marks a rule recently changed when Enable-InboxRule re-enabled it in the window' {
+        Mock New-ExoRequest {
+            switch ($cmdlet) {
+                'Get-AdminAuditLogConfig' { [pscustomobject]@{ UnifiedAuditLogIngestionEnabled = $true } }
+                'Get-InboxRule' { [pscustomobject]@{ Name = 'Old forwarder'; Identity = 'r11'; Enabled = $true; ForwardTo = @('attacker@evil.example') } }
+                'Get-MailboxJunkEmailConfiguration' { [pscustomobject]@{ TrustedSendersAndDomains = @(); BlockedSendersAndDomains = @() } }
+                'Get-AcceptedDomain' { [pscustomobject]@{ DomainName = 'contoso.com' } }
+                default { @() }
+            }
+        }
+        Mock Search-CIPPBecAuditLog -ParameterFilter { $Operations -contains 'Enable-InboxRule' } {
+            [pscustomobject]@{ Complete = $true; Cap = $null; Pages = 1; Records = @([pscustomobject]@{ Identity = 'e1'; Operation = 'Enable-InboxRule'; AuditData = [pscustomobject]@{ Operation = 'Enable-InboxRule'; UserId = 'victim@contoso.com'; CreationTime = '2026-08-19T01:00:00Z'; ClientIP = '203.0.113.10'; ObjectId = 'victim@contoso.com\Old forwarder' } }) }
+        }
+        Invoke-BecRun -Item ($script:Item + @{ Scope = 'Full' })
+        $Rule = @($script:Saved.Results.NewRules)[0]
+        $Rule.RecentlyChanged | Should -BeTrue -Because 'Enable-InboxRule carries the rule identity this window'
+    }
+
     It 'marks a rule suspicious only when it hides mail with a reason to, not for an ordinary delete or archive rule' {
         Mock New-ExoRequest {
             switch ($cmdlet) {

@@ -94,6 +94,7 @@ function Build-CippBecReportTree {
     # -- statistics (mirrors the client stats object) --
     $stats = @{
         newRules                       = Cnt $bec.NewRules
+        enabledRules                   = Cnt @($bec.NewRules | Where-Object { $_.Enabled -ne $false })
         ruleChanges                    = Cnt $bec.InboxRuleChanges
         newUsers                       = Cnt $bec.NewUsers
         newApps                        = Cnt $bec.AddedApps
@@ -225,7 +226,7 @@ function Build-CippBecReportTree {
         RiskState                = $(if ($riskState.Listed) { 1 } else { 0 })
         RegisteredDevices        = $recentRegisteredDevices.Count
         IntuneDevices            = $stats.recentIntuneDevices
-        NewRules                 = Cnt @($bec.NewRules | Where-Object { $_.Suspicious -or (@($_.RiskReasons).Count -gt 0) })
+        NewRules                 = Cnt @($bec.NewRules | Where-Object { $_.Enabled -ne $false -and ($_.Suspicious -or (@($_.RiskReasons).Count -gt 0)) })
         Delegations              = $flaggedDelegations.Count
         UserGrants               = $flaggedGrants.Count
         MailboxAddIns            = $flaggedAddIns.Count
@@ -303,7 +304,7 @@ function Build-CippBecReportTree {
     # Priority remediation actions, written from what was actually found (mirrors tailoredActions).
     # ============================================================================================
     $isHighOrMed = ($threatLevel -eq 'High' -or $threatLevel -eq 'Medium')
-    $ruleNames = (@($bec.NewRules | ForEach-Object { $_.Name } | Where-Object { $_ } | Select-Object -First 3)) -join ', '
+    $ruleNames = (@($bec.NewRules | Where-Object { $_.Enabled -ne $false } | ForEach-Object { $_.Name } | Where-Object { $_ } | Select-Object -First 3)) -join ', '
     $rogueAppNames = (@(
             @($bec.AddedApps | Where-Object { $_.MaliciousMatch } | ForEach-Object { if ($_.DisplayName) { $_.DisplayName } else { $_.AppId } })
             @($bec.MaliciousSPs | ForEach-Object { if ($_.DisplayName) { $_.DisplayName } else { $_.AppId } })
@@ -322,7 +323,7 @@ function Build-CippBecReportTree {
         if ($attackerIps.Count -gt 0) { @{ tag = 'High'; text = "Block the $($attackerIps.Count) attacker address(es) ($(ListNames @($attackerIps | ForEach-Object { $_.IP }))) tenant-wide so they cannot be used against any other account." } }
         if ($attackerFormIds.Count -gt 0) { @{ tag = 'High'; text = "Remove the $($attackerFormIds.Count) Microsoft Form(s) built from the attacker's addresses$(if ($attackerFormNames.Count) { " ($(ListNames $attackerFormNames))" }) and warn anyone who responded: confirm phishing and delete each one from its Microsoft Defender alert, or, after the password reset, delete it in Microsoft Forms as the account." } }
         if ($delegatedReached.Count -gt 0) { @{ tag = 'High'; text = "Check the $($delegatedReached.Count) other mailbox(es) reached through this account ($(ListNames @($delegatedReached | ForEach-Object { $_.Mailbox }))) for rules, forwarding and sent mail." } }
-        if ($stats.newRules -gt 0 -or $stats.ruleChanges -gt 0) { @{ ids = @('DisableInboxRules'); tag = 'High'; text = "Disable the $($stats.newRules + $stats.ruleChanges) suspicious inbox rule(s)/change(s)$(if ($ruleNames) { " ($ruleNames)" }) that hide replies or auto-forward mail." } }
+        if ($stats.enabledRules -gt 0 -or $stats.ruleChanges -gt 0) { @{ ids = @('DisableInboxRules'); tag = 'High'; text = "Disable the $($stats.enabledRules + $stats.ruleChanges) suspicious inbox rule(s)/change(s)$(if ($ruleNames) { " ($ruleNames)" }) that hide replies or auto-forward mail." } }
         if ($hasForwarding) { @{ ids = @('ClearForwarding'); tag = 'High'; text = "Clear mailbox forwarding$(if ($forwardingAddress) { " to $forwardingAddress" }), which silently copies mail out of the tenant." } }
         if ($flaggedDelegations.Count -gt 0) { @{ ids = @('RemoveDelegations'); tag = 'High'; text = "Remove $($flaggedDelegations.Count) flagged mailbox delegation(s) - a delegate keeps access after a reset." } }
         if ($stats.anonymousLinks -gt 0 -or $stats.sharingChanges -gt 0) { @{ ids = @('RemoveSharingLinks'); tag = 'High'; text = "Remove the $($stats.sharingChanges) sharing-link change(s)$(if ($stats.anonymousLinks) { ", including $($stats.anonymousLinks) 'anyone' link(s)" }) and disable OneDrive sharing - anonymous links expose data past any reset." } }
@@ -371,7 +372,7 @@ function Build-CippBecReportTree {
         if ($attackerReach.Count -gt 0) { "The attack reached beyond this account: $(ListNames $attackerReach 3)." }
         if ($riskState.Listed) { "Microsoft Identity Protection currently flags this account as at risk$(if ($riskState.RiskLevel) { " ($($riskState.RiskLevel) risk)" })." }
         if ($hasForwarding) { "Incoming mail is being copied out of the organization$(if ($forwardingAddress) { " to $forwardingAddress" }), so the attacker keeps reading it even after a reset." }
-        if ($stats.newRules -gt 0 -or $stats.ruleChanges -gt 0) { "$($stats.newRules + $stats.ruleChanges) inbox rule(s) or change(s) hide, delete or redirect the user's mail." }
+        if ($stats.enabledRules -gt 0 -or $stats.ruleChanges -gt 0) { "$($stats.enabledRules + $stats.ruleChanges) inbox rule(s) or change(s) hide, delete or redirect the user's mail." }
         if ($stats.anonymousLinks -gt 0) { "$($stats.anonymousLinks) `"anyone with the link`" sharing link(s) expose files to anyone holding the URL, past any later reset." }
         if ($stats.massMailFlagged) { "The mailbox sent a mass-mail wave - $($stats.sentTotalMessages) message(s) to $($stats.sentTotalRecipients) recipient(s) - so it is now being used to attack others." }
         if ($flaggedGrants.Count -gt 0 -or $stats.maliciousApps -gt 0) { "$($flaggedGrants.Count + $stats.maliciousApps) risky application consent(s) or app(s) retain access to data independently of the password." }

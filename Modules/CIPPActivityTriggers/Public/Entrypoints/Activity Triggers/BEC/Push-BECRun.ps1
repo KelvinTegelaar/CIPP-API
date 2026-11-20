@@ -320,7 +320,7 @@ function Push-BECRun {
                 # Inbox-rule, safelist and sharing changes are all user-scoped to the same mailbox and window;
                 # only their operations differ, and the unified-audit-log session is the slow part. One combined
                 # search feeds all three (partitioned by operation locally) instead of three separate sessions.
-                $RuleOps = @('New-InboxRule', 'Set-InboxRule', 'Remove-InboxRule', 'UpdateInboxRules')
+                $RuleOps = @('New-InboxRule', 'Set-InboxRule', 'Remove-InboxRule', 'Enable-InboxRule', 'UpdateInboxRules')
                 $SafelistOps = @('Set-MailboxJunkEmailConfiguration')
                 $SharingOps = @('SharingSet', 'SharingInvitationCreated', 'AnonymousLinkCreated', 'AnonymousLinkUpdated', 'SecureLinkCreated', 'SecureLinkUpdated', 'AddedToSecureLink', 'CompanyLinkCreated')
                 $ChangeSearch = $null
@@ -374,7 +374,8 @@ function Push-BECRun {
                 }
 
                 # inbox rules carry no timestamps, so 'recent' = name-matches an audit event in the window; Outlook-client changes (UpdateInboxRules) carry no rule name and stay unflagged
-                $RecentRuleNames = @($RuleChangesLog | Where-Object { $_.Operation -in 'New-InboxRule', 'Set-InboxRule' } | ForEach-Object { ($_.RuleName -split '\\')[-1] })
+                # Enable-InboxRule counts because re-enabling an old forwarder makes it live again
+                $RecentRuleNames = @($RuleChangesLog | Where-Object { $_.Operation -in 'New-InboxRule', 'Set-InboxRule', 'Enable-InboxRule' } | ForEach-Object { ($_.RuleName -split '\\')[-1] })
                 $LowVisibilityRegex = [string]$Heuristics.inboxRules.lowVisibilityFolderRegex
                 $SensitiveNameRegex = [string]$Heuristics.inboxRules.sensitiveNameRegex
                 $SensitiveKeywordRegex = [string]$Heuristics.inboxRules.sensitiveKeywordRegex
