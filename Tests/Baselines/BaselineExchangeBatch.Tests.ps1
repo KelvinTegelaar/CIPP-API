@@ -369,6 +369,37 @@ Describe 'Get-CIPPBaselineSpamFilterPolicyState block-list write params' {
     }
 }
 
+Describe 'Get-CIPPBaselineSpamFilterPolicyState policy resolution' {
+    BeforeAll {
+        . (Join-Path (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public') 'PrepareHooks/Get-CIPPBaselineSpamFilterPolicyState.ps1')
+    }
+    BeforeEach {
+        Mock New-CIPPDbRequest {
+            switch ($Type) {
+                'ExoHostedContentFilterPolicy' { @(@{ Name = 'Default'; IsDefault = $true } | ConvertTo-Cached) }
+                'ExoAcceptedDomains' { @(@{ Name = 'contoso.com' } | ConvertTo-Cached) }
+            }
+        }
+    }
+
+    It 'creates a custom-named policy and its rule instead of adopting the built-in Default' {
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ name = 'Contoso Spam Policy' } }
+        $Prepared = Get-CIPPBaselineSpamFilterPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.policyName | Should -BeExactly 'Contoso Spam Policy'
+        $Prepared.Current.policyExists | Should -BeFalse
+        $Prepared.Current.skipRule | Should -BeFalse
+        $Prepared.Expected.rule.priority | Should -Be 0
+    }
+
+    It 'adopts the built-in Default policy when the configured name is the portal alias' {
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ name = 'Anti-spam inbound policy' } }
+        $Prepared = Get-CIPPBaselineSpamFilterPolicyState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.policyName | Should -BeExactly 'Default'
+        $Prepared.Current.skipRule | Should -BeTrue
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'rule'
+    }
+}
+
 Describe 'Get-CIPPBaselineSafeLinksPolicyState DoNotRewriteUrls write' {
     BeforeAll {
         . (Join-Path (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public') 'PrepareHooks/Get-CIPPBaselineSafeLinksPolicyState.ps1')

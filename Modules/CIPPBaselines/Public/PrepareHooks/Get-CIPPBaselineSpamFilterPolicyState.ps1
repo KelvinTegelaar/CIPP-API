@@ -34,10 +34,13 @@ function Get-CIPPBaselineSpamFilterPolicyState {
 
     $V = $Item.Variables
     $Configured = if ([string]::IsNullOrWhiteSpace("$($V.name)")) { 'CIPP Default Spam Filter Policy' } else { "$($V.name)" }
-    $PolicyCandidates = @($Configured, 'Default Spam Filter Policy', 'Default')
-    $ExistingPolicy = @($Policies.Where({ $PolicyCandidates -contains "$($_.Name)" })) | Select-Object -First 1
+    # An exact name wins. Only a built-in alias falls back to the Default policy; a custom name is created.
+    $ExistingPolicy = $Policies.Where({ "$($_.Name)" -eq $Configured }, 'First')[0]
+    if ($null -eq $ExistingPolicy -and $Configured -in @('CIPP Default Spam Filter Policy', 'Default Spam Filter Policy', 'Default', 'Anti-spam inbound policy')) {
+        $ExistingPolicy = $Policies.Where({ $_.IsDefault -eq $true }, 'First')[0] ?? $Policies.Where({ "$($_.Name)" -eq 'Default' }, 'First')[0]
+    }
     $PolicyName = if ($ExistingPolicy.Name) { "$($ExistingPolicy.Name)" } else { $Configured }
-    $IsDefaultPolicy = $PolicyName -eq 'Default'
+    $IsDefaultPolicy = $ExistingPolicy.IsDefault -eq $true -or $PolicyName -eq 'Default'
 
     $Policy = @($Policies.Where({ "$($_.Name)" -eq $PolicyName })) | Select-Object -First 1
     # The classic keys the rule on the POLICY name, not a "<policy> Rule" name.
