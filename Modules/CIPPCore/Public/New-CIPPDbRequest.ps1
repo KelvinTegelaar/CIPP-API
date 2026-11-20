@@ -39,7 +39,7 @@ function New-CIPPDbRequest {
         Without -Fields the parser alone is modestly faster and allocates less, but retains the
         same live bytes — the parser was never the memory cost. Only -Fields reduces footprint.
 
-        Benchmark on production's runtime (PowerShell 7.4 / .NET 8, Linux container).
+        Benchmark on production's runtime (PowerShell 7.6 / .NET 10, Linux container).
         System.Text.Json timings differ enough on newer runtimes to invert conclusions;
         allocation numbers are runtime-insensitive.
 
