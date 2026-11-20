@@ -17,8 +17,8 @@ function Invoke-CIPPBaselineSecureScoreRemediation {
         $Current
     )
 
-    $Controls = @($Current.driftedControls | Where-Object { $_ -and "$($_.Control)" -notmatch '^scid_' })
-    $Skipped = @($Current.driftedControls | Where-Object { $_ -and "$($_.Control)" -match '^scid_' })
+    $Controls = @(@($Current.driftedControls).Where({ $_ -and "$($_.Control)" -notmatch '^scid_' }))
+    $Skipped = @(@($Current.driftedControls).Where({ $_ -and "$($_.Control)" -match '^scid_' }))
     foreach ($Skip in $Skipped) {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Secure score control '$($Skip.Control)' is a Defender control and cannot be set through this endpoint - skipped." -Sev 'Info'
     }

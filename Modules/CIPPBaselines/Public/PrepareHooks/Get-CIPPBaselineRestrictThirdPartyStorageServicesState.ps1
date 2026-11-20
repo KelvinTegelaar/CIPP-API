@@ -21,7 +21,7 @@ function Get-CIPPBaselineRestrictThirdPartyStorageServicesState {
     if ($ServicePrincipals.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'ServicePrincipals')) {
         return @{ Current = $null }
     }
-    $Principal = @($ServicePrincipals | Where-Object { "$($_.appId)" -eq 'c1f33bc0-bdb4-4248-ba9b-096807ddb43e' }) | Select-Object -First 1
+    $Principal = @($ServicePrincipals.Where({ "$($_.appId)" -eq 'c1f33bc0-bdb4-4248-ba9b-096807ddb43e' })) | Select-Object -First 1
 
     @{
         Expected = [PSCustomObject]@{ thirdPartyStorageRestricted = $true }

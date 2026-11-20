@@ -24,7 +24,7 @@ function Get-CIPPBaselineActivityBasedTimeoutState {
         $TenantFilter
     )
 
-    $Policy = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ActivityBasedTimeoutPolicy' | Where-Object { $_ })[0]
+    $Policy = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ActivityBasedTimeoutPolicy').Where({ $_ }))[0]
     if ($null -eq $Policy) { return @{ Current = $null } }
 
     $CurrentTimeout = $(try {

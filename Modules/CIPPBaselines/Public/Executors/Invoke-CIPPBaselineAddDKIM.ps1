@@ -17,8 +17,8 @@ function Invoke-CIPPBaselineAddDKIM {
         $Current
     )
 
-    $ToCreate = @($Current.domainsToCreate | Where-Object { $_ })
-    $ToEnable = @($Current.domainsToEnable | Where-Object { $_ })
+    $ToCreate = @(@($Current.domainsToCreate).Where({ $_ }))
+    $ToEnable = @(@($Current.domainsToEnable).Where({ $_ }))
     if ($ToCreate.Count -eq 0 -and $ToEnable.Count -eq 0) { return }
 
     $Requests = [System.Collections.Generic.List[hashtable]]::new()
@@ -30,7 +30,7 @@ function Invoke-CIPPBaselineAddDKIM {
     }
 
     $Results = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($Requests) -useSystemMailbox $true
-    $Errors = @($Results | Where-Object { $_.error })
+    $Errors = @(@($Results).Where({ $_.error }))
     foreach ($ErrorResult in $Errors) {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "DKIM write failed: $(Get-NormalizedError -Message $ErrorResult.error)" -Sev 'Error'
     }

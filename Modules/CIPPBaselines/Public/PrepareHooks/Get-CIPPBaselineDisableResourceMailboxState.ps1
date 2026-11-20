@@ -23,7 +23,7 @@ function Get-CIPPBaselineDisableResourceMailboxState {
     # Users is the SECOND cache - see Get-CIPPBaselineCacheRows for why reading it directly
     # parks the standard at No Data forever on a tenant that never collected it.
     $Users = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users' -Fields 'id', 'accountEnabled', 'onPremisesSyncEnabled', 'userType', 'assignedLicenses')
-    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'primarySmtpAddress', 'recipientTypeDetails', 'ExternalDirectoryObjectId' | Where-Object { $_ })
+    $Mailboxes = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'primarySmtpAddress', 'recipientTypeDetails', 'ExternalDirectoryObjectId').Where({ $_ }))
     if ($Users.Count -eq 0 -or $Mailboxes.Count -eq 0) { return @{ Current = $null } }
 
     $Candidates = @{}
@@ -35,10 +35,10 @@ function Get-CIPPBaselineDisableResourceMailboxState {
         $Candidates["$($User.id)"] = $User
     }
 
-    $Offending = @($Mailboxes | Where-Object {
+    $Offending = @($Mailboxes.Where({
             $_.recipientTypeDetails -in @('RoomMailbox', 'EquipmentMailbox') -and
             $Candidates.ContainsKey("$($_.ExternalDirectoryObjectId)")
-        })
+        }))
 
     @{
         Current = [PSCustomObject]@{

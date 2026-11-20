@@ -34,7 +34,7 @@ function Invoke-CIPPBaselineRetentionPolicyTag {
     }
 
     if ($Current.linkedToPolicy -ne $true) {
-        $Links = @(@($Current.existingLinks | Where-Object { $_ }) + $TagName)
+        $Links = @(@(@($Current.existingLinks).Where({ $_ })) + $TagName)
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-RetentionPolicy' -cmdParams @{
             Identity = 'Default MRM Policy'; RetentionPolicyTagLinks = $Links
         } -useSystemMailbox $true

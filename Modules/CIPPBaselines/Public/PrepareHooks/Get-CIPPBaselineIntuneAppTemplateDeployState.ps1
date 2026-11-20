@@ -29,7 +29,7 @@ function Get-CIPPBaselineIntuneAppTemplateDeployState {
     # Uploaded packages are only current when an app with the name carries the template's package marker.
     $CurrentPackageNotes = @{}
     foreach ($App in $Apps) { $CurrentPackageNotes["$($App.displayName)"] = "$($CurrentPackageNotes["$($App.displayName)"]) $($App.notes)" }
-    $OfficeDeployed = @($Apps | Where-Object { "$($_.'@odata.type')" -eq '#microsoft.graph.officeSuiteApp' }).Count -gt 0
+    $OfficeDeployed = @($Apps.Where({ "$($_.'@odata.type')" -eq '#microsoft.graph.officeSuiteApp' })).Count -gt 0
 
     $Table = Get-CIPPTable -TableName 'templates'
     $MissingApps = [System.Collections.Generic.List[object]]::new()

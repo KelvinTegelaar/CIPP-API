@@ -19,7 +19,7 @@ function Invoke-CIPPBaselineCustomBannedPasswordList {
         $Current
     )
 
-    $Missing = @($Current.missingBannedWords | Where-Object { $_ })
+    $Missing = @(@($Current.missingBannedWords).Where({ $_ }))
     if ($Missing.Count -eq 0 -and $Current.bannedPasswordCheckEnabled -eq $true) { return }
 
     $AllWords = @(@($Missing) + @($Current.currentWords) | Where-Object { $_ } | Select-Object -Unique -First 1000)
@@ -32,7 +32,7 @@ function Invoke-CIPPBaselineCustomBannedPasswordList {
     # guessing them.
     $Live = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/settings' -tenantid $TenantFilter) | Where-Object { "$($_.templateId)" -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' } | Select-Object -First 1
     if ($Live) {
-        $LiveWords = @("$((@($Live.values) | Where-Object { $_.name -eq 'BannedPasswordList' }).value)" -split ([char]9) | Where-Object { $_ })
+        $LiveWords = @(@("$((@($Live.values) | Where-Object { $_.name -eq 'BannedPasswordList' }).value)" -split ([char]9)).Where({ $_ }))
         $AllWords = @(@($Missing) + @($LiveWords) | Where-Object { $_ } | Select-Object -Unique -First 1000)
         $ListValue = $AllWords -join ([char]9)
         $LiveValueOf = { param($Name, $Fallback) $Value = "$((@($Live.values) | Where-Object { $_.name -eq $Name }).value)"; if ([string]::IsNullOrWhiteSpace($Value)) { $Fallback } else { $Value } }

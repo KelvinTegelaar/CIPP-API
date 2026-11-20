@@ -17,8 +17,8 @@ function Invoke-CIPPBaselinePhishSimSpoofIntelligence {
         $Current
     )
 
-    $Missing = @($Current.missingDomains | Where-Object { $_ })
-    $RemoveIds = @($Current.extraItemIds | Where-Object { $_ })
+    $Missing = @(@($Current.missingDomains).Where({ $_ }))
+    $RemoveIds = @(@($Current.extraItemIds).Where({ $_ }))
     if ($Missing.Count -eq 0 -and $RemoveIds.Count -eq 0) { return }
 
     $Requests = [System.Collections.Generic.List[hashtable]]::new()
@@ -34,7 +34,7 @@ function Invoke-CIPPBaselinePhishSimSpoofIntelligence {
     }
 
     $Results = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($Requests) -useSystemMailbox $true
-    $Errors = @($Results | Where-Object { $_.error })
+    $Errors = @(@($Results).Where({ $_.error }))
     foreach ($ErrorResult in $Errors) {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Spoof intelligence write failed: $(Get-NormalizedError -Message $ErrorResult.error)" -Sev 'Error'
     }

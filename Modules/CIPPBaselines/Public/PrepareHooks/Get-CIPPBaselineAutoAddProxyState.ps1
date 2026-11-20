@@ -17,10 +17,10 @@ function Get-CIPPBaselineAutoAddProxyState {
     [CmdletBinding()]
     param($Item, $TenantFilter)
 
-    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'primarySmtpAddress', 'AdditionalEmailAddresses' | Where-Object { $_ })
+    $Mailboxes = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'primarySmtpAddress', 'AdditionalEmailAddresses').Where({ $_ }))
     if ($Mailboxes.Count -eq 0) { return @{ Current = $null } }
 
-    $Domains = @((Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ExoAcceptedDomains').DomainName | Where-Object { $_ })
+    $Domains = @(@((Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ExoAcceptedDomains').DomainName).Where({ $_ }))
     if ($Domains.Count -eq 0) { return @{ Current = $null } }
 
     $Missing = [System.Collections.Generic.List[object]]::new()

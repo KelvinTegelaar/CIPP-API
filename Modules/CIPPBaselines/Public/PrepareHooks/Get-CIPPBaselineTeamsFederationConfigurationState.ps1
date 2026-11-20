@@ -36,7 +36,7 @@ function Get-CIPPBaselineTeamsFederationConfigurationState {
 
     $DomainList = @()
     if (-not [string]::IsNullOrWhiteSpace("$($V.DomainList)")) {
-        $DomainList = @("$($V.DomainList)".Split(',').Trim() | Where-Object { $_ }) | Sort-Object
+        $DomainList = @(@("$($V.DomainList)".Split(',').Trim()).Where({ $_ })) | Sort-Object
     }
 
     # PUT shapes are GET-symmetric: allow-all = an empty OBJECT (AllowAllKnownDomains), a

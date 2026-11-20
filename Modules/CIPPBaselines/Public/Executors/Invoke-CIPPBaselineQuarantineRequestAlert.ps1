@@ -60,7 +60,7 @@ function Invoke-CIPPBaselineQuarantineRequestAlert {
     if ($AllowExtra) {
         foreach ($Address in @($Existing.NotifyUser)) {
             if ([string]::IsNullOrWhiteSpace($Address)) { continue }
-            if (@($Recipients | Where-Object { $_ -eq "$Address" }).Count -gt 0) { continue }
+            if (@(@($Recipients).Where({ $_ -eq "$Address" })).Count -gt 0) { continue }
             $Recipients.Add("$Address")
         }
     }

@@ -31,7 +31,7 @@ function Get-CIPPBaselineAutopilotProfileState {
     # unwrap before interpolating or the profile title becomes the stringified object.
     $DisplayName = "$($V.DisplayName.value ?? $V.DisplayName)"
     if ([string]::IsNullOrWhiteSpace($DisplayName)) { return @{ Current = $null; ConfigError = $true } }
-    $Profile = @($Profiles | Where-Object { "$($_.displayName)" -eq $DisplayName }) | Select-Object -First 1
+    $Profile = @($Profiles.Where({ "$($_.displayName)" -eq $DisplayName })) | Select-Object -First 1
 
     $UserType = $(if ($V.NotLocalAdmin -eq $true) { 'standard' } else { 'administrator' })
     $SelfDeploying = $V.SelfDeployingMode -eq $true
@@ -112,8 +112,8 @@ function Get-CIPPBaselineAutopilotProfileState {
         excludeGroups                 = $Expected.excludeGroups
     }
     if (-not $AssignmentsUnknown -and $null -ne $Profile -and $Profile.PSObject.Properties.Name -contains 'assignments') {
-        $Assignments = @($Profile.assignments | Where-Object { $_ })
-        $Current.assignedToAllDevices = @($Assignments | Where-Object { $_.target.'@odata.type' -eq '#microsoft.graph.allDevicesAssignmentTarget' }).Count -gt 0
+        $Assignments = @(@($Profile.assignments).Where({ $_ }))
+        $Current.assignedToAllDevices = @($Assignments.Where({ $_.target.'@odata.type' -eq '#microsoft.graph.allDevicesAssignmentTarget' })).Count -gt 0
         $Current.includeGroups = & $FormatGroups ($Assignments | Where-Object { $_.target.'@odata.type' -eq '#microsoft.graph.groupAssignmentTarget' } | ForEach-Object { $_.target.groupId })
         $Current.excludeGroups = & $FormatGroups ($Assignments | Where-Object { $_.target.'@odata.type' -eq '#microsoft.graph.exclusionGroupAssignmentTarget' } | ForEach-Object { $_.target.groupId })
         # Legacy settings leave group assignments (and, when off, all assignments) to the tenant.

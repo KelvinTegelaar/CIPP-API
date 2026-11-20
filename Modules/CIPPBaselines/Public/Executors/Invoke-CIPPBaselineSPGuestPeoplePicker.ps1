@@ -29,7 +29,7 @@ function Invoke-CIPPBaselineSPGuestPeoplePicker {
         $Current
     )
 
-    $Targets = @($Current.targets | Where-Object { $_ })
+    $Targets = @(@($Current.targets).Where({ $_ }))
     if ($Targets.Count -eq 0) { return }
 
     # Once-per-24h per tenant. Test-CIPPRerun records the run as it allows it, and the classic standard
@@ -51,7 +51,7 @@ function Invoke-CIPPBaselineSPGuestPeoplePicker {
 
     # Tenant default (at most one target): a fresh Get-CIPPSPOTenant supplies the write handle, then
     # one Set-CIPPSPOTenant. No re-read - the next daily cache run confirms it.
-    foreach ($Target in @($Targets | Where-Object { $_.Scope -eq 'tenant' })) {
+    foreach ($Target in @($Targets.Where({ $_.Scope -eq 'tenant' }))) {
         $Attempted++
         try {
             $SPOTenant = Get-CIPPSPOTenant -TenantFilter $TenantFilter @AuthSplat | Select-Object -First 1
@@ -65,7 +65,7 @@ function Invoke-CIPPBaselineSPGuestPeoplePicker {
 
     # Existing sites: one concurrent bulk write. Per-site success/failure comes straight from the bulk
     # result (CSOM reports per-site errors in the response body); no separate verification read.
-    $SiteTargets = @($Targets | Where-Object { $_.Scope -eq 'site' -and $_.SiteUrl })
+    $SiteTargets = @($Targets.Where({ $_.Scope -eq 'site' -and $_.SiteUrl }))
     if ($SiteTargets.Count -gt 0) {
         $BulkSites = @($SiteTargets | ForEach-Object { @{ SiteUrl = $_.SiteUrl; Properties = @{ $Property = [bool]$_.Wanted } } })
         try {

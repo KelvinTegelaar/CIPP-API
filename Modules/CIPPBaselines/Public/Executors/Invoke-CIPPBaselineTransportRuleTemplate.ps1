@@ -21,7 +21,7 @@ function Invoke-CIPPBaselineTransportRuleTemplate {
         $Current
     )
 
-    $Bodies = @($Current.ruleBodies | Where-Object { $_ })
+    $Bodies = @(@($Current.ruleBodies).Where({ $_ }))
     if ($Bodies.Count -eq 0) { return }
 
     $Deployed = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)

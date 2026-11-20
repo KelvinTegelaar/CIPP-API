@@ -28,18 +28,18 @@ function Get-CIPPBaselineDisableInactiveUsersState {
     $CheckDays = if ([string]::IsNullOrWhiteSpace("$($Item.Variables.days)")) { 180 } else { [int]$Item.Variables.days }
     if ($CheckDays -lt 30) { throw "DisableInactiveUsers: a threshold of $CheckDays days is below the 30-day floor - refusing to run to prevent mass account changes." }
 
-    $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' -Fields 'accountEnabled', 'createdDateTime', 'id', 'onPremisesSyncEnabled', 'signInActivity', 'userPrincipalName', 'userType' | Where-Object { $_ })
+    $Users = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' -Fields 'accountEnabled', 'createdDateTime', 'id', 'onPremisesSyncEnabled', 'signInActivity', 'userPrincipalName', 'userType').Where({ $_ }))
     if ($Users.Count -eq 0) { return @{ Current = $null } }
 
     $Cutoff = (Get-Date).AddDays(-$CheckDays).ToUniversalTime()
-    $Inactive = @($Users | Where-Object {
+    $Inactive = @($Users.Where({
             $_.userType -eq 'Member' -and
             $_.accountEnabled -eq $true -and
             $_.onPremisesSyncEnabled -ne $true -and
             $_.createdDateTime -and ([datetime]$_.createdDateTime).ToUniversalTime() -le $Cutoff -and
             $_.signInActivity -and $_.signInActivity.lastSuccessfulSignInDateTime -and
             ([datetime]$_.signInActivity.lastSuccessfulSignInDateTime).ToUniversalTime() -le $Cutoff
-        })
+        }))
 
     if ($Inactive.Count -gt 0) {
         $AuditLookup = (Get-Date).AddDays(-7).ToUniversalTime().ToString('o')
@@ -50,14 +50,14 @@ function Get-CIPPBaselineDisableInactiveUsersState {
                 Write-Information "Baselines: reactivation audit lookup on $TenantFilter failed: $($_.Exception.Message)"
                 @()
             })
-        $Inactive = @($Inactive | Where-Object { $Reactivated -notcontains $_.id })
+        $Inactive = @($Inactive.Where({ $Reactivated -notcontains $_.id }))
     }
 
     # Operator-excluded accounts (breakglass, service accounts) are never offenders -
     # disabling a breakglass account through an inactivity sweep is how lockouts happen.
     $ExcludedUsers = @(@($Item.Variables.excludedUsers) | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
     if ($ExcludedUsers.Count -gt 0) {
-        $Inactive = @($Inactive | Where-Object { "$($_.userPrincipalName)" -notin $ExcludedUsers })
+        $Inactive = @($Inactive.Where({ "$($_.userPrincipalName)" -notin $ExcludedUsers }))
     }
 
     @{

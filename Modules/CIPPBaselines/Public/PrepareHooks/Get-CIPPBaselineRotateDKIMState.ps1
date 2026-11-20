@@ -20,9 +20,9 @@ function Get-CIPPBaselineRotateDKIMState {
         return @{ Current = $null }
     }
 
-    $Weak = @($DkimConfigs | Where-Object {
+    $Weak = @($DkimConfigs.Where({
             ($_.Selector1KeySize -eq 1024 -or $_.Selector2KeySize -eq 1024) -and $_.Enabled -eq $true
-        })
+        }))
 
     $Current = [PSCustomObject]@{ domainsWith1024BitDkim = @($Weak | ForEach-Object { "$($_.Identity)" } | Sort-Object) }
 

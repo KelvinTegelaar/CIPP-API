@@ -84,7 +84,7 @@ function Get-CIPPBaselineWorkItems {
         # How directly is each tenant covered: direct tenant assignment beats group beats allTenants.
         $AssignmentValues = @($Baseline.assignments.value)
         $HasAllTenants = $AssignmentValues -contains 'AllTenants'
-        $AssignedGroups = @($Groups | Where-Object { $AssignmentValues -contains $_.Id -or $AssignmentValues -contains $_.Name })
+        $AssignedGroups = @($Groups.Where({ $AssignmentValues -contains $_.Id -or $AssignmentValues -contains $_.Name }))
 
         foreach ($State in $Baseline.tenantStates) {
             $Domain = $State.tenantFilter
@@ -93,7 +93,7 @@ function Get-CIPPBaselineWorkItems {
             if ($Baseline.excludedTenants -contains $Domain) { continue }
 
             $Rank = if ($AssignmentValues -contains $Domain) { 2 }
-            elseif (@($AssignedGroups | Where-Object { $_.Members.defaultDomainName -contains $Domain }).Count -gt 0) { 1 }
+            elseif (@($AssignedGroups.Where({ $_.Members.defaultDomainName -contains $Domain })).Count -gt 0) { 1 }
             elseif ($HasAllTenants) { 0 } else { 2 }
             $Scope = @('allTenants', 'group', 'tenant')[$Rank]
 
@@ -206,7 +206,7 @@ function Get-CIPPBaselineWorkItems {
                             $Keep.Item.AlertOnRemediate = [bool]($Keep.Item.AlertOnRemediate -or $Fold.Item.AlertOnRemediate)
                             $Keep.Item.SourceTemplate = @(@($Keep.Item.SourceTemplate -split ', ') + @($Fold.Item.SourceTemplate -split ', ') | Where-Object { $_ } | Select-Object -Unique) -join ', '
                             $Keep.Item.SourceTemplateIds = @(@($Keep.Item.SourceTemplateIds) + @($Fold.Item.SourceTemplateIds) | Select-Object -Unique)
-                            $Keep.Item.Tiers = @(@($Keep.Item.Tiers) + @($Fold.Item.Tiers) | Where-Object { $_ })
+                            $Keep.Item.Tiers = @(@(@($Keep.Item.Tiers) + @($Fold.Item.Tiers)).Where({ $_ }))
                             if ($Fold.UpdatedAt -gt $Keep.UpdatedAt) { $Keep.UpdatedAt = $Fold.UpdatedAt }
                         } else {
                             # Same level, same identity, different settings: conflict.
@@ -404,7 +404,7 @@ function Get-CIPPBaselineWorkItems {
     # whole set parks at Conflict through the same Conflicted plumbing as the
     # same-standard collision above. Items already Conflicted never write and are skipped.
     foreach ($TargetGroup in ($ResolvedItems | Where-Object { $_.WriteTarget } | Group-Object -Property { '{0}|{1}' -f $_.TenantFilter, $_.WriteTarget })) {
-        $Claimants = @($TargetGroup.Group | Where-Object { $_.RemediateEnabled -and $_.Conflicted -ne $true })
+        $Claimants = @(@($TargetGroup.Group).Where({ $_.RemediateEnabled -and $_.Conflicted -ne $true }))
         if ($Claimants.Count -lt 2) { continue }
         # Index-aligned with $Claimants; a List keeps $null entries (definition without
         # writeTargetProperties) in place where a pipeline would drop them.
@@ -419,7 +419,7 @@ function Get-CIPPBaselineWorkItems {
                 $MapA = $ClaimMaps[$First]
                 $MapB = $ClaimMaps[$Second]
                 if (-not $MapA -or -not $MapB) { continue }
-                $Opposed = @($MapA.Keys | Where-Object { $MapB.ContainsKey($_) -and $MapA[$_] -ne $MapB[$_] })
+                $Opposed = @(@($MapA.Keys).Where({ $MapB.ContainsKey($_) -and $MapA[$_] -ne $MapB[$_] }))
                 if ($Opposed.Count -eq 0) { continue }
                 foreach ($Pair in @(@($First, $Second), @($Second, $First))) {
                     $Theirs = $Claimants[$Pair[1]]
@@ -429,7 +429,7 @@ function Get-CIPPBaselineWorkItems {
             }
         }
         if ($Opponents.Count -eq 0) { continue }
-        $GroupAlert = @($Opponents.Keys | Where-Object { $Claimants[$_].AlertEnabled }).Count -gt 0
+        $GroupAlert = @(@($Opponents.Keys).Where({ $Claimants[$_].AlertEnabled })).Count -gt 0
         foreach ($Index in $Opponents.Keys) {
             $Member = $Claimants[$Index]
             $Member.RemediateEnabled = $false

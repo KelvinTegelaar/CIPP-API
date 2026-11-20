@@ -39,7 +39,7 @@ function Get-CIPPBaselineDisableInactiveAppsState {
         }
     }
 
-    $ServicePrincipals = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals' -Fields 'accountEnabled', 'appId', 'appOwnerOrganizationId', 'createdDateTime', 'displayName', 'id', 'servicePrincipalType' | Where-Object { $_ })
+    $ServicePrincipals = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals' -Fields 'accountEnabled', 'appId', 'appOwnerOrganizationId', 'createdDateTime', 'displayName', 'id', 'servicePrincipalType').Where({ $_ }))
     if ($ServicePrincipals.Count -eq 0) { return @{ Current = $null } }
 
     $Activities = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ServicePrincipalSignInActivities')

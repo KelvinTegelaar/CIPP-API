@@ -26,7 +26,7 @@ function Get-CIPPBaselineCreateSharedMailboxState {
         $TenantFilter
     )
 
-    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'primarySmtpAddress', 'displayName', 'recipientTypeDetails', 'AccountDisabled', 'ExternalDirectoryObjectId' | Where-Object { $_ })
+    $Mailboxes = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'primarySmtpAddress', 'displayName', 'recipientTypeDetails', 'AccountDisabled', 'ExternalDirectoryObjectId').Where({ $_ }))
     if ($Mailboxes.Count -eq 0) { return @{ Current = $null } }
 
     $V = $Item.Variables
@@ -38,10 +38,10 @@ function Get-CIPPBaselineCreateSharedMailboxState {
         return @{ Current = $null; NoDataReason = "the configured address '$Address' is not a valid email address"; ConfigError = $true }
     }
 
-    $Existing = @($Mailboxes | Where-Object {
+    $Existing = @($Mailboxes.Where({
             "$($_.primarySmtpAddress)".Equals($Address, [System.StringComparison]::OrdinalIgnoreCase) -or
             "$($_.UPN)".Equals($Address, [System.StringComparison]::OrdinalIgnoreCase)
-        }) | Select-Object -First 1
+        })) | Select-Object -First 1
 
     $Current = [PSCustomObject]@{
         exists             = ($null -ne $Existing)

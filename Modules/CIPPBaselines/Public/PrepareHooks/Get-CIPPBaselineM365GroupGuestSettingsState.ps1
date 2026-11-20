@@ -26,7 +26,7 @@ function Get-CIPPBaselineM365GroupGuestSettingsState {
     $V = $Item.Variables
     $AsFlag = { param($Value) if ($Value -eq $true -or "$Value" -eq 'True') { 'true' } else { 'false' } }
 
-    $Existing = @($Settings | Where-Object { "$($_.displayName)" -eq 'Group.Unified' }) | Select-Object -First 1
+    $Existing = @($Settings.Where({ "$($_.displayName)" -eq 'Group.Unified' })) | Select-Object -First 1
     $ValueOf = { param($Name) "$((@($Existing.values) | Where-Object { $_.name -eq $Name }).value)".ToLower() }
 
     $Current = [PSCustomObject]@{

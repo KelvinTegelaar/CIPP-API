@@ -52,28 +52,28 @@ function Get-CIPPBaselineEnableAppConsentRequestsState {
     $MissingUsers = @()
     if ($UserNames.Count -gt 0) {
         $Users = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users' -Fields 'displayName', 'id', 'userPrincipalName')
-        $MissingUsers = @($UserNames | Where-Object {
+        $MissingUsers = @($UserNames.Where({
                 $Name = $_
                 $Covered = @($Users) | Where-Object { $_.displayName -eq $Name } | Where-Object {
                     $User = $_
                     $ReviewerQueries | Where-Object { $_ -match [regex]::Escape("$($User.id)") -or (-not [string]::IsNullOrWhiteSpace($User.userPrincipalName) -and $_ -match [regex]::Escape("$($User.userPrincipalName)")) }
                 }
                 -not $Covered
-            })
+            }))
     }
 
     $GroupNames = @(@($Item.Variables.ReviewerGroups) | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     $MissingGroups = @()
     if ($GroupNames.Count -gt 0) {
         $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id')
-        $MissingGroups = @($GroupNames | Where-Object {
+        $MissingGroups = @($GroupNames.Where({
                 $Name = $_
                 $Covered = @($Groups) | Where-Object { $_.displayName -eq $Name } | Where-Object {
                     $Group = $_
                     $ReviewerQueries | Where-Object { $_ -match [regex]::Escape("$($Group.id)") }
                 }
                 -not $Covered
-            })
+            }))
     }
 
     @{

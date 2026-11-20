@@ -21,7 +21,7 @@ function Invoke-CIPPBaselineRetentionCompliancePolicyTemplate {
         $Current
     )
 
-    $Templates = @($Current.templateBodies | Where-Object { $_ })
+    $Templates = @(@($Current.templateBodies).Where({ $_ }))
     if ($Templates.Count -eq 0) { return }
 
     $Failures = foreach ($Template in $Templates) {

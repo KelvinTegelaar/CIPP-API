@@ -38,7 +38,7 @@ function Get-CIPPBaselineCacheRows {
         [string[]]$Fields
     )
 
-    $Rows = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Type -Fields $Fields | Where-Object { $_ })
+    $Rows = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Type -Fields $Fields).Where({ $_ }))
     if ($Rows.Count -gt 0) { return $Rows }
     # A zero count row means the type was collected and is genuinely empty (e.g. no SMTP AUTH overrides).
     if (@(Get-CIPPDbItem -TenantFilter $TenantFilter -Type $Type -CountsOnly | Where-Object { [int]$_.DataCount -eq 0 }).Count -gt 0) { return @() }
@@ -59,5 +59,5 @@ function Get-CIPPBaselineCacheRows {
         return @()
     }
 
-    @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Type -Fields $Fields | Where-Object { $_ })
+    @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type $Type -Fields $Fields).Where({ $_ }))
 }

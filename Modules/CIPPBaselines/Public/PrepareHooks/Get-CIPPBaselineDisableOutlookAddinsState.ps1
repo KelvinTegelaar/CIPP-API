@@ -21,7 +21,7 @@ function Get-CIPPBaselineDisableOutlookAddinsState {
     if (-not $Policy) { return @{ Current = $null } }
 
     $Roles = @('My Custom Apps', 'My Marketplace Apps', 'My ReadWriteMailbox Apps')
-    $RolesToRemove = @($Roles | Where-Object { @($Policy.AssignedRoles) -contains $_ })
+    $RolesToRemove = @($Roles.Where({ @($Policy.AssignedRoles) -contains $_ }))
 
     $Current = [PSCustomObject]@{
         disabledOutlookAddins = ($RolesToRemove.Count -eq 0)

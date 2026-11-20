@@ -21,7 +21,7 @@ function Invoke-CIPPBaselineTenantAllowBlockListTemplate {
         $Current
     )
 
-    $Missing = @($Current.missingEntries | Where-Object { -not [string]::IsNullOrWhiteSpace("$_") })
+    $Missing = @(@($Current.missingEntries).Where({ -not [string]::IsNullOrWhiteSpace("$_") }))
     $Template = $Current.templateBody
     if ($Missing.Count -eq 0 -or -not $Template) { return }
 

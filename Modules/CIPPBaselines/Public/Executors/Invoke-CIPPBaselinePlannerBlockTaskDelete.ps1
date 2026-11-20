@@ -17,7 +17,7 @@ function Invoke-CIPPBaselinePlannerBlockTaskDelete {
     )
 
     if ($null -eq $Current) { throw 'PlannerBlockTaskDelete: no Planner policy data to remediate from.' }
-    $Targets = @($Current.targets | Where-Object { $_.userPrincipalName })
+    $Targets = @(@($Current.targets).Where({ $_.userPrincipalName }))
     if ($Targets.Count -eq 0) { return }
 
     $Body = @{ blockDeleteTasksNotCreatedBySelf = $true } | ConvertTo-Json -Compress

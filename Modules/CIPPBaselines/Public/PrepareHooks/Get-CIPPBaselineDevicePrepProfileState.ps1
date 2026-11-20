@@ -37,7 +37,7 @@ function Get-CIPPBaselineDevicePrepProfileState {
     $ProfileName = "$($V.ProfileName.value ?? $V.ProfileName)"
     if ([string]::IsNullOrWhiteSpace($ProfileName)) { return @{ Current = $null; ConfigError = $true } }
     # Name alone could match an unrelated policy the executor would then delete; require the device-prep template.
-    $Policy = @($Policies | Where-Object { "$($_.name)" -eq $ProfileName -and "$($_.templateReference.templateId)" -like '80d33118-b7b4-40d8-b15f-81be745e053f*' }) | Select-Object -First 1
+    $Policy = @($Policies.Where({ "$($_.name)" -eq $ProfileName -and "$($_.templateReference.templateId)" -like '80d33118-b7b4-40d8-b15f-81be745e053f*' })) | Select-Object -First 1
 
     $DeploymentType = [string]($V.DeploymentType.value ?? $V.DeploymentType ?? '0')
     $JoinType = [string]($V.JoinType.value ?? $V.JoinType ?? '0')
@@ -64,7 +64,7 @@ function Get-CIPPBaselineDevicePrepProfileState {
         if (-not [string]::IsNullOrWhiteSpace($DeviceGroupId)) {
             try {
                 $Owners = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$DeviceGroupId/owners?`$select=id,appId" -tenantid $TenantFilter)
-                $HasProvisioningOwner = @($Owners | Where-Object { "$($_.appId)" -eq 'f1346770-5b25-470b-88bd-d5744ab7952c' }).Count -gt 0
+                $HasProvisioningOwner = @($Owners.Where({ "$($_.appId)" -eq 'f1346770-5b25-470b-88bd-d5744ab7952c' })).Count -gt 0
             } catch {
                 Write-Information "Baselines: DevicePrepProfile owner lookup for group '$DeviceGroupId' failed: $($_.Exception.Message)"
             }

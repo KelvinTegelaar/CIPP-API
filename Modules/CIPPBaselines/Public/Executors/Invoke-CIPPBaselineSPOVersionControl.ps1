@@ -55,7 +55,7 @@ function Invoke-CIPPBaselineSPOVersionControl {
         # One concurrent batch (Set-CIPPSPOSiteBulk fans out in .NET) instead of ~2s per site.
         $BulkSites = @($Sites | ForEach-Object { @{ SiteUrl = $_.webUrl; Properties = $SiteProperties } })
         $BulkResults = @(Set-CIPPSPOSiteBulk -TenantFilter $TenantFilter -Sites $BulkSites -UseCertificate)
-        $Failures = @($BulkResults | Where-Object { -not $_.Success })
+        $Failures = @($BulkResults.Where({ -not $_.Success }))
         foreach ($FailedSite in $Failures) {
             Write-Information "Baselines: version policy on $($FailedSite.SiteUrl) continued past: $($FailedSite.Error)"
         }

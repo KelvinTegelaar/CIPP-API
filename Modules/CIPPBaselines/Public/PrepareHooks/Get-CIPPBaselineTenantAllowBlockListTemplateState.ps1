@@ -58,7 +58,7 @@ function Get-CIPPBaselineTenantAllowBlockListTemplateState {
         }
     }
 
-    $Missing = @($Entries | Where-Object { -not $ExistingValues.Contains($_) })
+    $Missing = @($Entries.Where({ -not $ExistingValues.Contains($_) }))
 
     $Current = [PSCustomObject]@{ missingEntries = @($Missing) }
     # Carried for the executor, not graded.

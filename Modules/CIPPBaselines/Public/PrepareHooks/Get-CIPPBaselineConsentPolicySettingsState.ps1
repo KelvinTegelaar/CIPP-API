@@ -26,7 +26,7 @@ function Get-CIPPBaselineConsentPolicySettingsState {
     $V = $Item.Variables
     $AsFlag = { param($Value) if ($Value -eq $true -or "$Value" -eq 'True') { 'true' } else { 'false' } }
 
-    $Existing = @($Settings | Where-Object { "$($_.templateId)" -eq 'dffd5d46-495d-40a9-8e21-954ff55e198a' }) | Select-Object -First 1
+    $Existing = @($Settings.Where({ "$($_.templateId)" -eq 'dffd5d46-495d-40a9-8e21-954ff55e198a' })) | Select-Object -First 1
     $ValueOf = { param($Name) "$((@($Existing.values) | Where-Object { $_.name -eq $Name }).value)".ToLower() }
 
     $Current = [PSCustomObject]@{

@@ -33,7 +33,7 @@ function Get-CIPPBaselineQuarantineTemplateState {
     if ($Policies.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'ExoQuarantinePolicy')) {
         return @{ Current = $null }
     }
-    $Policies = @($Policies | Where-Object { "$($_.Guid)" -ne '00000000-0000-0000-0000-000000000000' })
+    $Policies = @($Policies.Where({ "$($_.Guid)" -ne '00000000-0000-0000-0000-000000000000' }))
 
     $V = $Item.Variables
     $PolicyName = $V.displayName

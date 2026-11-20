@@ -29,7 +29,7 @@ function Get-CIPPBaselineAddDKIMState {
     $IsExcluded = { param($Name) foreach ($Pattern in $Exclusions) { if ($Name -like $Pattern) { return $true } } $false }
 
     $AllDomains = @($Domains | ForEach-Object { "$($_.DomainName)" } | Where-Object { $_ -and -not (& $IsExcluded $_) })
-    $Dkim = @($DkimConfigs | Where-Object { "$($_.Domain)" -and -not (& $IsExcluded "$($_.Domain)") })
+    $Dkim = @($DkimConfigs.Where({ "$($_.Domain)" -and -not (& $IsExcluded "$($_.Domain)") }))
 
     $NewDomains = @($AllDomains | Where-Object { @($Dkim.Domain) -notcontains $_ } | Sort-Object)
     $SetDomains = @($Dkim | Where-Object { $AllDomains -contains "$($_.Domain)" -and $_.Enabled -eq $false } | ForEach-Object { "$($_.Domain)" } | Sort-Object)

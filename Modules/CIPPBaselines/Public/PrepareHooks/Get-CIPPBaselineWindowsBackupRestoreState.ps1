@@ -18,7 +18,7 @@ function Get-CIPPBaselineWindowsBackupRestoreState {
     $Configurations = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'DeviceEnrollmentConfigurations')
     if ($Configurations.Count -eq 0) { return @{ Current = $null } }
 
-    $Config = @($Configurations | Where-Object { "$($_.deviceEnrollmentConfigurationType)" -eq 'windowsRestore' }) | Select-Object -First 1
+    $Config = @($Configurations.Where({ "$($_.deviceEnrollmentConfigurationType)" -eq 'windowsRestore' })) | Select-Object -First 1
     if (-not $Config) { return @{ Current = $null } }
 
     @{

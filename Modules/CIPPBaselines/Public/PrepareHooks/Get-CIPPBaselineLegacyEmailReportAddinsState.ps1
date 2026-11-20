@@ -17,7 +17,7 @@ function Get-CIPPBaselineLegacyEmailReportAddinsState {
         $TenantFilter
     )
 
-    $Apps = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Apps' -Fields 'addIns', 'id' | Where-Object { $_ })
+    $Apps = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Apps' -Fields 'addIns', 'id').Where({ $_ }))
     if ($Apps.Count -eq 0) {
         # No app registrations at all means neither legacy add-in is installed, which is the
         # compliant state - but only once the type has actually been collected.
@@ -32,9 +32,9 @@ function Get-CIPPBaselineLegacyEmailReportAddinsState {
         '6046742c-3aee-485e-a4ac-92ab7199db2e' = 'Report Message'
     }
 
-    $Installed = @($Apps | Where-Object {
-            @($_.addIns | Where-Object { $Legacy.ContainsKey("$($_.id)") }).Count -gt 0
-        })
+    $Installed = @($Apps.Where({
+            @(@($_.addIns).Where({ $Legacy.ContainsKey("$($_.id)") })).Count -gt 0
+        }))
 
     @{
         Current = [PSCustomObject]@{

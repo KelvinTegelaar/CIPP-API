@@ -22,7 +22,7 @@ function Invoke-CIPPBaselineSensitiveInfoTypeTemplate {
         $Current
     )
 
-    $Templates = @($Current.remediableTemplates | Where-Object { $_ })
+    $Templates = @(@($Current.remediableTemplates).Where({ $_ }))
     if ($Templates.Count -eq 0) { return }
 
     foreach ($Template in $Templates) {

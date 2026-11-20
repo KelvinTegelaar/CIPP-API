@@ -13,13 +13,13 @@ function Get-CIPPBaselineEnableExchangeCloudManagementState {
     [CmdletBinding()]
     param($Item, $TenantFilter)
 
-    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'ExternalDirectoryObjectId', 'IsDirSynced', 'IsExchangeCloudManaged' | Where-Object { $_ })
+    $Mailboxes = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'ExternalDirectoryObjectId', 'IsDirSynced', 'IsExchangeCloudManaged').Where({ $_ }))
     if ($Mailboxes.Count -eq 0) { return @{ Current = $null } }
 
     $Desired = "$($Item.Variables.state)" -in @('True', 'true', '1')
-    $Offending = @($Mailboxes | Where-Object {
+    $Offending = @($Mailboxes.Where({
             $_.IsDirSynced -eq $true -and [bool]$_.IsExchangeCloudManaged -ne $Desired
-        })
+        }))
 
     @{
         Current = [PSCustomObject]@{

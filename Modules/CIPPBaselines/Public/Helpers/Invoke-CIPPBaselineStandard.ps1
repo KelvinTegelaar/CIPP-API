@@ -216,13 +216,13 @@ function Invoke-CIPPBaselineStandard {
             # Built as a List: an if-expression's pipeline output unwraps one array level,
             # which silently turned every capability into its own AND-group.
             $Groups = [System.Collections.Generic.List[object]]::new()
-            if (@($Required | Where-Object { $_ -is [System.Array] }).Count -gt 0) {
+            if (@($Required.Where({ $_ -is [System.Array] })).Count -gt 0) {
                 foreach ($Entry in $Required) { $Groups.Add(@($Entry)) }
             } else {
                 $Groups.Add(@($Required))
             }
             foreach ($Group in $Groups) {
-                if (@(@($Group) | Where-Object { $Capabilities.$_ -eq $true }).Count -eq 0) { return $false }
+                if (@(@($Group).Where({ $Capabilities.$_ -eq $true })).Count -eq 0) { return $false }
             }
             $true
         }
@@ -257,11 +257,11 @@ function Invoke-CIPPBaselineStandard {
             $Names = @($Node.PSObject.Properties.Name)
             if ($Names.Count -eq 1 -and $Names[0] -eq '$anyOf') {
                 $Allowed = @($Node.'$anyOf')
-                $IsMember = @($Allowed | Where-Object {
+                $IsMember = @($Allowed.Where({
                         if ($null -eq $Current -or ('' -eq "$Current" -and $Current -isnot [bool])) { $null -eq $_ }
                         elseif ($_ -is [bool]) { $Current -is [bool] -and $_ -eq $Current }
                         else { $null -ne $_ -and $_ -eq $Current }
-                    }).Count -gt 0
+                    })).Count -gt 0
                 if ($UseCurrent -and $IsMember) { return $Current }
                 return $Allowed.Where({ $null -ne $_ }, 'First')[0]
             }
@@ -276,7 +276,7 @@ function Invoke-CIPPBaselineStandard {
         # keys are self-healed: newest by LastRun becomes Prior, siblings are deleted.
         $PriorRows = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant' and StandardName eq '$SafeStandard'")
         $CanonicalRowKey = $Item.Standard -replace '#', '~'
-        $StaleRows = @($PriorRows | Where-Object { $_.RowKey -ne $CanonicalRowKey })
+        $StaleRows = @($PriorRows.Where({ $_.RowKey -ne $CanonicalRowKey }))
         if ($StaleRows.Count -gt 0 -and -not $GradeOnly) {
             try { Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $StaleRows } catch { Write-Information "Baselines: stale resolved-row cleanup for $($Item.Standard) on $TenantFilter failed: $($_.Exception.Message)" }
         }
@@ -290,7 +290,7 @@ function Invoke-CIPPBaselineStandard {
         # object for deletion. Both filter the diff; deny-delete parks the row at Delete
         # Pending instead of scoring it Accepted.
         $AcceptedPaths = $(try { if ($Prior.AcceptedPaths) { $Prior.AcceptedPaths | ConvertFrom-Json -ErrorAction Stop } } catch { $null })
-        $AcceptedKeys = @($AcceptedPaths.PSObject.Properties.Name | Where-Object { $_ })
+        $AcceptedKeys = @(@($AcceptedPaths.PSObject.Properties.Name).Where({ $_ }))
         $DenyDeleteKeys = @($AcceptedPaths.PSObject.Properties | Where-Object { $_.Name -and $_.Value.verdict -eq 'denyDelete' } | ForEach-Object { $_.Name })
         $ExpectedTemplate = & $Render $Definition.expected $Item.Variables
         $Expected = & $ResolveAnyOf $ExpectedTemplate $null $false
@@ -472,7 +472,7 @@ function Invoke-CIPPBaselineStandard {
         foreach ($Argument in ($Definition.read.collectorArgs ?? [PSCustomObject]@{}).PSObject.Properties) {
             $CollectorArgs[$Argument.Name] = $Argument.Value
         }
-        if ($CacheCollector -and @($Definition.read.requiredCaches | Where-Object { $_ }).Count -gt 0) {
+        if ($CacheCollector -and @(@($Definition.read.requiredCaches).Where({ $_ })).Count -gt 0) {
             $JustRefreshed = Wait-CIPPBaselineCacheReady -TenantFilter $TenantFilter -Definition $Definition -RunId $RunId
         }
 
@@ -525,7 +525,7 @@ function Invoke-CIPPBaselineStandard {
                 $PriorCurrentParsed = $(try { $Prior.CurrentValue | ConvertFrom-Json -ErrorAction Stop } catch { $null })
                 $PriorHadLiveData = if ($PriorCurrentParsed -is [System.Management.Automation.PSCustomObject]) {
                     (-not $PriorCurrentParsed.PSObject.Properties['policyStatus']) -and
-                    @($PriorCurrentParsed.PSObject.Properties | Where-Object { $null -ne $_.Value }).Count -gt 0
+                    @(@($PriorCurrentParsed.PSObject.Properties).Where({ $null -ne $_.Value })).Count -gt 0
                 } else { $null -ne $PriorCurrentParsed }
                 $PriorSawPolicy = $PriorHadLiveData -and
                 ([int64]($Prior.LastRun ?? 0) -gt ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - 604800))
@@ -599,7 +599,7 @@ function Invoke-CIPPBaselineStandard {
             }
             $Result.CurrentValue = $Projected
             $CompareExpected = & $ResolveAnyOf $ExpectedTemplate $Current $true
-            $CompareTypes = @($Prepared.CompareType | Where-Object { $_ })
+            $CompareTypes = @(@($Prepared.CompareType).Where({ $_ }))
             $Differences = @(Compare-CIPPIntuneObject -ReferenceObject $CompareExpected -DifferenceObject $Projected -CompareType $CompareTypes | Where-Object { $_ })
 
             $HardCompareEnabled = $Definition.hardCompare -ne $false
@@ -623,10 +623,10 @@ function Invoke-CIPPBaselineStandard {
             }
             # StrictCompare: properties a prepare declares as always-compared, exact and
             # type-strict, regardless of compare type.
-            foreach ($StrictProperty in @($Prepared.StrictCompare | Where-Object { $_ })) {
+            foreach ($StrictProperty in @(@($Prepared.StrictCompare).Where({ $_ }))) {
                 $ExpectedStrict = $CompareExpected.$StrictProperty
                 $CurrentStrict = $Projected.$StrictProperty
-                if ("$ExpectedStrict" -ne "$CurrentStrict" -and @($Differences | Where-Object { $_.Property -eq $StrictProperty }).Count -eq 0) {
+                if ("$ExpectedStrict" -ne "$CurrentStrict" -and @(@($Differences).Where({ $_.Property -eq $StrictProperty })).Count -eq 0) {
                     $Differences = @($Differences) + @([PSCustomObject]@{ Property = $StrictProperty; ExpectedValue = $ExpectedStrict; ReceivedValue = $CurrentStrict })
                 }
             }
@@ -639,7 +639,7 @@ function Invoke-CIPPBaselineStandard {
                 $Merged = [System.Collections.Generic.List[object]]::new()
                 foreach ($Difference in $Differences) { $Merged.Add($Difference) }
                 foreach ($Gap in $HardGaps) {
-                    if (@($Differences | Where-Object { $_.Property -eq $Gap.Property }).Count -eq 0) { $Merged.Add($Gap) }
+                    if (@(@($Differences).Where({ $_.Property -eq $Gap.Property })).Count -eq 0) { $Merged.Add($Gap) }
                 }
                 $Differences = @($Merged)
             }
@@ -648,10 +648,10 @@ function Invoke-CIPPBaselineStandard {
             # Prefix matches cover nested paths.
             $PreFilterDifferences = $Differences
             if ($AcceptedKeys.Count -gt 0) {
-                $Differences = @($Differences | Where-Object {
+                $Differences = @(@($Differences).Where({
                         $Property = $_.Property
                         -not ($AcceptedKeys | Where-Object { $Property -eq $_ -or $Property.StartsWith("$_.") })
-                    })
+                    }))
             }
             $Result.Diff = $Differences
             $Result.RowDiff = $PreFilterDifferences
@@ -699,15 +699,15 @@ function Invoke-CIPPBaselineStandard {
             }
             if ($DeletedKeys.Count -gt 0) {
                 foreach ($DeletedKey in $DeletedKeys) { $AcceptedPaths.PSObject.Properties.Remove($DeletedKey) }
-                $AcceptedKeys = @($AcceptedPaths.PSObject.Properties.Name | Where-Object { $_ })
+                $AcceptedKeys = @(@($AcceptedPaths.PSObject.Properties.Name).Where({ $_ }))
                 $DenyDeleteKeys = @($AcceptedPaths.PSObject.Properties | Where-Object { $_.Name -and $_.Value.verdict -eq 'denyDelete' } | ForEach-Object { $_.Name })
                 if ($Prior) { $Prior | Add-Member -NotePropertyName 'AcceptedPaths' -NotePropertyValue (ConvertTo-Json -Compress -Depth 20 -InputObject $AcceptedPaths) -Force }
                 $DropDeleted = {
                     param($Entries)
-                    @($Entries | Where-Object {
+                    @(@($Entries).Where({
                             $Property = $_.Property
                             -not ($DeletedKeys | Where-Object { $Property -eq $_ -or $Property.StartsWith("$_.") })
-                        })
+                        }))
                 }
                 $PreFilterDifferences = & $DropDeleted $PreFilterDifferences
                 $Differences = & $DropDeleted $Differences
@@ -746,10 +746,10 @@ function Invoke-CIPPBaselineStandard {
         }
         if ($Compliant -and $PathAccepted -and $PriorStatus -ne 'Denied - Remediate Pending') {
             # Aligned only because every deviating property is individually triaged.
-            $DenyDeleteLive = $DenyDeleteKeys.Count -gt 0 -and @($PreFilterDifferences | Where-Object {
+            $DenyDeleteLive = $DenyDeleteKeys.Count -gt 0 -and @(@($PreFilterDifferences).Where({
                     $Property = $_.Property
                     $DenyDeleteKeys | Where-Object { $Property -eq $_ -or $Property.StartsWith("$_.") }
-                }).Count -gt 0
+                })).Count -gt 0
             $Result.Diff = $PreFilterDifferences
             $Result.Outcome = 'Drift'
             $Result.Status = $(if ($DenyDeleteLive) { 'Denied - Delete Pending' } else { 'Accepted' })

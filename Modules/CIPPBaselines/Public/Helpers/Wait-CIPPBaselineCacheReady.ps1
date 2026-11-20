@@ -64,7 +64,7 @@ function Wait-CIPPBaselineCacheReady {
         # changed externally, and a mismatch means alerts would fire on stale state.
         try {
             $LiveRows = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Definition.read.liveCount.uri)?`$select=id&`$top=999" -tenantid $TenantFilter
-            $LiveCount = @($LiveRows | Where-Object { $_.id }).Count
+            $LiveCount = @(@($LiveRows).Where({ $_.id })).Count
             $CountedType = $Definition.read.liveCount.cacheType ?? $FreshnessType
             $CountedMeta = $(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $CountedType -CountsOnly } catch { $null })
             if ($LiveCount -ne [int]($CountedMeta.DataCount ?? 0)) {

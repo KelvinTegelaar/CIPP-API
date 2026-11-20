@@ -30,7 +30,7 @@ function Get-CIPPBaselineStaleEntraDevicesState {
     $DeleteDelta = if ([string]::IsNullOrWhiteSpace("$($Item.Variables.deviceDeleteThreshold)")) { 0 } else { [int]$Item.Variables.deviceDeleteThreshold }
     if ($DeleteDelta -lt 0) { $DeleteDelta = 0 }
 
-    $Devices = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Devices' -Fields 'accountEnabled', 'approximateLastSignInDateTime', 'displayName', 'id', 'isCompliant', 'isManaged', 'onPremisesSyncEnabled', 'physicalIds' | Where-Object { $_ -and $_.approximateLastSignInDateTime })
+    $Devices = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Devices' -Fields 'accountEnabled', 'approximateLastSignInDateTime', 'displayName', 'id', 'isCompliant', 'isManaged', 'onPremisesSyncEnabled', 'physicalIds').Where({ $_ -and $_.approximateLastSignInDateTime }))
     if ($Devices.Count -eq 0) {
         # A tenant with no registered devices - or none that ever signed in - has nothing
         # stale to clean up. Once the type has been collected that is compliant, not unknown.

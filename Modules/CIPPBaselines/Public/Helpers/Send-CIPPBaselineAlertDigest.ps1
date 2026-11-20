@@ -61,7 +61,7 @@ function Send-CIPPBaselineAlertDigest {
                             Baseline     = $_.Baseline
                             Stage        = $_.Stage
                             Differences  = @($_.Differences | ConvertFrom-Json -ErrorAction SilentlyContinue)
-                            ConflictWith = @("$($_.ConflictWith)" -split ', ' | Where-Object { $_ })
+                            ConflictWith = @(@("$($_.ConflictWith)" -split ', ').Where({ $_ }))
                             RunId        = $_.RunId
                         }
                     })
@@ -72,9 +72,9 @@ function Send-CIPPBaselineAlertDigest {
                 $WebhookData = [PSCustomObject]@{
                     Title           = $Title
                     Tenant          = $TenantFilter
-                    DriftCount      = @($Alerts | Where-Object { $_.Event -eq 'Drift' }).Count
-                    RemediatedCount = @($Alerts | Where-Object { $_.Event -eq 'Remediated' }).Count
-                    ConflictCount   = @($Alerts | Where-Object { $_.Event -eq 'Conflict' }).Count
+                    DriftCount      = @($Alerts.Where({ $_.Event -eq 'Drift' })).Count
+                    RemediatedCount = @($Alerts.Where({ $_.Event -eq 'Remediated' })).Count
+                    ConflictCount   = @($Alerts.Where({ $_.Event -eq 'Conflict' })).Count
                     Standards       = @($Alerts | Select-Object Event, Standard, Label, Category, Baseline, Stage, Differences, ConflictWith, RunId)
                 } | ConvertTo-Json -Depth 10 -Compress
 

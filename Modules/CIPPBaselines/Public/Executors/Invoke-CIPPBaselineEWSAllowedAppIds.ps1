@@ -26,7 +26,7 @@ function Invoke-CIPPBaselineEWSAllowedAppIds {
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-OrganizationConfig' -cmdParams @{ EwsEnabled = $true; EwsAllowedAppIDs = ($State.DesiredAppIds -join ',') } -UseSystemMailbox $true
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "EWS allowed applications: enabled EWS, added $($State.MissingAppIds.Count) app ID(s), list now $($State.DesiredAppIds.Count)." -Sev 'Info'
     }
-    $Remaining = @($State.MaliciousAppIdsPresent | Where-Object { $State.DesiredAppIds -contains $_ })
+    $Remaining = @(@($State.MaliciousAppIdsPresent).Where({ $State.DesiredAppIds -contains $_ }))
     if ($Remaining.Count -gt 0) {
         throw "Known-malicious app ID(s) $($Remaining -join ', ') are on the EWS allow list. Enable 'Remove known-malicious apps from the list' or remove them manually."
     }

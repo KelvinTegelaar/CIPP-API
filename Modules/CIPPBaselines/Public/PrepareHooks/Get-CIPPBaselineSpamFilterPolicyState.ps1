@@ -35,13 +35,13 @@ function Get-CIPPBaselineSpamFilterPolicyState {
     $V = $Item.Variables
     $Configured = if ([string]::IsNullOrWhiteSpace("$($V.name)")) { 'CIPP Default Spam Filter Policy' } else { "$($V.name)" }
     $PolicyCandidates = @($Configured, 'Default Spam Filter Policy', 'Default')
-    $ExistingPolicy = @($Policies | Where-Object { $PolicyCandidates -contains "$($_.Name)" }) | Select-Object -First 1
+    $ExistingPolicy = @($Policies.Where({ $PolicyCandidates -contains "$($_.Name)" })) | Select-Object -First 1
     $PolicyName = if ($ExistingPolicy.Name) { "$($ExistingPolicy.Name)" } else { $Configured }
     $IsDefaultPolicy = $PolicyName -eq 'Default'
 
-    $Policy = @($Policies | Where-Object { "$($_.Name)" -eq $PolicyName }) | Select-Object -First 1
+    $Policy = @($Policies.Where({ "$($_.Name)" -eq $PolicyName })) | Select-Object -First 1
     # The classic keys the rule on the POLICY name, not a "<policy> Rule" name.
-    $Rule = @($Rules | Where-Object { "$($_.Name)" -eq $PolicyName }) | Select-Object -First 1
+    $Rule = @($Rules.Where({ "$($_.Name)" -eq $PolicyName })) | Select-Object -First 1
 
     $OnOff = { param($Value) if ($Value -eq $true) { 'On' } else { 'Off' } }
     $SplitList = { param($Value, $Case)

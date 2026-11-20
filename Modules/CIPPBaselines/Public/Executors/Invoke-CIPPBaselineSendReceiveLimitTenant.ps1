@@ -15,7 +15,7 @@ function Invoke-CIPPBaselineSendReceiveLimitTenant {
         $Current
     )
 
-    $Guids = @($Current.offenderGuids | Where-Object { -not [string]::IsNullOrWhiteSpace("$_") })
+    $Guids = @(@($Current.offenderGuids).Where({ -not [string]::IsNullOrWhiteSpace("$_") }))
     if ($Guids.Count -eq 0) { return }
     $MaxSend = [int64]"$($Remediate.sendLimit)" * 1MB
     $MaxReceive = [int64]"$($Remediate.receiveLimit)" * 1MB

@@ -25,7 +25,7 @@ function Get-CIPPBaselineDefaultPlatformRestrictionsState {
     $Configurations = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'DeviceEnrollmentConfigurations')
     if ($Configurations.Count -eq 0) { return @{ Current = $null } }
 
-    $Config = @($Configurations | Where-Object { "$($_.id)".EndsWith('_DefaultPlatformRestrictions') }) | Select-Object -First 1
+    $Config = @($Configurations.Where({ "$($_.id)".EndsWith('_DefaultPlatformRestrictions') })) | Select-Object -First 1
     if (-not $Config) { return @{ Current = $null } }
 
     $V = $Item.Variables

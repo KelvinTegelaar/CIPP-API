@@ -28,10 +28,10 @@ function Get-CIPPBaselinecalDefaultState {
     if ($Permissions.Count -eq 0) { return @{ Current = $null } }
 
     $Level = "$($Item.Variables.permissionLevel)"
-    $Offending = @($Permissions | Where-Object {
+    $Offending = @($Permissions.Where({
             $_.User -eq 'Default' -and
             (($(if ($_.AccessRights -is [array]) { $_.AccessRights -join ',' } else { "$($_.AccessRights)" })) -ne $Level)
-        })
+        }))
 
     @{
         Current = [PSCustomObject]@{

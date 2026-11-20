@@ -27,7 +27,7 @@ function Invoke-CIPPBaselineDisableBasicAuthSMTP {
     $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-TransportConfig' -cmdParams @{ SmtpClientAuthenticationDisabled = $Disabled }
     if (-not $Disabled) { return }
 
-    $EnabledUsers = @($Current.UsersWithSmtpAuthEnabled | Where-Object { $_ })
+    $EnabledUsers = @(@($Current.UsersWithSmtpAuthEnabled).Where({ $_ }))
     foreach ($User in $EnabledUsers) {
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-CASMailbox' -cmdParams @{ Identity = $User; SmtpClientAuthenticationDisabled = $null }
     }

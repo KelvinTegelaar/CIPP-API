@@ -12,7 +12,7 @@ function Invoke-CIPPBaselineMailboxDefaultAuditSet {
     [CmdletBinding()]
     param($Remediate, $TenantFilter, $Current)
 
-    $Targets = @($Current.targets | Where-Object { $_.id })
+    $Targets = @(@($Current.targets).Where({ $_.id }))
     if ($Targets.Count -eq 0) { return }
 
     $Requests = foreach ($Target in $Targets) {

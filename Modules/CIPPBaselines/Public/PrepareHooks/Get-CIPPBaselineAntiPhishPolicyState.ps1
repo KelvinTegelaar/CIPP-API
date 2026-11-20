@@ -41,8 +41,8 @@ function Get-CIPPBaselineAntiPhishPolicyState {
     $ExistingRule = @($LinkedRules.Where({ $RuleCandidates -contains "$($_.Name)" }); $LinkedRules; $Rules.Where({ $RuleCandidates -contains "$($_.Name)" }))[0]
     $RuleName = if ($ExistingRule.Name) { "$($ExistingRule.Name)" } else { $DesiredRuleName }
 
-    $Policy = @($Policies | Where-Object { "$($_.Name)" -eq $PolicyName }) | Select-Object -First 1
-    $Rule = @($Rules | Where-Object { "$($_.Name)" -eq $RuleName }) | Select-Object -First 1
+    $Policy = @($Policies.Where({ "$($_.Name)" -eq $PolicyName })) | Select-Object -First 1
+    $Rule = @($Rules.Where({ "$($_.Name)" -eq $RuleName })) | Select-Object -First 1
     $V = $Item.Variables
 
     # Get-AntiPhishPolicy only populates Enabled for the built-in default policy; on a custom policy

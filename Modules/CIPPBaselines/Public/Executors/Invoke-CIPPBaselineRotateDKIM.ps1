@@ -17,7 +17,7 @@ function Invoke-CIPPBaselineRotateDKIM {
         $Current
     )
 
-    $Domains = @($Current.domainsWith1024BitDkim | Where-Object { $_ })
+    $Domains = @(@($Current.domainsWith1024BitDkim).Where({ $_ }))
     if ($Domains.Count -eq 0) { return }
 
     foreach ($Domain in $Domains) {

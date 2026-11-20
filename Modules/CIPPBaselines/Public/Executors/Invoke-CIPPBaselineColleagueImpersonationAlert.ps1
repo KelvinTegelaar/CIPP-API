@@ -22,7 +22,7 @@ function Invoke-CIPPBaselineColleagueImpersonationAlert {
 
     $RuleHtml = "$($Remediate.disclaimerHtml)"
     if ([string]::IsNullOrWhiteSpace($RuleHtml)) {
-        $Fallback = @($Current.ruleStates | Where-Object { -not [string]::IsNullOrWhiteSpace("$($_.ExistingDisclaimer)") }) | Select-Object -First 1
+        $Fallback = @(@($Current.ruleStates).Where({ -not [string]::IsNullOrWhiteSpace("$($_.ExistingDisclaimer)") })) | Select-Object -First 1
         if ($Fallback) {
             $RuleHtml = "$($Fallback.ExistingDisclaimer)"
             Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message 'Disclaimer HTML not configured - using the HTML from an existing rule.' -Sev 'Info'

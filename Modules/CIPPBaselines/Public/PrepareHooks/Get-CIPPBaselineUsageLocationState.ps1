@@ -28,7 +28,7 @@ function Get-CIPPBaselineUsageLocationState {
         $TenantFilter
     )
 
-    $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' -Fields 'displayName', 'id', 'usageLocation', 'userPrincipalName', 'userType' | Where-Object { $_ })
+    $Users = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' -Fields 'displayName', 'id', 'usageLocation', 'userPrincipalName', 'userType').Where({ $_ }))
     if ($Users.Count -eq 0) { return @{ Current = $null } }
 
     $Wanted = "$($Item.Variables.usageLocation.value ?? $Item.Variables.usageLocation)".Trim().ToUpperInvariant()
@@ -62,7 +62,7 @@ function Get-CIPPBaselineUsageLocationState {
         }
         # Case-insensitive lookup: the hashtable literal above is case-insensitive already,
         # this just makes the intent explicit for the reader.
-        $Unresolved = @(@($IncludeNames) + @($ExcludeNames) | Where-Object { -not $GroupIdsByName.ContainsKey($_) })
+        $Unresolved = @(@(@($IncludeNames) + @($ExcludeNames)).Where({ -not $GroupIdsByName.ContainsKey($_) }))
         if ($Unresolved.Count -gt 0) {
             Write-Information "Baselines: UsageLocation on $TenantFilter cannot resolve group(s) $($Unresolved -join ', ') - refusing to sweep with a partial scope."
             return @{ Current = $null }
@@ -92,18 +92,18 @@ function Get-CIPPBaselineUsageLocationState {
                 return @{ Current = $null }
             }
             $Bucket = if ("$($Response.id)".StartsWith('include-')) { $IncludedIds } else { $ExcludedIds }
-            foreach ($MemberId in @($Response.body.value.id | Where-Object { $_ })) { $Bucket["$MemberId"] = $true }
+            foreach ($MemberId in @(@($Response.body.value.id).Where({ $_ }))) { $Bucket["$MemberId"] = $true }
         }
     }
 
-    $Candidates = @($Users | Where-Object { $_.userType -eq 'Member' -and $_.id })
-    if ($IncludeNames.Count -gt 0) { $Candidates = @($Candidates | Where-Object { $IncludedIds.ContainsKey("$($_.id)") }) }
-    if ($ExcludeNames.Count -gt 0) { $Candidates = @($Candidates | Where-Object { -not $ExcludedIds.ContainsKey("$($_.id)") }) }
+    $Candidates = @($Users.Where({ $_.userType -eq 'Member' -and $_.id }))
+    if ($IncludeNames.Count -gt 0) { $Candidates = @($Candidates.Where({ $IncludedIds.ContainsKey("$($_.id)") })) }
+    if ($ExcludeNames.Count -gt 0) { $Candidates = @($Candidates.Where({ -not $ExcludedIds.ContainsKey("$($_.id)") })) }
 
-    $Incorrect = @($Candidates | Where-Object {
+    $Incorrect = @($Candidates.Where({
             $Location = "$($_.usageLocation)".Trim().ToUpperInvariant()
             if ($OnlyWhenBlank) { [string]::IsNullOrWhiteSpace($Location) } else { $Location -ne $Wanted }
-        })
+        }))
 
     @{
         Current = [PSCustomObject]@{

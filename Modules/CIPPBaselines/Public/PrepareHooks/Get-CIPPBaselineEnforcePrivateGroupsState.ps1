@@ -15,7 +15,7 @@ function Get-CIPPBaselineEnforcePrivateGroupsState {
         $TenantFilter
     )
 
-    $Groups = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'groupTypes', 'id', 'visibility' | Where-Object { $_ })
+    $Groups = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'groupTypes', 'id', 'visibility').Where({ $_ }))
     if ($Groups.Count -eq 0) { return @{ Current = $null } }
 
     $Keywords = @(@($Item.Variables.ExcludedGroupNames) | ForEach-Object {
@@ -26,7 +26,7 @@ function Get-CIPPBaselineEnforcePrivateGroupsState {
             $_.groupTypes -contains 'Unified' -and $_.visibility -eq 'Public'
         } | Where-Object {
             $DisplayName = "$($_.displayName)"
-            -not @($Keywords | Where-Object { $DisplayName -match [regex]::Escape($_) })
+            -not @($Keywords.Where({ $DisplayName -match [regex]::Escape($_) }))
         })
 
     @{

@@ -20,7 +20,7 @@ function Get-CIPPBaselineDefenderASRPolicyState {
     if ($Policies.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'IntuneConfigurationPolicies')) {
         return @{ Current = $null }
     }
-    $Policy = @($Policies | Where-Object { "$($_.name)" -eq 'ASR Default rules' }) | Select-Object -First 1
+    $Policy = @($Policies.Where({ "$($_.name)" -eq 'ASR Default rules' })) | Select-Object -First 1
 
     $ASRPrefix = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules'
     $ASRRuleDefMap = @{

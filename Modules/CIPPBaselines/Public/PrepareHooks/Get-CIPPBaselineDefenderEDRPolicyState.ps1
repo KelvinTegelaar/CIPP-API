@@ -19,7 +19,7 @@ function Get-CIPPBaselineDefenderEDRPolicyState {
     if ($Policies.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'IntuneConfigurationPolicies')) {
         return @{ Current = $null }
     }
-    $Policy = @($Policies | Where-Object { "$($_.name)" -eq 'EDR Configuration' }) | Select-Object -First 1
+    $Policy = @($Policies.Where({ "$($_.name)" -eq 'EDR Configuration' })) | Select-Object -First 1
 
     $CurrentConfig = $false
     $CurrentSampleSharing = $false

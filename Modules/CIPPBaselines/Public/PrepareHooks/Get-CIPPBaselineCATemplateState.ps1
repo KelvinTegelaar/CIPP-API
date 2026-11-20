@@ -75,12 +75,12 @@ function Get-CIPPBaselineCATemplateState {
     foreach ($Location in @($Template.LocationInfo)) {
         if ($Location.id -and $Location.displayName) { $NameById["$($Location.id)"] = "$($Location.displayName)" }
     }
-    $TenantLocations = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'NamedLocations' | Where-Object { $_ })
+    $TenantLocations = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'NamedLocations').Where({ $_ }))
     foreach ($Location in $TenantLocations) {
         if ($Location.id -and $Location.displayName -and -not $NameById.ContainsKey("$($Location.id)")) { $NameById["$($Location.id)"] = "$($Location.displayName)" }
     }
     $StrengthNameById = @{}
-    foreach ($Strength in @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'AuthenticationStrengths' | Where-Object { $_ })) {
+    foreach ($Strength in @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'AuthenticationStrengths').Where({ $_ }))) {
         if ($Strength.id -and $Strength.displayName) { $StrengthNameById["$($Strength.id)"] = "$($Strength.displayName)" }
     }
     $UserNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -140,7 +140,7 @@ function Get-CIPPBaselineCATemplateState {
             }
             if ($null -ne $Policy.conditions.users.excludeGroups) {
                 # CIPP re-adds Vacation Exclusion groups on every deploy - tolerated, and ignored in a template captured with them.
-                $Policy.conditions.users.excludeGroups = @($Policy.conditions.users.excludeGroups | Where-Object { -not "$_".StartsWith('Vacation Exclusion') })
+                $Policy.conditions.users.excludeGroups = @(@($Policy.conditions.users.excludeGroups).Where({ -not "$_".StartsWith('Vacation Exclusion') }))
             }
         }
 
@@ -161,8 +161,8 @@ function Get-CIPPBaselineCATemplateState {
     }
 
     # --- the live side, from the ConditionalAccessPolicies cache
-    $Policies = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' | Where-Object { $_ })
-    $Live = @($Policies | Where-Object { $_.displayName -eq $Template.displayName })
+    $Policies = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies').Where({ $_ }))
+    $Live = @($Policies.Where({ $_.displayName -eq $Template.displayName }))
     if ($Live.Count -gt 1) {
         Write-Information "Baselines: $($Live.Count) CA policies named '$($Template.displayName)' exist on $TenantFilter - comparing the first."
     }
@@ -228,7 +228,7 @@ function Get-CIPPBaselineCATemplateState {
         $Guid = [guid]::Empty
         foreach ($Side in @('includeUsers', 'excludeUsers')) {
             if ($null -eq $Template.conditions.users.$Side) { continue }
-            $Template.conditions.users.$Side = @($Template.conditions.users.$Side | Where-Object { "$_" -in 'All', 'None', 'GuestsOrExternalUsers' -or [guid]::TryParse("$_", [ref]$Guid) -or $UserNames.Contains("$_") })
+            $Template.conditions.users.$Side = @(@($Template.conditions.users.$Side).Where({ "$_" -in 'All', 'None', 'GuestsOrExternalUsers' -or [guid]::TryParse("$_", [ref]$Guid) -or $UserNames.Contains("$_") }))
         }
     }
 

@@ -64,7 +64,7 @@ function Invoke-CIPPBaselineGlobalSecureAccessCompliantNetwork {
         $Changed = $true
         $Refresh.Add('NetworkAccess')
     }
-    foreach ($Link in @($TrafficProfile.policies | Where-Object { $_.state -ne 'enabled' })) {
+    foreach ($Link in @(@($TrafficProfile.policies).Where({ $_.state -ne 'enabled' }))) {
         $null = New-GraphPostRequest -uri "$Graph/networkAccess/forwardingProfiles/$($TrafficProfile.id)/policies/$($Link.id)" -tenantid $TenantFilter -type PATCH -body '{"state":"enabled"}' -AsApp $true
         $Changed = $true
         $Refresh.Add('NetworkAccess')
@@ -195,7 +195,7 @@ exit 0
         $MacScript = $MacScript.Replace('CONFIGHASH', $ScriptHash)
         $ScriptName = 'Global Secure Access Client (macOS)'
         $ExistingScript = New-GraphGetRequest -uri "$Graph/deviceManagement/deviceShellScripts?`$select=id,displayName,description&`$expand=assignments" -tenantid $TenantFilter | Where-Object { $_.displayName -eq $ScriptName } | Select-Object -First 1
-        $Unassigned = @($ExistingScript.assignments | Where-Object { $_ }).Count -eq 0
+        $Unassigned = @(@($ExistingScript.assignments).Where({ $_ })).Count -eq 0
         if (-not $ExistingScript -or "$($ExistingScript.description)" -notmatch "\[cfg:$ScriptHash\]" -or $Unassigned) {
             $Script = Add-CIPPMacOSShellScript -TenantFilter $TenantFilter -DisplayName $ScriptName -Description "Installs the Microsoft Global Secure Access client; re-runs daily. Managed by CIPP. [cfg:$ScriptHash]" -ScriptContent $MacScript -ExecutionFrequency 'P1D'
             if ($PolicyAssignTo -ne 'On' -and $Unassigned) {

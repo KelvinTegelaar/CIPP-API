@@ -20,7 +20,7 @@ function Get-CIPPBaselineTeamsDisableResourceAccountsState {
         $TenantFilter
     )
 
-    $Accounts = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'TeamsResourceAccounts' | Where-Object { $_ })
+    $Accounts = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'TeamsResourceAccounts').Where({ $_ }))
     if ($Accounts.Count -eq 0) {
         # Plenty of tenants run no auto attendants or call queues at all. Once the type has
         # been collected, empty is the answer - nothing to disable, so compliant. Before that
@@ -38,7 +38,7 @@ function Get-CIPPBaselineTeamsDisableResourceAccountsState {
         if ($User.accountEnabled -eq $true -and $User.onPremisesSyncEnabled -ne $true) { $EnabledIds["$($User.id)"] = $true }
     }
 
-    $Enabled = @($Accounts | Where-Object { $_.objectId -and $EnabledIds.ContainsKey("$($_.objectId)") })
+    $Enabled = @($Accounts.Where({ $_.objectId -and $EnabledIds.ContainsKey("$($_.objectId)") }))
 
     @{
         Current = [PSCustomObject]@{

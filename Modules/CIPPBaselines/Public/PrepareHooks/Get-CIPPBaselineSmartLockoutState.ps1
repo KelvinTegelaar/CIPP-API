@@ -37,7 +37,7 @@ function Get-CIPPBaselineSmartLockoutState {
     if ($Mode -eq 'Enforced') { $Mode = 'Enforce' }
     if ([string]::IsNullOrWhiteSpace($Mode)) { $Mode = 'Audit' }
 
-    $Existing = @($Settings | Where-Object { "$($_.templateId)" -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' }) | Select-Object -First 1
+    $Existing = @($Settings.Where({ "$($_.templateId)" -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' })) | Select-Object -First 1
     $ValueOf = { param($Name) "$((@($Existing.values) | Where-Object { $_.name -eq $Name }).value)" }
 
     $Current = [PSCustomObject]@{

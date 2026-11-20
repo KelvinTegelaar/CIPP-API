@@ -34,7 +34,7 @@ function Get-CIPPBaselinePhishSimSpoofIntelligenceState {
     $Current = [PSCustomObject]@{ missingDomains = @($Missing) }
     $ExtraItems = @()
     if ($RemoveExtra) {
-        $ExtraItems = @($SpoofItems | Where-Object { $Allowed -notcontains "$($_.SendingInfrastructure)" })
+        $ExtraItems = @($SpoofItems.Where({ $Allowed -notcontains "$($_.SendingInfrastructure)" }))
         $Expected | Add-Member -NotePropertyName 'extraDomains' -NotePropertyValue @()
         $Current | Add-Member -NotePropertyName 'extraDomains' -NotePropertyValue @($ExtraItems | ForEach-Object { "$($_.SendingInfrastructure)" } | Sort-Object)
     }

@@ -48,7 +48,7 @@ function Get-CIPPBaselineNudgeMFAState {
         $Resolved = [System.Collections.Generic.List[hashtable]]::new()
         foreach ($Entry in $Entries) {
             if ($Entry -match '^(all_users|allusers|all users)$') { $Resolved.Add(@{ id = 'all_users'; targetType = 'group' }); continue }
-            $Matched = @($Groups | Where-Object { "$($_.displayName)".StartsWith($Entry) })
+            $Matched = @($Groups.Where({ "$($_.displayName)".StartsWith($Entry) }))
             $Exact = $Matched.Where({ $_.displayName -eq $Entry })
             if ($Exact.Count -gt 0) { $Matched = @($Exact) }
             if ($Matched.Count -eq 0) { return $null }
@@ -86,7 +86,7 @@ function Get-CIPPBaselineNudgeMFAState {
         state                                  = "$($Campaign.state)"
         snoozeDurationInDays                   = [int]"$($Campaign.snoozeDurationInDays)"
         enforceRegistrationAfterAllowedSnoozes = [bool]$Campaign.enforceRegistrationAfterAllowedSnoozes
-        targetedMethodCorrect                  = (@($Campaign.includeTargets | Where-Object { "$($_.targetedAuthenticationMethod)" -ne $Method }).Count -eq 0)
+        targetedMethodCorrect                  = (@(@($Campaign.includeTargets).Where({ "$($_.targetedAuthenticationMethod)" -ne $Method })).Count -eq 0)
         includeTargetIds                       = @($Campaign.includeTargets.id | Sort-Object)
     }
     if ($ExcludeEntries.Count -gt 0) {

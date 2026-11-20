@@ -9,7 +9,7 @@ function Get-CIPPBaselineMailboxDefaultAuditSetState {
     [CmdletBinding()]
     param($Item, $TenantFilter)
 
-    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'recipientTypeDetails', 'DefaultAuditSet' | Where-Object { $_ })
+    $Mailboxes = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'recipientTypeDetails', 'DefaultAuditSet').Where({ $_ }))
     if ($Mailboxes.Count -eq 0) { return @{ Current = $null } }
 
     $Types = @('UserMailbox', 'SharedMailbox', 'RoomMailbox', 'EquipmentMailbox')

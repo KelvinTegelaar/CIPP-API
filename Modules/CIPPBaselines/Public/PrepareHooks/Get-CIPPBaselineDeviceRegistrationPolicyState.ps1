@@ -28,7 +28,7 @@ function Get-CIPPBaselineDeviceRegistrationPolicyState {
         $TenantFilter
     )
 
-    $Policy = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'DeviceRegistrationPolicy' | Where-Object { $_ }) | Select-Object -First 1
+    $Policy = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'DeviceRegistrationPolicy').Where({ $_ })) | Select-Object -First 1
     if ($null -eq $Policy) { return @{ Current = $null } }
 
     $Current = [PSCustomObject]@{

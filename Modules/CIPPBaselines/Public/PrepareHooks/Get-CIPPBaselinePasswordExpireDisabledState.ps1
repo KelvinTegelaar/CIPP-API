@@ -20,7 +20,7 @@ function Get-CIPPBaselinePasswordExpireDisabledState {
         $TenantFilter
     )
 
-    $Domains = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Domains' | Where-Object { $_ })
+    $Domains = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Domains').Where({ $_ }))
     if ($Domains.Count -eq 0) { return @{ Current = $null } }
 
     $Ids = @($Domains.id)
@@ -30,11 +30,11 @@ function Get-CIPPBaselinePasswordExpireDisabledState {
             }
         })
 
-    $Offending = @($Domains | Where-Object {
+    $Offending = @($Domains.Where({
             $_.isVerified -eq $true -and
             $_.passwordValidityPeriodInDays -ne 2147483647 -and
             $_.id -notin $SubDomains
-        })
+        }))
 
     @{
         Current = [PSCustomObject]@{

@@ -20,7 +20,7 @@ function Invoke-CIPPBaselinesharingDomainRestriction {
     if ($Mode -notin @('none', 'allowList', 'blockList')) { return }
     $Body = @{ sharingDomainRestrictionMode = $Mode }
     if ($Mode -ne 'none') {
-        $Domains = @("$($Remediate.domains)".Split(',').Trim() | Where-Object { $_ })
+        $Domains = @(@("$($Remediate.domains)".Split(',').Trim()).Where({ $_ }))
         if ($Domains.Count -eq 0) { return }
         if ($Mode -eq 'allowList') { $Body['sharingAllowedDomainList'] = @($Domains) } else { $Body['sharingBlockedDomainList'] = @($Domains) }
     }

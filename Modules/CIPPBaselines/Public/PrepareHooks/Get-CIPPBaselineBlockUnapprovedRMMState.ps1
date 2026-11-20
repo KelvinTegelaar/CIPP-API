@@ -55,7 +55,7 @@ function Get-CIPPBaselineBlockUnapprovedRMMState {
 
     $Current = [ordered]@{}
     foreach ($Platform in $Wanted.Keys) {
-        $Deployed = @($Policies | Where-Object { "$($_.name)" -eq $Wanted[$Platform].Name }) | Select-Object -First 1
+        $Deployed = @($Policies.Where({ "$($_.name)" -eq $Wanted[$Platform].Name })) | Select-Object -First 1
         $Current["$($Platform.ToLowerInvariant())Policy"] = if (-not $Deployed) {
             'Not deployed'
         } elseif ("$($Deployed.description)" -match '\[cfg:([0-9A-F]{16})\]' -and $Matches[1] -eq $Wanted[$Platform].Fingerprint) {

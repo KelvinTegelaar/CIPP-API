@@ -12,14 +12,14 @@ function Get-CIPPBaselineDelegateSentItemsState {
     [CmdletBinding()]
     param($Item, $TenantFilter)
 
-    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'recipientTypeDetails', 'MessageCopyForSendOnBehalfEnabled', 'MessageCopyForSentAsEnabled' | Where-Object { $_ })
+    $Mailboxes = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'recipientTypeDetails', 'MessageCopyForSendOnBehalfEnabled', 'MessageCopyForSentAsEnabled').Where({ $_ }))
     if ($Mailboxes.Count -eq 0) { return @{ Current = $null } }
 
     $Types = if ("$($Item.Variables.IncludeUserMailboxes)" -in @('False', 'false', '0')) { @('SharedMailbox') } else { @('UserMailbox', 'SharedMailbox') }
-    $Offending = @($Mailboxes | Where-Object {
+    $Offending = @($Mailboxes.Where({
             $_.recipientTypeDetails -in $Types -and
             ($_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false)
-        })
+        }))
 
     @{
         Current = [PSCustomObject]@{

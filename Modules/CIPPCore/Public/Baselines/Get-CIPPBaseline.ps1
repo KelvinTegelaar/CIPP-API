@@ -184,7 +184,7 @@ function Get-CIPPBaseline {
                 $Expansions = @($StageDeltas | ForEach-Object { & $ExpandDeltaConfigs $_ })
                 $StageConfigs = [System.Collections.Generic.List[object]]::new()
                 $SeenInstances = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                foreach ($Expansion in @($Expansions | Where-Object { -not $_.FannedOut }) + @($Expansions | Where-Object { $_.FannedOut })) {
+                foreach ($Expansion in @($Expansions.Where({ -not $_.FannedOut })) + @($Expansions.Where({ $_.FannedOut }))) {
                     foreach ($Config in $Expansion.Configs) {
                         if ($SeenInstances.Add("$($Config.instance)")) { $StageConfigs.Add($Config) }
                     }
@@ -192,9 +192,9 @@ function Get-CIPPBaseline {
                 [PSCustomObject]@{
                     name            = $StageDefinition.name
                     logic           = $StageDefinition.logic
-                    conditions      = @($StageDefinition.conditions | Where-Object { $_.type })
+                    conditions      = @(@($StageDefinition.conditions).Where({ $_.type }))
                     conditionGroups = @(foreach ($Group in @($StageDefinition.conditionGroups)) {
-                            $GroupConditions = @($Group.conditions | Where-Object { $_.type })
+                            $GroupConditions = @(@($Group.conditions).Where({ $_.type }))
                             if ($GroupConditions.Count -gt 0) { [PSCustomObject]@{ logic = $Group.logic ?? 'and'; conditions = $GroupConditions } }
                         })
                     # Enumerated explicitly: member access on an empty array yields a lone $null.
@@ -254,7 +254,7 @@ function Get-CIPPBaseline {
             # Posture summary: multiple stages = Staged; otherwise Remediate/Report from the deltas.
             $RemediationPosture = if ($Stages.Count -gt 1) {
                 'Staged'
-            } elseif (@($Deltas | Where-Object { -not [bool]$_.remediateEnabled }).Count -gt 0) {
+            } elseif (@($Deltas.Where({ -not [bool]$_.remediateEnabled })).Count -gt 0) {
                 'Report'
             } else {
                 'Remediate'
@@ -353,7 +353,7 @@ function Get-CIPPBaseline {
             $Occupancy = foreach ($Stage in $Stages) {
                 $StageNumber++
                 $CurrentNumber = $StageNumber
-                $InStage = @($TenantStates | Where-Object { $_.currentStage -eq $CurrentNumber })
+                $InStage = @(@($TenantStates).Where({ $_.currentStage -eq $CurrentNumber }))
                 $NextAdvanceAt = ($InStage.estimatedAdvanceAt | Where-Object { $_ } | Sort-Object | Select-Object -First 1)
                 [PSCustomObject]@{
                     stage          = $CurrentNumber

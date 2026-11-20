@@ -22,14 +22,14 @@ function Get-CIPPBaselineDisableM365GroupUsersState {
         return @{ Current = $null }
     }
 
-    $GroupSetting = @($Settings | Where-Object { "$($_.displayName)" -eq 'Group.Unified' }) | Select-Object -First 1
+    $GroupSetting = @($Settings.Where({ "$($_.displayName)" -eq 'Group.Unified' })) | Select-Object -First 1
     $ValueOf = { param($Name) "$((@($GroupSetting.values) | Where-Object { $_.name -eq $Name }).value)" }
 
     $AllowedGroupName = "$($Item.Variables.AllowedGroupName)"
     $DesiredGroupId = $null
     if (-not [string]::IsNullOrWhiteSpace($AllowedGroupName)) {
         $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id')
-        $DesiredGroupId = "$((@($Groups | Where-Object { "$($_.displayName)" -eq $AllowedGroupName }) | Select-Object -First 1).id)"
+        $DesiredGroupId = "$((@($Groups.Where({ "$($_.displayName)" -eq $AllowedGroupName })) | Select-Object -First 1).id)"
     }
 
     $Expected = [PSCustomObject]@{ groupCreationDisabled = $true }

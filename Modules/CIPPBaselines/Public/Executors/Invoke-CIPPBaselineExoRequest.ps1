@@ -29,7 +29,7 @@ function Invoke-CIPPBaselineExoRequest {
         # resolve here; an exact "%prop%" keeps the property's JSON type.
         $StepJson = ConvertTo-Json -Compress -Depth 100 -InputObject $StepParams
         if ($StepJson -match '%[A-Za-z_][A-Za-z0-9_.]*%') {
-            $Records = @($Current | Where-Object { $_ })
+            $Records = @(@($Current).Where({ $_ }))
             if ($Records.Count -ne 1) {
                 throw "$($Step.cmdlet) references a read-record token ($($Matches[0])) but the read returned $($Records.Count) records."
             }
@@ -61,7 +61,7 @@ function Invoke-CIPPBaselineExoRequest {
                 $HasEditKey = if ($IsHash) { $Value.Contains($EditKey) } else { $null -ne $Value.PSObject.Properties[$EditKey] }
                 if (-not $HasEditKey) { continue }
                 $EditValue = if ($IsHash) { $Value[$EditKey] } else { $Value.PSObject.Properties[$EditKey].Value }
-                $Cleaned = @($EditValue | Where-Object { $null -ne $_ -and -not ($_ -is [string] -and [string]::IsNullOrWhiteSpace($_)) })
+                $Cleaned = @(@($EditValue).Where({ $null -ne $_ -and -not ($_ -is [string] -and [string]::IsNullOrWhiteSpace($_)) }))
                 if ($Cleaned.Count -gt 0) { $AnyReal = $true }
                 if ($IsHash) { $Value[$EditKey] = $Cleaned } else { $Value.$EditKey = $Cleaned }
             }

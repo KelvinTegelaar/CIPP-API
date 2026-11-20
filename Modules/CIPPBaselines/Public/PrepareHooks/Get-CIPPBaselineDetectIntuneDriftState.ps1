@@ -24,7 +24,7 @@ function Get-CIPPBaselineDetectIntuneDriftState {
     $ManagedNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $TemplatesTable = Get-CippTable -tablename 'templates'
     $WorkItems = @(try { Get-CIPPBaselineWorkItems -TenantFilter $TenantFilter } catch { @() })
-    $IntuneWorkItems = @($WorkItems | Where-Object { $_.BaseName -eq 'IntuneTemplate' })
+    $IntuneWorkItems = @($WorkItems.Where({ $_.BaseName -eq 'IntuneTemplate' }))
     $AllTemplateRows = if ($IntuneWorkItems.Count -gt 0) {
         @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq 'IntuneTemplate'")
     } else { @() }
@@ -84,7 +84,7 @@ function Get-CIPPBaselineDetectIntuneDriftState {
         foreach ($CacheType in $Family.Caches) {
             $CacheMeta = $(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $CacheType -CountsOnly } catch { $null })
             if ($null -ne $CacheMeta) { $AnyCollected = $true }
-            $Policies = @($(try { New-CIPPDbRequest -TenantFilter $TenantFilter -Type $CacheType } catch { $null }) | Where-Object { $_ })
+            $Policies = @(@($(try { New-CIPPDbRequest -TenantFilter $TenantFilter -Type $CacheType } catch { $null })).Where({ $_ }))
             if ($Policies.Count -gt 0) { break }
         }
         foreach ($Policy in $Policies) {

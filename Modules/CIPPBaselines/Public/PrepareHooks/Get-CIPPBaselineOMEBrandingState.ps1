@@ -24,7 +24,7 @@ function Get-CIPPBaselineOMEBrandingState {
     if ($Configs.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'ExoOMEConfiguration')) {
         return @{ Current = $null }
     }
-    $Config = @($Configs | Where-Object { "$($_.Identity)" -eq 'OME Configuration' }) | Select-Object -First 1
+    $Config = @($Configs.Where({ "$($_.Identity)" -eq 'OME Configuration' })) | Select-Object -First 1
     if (-not $Config) { $Config = $Configs | Select-Object -First 1 }
 
     $V = $Item.Variables

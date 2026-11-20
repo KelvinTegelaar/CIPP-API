@@ -18,7 +18,7 @@ function Invoke-CIPPBaselineAuthenticationMethods {
         $Current
     )
 
-    $Sets = @($Current.remediationSets | Where-Object { $_ })
+    $Sets = @(@($Current.remediationSets).Where({ $_ }))
     if ($Sets.Count -eq 0) { return }
 
     $Failures = 0

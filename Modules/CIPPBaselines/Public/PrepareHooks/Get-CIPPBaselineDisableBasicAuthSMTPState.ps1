@@ -29,7 +29,7 @@ function Get-CIPPBaselineDisableBasicAuthSMTPState {
         $TenantFilter
     )
 
-    $TransportConfig = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoTransportConfig' | Where-Object { $_ }) | Select-Object -First 1
+    $TransportConfig = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoTransportConfig').Where({ $_ })) | Select-Object -First 1
     if ($null -eq $TransportConfig) { return @{ Current = $null } }
 
     $ExpectedDisabled = "$($Item.Variables.disabled)" -in @('True', 'true', '1')

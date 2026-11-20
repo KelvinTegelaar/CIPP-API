@@ -22,7 +22,7 @@ function Get-CIPPBaselineProfilePhotosState {
     if (-not $PhotoSettings -and $OwaPolicies.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'PhotoUpdateSettings')) {
         return @{ Current = $null }
     }
-    $OwaPolicy = @($OwaPolicies | Where-Object { "$($_.Identity)" -eq 'OwaMailboxPolicy-Default' }) | Select-Object -First 1
+    $OwaPolicy = @($OwaPolicies.Where({ "$($_.Identity)" -eq 'OwaMailboxPolicy-Default' })) | Select-Object -First 1
 
     $StateValue = "$($Item.Variables.state.value ?? $Item.Variables.state)"
     if ($StateValue -notin @('enabled', 'disabled')) { return @{ Current = $null; ConfigError = $true } }

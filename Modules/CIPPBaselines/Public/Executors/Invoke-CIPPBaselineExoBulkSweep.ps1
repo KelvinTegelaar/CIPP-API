@@ -54,7 +54,7 @@ function Invoke-CIPPBaselineExoBulkSweep {
         if (-not ($Current -and $Current.PSObject.Properties.Name -contains $From)) {
             throw "ExoBulkSweep: the prepare hook produced no '$From' set to sweep."
         }
-        $Objects = @($Current.$From | Where-Object { $_ })
+        $Objects = @(@($Current.$From).Where({ $_ }))
         if ($Objects.Count -eq 0) { continue }
         if (-not $Write.cmdlet) { throw 'ExoBulkSweep: a write group declares no cmdlet.' }
 
@@ -88,7 +88,7 @@ function Invoke-CIPPBaselineExoBulkSweep {
         throw "ExoBulkSweep: all $Attempted writes failed. $($FailureDetail | Select-Object -First 1)"
     }
 
-    foreach ($CacheType in @($Remediate.refreshCache | Where-Object { $_ })) {
+    foreach ($CacheType in @(@($Remediate.refreshCache).Where({ $_ }))) {
         $Collector = Get-CIPPBaselineCommand -Name "Set-CIPPDBCache$CacheType"
         if (-not $Collector) { continue }
         try {

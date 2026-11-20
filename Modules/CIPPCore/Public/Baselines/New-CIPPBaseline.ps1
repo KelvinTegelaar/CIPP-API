@@ -47,9 +47,9 @@ function New-CIPPBaseline {
             [PSCustomObject]@{
                 name            = $_.name
                 logic           = $_.logic ?? 'and'
-                conditions      = @($_.conditions | Where-Object { $_.type })
+                conditions      = @(@($_.conditions).Where({ $_.type }))
                 conditionGroups = @(foreach ($Group in @($_.conditionGroups)) {
-                        $GroupConditions = @($Group.conditions | Where-Object { $_.type })
+                        $GroupConditions = @(@($Group.conditions).Where({ $_.type }))
                         if ($GroupConditions.Count -gt 0) { [PSCustomObject]@{ logic = $Group.logic ?? 'and'; conditions = $GroupConditions } }
                     })
             }
@@ -197,12 +197,12 @@ function New-CIPPBaseline {
                 if ($Group) { $Group.Members.defaultDomainName } else { $TenantLookup["$Value"].defaultDomainName ?? $Value }
             }
         }
-        $AllTenantsAssigned = @($Scopes | Where-Object { $_.scope -eq 'allTenants' }).Count -gt 0
+        $AllTenantsAssigned = @(@($Scopes).Where({ $_.scope -eq 'allTenants' })).Count -gt 0
         $AssignedDomains = @(& $ExpandDomains @($Scopes | Where-Object { $_.scope -ne 'allTenants' } | ForEach-Object { $_.scopeId }))
         $ExcludedDomains = @(& $ExpandDomains $ExcludedValues)
-        $Unassigned = @($ResolvedRows | Where-Object {
+        $Unassigned = @($ResolvedRows.Where({
                 $Orphans -notcontains $_ -and ($ExcludedDomains -contains $_.PartitionKey -or -not ($AllTenantsAssigned -or $AssignedDomains -contains $_.PartitionKey))
-            })
+            }))
         if ($Unassigned.Count -gt 0) {
             $StillResolved = @(Get-CIPPBaselineWorkItems -TenantFilter @($Unassigned.PartitionKey | Select-Object -Unique) | ForEach-Object { '{0}|{1}' -f $_.TenantFilter, $_.Standard })
             foreach ($Row in $Unassigned) {

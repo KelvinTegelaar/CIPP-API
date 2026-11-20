@@ -83,7 +83,7 @@ function Invoke-CIPPBaselineAppleEnrollmentTypeProfile {
     # Reconcile the assignments to exactly the configured groups.
     $ExpectedGroupIds = [System.Collections.Generic.List[string]]::new()
     $AllGroups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter
-    foreach ($Name in @("$($Remediate.customGroup)".Split(',').Trim() | Where-Object { $_ })) {
+    foreach ($Name in @(@("$($Remediate.customGroup)".Split(',').Trim()).Where({ $_ }))) {
         # Square brackets are wildcard character classes to -like; group names containing them
         # are literal. Matches the escaping Compare-CIPPIntuneAssignments applies.
         $Pattern = $Name -replace '\[', '`[' -replace '\]', '`]'

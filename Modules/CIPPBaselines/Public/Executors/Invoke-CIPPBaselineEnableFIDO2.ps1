@@ -26,14 +26,14 @@ function Invoke-CIPPBaselineEnableFIDO2 {
     $Config = New-GraphGetRequest -uri $Uri -tenantid $TenantFilter -AsApp $true
     $Config.state = 'enabled'
     $Config.isSelfServiceRegistrationAllowed = $true
-    $PasskeyProfiles = @($Config.passkeyProfiles | Where-Object { $_ })
+    $PasskeyProfiles = @(@($Config.passkeyProfiles).Where({ $_ }))
     if ($PasskeyProfiles.Count -gt 0) {
         # With passkey profiles present attestation is governed per-profile, and Graph
         # rejects a top-level flag that disagrees with the DEFAULT profile ("Attestation
         # enforcement cannot be enabled when it is disabled in default passkey profile").
         # The standard's deliverable is state=enabled - align the legacy flag with the
         # default profile instead of fighting a validation that cannot be won here.
-        $DefaultProfile = @($PasskeyProfiles | Where-Object { "$($_.id)" -eq "$($Config.defaultPasskeyProfile)" }) | Select-Object -First 1
+        $DefaultProfile = @($PasskeyProfiles.Where({ "$($_.id)" -eq "$($Config.defaultPasskeyProfile)" })) | Select-Object -First 1
         $Config.isAttestationEnforced = "$(($DefaultProfile ?? $PasskeyProfiles[0]).attestationEnforcement)" -ne 'disabled'
     } else {
         $Config.isAttestationEnforced = $true

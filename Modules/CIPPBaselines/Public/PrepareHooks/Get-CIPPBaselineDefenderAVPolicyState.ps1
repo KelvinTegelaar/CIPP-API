@@ -21,7 +21,7 @@ function Get-CIPPBaselineDefenderAVPolicyState {
     if ($Policies.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'IntuneConfigurationPolicies')) {
         return @{ Current = $null }
     }
-    $Policy = @($Policies | Where-Object { "$($_.name)" -eq 'Default AV Policy' }) | Select-Object -First 1
+    $Policy = @($Policies.Where({ "$($_.name)" -eq 'Default AV Policy' })) | Select-Object -First 1
 
     $DP = 'device_vendor_msft_policy_config_defender'
     $DA = 'device_vendor_msft_defender_configuration'

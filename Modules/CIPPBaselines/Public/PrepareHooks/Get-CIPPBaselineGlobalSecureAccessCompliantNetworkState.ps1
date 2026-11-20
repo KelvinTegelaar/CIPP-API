@@ -22,13 +22,13 @@ function Get-CIPPBaselineGlobalSecureAccessCompliantNetworkState {
     $UserRefs = @($V.excludeUsers | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
     $GroupRefs = @($V.excludeGroups | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
 
-    $State = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'NetworkAccess' | Where-Object { $_ }) | Select-Object -First 1
+    $State = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'NetworkAccess').Where({ $_ })) | Select-Object -First 1
     if (-not $State) { return @{ Current = $null } }
 
     $Locations = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'NamedLocations' -CollectorType 'ConditionalAccessPolicies')
-    $Location = @($Locations | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.compliantNetworkNamedLocation' }) | Select-Object -First 1
-    $TrafficProfile = @($State.profiles | Where-Object { $_.trafficForwardingType -eq 'm365' -and $_.isCustomProfile -ne $true }) | Select-Object -First 1
-    $Links = @($TrafficProfile.policies | Where-Object { $_ })
+    $Location = @($Locations.Where({ $_.'@odata.type' -eq '#microsoft.graph.compliantNetworkNamedLocation' })) | Select-Object -First 1
+    $TrafficProfile = @(@($State.profiles).Where({ $_.trafficForwardingType -eq 'm365' -and $_.isCustomProfile -ne $true })) | Select-Object -First 1
+    $Links = @(@($TrafficProfile.policies).Where({ $_ }))
 
     $Expected = [ordered]@{
         onboarded                       = $true
@@ -41,7 +41,7 @@ function Get-CIPPBaselineGlobalSecureAccessCompliantNetworkState {
     $Current = [ordered]@{
         onboarded                       = $State.onboarded -eq $true
         microsoftProfileEnabled         = $TrafficProfile.state -eq 'enabled'
-        microsoftPolicyGroupsEnabled    = $Links.Count -gt 0 -and @($Links | Where-Object { $_.state -ne 'enabled' }).Count -eq 0
+        microsoftPolicyGroupsEnabled    = $Links.Count -gt 0 -and @($Links.Where({ $_.state -ne 'enabled' })).Count -eq 0
         profileAssignedToAllUsers       = $TrafficProfile.appRoleAssignmentRequired -eq $false
         signalingEnabled                = $State.signalingStatus -eq 'enabled'
         compliantNetworkLocationPresent = $null -ne $Location
@@ -50,31 +50,31 @@ function Get-CIPPBaselineGlobalSecureAccessCompliantNetworkState {
     if ($DeployWindows) {
         $Apps = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'IntuneMobileApps')
         $Expected.windowsAppDeployed = $true
-        $Current.windowsAppDeployed = @($Apps | Where-Object { $_.displayName -eq 'Global Secure Access Client (Windows)' }).Count -gt 0
+        $Current.windowsAppDeployed = @($Apps.Where({ $_.displayName -eq 'Global Secure Access Client (Windows)' })).Count -gt 0
     }
     if ($DeployMacOS) {
         $Scripts = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'IntuneMacOSScripts' -CollectorType 'IntuneScripts')
         $Catalog = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'IntuneConfigurationPolicies')
         $Configs = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'IntuneDeviceConfigurations' -CollectorType 'IntunePolicies')
         $Expected.macOSScriptDeployed = $true
-        $Current.macOSScriptDeployed = @($Scripts | Where-Object { $_.displayName -eq 'Global Secure Access Client (macOS)' }).Count -gt 0
+        $Current.macOSScriptDeployed = @($Scripts.Where({ $_.displayName -eq 'Global Secure Access Client (macOS)' })).Count -gt 0
         $Expected.macOSSystemExtensionsPolicyDeployed = $true
-        $Current.macOSSystemExtensionsPolicyDeployed = @($Catalog | Where-Object { $_.name -eq 'Global Secure Access - macOS System Extensions' }).Count -gt 0
+        $Current.macOSSystemExtensionsPolicyDeployed = @($Catalog.Where({ $_.name -eq 'Global Secure Access - macOS System Extensions' })).Count -gt 0
         $Expected.macOSTransparentProxyProfileDeployed = $true
-        $Current.macOSTransparentProxyProfileDeployed = @($Configs | Where-Object { $_.displayName -eq 'Global Secure Access - macOS Transparent Proxy' }).Count -gt 0
+        $Current.macOSTransparentProxyProfileDeployed = @($Configs.Where({ $_.displayName -eq 'Global Secure Access - macOS Transparent Proxy' })).Count -gt 0
         $Expected.macOSClientSettingsProfileDeployed = $true
-        $Current.macOSClientSettingsProfileDeployed = @($Configs | Where-Object { $_.displayName -eq 'Global Secure Access - macOS Client Settings' }).Count -gt 0
+        $Current.macOSClientSettingsProfileDeployed = @($Configs.Where({ $_.displayName -eq 'Global Secure Access - macOS Client Settings' })).Count -gt 0
     }
 
     $Policies = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies')
-    $Policy = @($Policies | Where-Object { $_.displayName -eq $PolicyName }) | Select-Object -First 1
+    $Policy = @($Policies.Where({ $_.displayName -eq $PolicyName })) | Select-Object -First 1
     $Expected.policyPresent = $true
     $Current.policyPresent = $null -ne $Policy
     $Expected.policyState = if ($Enforce) { 'enabled' } else { 'enabledForReportingButNotEnforced' }
     $Current.policyState = "$($Policy.state)"
     $LiveRoles = @($Policy.conditions.users.excludeRoles)
     $Expected.policyExcludedRoles = $RoleIds -join ','
-    $Current.policyExcludedRoles = @($RoleIds | Where-Object { $LiveRoles -contains $_ }) -join ','
+    $Current.policyExcludedRoles = @($RoleIds.Where({ $LiveRoles -contains $_ })) -join ','
     if ($UserRefs.Count -gt 0 -or $GroupRefs.Count -gt 0) {
         $Users = if ($UserRefs.Count -gt 0) { @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users' -Fields 'displayName', 'id', 'state', 'userPrincipalName') } else { @() }
         $Groups = if ($GroupRefs.Count -gt 0) { @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id') } else { @() }
@@ -82,11 +82,11 @@ function Get-CIPPBaselineGlobalSecureAccessCompliantNetworkState {
         $Resolved = @($UserRefs | ForEach-Object { $Ref = $_; ($Users | Where-Object { $_.userPrincipalName -eq $Ref -or $_.displayName -eq $Ref -or $_.id -eq $Ref } | Select-Object -First 1).id }) +
         @($GroupRefs | ForEach-Object { $Ref = $_; ($Groups | Where-Object { $_.displayName -eq $Ref -or $_.id -eq $Ref } | Select-Object -First 1).id })
         $Expected.policyExclusionsPresent = $true
-        $Current.policyExclusionsPresent = @($Resolved | Where-Object { -not $_ -or $ExcludedIds -notcontains $_ }).Count -eq 0
+        $Current.policyExclusionsPresent = @(@($Resolved).Where({ -not $_ -or $ExcludedIds -notcontains $_ })).Count -eq 0
     }
 
     $CurrentObject = [PSCustomObject]$Current
-    $PolicyDrift = @($Expected.Keys | Where-Object { $_ -like 'policy*' -and "$($Expected[$_])" -ne "$($Current[$_])" }).Count -gt 0
+    $PolicyDrift = @(@($Expected.Keys).Where({ $_ -like 'policy*' -and "$($Expected[$_])" -ne "$($Current[$_])" })).Count -gt 0
     $CurrentObject | Add-Member -NotePropertyName policyDrift -NotePropertyValue $PolicyDrift
     $CurrentObject | Add-Member -NotePropertyName compliantNetworkLocationId -NotePropertyValue "$($Location.id)"
 

@@ -72,7 +72,7 @@ function Get-CIPPBaselineIntuneTemplateState {
         # so a tenant that never collected it used to yield no match, leave the TEMPLATE's
         # foreign GUID in the payload, and report permanent false drift - with remediation
         # deploying a policy that references a reusable setting the tenant does not have.
-        $TenantReusable = @($(try { Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'IntuneReusableSettings' } catch { $null }) | Where-Object { $_.displayName -eq $ReusableName }) | Select-Object -First 1
+        $TenantReusable = @(@($(try { Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'IntuneReusableSettings' } catch { $null })).Where({ $_.displayName -eq $ReusableName })) | Select-Object -First 1
         if ($TenantReusable.id) { $RawJson = $RawJson.Replace($ReusableGuid, "$($TenantReusable.id)") }
     }
     $RawJson = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $RawJson -EscapeForJson
@@ -151,7 +151,7 @@ function Get-CIPPBaselineIntuneTemplateState {
     # --- current side, cache-only
     $Policies = @()
     foreach ($CacheType in $Family.Caches) {
-        $Policies = @($(try { New-CIPPDbRequest -TenantFilter $TenantFilter -Type $CacheType } catch { $null }) | Where-Object { $_ })
+        $Policies = @(@($(try { New-CIPPDbRequest -TenantFilter $TenantFilter -Type $CacheType } catch { $null })).Where({ $_ }))
         if ($Policies.Count -gt 0) { break }
     }
     if ($Policies.Count -eq 0) {

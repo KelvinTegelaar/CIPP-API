@@ -48,7 +48,7 @@ function Get-CIPPBaselineDisableGuestsState {
     }
 
     $EnabledGuests = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=createdDateTime le $Lookup and userType eq 'Guest' and accountEnabled eq true&`$select=$GuestSelect" -scope 'https://graph.microsoft.com/.default' -tenantid $TenantFilter)
-    $ToDisable = @($EnabledGuests | Where-Object { & $TestStale $_ $Cutoff })
+    $ToDisable = @($EnabledGuests.Where({ & $TestStale $_ $Cutoff }))
 
     if ($ToDisable.Count -gt 0) {
         $AuditLookup = (Get-Date).AddDays(-7).ToUniversalTime().ToString('o')
@@ -59,7 +59,7 @@ function Get-CIPPBaselineDisableGuestsState {
                 Write-Information "Baselines: reactivation audit lookup on $TenantFilter failed: $($_.Exception.Message)"
                 @()
             })
-        $ToDisable = @($ToDisable | Where-Object { $Reactivated -notcontains $_.id })
+        $ToDisable = @($ToDisable.Where({ $Reactivated -notcontains $_.id }))
     }
 
     $ToDelete = @(if ($DeleteEnabled) {

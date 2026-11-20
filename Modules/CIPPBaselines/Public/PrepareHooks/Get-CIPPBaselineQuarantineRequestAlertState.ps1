@@ -32,12 +32,12 @@ function Get-CIPPBaselineQuarantineRequestAlertState {
     $Configured = "$($Item.Variables.NotifyUser)"
     $AllowExtra = "$($Item.Variables.AllowExtraAddresses)" -notin @('False', 'false', '0')
 
-    $Alerts = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoProtectionAlert' | Where-Object { $_ })
+    $Alerts = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoProtectionAlert').Where({ $_ }))
     if ($Alerts.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'ExoProtectionAlert')) {
         return @{ Current = $null }
     }
 
-    $Alert = @($Alerts | Where-Object { $_.Name -eq $PolicyName }) | Select-Object -First 1
+    $Alert = @($Alerts.Where({ $_.Name -eq $PolicyName })) | Select-Object -First 1
 
     if ("$($Item.Variables.State)" -eq 'removed') {
         return @{
@@ -46,7 +46,7 @@ function Get-CIPPBaselineQuarantineRequestAlertState {
         }
     }
 
-    $Recipients = @(@($Alert.NotifyUser) | Where-Object { $_ })
+    $Recipients = @(@($Alert.NotifyUser).Where({ $_ }))
 
     if ($AllowExtra) {
         return @{

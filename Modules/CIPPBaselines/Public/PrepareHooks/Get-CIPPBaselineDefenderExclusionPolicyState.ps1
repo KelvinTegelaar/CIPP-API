@@ -21,7 +21,7 @@ function Get-CIPPBaselineDefenderExclusionPolicyState {
     if ($Policies.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'IntuneConfigurationPolicies')) {
         return @{ Current = $null }
     }
-    $Policy = @($Policies | Where-Object { "$($_.name)" -eq 'Default AV Exclusion Policy' }) | Select-Object -First 1
+    $Policy = @($Policies.Where({ "$($_.name)" -eq 'Default AV Exclusion Policy' })) | Select-Object -First 1
 
     $V = $Item.Variables
     $ExpectedExtensions = @(("$($V.excludedExtensions)" -replace ' ', '') -split ',' | Where-Object { $_ } | Sort-Object)

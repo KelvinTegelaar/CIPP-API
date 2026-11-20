@@ -21,7 +21,7 @@ function Get-CIPPBaselineDisableExchangeOnlinePowerShellState {
         $TenantFilter
     )
 
-    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'Guid', 'RemotePowerShellEnabled' | Where-Object { $_ })
+    $Mailboxes = @(@(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'Guid', 'RemotePowerShellEnabled').Where({ $_ }))
     if ($Mailboxes.Count -eq 0) { return @{ Current = $null } }
 
     try {
@@ -43,9 +43,9 @@ function Get-CIPPBaselineDisableExchangeOnlinePowerShellState {
     $Admins = @{}
     foreach ($UPN in ($AdminUPNs | Where-Object { $_ })) { $Admins["$UPN"] = $true }
 
-    $Offending = @($Mailboxes | Where-Object {
+    $Offending = @($Mailboxes.Where({
             $_.RemotePowerShellEnabled -eq $true -and -not $Admins.ContainsKey("$($_.UPN)")
-        })
+        }))
 
     @{
         Current = [PSCustomObject]@{

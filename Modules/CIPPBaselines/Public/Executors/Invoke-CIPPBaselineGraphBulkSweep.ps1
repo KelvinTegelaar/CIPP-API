@@ -62,7 +62,7 @@ function Invoke-CIPPBaselineGraphBulkSweep {
         if (-not ($Current -and $Current.PSObject.Properties.Name -contains $From)) {
             throw "GraphBulkSweep: the prepare hook produced no '$From' set to sweep."
         }
-        $Objects = @($Current.$From | Where-Object { $_ })
+        $Objects = @(@($Current.$From).Where({ $_ }))
         if ($Objects.Count -eq 0) { continue }
 
         $Index = 0
@@ -108,7 +108,7 @@ function Invoke-CIPPBaselineGraphBulkSweep {
         throw "GraphBulkSweep: all $Attempted writes failed. $($FailureDetail | Select-Object -First 1)"
     }
 
-    foreach ($CacheType in @($Remediate.refreshCache | Where-Object { $_ })) {
+    foreach ($CacheType in @(@($Remediate.refreshCache).Where({ $_ }))) {
         $Collector = Get-CIPPBaselineCommand -Name "Set-CIPPDBCache$CacheType"
         if (-not $Collector) { continue }
         try { $null = & $Collector -TenantFilter $TenantFilter } catch {

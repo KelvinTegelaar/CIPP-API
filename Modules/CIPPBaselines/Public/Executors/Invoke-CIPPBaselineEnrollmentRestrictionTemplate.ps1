@@ -21,7 +21,7 @@ function Invoke-CIPPBaselineEnrollmentRestrictionTemplate {
     if (-not $Template) { return }
 
     $SetParams = @{ TenantFilter = $TenantFilter; Settings = $Template; APIName = 'Baselines' }
-    $ExistingIds = @($Current.existingIds | Where-Object { $_ })
+    $ExistingIds = @(@($Current.existingIds).Where({ $_ }))
     if ($ExistingIds.Count -gt 0) { $SetParams.ConfigurationIds = $ExistingIds }
     $null = Set-CIPPEnrollmentRestriction @SetParams
 }

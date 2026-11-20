@@ -29,10 +29,10 @@ function Get-CIPPBaselineCustomBannedPasswordListState {
             Where-Object { $_.Length -ge 4 -and $_.Length -le 16 } | Select-Object -Unique)
     if ($Words.Count -eq 0 -or $Words.Count -gt 1000) { return @{ Current = $null; ConfigError = $true } }
 
-    $Existing = @($Settings | Where-Object { "$($_.templateId)" -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' }) | Select-Object -First 1
+    $Existing = @($Settings.Where({ "$($_.templateId)" -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' })) | Select-Object -First 1
     $CurrentWords = @()
     if ($Existing) {
-        $CurrentWords = @("$((@($Existing.values) | Where-Object { $_.name -eq 'BannedPasswordList' }).value)" -split ([char]9) | Where-Object { $_ })
+        $CurrentWords = @(@("$((@($Existing.values) | Where-Object { $_.name -eq 'BannedPasswordList' }).value)" -split ([char]9)).Where({ $_ }))
     }
     $CheckEnabled = [bool]($Existing -and "$((@($Existing.values) | Where-Object { $_.name -eq 'EnableBannedPasswordCheck' }).value)" -eq 'True')
     $Missing = @($Words | Where-Object { $CurrentWords -notcontains $_ } | Sort-Object)

@@ -18,7 +18,7 @@ function Invoke-CIPPBaselineDisableSelfServiceLicenses {
         $Current
     )
 
-    $Offenders = @($Current.offenders | Where-Object { $_ })
+    $Offenders = @(@($Current.offenders).Where({ $_ }))
     if ($Offenders.Count -eq 0) { return }
 
     $Failures = 0

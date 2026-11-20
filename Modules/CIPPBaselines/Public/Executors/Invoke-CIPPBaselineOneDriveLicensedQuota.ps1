@@ -17,7 +17,7 @@ function Invoke-CIPPBaselineOneDriveLicensedQuota {
     )
 
     if ($null -eq $Current) { throw 'OneDriveLicensedQuota: no OneDrive quota data to remediate from.' }
-    $Targets = @($Current.targets | Where-Object { $_.siteUrl })
+    $Targets = @(@($Current.targets).Where({ $_.siteUrl }))
     if ($Targets.Count -eq 0) { return }
 
     $TargetQuotaMB = [int64](5TB / 1MB)

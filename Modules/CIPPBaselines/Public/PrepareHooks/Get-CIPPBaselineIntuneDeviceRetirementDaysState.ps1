@@ -26,7 +26,7 @@ function Get-CIPPBaselineIntuneDeviceRetirementDaysState {
         return @{ Current = $null }
     }
 
-    $Rule = @($Rules | Where-Object { "$($_.deviceCleanupRulePlatformType)" -eq 'all' }) | Select-Object -First 1
+    $Rule = @($Rules.Where({ "$($_.deviceCleanupRulePlatformType)" -eq 'all' })) | Select-Object -First 1
     if (-not $Rule) { $Rule = $Rules | Select-Object -First 1 }
 
     $Current = [PSCustomObject]@{

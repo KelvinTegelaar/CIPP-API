@@ -27,7 +27,7 @@ function Get-CIPPBaselineEmailAsAlternateLoginIdState {
     }
 
     $Desired = [bool]($Item.Variables.Enabled -eq $true)
-    $Policy = @($Policies | Where-Object { $_.isOrganizationDefault -eq $true }) | Select-Object -First 1
+    $Policy = @($Policies.Where({ $_.isOrganizationDefault -eq $true })) | Select-Object -First 1
     $Definition = $(if ($Policy.definition) { try { @($Policy.definition)[0] | ConvertFrom-Json -ErrorAction Stop } catch { $null } })
     $Raw = $Definition.HomeRealmDiscoveryPolicy.AlternateIdLogin.Enabled
 

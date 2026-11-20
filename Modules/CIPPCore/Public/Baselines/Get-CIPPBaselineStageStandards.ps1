@@ -25,6 +25,6 @@ function Get-CIPPBaselineStageStandards {
                 "$($Config.instance ?? $Config.standard)"
             }
         }
-        Write-Output -NoEnumerate ([string[]]@($Keys | Where-Object { $_ }))
+        Write-Output -NoEnumerate ([string[]]@(@($Keys).Where({ $_ })))
     }
 }

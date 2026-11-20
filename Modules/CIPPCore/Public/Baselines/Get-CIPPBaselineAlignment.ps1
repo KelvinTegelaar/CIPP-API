@@ -317,7 +317,7 @@ function Get-CIPPBaselineAlignment {
             # Aligned % against the standards this baseline has rolled out so far ('No Data'
             # rows carry no signal, so no percentage until the engine resolves something).
             $RolledOut = @(Get-CIPPBaselineStageStandards -Baseline $Baseline -Definitions $Definitions | Select-Object -First $State.currentStage | ForEach-Object { $_ })
-            $RolledOutRows = @($Rows | Where-Object { $RolledOut -contains $_.standardName })
+            $RolledOutRows = @(@($Rows).Where({ $RolledOut -contains $_.standardName }))
             $RolledOutScores = & $ScoreRows $RolledOutRows
             $AlignedPercentage = if ($RolledOutScores.applicable -gt 0) { $RolledOutScores.alignedPercentage } else { $null }
 
@@ -585,9 +585,9 @@ function Get-CIPPBaselineAlignment {
                 } else {
                     $StageKeys | Select-Object -First $State.currentStage | ForEach-Object { $_ }
                 }
-                $Allowed["$($State.tenantFilter)"] = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Keys | Where-Object { $_ }), [System.StringComparer]::OrdinalIgnoreCase)
+                $Allowed["$($State.tenantFilter)"] = [System.Collections.Generic.HashSet[string]]::new([string[]]@(@($Keys).Where({ $_ })), [System.StringComparer]::OrdinalIgnoreCase)
             }
-            $Rows = @($Rows | Where-Object { $Allowed.ContainsKey("$($_.tenantFilter)") -and $Allowed["$($_.tenantFilter)"].Contains("$($_.standardName)") })
+            $Rows = @(@($Rows).Where({ $Allowed.ContainsKey("$($_.tenantFilter)") -and $Allowed["$($_.tenantFilter)"].Contains("$($_.standardName)") }))
             $FilterInfo = [PSCustomObject]@{
                 baselineId   = $FilterBaseline.GUID
                 baselineName = $FilterBaseline.templateName
@@ -675,7 +675,7 @@ function Get-CIPPBaselineAlignment {
             standards        = @($Standards)
             tenants          = @($Tenants)
             trend            = $Trend
-            activeDeviations = @($Rows | Where-Object { $_.status -in @('Accepted', 'Partially Accepted') -or $_.status -like 'Denied - *' })
+            activeDeviations = @(@($Rows).Where({ $_.status -in @('Accepted', 'Partially Accepted') -or $_.status -like 'Denied - *' }))
         }
         if ($FilterInfo) { $Result | Add-Member -NotePropertyName 'filter' -NotePropertyValue $FilterInfo }
         return $Result

@@ -71,7 +71,7 @@ function Get-CIPPBaselineAuthenticationMethodsState {
     foreach ($Config in @($Policy.authenticationMethodConfigurations)) { $Configs["$($Config.id)"] = $Config }
 
     $Groups = $null
-    $NeedsGroups = @($Configured | Where-Object { $_.Enabled -and (-not [string]::IsNullOrWhiteSpace($_.GroupName) -or -not [string]::IsNullOrWhiteSpace($_.ExcludeGroupName)) }).Count -gt 0
+    $NeedsGroups = @($Configured.Where({ $_.Enabled -and (-not [string]::IsNullOrWhiteSpace($_.GroupName) -or -not [string]::IsNullOrWhiteSpace($_.ExcludeGroupName)) })).Count -gt 0
     if ($NeedsGroups) { $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'Id') }
     $GroupIdCache = @{}
     $ResolveGroup = {

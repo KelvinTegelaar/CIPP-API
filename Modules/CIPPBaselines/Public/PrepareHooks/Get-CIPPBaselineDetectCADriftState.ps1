@@ -70,7 +70,7 @@ function Get-CIPPBaselineDetectCADriftState {
     # this tenant. Without a creating standard they stay flagged: then somebody clicked
     # the admin center by hand.
     $SharePointAccessStandards = @('unmanagedSync', 'OWAAttachmentRestrictions')
-    $SharePointAccessManaged = @($WorkItems | Where-Object { $_.BaseName -in $SharePointAccessStandards }).Count -gt 0
+    $SharePointAccessManaged = @($WorkItems.Where({ $_.BaseName -in $SharePointAccessStandards })).Count -gt 0
 
     $CacheMeta = $(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' -CountsOnly } catch { $null })
     if ($null -eq $CacheMeta) {
@@ -80,7 +80,7 @@ function Get-CIPPBaselineDetectCADriftState {
 
     $Expected = [PSCustomObject]@{}
     $Current = [PSCustomObject]@{}
-    $Policies = @($(try { New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' } catch { $null }) | Where-Object { $_ })
+    $Policies = @(@($(try { New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies' } catch { $null })).Where({ $_ }))
     foreach ($Policy in $Policies) {
         $PolicyName = "$($Policy.displayName)"
         if (-not $PolicyName) { continue }

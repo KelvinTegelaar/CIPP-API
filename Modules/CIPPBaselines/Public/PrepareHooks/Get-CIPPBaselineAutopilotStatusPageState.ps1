@@ -26,10 +26,10 @@ function Get-CIPPBaselineAutopilotStatusPageState {
     $Configurations = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'DeviceEnrollmentConfigurations')
     if ($Configurations.Count -eq 0) { return @{ Current = $null } }
 
-    $Config = @($Configurations | Where-Object {
+    $Config = @($Configurations.Where({
             "$($_.deviceEnrollmentConfigurationType)" -eq 'windows10EnrollmentCompletionPageConfiguration' -and
             [int]$_.priority -eq 0
-        }) | Select-Object -First 1
+        })) | Select-Object -First 1
     if (-not $Config) { return @{ Current = $null } }
 
     $V = $Item.Variables

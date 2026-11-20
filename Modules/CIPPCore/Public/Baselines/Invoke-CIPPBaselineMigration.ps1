@@ -207,7 +207,7 @@ function Invoke-CIPPBaselineMigration {
         # Specials first (renames + value maps + documented drops), then the generic
         # case-insensitive key match against the definition's variables.
         $Special = $Specials[$Name]
-        foreach ($Dropped in @($Special.drop | Where-Object { $_ })) {
+        foreach ($Dropped in @(@($Special.drop).Where({ $_ }))) {
             if ($null -ne $Settings[$Dropped]) {
                 $DropNote = ($Special.dropNotes ?? @{})[$Dropped] ?? 'has no V3 equivalent'
                 $Warnings.Add("'$Dropped' dropped - $DropNote (was '$(& $Unwrap $Settings[$Dropped])')")
@@ -375,7 +375,7 @@ function Invoke-CIPPBaselineMigration {
                 if (-not $V2Entry) { continue }
                 $Mapped = & $MapEntry $StandardProperty.Name $V2Entry $IsDrift
                 foreach ($Warning in $Mapped.Warnings) { $Warnings.Add("$($StandardProperty.Name): $Warning") }
-                foreach ($Config in @($Mapped.Configs | Where-Object { $_ })) {
+                foreach ($Config in @(@($Mapped.Configs).Where({ $_ }))) {
                     $Configs.Add($Config)
                     $StandardReports.Add([PSCustomObject]@{
                             standard          = $Config.standard
@@ -455,11 +455,11 @@ function Invoke-CIPPBaselineMigration {
         templates = @($Report)
         summary   = [PSCustomObject]@{
             total    = @($Report).Count
-            ready    = @($Report | Where-Object { $_.status -in @('Ready', 'WillUpdate') }).Count
-            migrated = @($Report | Where-Object { $_.status -in @('Migrated', 'Updated') }).Count
-            upToDate = @($Report | Where-Object { $_.status -eq 'UpToDate' }).Count
-            skipped  = @($Report | Where-Object { $_.status -eq 'Skipped' }).Count
-            failed   = @($Report | Where-Object { $_.status -eq 'Failed' }).Count
+            ready    = @(@($Report).Where({ $_.status -in @('Ready', 'WillUpdate') })).Count
+            migrated = @(@($Report).Where({ $_.status -in @('Migrated', 'Updated') })).Count
+            upToDate = @(@($Report).Where({ $_.status -eq 'UpToDate' })).Count
+            skipped  = @(@($Report).Where({ $_.status -eq 'Skipped' })).Count
+            failed   = @(@($Report).Where({ $_.status -eq 'Failed' })).Count
             warnings = @($Report | ForEach-Object { @($_.warnings).Count } | Measure-Object -Sum).Sum
         }
     }

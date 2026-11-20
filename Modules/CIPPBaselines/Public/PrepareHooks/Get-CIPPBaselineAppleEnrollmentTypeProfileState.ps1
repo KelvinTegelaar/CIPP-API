@@ -32,7 +32,7 @@ function Get-CIPPBaselineAppleEnrollmentTypeProfileState {
     # The identity may arrive as an option object ({label, value}) from some save paths.
     $DisplayName = "$($V.DisplayName.value ?? $V.DisplayName)"
     if ([string]::IsNullOrWhiteSpace($DisplayName)) { return @{ Current = $null; ConfigError = $true } }
-    $EnrollmentProfile = @($Profiles | Where-Object { "$($_.displayName)" -eq $DisplayName }) | Select-Object -First 1
+    $EnrollmentProfile = @($Profiles.Where({ "$($_.displayName)" -eq $DisplayName })) | Select-Object -First 1
 
     $EnrollmentType = [string]($V.EnrollmentType.value ?? $V.EnrollmentType)
     if ([string]::IsNullOrWhiteSpace($EnrollmentType)) { $EnrollmentType = 'webDeviceEnrollment' }

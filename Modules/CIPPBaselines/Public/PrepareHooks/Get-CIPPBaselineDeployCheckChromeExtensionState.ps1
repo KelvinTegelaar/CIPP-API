@@ -23,7 +23,7 @@ function Get-CIPPBaselineDeployCheckChromeExtensionState {
     }
     # The cache $select drops @odata.type on some rows, so match on the CIPP-authored
     # display name alone - it is unique to this deployment.
-    $App = @($Apps | Where-Object { "$($_.displayName)" -eq 'Check by CyberDrain - Browser Extension' }) | Select-Object -First 1
+    $App = @($Apps.Where({ "$($_.displayName)" -eq 'Check by CyberDrain - Browser Extension' })) | Select-Object -First 1
 
     @{
         Expected = [PSCustomObject]@{ appDeployed = $true }

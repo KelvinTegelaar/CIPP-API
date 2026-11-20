@@ -21,7 +21,7 @@ function Invoke-CIPPBaselineSensitivityLabelTemplate {
         $Current
     )
 
-    $Templates = @($Current.templateBodies | Where-Object { $_ })
+    $Templates = @(@($Current.templateBodies).Where({ $_ }))
     if ($Templates.Count -eq 0) { return }
 
     foreach ($Template in $Templates) {
