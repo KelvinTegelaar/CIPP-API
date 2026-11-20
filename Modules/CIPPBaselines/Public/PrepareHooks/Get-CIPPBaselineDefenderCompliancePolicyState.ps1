@@ -58,11 +58,11 @@ function Get-CIPPBaselineDefenderCompliancePolicyState {
     }
     $Current = [PSCustomObject]@{}
     foreach ($Key in $Keys) {
-        $Current | Add-Member -NotePropertyName $Key -NotePropertyValue ([bool]$ConnectorState.$Key)
+        $Current.PSObject.Properties.Remove($Key); $Current.PSObject.Properties.Add([psnoteproperty]::new($Key, ([bool]$ConnectorState.$Key)))
     }
     # Graded so a missing connector is created even when every switch is off, and carried for the executor.
-    $Expected | Add-Member -NotePropertyName 'connectorExists' -NotePropertyValue $true
-    $Current | Add-Member -NotePropertyName 'connectorExists' -NotePropertyValue ($null -ne $ConnectorState)
+    $Expected.PSObject.Properties.Remove('connectorExists'); $Expected.PSObject.Properties.Add([psnoteproperty]::new('connectorExists', $true))
+    $Current.PSObject.Properties.Remove('connectorExists'); $Current.PSObject.Properties.Add([psnoteproperty]::new('connectorExists', ($null -ne $ConnectorState)))
 
     @{ Expected = $Expected; Current = $Current }
 }

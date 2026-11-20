@@ -49,8 +49,9 @@ function Get-CIPPBaseline {
     $IdentityDefinitions = @{}
     if ($ResolveIdentityLabels) {
         foreach ($Definition in $AllDefinitions) {
+            if (-not $Definition.instanceIdentity) { continue }
             $IdentityType = "$($Definition.variables.$($Definition.instanceIdentity).type)"
-            if ($Definition.instanceIdentity -and $IdentityType -in @('autoComplete', 'select')) {
+            if ($IdentityType -in @('autoComplete', 'select')) {
                 $IdentityDefinitions[$Definition.name] = @{
                     Variable  = $Definition.instanceIdentity
                     Partition = "$($Definition.identity.partition ?? $Definition.remediate.executor)"

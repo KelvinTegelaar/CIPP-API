@@ -13,14 +13,9 @@ function Invoke-CippTestCopilotReady009 {
     try {
         $ReadinessData = Get-CIPPTestData -TenantFilter $Tenant -Type 'CopilotReadinessActivity'
         # Plans are streamed: kept for every licensed user they are too large to cache
-        $UsersSeen = $false
-        $LicensedUsers = [System.Collections.Generic.List[object]]::new()
-        Get-CIPPTestData -TenantFilter $Tenant -Type 'Users' -Fields 'userPrincipalName', 'accountEnabled', 'assignedPlans' -Stream | ForEach-Object {
-            $UsersSeen = $true
-            if ($_.userPrincipalName -and $_.accountEnabled -eq $true -and $_.assignedPlans.Where({ $_.capabilityStatus -eq 'Enabled' }, 'First').Count) {
-                $LicensedUsers.Add([pscustomobject]@{ userPrincipalName = $_.userPrincipalName })
-            }
-        }
+        $CopilotUsers = Get-CippCopilotReadinessUsers -Tenant $Tenant
+        $UsersSeen = $CopilotUsers.Seen
+        $LicensedUsers = $CopilotUsers.Licensed
 
         if (-not $ReadinessData -and -not $UsersSeen) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady009' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Copilot readiness activity or user data found in database. Data collection may not yet have run for this tenant.' -Risk 'High' -Name 'Majority of users are Copilot-ready (Medium or above)' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

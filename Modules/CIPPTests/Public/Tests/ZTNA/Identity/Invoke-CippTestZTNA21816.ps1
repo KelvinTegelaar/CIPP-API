@@ -35,11 +35,11 @@ function Invoke-CippTestZTNA21816 {
         $UsersById = @{}
         foreach ($U in $Users) { $UsersById[$U.id] = $U }
         $GAMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $GlobalAdminRoleId
-        # Members are streamed: kept for every group they are too large to cache, so only the groups looked up below are kept
+        # Members are too large to cache, so only the groups looked up below are read
         $LookupGroupIds = [System.Collections.Generic.HashSet[string]]::new()
         foreach ($Id in @($EligibleGAs.principalId) + @($GAMembers.id)) { if ($Id) { [void]$LookupGroupIds.Add([string]$Id) } }
         $GroupsById = @{}
-        Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'members' -Stream | ForEach-Object {
+        Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'members' -Id @($LookupGroupIds) | ForEach-Object {
             if ($LookupGroupIds.Contains([string]$_.id)) { $GroupsById[$_.id] = $_ }
         }
         # Composite keys principalId|roleDefinitionId: any PIM assignment, and standing ones (Assigned, no end date)

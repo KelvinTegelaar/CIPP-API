@@ -40,7 +40,7 @@ function Invoke-CippTestZTNA21835 {
         # ponytail: direct group members only; a break-glass account nested in an excluded group reads as not excluded
         $GroupMembersById = @{}
         if ($LookupGroupIds.Count -gt 0) {
-            Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'members' -Stream | ForEach-Object {
+            Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'members' -Id @($LookupGroupIds) | ForEach-Object {
                 if ($LookupGroupIds.Contains([string]$_.id)) { $GroupMembersById[[string]$_.id] = @($_.members) }
             }
         }

@@ -58,7 +58,7 @@ function Invoke-CippTestZTNA61006 {
         }
         $NonEmptyGroups = [System.Collections.Generic.HashSet[string]]::new()
         if ($GroupIds.Count -gt 0) {
-            Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'members' -Stream | ForEach-Object {
+            Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'members' -Id @($GroupIds) | ForEach-Object {
                 if ($GroupIds.Contains([string]$_.id) -and @($_.members).Count -gt 0) { [void]$NonEmptyGroups.Add([string]$_.id) }
             }
         }

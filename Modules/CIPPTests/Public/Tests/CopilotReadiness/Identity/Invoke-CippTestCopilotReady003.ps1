@@ -20,14 +20,9 @@ function Invoke-CippTestCopilotReady003 {
         # Filter Users cache to those with an active M365 Apps (desktop) license plan.
         # assignedPlans entries with service 'MicrosoftOffice' and capabilityStatus 'Enabled'
         # indicate the user holds a license that includes M365 desktop applications.
-        $UsersSeen = $false
-        $LicensedUsers = [System.Collections.Generic.List[object]]::new()
-        Get-CIPPTestData -TenantFilter $Tenant -Type 'Users' -Fields 'userPrincipalName', 'displayName', 'accountEnabled', 'assignedPlans' -Stream | ForEach-Object {
-            $UsersSeen = $true
-            if ($_.userPrincipalName -and $_.accountEnabled -eq $true -and $_.assignedPlans.Where({ $_.service -eq 'MicrosoftOffice' -and $_.capabilityStatus -eq 'Enabled' }, 'First').Count) {
-                $LicensedUsers.Add([pscustomobject]@{ userPrincipalName = $_.userPrincipalName; displayName = $_.displayName })
-            }
-        }
+        $CopilotUsers = Get-CippCopilotReadinessUsers -Tenant $Tenant
+        $UsersSeen = $CopilotUsers.Seen
+        $LicensedUsers = $CopilotUsers.OfficeLicensed
 
         if (-not $ActivationData -and -not $UsersSeen) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady003' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Office activation or user data found in database. Data collection may not yet have run for this tenant.' -Risk 'High' -Name 'Users have M365 desktop apps activated' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

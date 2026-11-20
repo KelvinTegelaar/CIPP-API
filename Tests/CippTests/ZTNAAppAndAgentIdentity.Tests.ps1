@@ -12,8 +12,10 @@ BeforeAll {
     $script:AiAdmin = 'd2562ede-74db-457e-a7b6-544e236ebb61'
 
     function Get-CIPPTestData {
-        param($TenantFilter, $Type, $Fields, [switch]$Stream)
-        $script:Data[$Type]
+        param($TenantFilter, $Type, $Fields, [switch]$Stream, [string[]]$Id)
+        $Records = $script:Data[$Type]
+        if ($PSBoundParameters.ContainsKey('Id')) { return @($Records).Where({ $Id -contains $_.id }) }
+        $Records
     }
     function Add-CippTestResult { param($TenantFilter, $TestId, $TestType, $Status, $ResultMarkdown, $Risk, $Name, $UserImpact, $ImplementationEffort, $Category) $script:Result = @{ Status = $Status; Markdown = "$ResultMarkdown" } }
     function Test-CIPPStandardLicense {

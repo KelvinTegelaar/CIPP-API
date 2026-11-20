@@ -25,7 +25,7 @@ function Get-CIPPBaselineProfilePhotosState {
     $OwaPolicy = @($OwaPolicies | Where-Object { "$($_.Identity)" -eq 'OwaMailboxPolicy-Default' }) | Select-Object -First 1
 
     $StateValue = "$($Item.Variables.state.value ?? $Item.Variables.state)"
-    if ($StateValue -notin @('enabled', 'disabled')) { return @{ Current = $null } }
+    if ($StateValue -notin @('enabled', 'disabled')) { return @{ Current = $null; ConfigError = $true } }
     $Desired = $StateValue -eq 'enabled'
 
     $UsersCanChange = [string]::IsNullOrWhiteSpace("$($PhotoSettings.allowedRoles)")

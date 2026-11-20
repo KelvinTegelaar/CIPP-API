@@ -20,9 +20,9 @@ function Get-CIPPBaselineMDMScopeState {
     if (-not $Policy) { return @{ Current = $null } }
 
     $AppliesTo = "$($Item.Variables.appliesTo.value ?? $Item.Variables.appliesTo)"
-    if ($AppliesTo -notin @('all', 'none', 'selected')) { return @{ Current = $null } }
+    if ($AppliesTo -notin @('all', 'none', 'selected')) { return @{ Current = $null; ConfigError = $true } }
     $CustomGroup = "$($Item.Variables.customGroup)"
-    if ($AppliesTo -eq 'selected' -and [string]::IsNullOrWhiteSpace($CustomGroup)) { return @{ Current = $null } }
+    if ($AppliesTo -eq 'selected' -and [string]::IsNullOrWhiteSpace($CustomGroup)) { return @{ Current = $null; ConfigError = $true } }
 
     $Expected = [PSCustomObject]@{
         termsOfUseUrl = 'https://portal.manage.microsoft.com/TermsofUse.aspx'

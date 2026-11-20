@@ -28,7 +28,7 @@ function Get-CIPPBaselineAppDeployState {
 
     if ($Mode -eq 'template') {
         $TemplateIds = @($V.templateIds | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
-        if ($TemplateIds.Count -eq 0) { return @{ Current = $null } }
+        if ($TemplateIds.Count -eq 0) { return @{ Current = $null; ConfigError = $true } }
         $Table = Get-CIPPTable -TableName 'templates'
         foreach ($TemplateId in $TemplateIds) {
             $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$TemplateId'"
@@ -46,7 +46,7 @@ function Get-CIPPBaselineAppDeployState {
         }
     } else {
         $AppsToAdd = @("$($V.appids)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-        if ($AppsToAdd.Count -eq 0) { return @{ Current = $null } }
+        if ($AppsToAdd.Count -eq 0) { return @{ Current = $null; ConfigError = $true } }
         foreach ($App in $AppsToAdd) {
             if ($App -notin @($ServicePrincipals.appId) -and $App -notin @($ServicePrincipals.applicationTemplateId)) {
                 $MissingApps.Add($App)

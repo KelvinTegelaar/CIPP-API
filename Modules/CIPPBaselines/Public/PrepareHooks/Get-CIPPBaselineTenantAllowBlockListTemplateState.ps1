@@ -36,19 +36,19 @@ function Get-CIPPBaselineTenantAllowBlockListTemplateState {
 
     $Reference = $Item.Variables.tenantAllowBlockListTemplate
     if ($Reference -is [System.Management.Automation.PSCustomObject] -and $Reference.PSObject.Properties.Name -contains 'value') { $Reference = $Reference.value }
-    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null; ConfigError = $true } }
 
     $Table = Get-CippTable -tablename 'templates'
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
     $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantAllowBlockListTemplate' and RowKey eq '$SafeReference'" | Select-Object -First 1
     $Template = $(if ($Entity -and -not [string]::IsNullOrWhiteSpace($Entity.JSON)) { try { $Entity.JSON | ConvertFrom-Json -Depth 10 -ErrorAction Stop } catch { $null } })
-    if (-not $Template) { return @{ Current = $null } }
+    if (-not $Template) { return @{ Current = $null; ConfigError = $true } }
 
     $Entries = @("$($Template.entries)" -split '[,;]' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() })
     $ListType = "$($Template.listType)"
     if ($Entries.Count -eq 0 -or [string]::IsNullOrWhiteSpace($ListType)) {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Tenant Allow/Block List template '$Reference' has no entries or no list type and cannot be evaluated." -Sev 'Error'
-        return @{ Current = $null }
+        return @{ Current = $null; ConfigError = $true }
     }
 
     $ExistingValues = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)

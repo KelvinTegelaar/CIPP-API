@@ -29,7 +29,7 @@ function Get-CIPPBaselineCopilotLimitedModeState {
     }
 
     $GroupName = "$($Item.Variables.GroupName)"
-    if ([string]::IsNullOrWhiteSpace($GroupName)) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace($GroupName)) { return @{ Current = $null; ConfigError = $true } }
     $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')
     $Resolved = @($Groups | Where-Object { "$($_.displayName)".StartsWith($GroupName) }) | Select-Object -First 1
     if (-not $Resolved) {

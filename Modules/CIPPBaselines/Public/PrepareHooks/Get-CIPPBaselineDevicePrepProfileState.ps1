@@ -35,7 +35,7 @@ function Get-CIPPBaselineDevicePrepProfileState {
     $V = $Item.Variables
     # The identity may arrive as an option object ({label, value}) from some save paths.
     $ProfileName = "$($V.ProfileName.value ?? $V.ProfileName)"
-    if ([string]::IsNullOrWhiteSpace($ProfileName)) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace($ProfileName)) { return @{ Current = $null; ConfigError = $true } }
     # Name alone could match an unrelated policy the executor would then delete; require the device-prep template.
     $Policy = @($Policies | Where-Object { "$($_.name)" -eq $ProfileName -and "$($_.templateReference.templateId)" -like '80d33118-b7b4-40d8-b15f-81be745e053f*' }) | Select-Object -First 1
 

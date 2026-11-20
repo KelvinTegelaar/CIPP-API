@@ -25,7 +25,7 @@ function Get-CIPPBaselineCollaborationDomainRestrictionState {
     }
 
     $Desired = @("$($Item.Variables.allowedDomains)" -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Sort-Object)
-    if ($Desired.Count -eq 0) { return @{ Current = $null } }
+    if ($Desired.Count -eq 0) { return @{ Current = $null; ConfigError = $true } }
 
     $Policy = @($Policies | Where-Object { $_.isOrganizationDefault -eq $true }) | Select-Object -First 1
     if (-not $Policy) { $Policy = $Policies | Select-Object -First 1 }

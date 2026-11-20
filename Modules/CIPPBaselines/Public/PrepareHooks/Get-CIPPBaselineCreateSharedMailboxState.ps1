@@ -32,7 +32,7 @@ function Get-CIPPBaselineCreateSharedMailboxState {
     $V = $Item.Variables
     # The identity may arrive as an option object ({label, value}) from some save paths.
     $Address = "$($V.primarySmtpAddress.value ?? $V.primarySmtpAddress)".Trim()
-    if ([string]::IsNullOrWhiteSpace($Address)) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace($Address)) { return @{ Current = $null; ConfigError = $true } }
     try { $null = [System.Net.Mail.MailAddress]::new($Address) } catch {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "CreateSharedMailbox: '$Address' is not a valid email address and cannot be evaluated." -Sev 'Error'
         return @{ Current = $null; NoDataReason = "the configured address '$Address' is not a valid email address"; ConfigError = $true }

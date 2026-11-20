@@ -13,6 +13,8 @@ function ConvertTo-CIPPBaselineOSVersion {
 
     $Text = "$Text".Trim()
     if ($Text -notmatch '^\d{1,9}(\.\d{1,9}){0,3}$') { return }
-    $Parts = [int[]]($Text -split '\.')
-    [version]::new($Parts[0], ($Parts[1] ?? 0), ($Parts[2] ?? 0), ($Parts[3] ?? 0))
+    $Parts = [int[]]::new(4)
+    $Split = $Text -split '\.'
+    for ($i = 0; $i -lt $Split.Count; $i++) { $Parts[$i] = [int]$Split[$i] }
+    [version]::new($Parts[0], $Parts[1], $Parts[2], $Parts[3])
 }

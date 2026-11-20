@@ -26,7 +26,7 @@ function Get-CIPPBaselineFIDO2PasskeyProfilesState {
     $V = $Item.Variables
     $PasskeyTypes = "$($V.PasskeyTypes.value ?? $V.PasskeyTypes)"
     $Attestation = "$($V.AttestationEnforcement.value ?? $V.AttestationEnforcement)"
-    if ([string]::IsNullOrWhiteSpace($PasskeyTypes) -or [string]::IsNullOrWhiteSpace($Attestation)) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace($PasskeyTypes) -or [string]::IsNullOrWhiteSpace($Attestation)) { return @{ Current = $null; ConfigError = $true } }
     $EnforceRestrictions = [bool]($V.EnforceKeyRestrictions -eq $true)
     $EnforcementType = "$($V.EnforcementType.value ?? $V.EnforcementType)"
     if ([string]::IsNullOrWhiteSpace($EnforcementType)) { $EnforcementType = 'allow' }
@@ -38,7 +38,7 @@ function Get-CIPPBaselineFIDO2PasskeyProfilesState {
         $AAGUIDs = @($AAGUIDs; '08987058-cadc-4b81-b6e1-30de50dcbe96', '9ddd1817-af5a-4672-a2b9-3e3dd95000a9', '6028b017-b1d4-4c02-b4b3-afcdafc96bb2', 'de1e552d-db1d-4423-a619-566b625cdc84', '90a3ccdf-635c-4729-a248-9b709135078f')
     }
     $AAGUIDs = @($AAGUIDs | Sort-Object -Unique)
-    if ($EnforceRestrictions -and $AAGUIDs.Count -eq 0) { return @{ Current = $null } }
+    if ($EnforceRestrictions -and $AAGUIDs.Count -eq 0) { return @{ Current = $null; ConfigError = $true } }
 
     $DefaultProfile = @($Config.passkeyProfiles) | Where-Object { "$($_.id)" -eq "$($Config.defaultPasskeyProfile)" } | Select-Object -First 1
 

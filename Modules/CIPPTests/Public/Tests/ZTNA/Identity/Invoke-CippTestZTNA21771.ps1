@@ -44,7 +44,7 @@ function Invoke-CippTestZTNA21771 {
         }
         $GroupMembers = @{}
         if ($GroupIds.Count -gt 0) {
-            Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'members' -Stream | ForEach-Object {
+            Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'members' -Id @($GroupIds) | ForEach-Object {
                 if ($GroupIds.Contains([string]$_.id)) { $GroupMembers[[string]$_.id] = @($_.members.id) }
             }
         }

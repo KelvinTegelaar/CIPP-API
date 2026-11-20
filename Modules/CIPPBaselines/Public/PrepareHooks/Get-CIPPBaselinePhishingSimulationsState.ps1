@@ -32,7 +32,7 @@ function Get-CIPPBaselinePhishingSimulationsState {
     $WantedDomains = & $Unwrap $Item.Variables.Domains
     $WantedRanges = & $Unwrap $Item.Variables.SenderIpRanges
     $WantedUrls = & $Unwrap $Item.Variables.PhishingSimUrls
-    if ($WantedDomains.Count -eq 0 -or $WantedRanges.Count -eq 0) { return @{ Current = $null } }
+    if ($WantedDomains.Count -eq 0 -or $WantedRanges.Count -eq 0) { return @{ Current = $null; ConfigError = $true } }
     $RemoveExtra = [bool]($Item.Variables.RemoveExtraUrls -eq $true)
 
     $Policy = $Policies | Where-Object { "$($_.Name)" -eq 'PhishSimOverridePolicy' } | Select-Object -First 1

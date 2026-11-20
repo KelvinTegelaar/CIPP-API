@@ -28,7 +28,7 @@ function Get-CIPPBaselineNudgeMFAState {
 
     $V = $Item.Variables
     $State = "$($V.state.value ?? $V.state)"
-    if ($State -notin @('enabled', 'disabled', 'default')) { return @{ Current = $null } }
+    if ($State -notin @('enabled', 'disabled', 'default')) { return @{ Current = $null; ConfigError = $true } }
     $Snooze = [int]"$($V.snoozeDurationInDays ?? 1)"
     $EnforceAfter = if ($null -eq $V.enforceRegistrationAfterAllowedSnoozes) { $true } else { [bool]($V.enforceRegistrationAfterAllowedSnoozes -eq $true) }
     $Method = "$($V.targetedAuthenticationMethod.value ?? $V.targetedAuthenticationMethod)"

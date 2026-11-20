@@ -101,7 +101,8 @@ function Get-CIPPFeatureFlag {
         }
 
         if ($Id) {
-            return ($Results | Select-Object -First 1)
+            foreach ($Result in $Results) { return $Result }
+            return
         }
         return $Results
     } catch {

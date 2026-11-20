@@ -23,7 +23,7 @@ function Get-CIPPBaselineIntuneAppTemplateDeployState {
     }
 
     $TemplateIds = @($Item.Variables.templateIds | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
-    if ($TemplateIds.Count -eq 0) { return @{ Current = $null } }
+    if ($TemplateIds.Count -eq 0) { return @{ Current = $null; ConfigError = $true } }
 
     $CurrentAppNames = @($Apps | ForEach-Object { "$($_.displayName)" })
     # Uploaded packages are only current when an app with the name carries the template's package marker.

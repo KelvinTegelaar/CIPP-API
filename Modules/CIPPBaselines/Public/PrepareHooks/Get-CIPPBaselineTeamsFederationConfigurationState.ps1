@@ -29,7 +29,7 @@ function Get-CIPPBaselineTeamsFederationConfigurationState {
     $V = $Item.Variables
     $DomainControl = "$($V.DomainControl.value ?? $V.DomainControl)"
     if ($DomainControl -notin @('AllowAllExternal', 'BlockAllExternal', 'AllowSpecificExternal', 'BlockSpecificExternal')) {
-        return @{ Current = $null }
+        return @{ Current = $null; ConfigError = $true }
     }
     $AllowTeamsConsumer = [bool]($V.AllowTeamsConsumer -eq $true)
     $AllowTeamsConsumerInbound = [bool]($V.AllowTeamsConsumerInbound -eq $true)

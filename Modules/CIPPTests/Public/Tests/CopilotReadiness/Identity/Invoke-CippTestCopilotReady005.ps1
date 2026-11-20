@@ -16,14 +16,9 @@ function Invoke-CippTestCopilotReady005 {
         $ReadinessData = Get-CIPPTestData -TenantFilter $Tenant -Type 'CopilotReadinessActivity'
         # Plans are streamed: kept for every licensed user they are too large to cache
         # Use licensed active users as the denominator — users absent from the report have never used M365
-        $UsersSeen = $false
-        $LicensedUsers = [System.Collections.Generic.List[object]]::new()
-        Get-CIPPTestData -TenantFilter $Tenant -Type 'Users' -Fields 'userPrincipalName', 'accountEnabled', 'assignedPlans' -Stream | ForEach-Object {
-            $UsersSeen = $true
-            if ($_.userPrincipalName -and $_.accountEnabled -eq $true -and $_.assignedPlans.Where({ $_.capabilityStatus -eq 'Enabled' }, 'First').Count) {
-                $LicensedUsers.Add([pscustomobject]@{ userPrincipalName = $_.userPrincipalName })
-            }
-        }
+        $CopilotUsers = Get-CippCopilotReadinessUsers -Tenant $Tenant
+        $UsersSeen = $CopilotUsers.Seen
+        $LicensedUsers = $CopilotUsers.Licensed
 
         if (-not $ReadinessData -and -not $UsersSeen) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady005' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No Copilot readiness activity or user data found in database. Data collection may not yet have run for this tenant.' -Risk 'Medium' -Name 'Users are actively using Microsoft Teams' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Copilot Readiness'

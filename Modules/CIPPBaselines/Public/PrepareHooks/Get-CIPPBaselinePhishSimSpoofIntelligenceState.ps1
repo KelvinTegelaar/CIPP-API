@@ -24,7 +24,7 @@ function Get-CIPPBaselinePhishSimSpoofIntelligenceState {
     }
 
     $Allowed = @(@($Item.Variables.AllowedDomains) | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-    if ($Allowed.Count -eq 0) { return @{ Current = $null } }
+    if ($Allowed.Count -eq 0) { return @{ Current = $null; ConfigError = $true } }
     $RemoveExtra = [bool]($Item.Variables.RemoveExtraDomains -eq $true)
 
     $ExistingInfra = @($SpoofItems | ForEach-Object { "$($_.SendingInfrastructure)" })

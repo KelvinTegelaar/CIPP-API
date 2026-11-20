@@ -35,14 +35,14 @@ function Get-CIPPBaselineAssignmentFilterTemplateState {
 
     $Reference = $Item.Variables.assignmentFilterTemplate
     if ($Reference -is [System.Management.Automation.PSCustomObject] -and $Reference.PSObject.Properties.Name -contains 'value') { $Reference = $Reference.value }
-    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null; ConfigError = $true } }
 
     $Table = Get-CippTable -tablename 'templates'
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
     $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AssignmentFilterTemplate' and RowKey eq '$SafeReference'" | Select-Object -First 1
     $Template = $(if ($Entity -and -not [string]::IsNullOrWhiteSpace($Entity.JSON)) { try { $Entity.JSON | ConvertFrom-Json -Depth 20 -ErrorAction Stop } catch { $null } })
     $FilterName = "$($Template.displayName)"
-    if (-not $Template -or [string]::IsNullOrWhiteSpace($FilterName)) { return @{ Current = $null } }
+    if (-not $Template -or [string]::IsNullOrWhiteSpace($FilterName)) { return @{ Current = $null; ConfigError = $true } }
 
     $Existing = $Filters | Where-Object { "$($_.displayName)" -eq $FilterName } | Select-Object -First 1
 

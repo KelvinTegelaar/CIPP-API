@@ -23,7 +23,7 @@ function Get-CIPPBaselineExcludedfileExtState {
     $Exts = @(("$($Item.Variables.ext)" -replace ' ', '') -split ',' | Where-Object { $_ } | ForEach-Object {
             if ($_ -notlike '*.*') { "*.$_" } else { $_ }
         } | Sort-Object -Unique)
-    if ($Exts.Count -eq 0) { return @{ Current = $null } }
+    if ($Exts.Count -eq 0) { return @{ Current = $null; ConfigError = $true } }
 
     @{
         Expected = [PSCustomObject]@{ excludedExtensions = @($Exts) }

@@ -37,7 +37,7 @@ function Get-CIPPBaselineSecureScoreRemediationState {
     foreach ($Control in (& $Unwrap $Item.Variables.Ignored)) { $Wanted.Add(@{ Control = $Control; State = 'ignored'; Reason = 'Ignored' }) }
     foreach ($Control in (& $Unwrap $Item.Variables.ThirdParty)) { $Wanted.Add(@{ Control = $Control; State = 'thirdParty'; Reason = 'ThirdParty' }) }
     foreach ($Control in (& $Unwrap $Item.Variables.Reviewed)) { $Wanted.Add(@{ Control = $Control; State = 'reviewed'; Reason = 'Reviewed' }) }
-    if ($Wanted.Count -eq 0) { return @{ Current = $null } }
+    if ($Wanted.Count -eq 0) { return @{ Current = $null; ConfigError = $true } }
 
     $Drifted = [System.Collections.Generic.List[object]]::new()
     foreach ($Want in $Wanted) {

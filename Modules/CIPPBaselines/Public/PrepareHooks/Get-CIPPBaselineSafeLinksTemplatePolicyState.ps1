@@ -33,16 +33,16 @@ function Get-CIPPBaselineSafeLinksTemplatePolicyState {
 
     $Reference = $Item.Variables.safeLinksTemplate
     if ($Reference -is [System.Management.Automation.PSCustomObject] -and $Reference.PSObject.Properties.Name -contains 'value') { $Reference = $Reference.value }
-    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null; ConfigError = $true } }
 
     $Table = Get-CippTable -tablename 'templates'
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
     $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'SafeLinksTemplate' and RowKey eq '$SafeReference'" | Select-Object -First 1
     $Template = $(if ($Entity -and -not [string]::IsNullOrWhiteSpace($Entity.JSON)) { try { $Entity.JSON | ConvertFrom-Json -Depth 20 -ErrorAction Stop } catch { $null } })
-    if (-not $Template) { return @{ Current = $null } }
+    if (-not $Template) { return @{ Current = $null; ConfigError = $true } }
 
     $PolicyName = "$($Template.PolicyName ?? $Template.Name)"
-    if ([string]::IsNullOrWhiteSpace($PolicyName)) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace($PolicyName)) { return @{ Current = $null; ConfigError = $true } }
     $RuleName = "$($Template.RuleName ?? "$($PolicyName)_Rule")"
 
     $Current = [PSCustomObject]@{

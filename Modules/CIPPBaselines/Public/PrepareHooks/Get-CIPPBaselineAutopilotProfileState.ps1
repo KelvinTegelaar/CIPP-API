@@ -30,7 +30,7 @@ function Get-CIPPBaselineAutopilotProfileState {
     # The identity may arrive as an option object ({label, value}) from some save paths -
     # unwrap before interpolating or the profile title becomes the stringified object.
     $DisplayName = "$($V.DisplayName.value ?? $V.DisplayName)"
-    if ([string]::IsNullOrWhiteSpace($DisplayName)) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace($DisplayName)) { return @{ Current = $null; ConfigError = $true } }
     $Profile = @($Profiles | Where-Object { "$($_.displayName)" -eq $DisplayName }) | Select-Object -First 1
 
     $UserType = $(if ($V.NotLocalAdmin -eq $true) { 'standard' } else { 'administrator' })

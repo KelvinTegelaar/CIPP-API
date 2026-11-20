@@ -34,7 +34,7 @@ function Get-CIPPBaselineUsageLocationState {
     $Wanted = "$($Item.Variables.usageLocation.value ?? $Item.Variables.usageLocation)".Trim().ToUpperInvariant()
     if ($Wanted -notmatch '^[A-Z]{2}$') {
         Write-Information "Baselines: UsageLocation on $TenantFilter has no valid two-letter country code configured ('$Wanted')."
-        return @{ Current = $null }
+        return @{ Current = $null; ConfigError = $true }
     }
     $OnlyWhenBlank = [bool]($Item.Variables.onlyWhenBlank -eq $true)
 

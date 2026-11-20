@@ -7,13 +7,15 @@ BeforeAll {
     function Get-CippDbRole { param($TenantFilter, [switch]$IncludePrivilegedRoles) @() }
     function Get-CippDbRoleMembers { param($TenantFilter, $RoleTemplateId) if ($RoleTemplateId -eq $script:GA) { $script:GAMembers } }
     function Get-CIPPTestData {
-        param($TenantFilter, $Type, $Fields, [switch]$Stream)
-        switch ($Type) {
+        param($TenantFilter, $Type, $Fields, [switch]$Stream, [string[]]$Id)
+        $Records = switch ($Type) {
             'RoleEligibilitySchedules' { $script:Eligible }
             'RoleAssignmentScheduleInstances' { @() }
             'Users' { $script:Users }
             'Groups' { $script:Groups }
         }
+        if ($PSBoundParameters.ContainsKey('Id')) { return @($Records).Where({ $Id -contains $_.id }) }
+        $Records
     }
     function Add-CippTestResult { param($TenantFilter, $TestId, $TestType, $Status, $ResultMarkdown, $Risk, $Name, $UserImpact, $ImplementationEffort, $Category) $script:Result = @{ Status = $Status; Markdown = "$ResultMarkdown" } }
     function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) $script:Licensed }

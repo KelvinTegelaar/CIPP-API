@@ -27,13 +27,15 @@ function Get-CIPPBaselineAutoAddProxyState {
     foreach ($Mailbox in $Mailboxes) {
         $UPN = "$($Mailbox.UPN)"
         if ([string]::IsNullOrWhiteSpace($UPN)) { continue }
-        $Addresses = @("$($Mailbox.primarySmtpAddress)")
-        if (-not [string]::IsNullOrWhiteSpace($Mailbox.AdditionalEmailAddresses)) {
-            $Addresses += @("$($Mailbox.AdditionalEmailAddresses)" -split ',\s*')
+        $Addresses = @("$($Mailbox.primarySmtpAddress)"; if (-not [string]::IsNullOrWhiteSpace($Mailbox.AdditionalEmailAddresses)) { "$($Mailbox.AdditionalEmailAddresses)" -split ',\s*' })
+        $HasDomain = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($Address in $Addresses) {
+            $At = $Address.LastIndexOf('@')
+            if ($At -ge 0) { $null = $HasDomain.Add($Address.Substring($At + 1)) }
         }
-        $LocalPart = ($UPN -split '@') | Select-Object -First 1
+        $LocalPart = ($UPN -split '@')[0]
         foreach ($Domain in $Domains) {
-            if (@($Addresses | Where-Object { $_ -like "*@$Domain" }).Count -gt 0) { continue }
+            if ($HasDomain.Contains($Domain)) { continue }
             $Missing.Add([PSCustomObject]@{ id = $UPN; alias = "smtp:$LocalPart@$Domain"; display = "$UPN -> $Domain" })
         }
     }
@@ -41,7 +43,7 @@ function Get-CIPPBaselineAutoAddProxyState {
     @{
         Current = [PSCustomObject]@{
             offenders = @($Missing.display | Sort-Object)
-            targets   = @($Missing | ForEach-Object { [PSCustomObject]@{ id = $_.id; alias = $_.alias } })
+            targets   = @(foreach ($Entry in $Missing) { [PSCustomObject]@{ id = $Entry.id; alias = $Entry.alias } })
         }
     }
 }

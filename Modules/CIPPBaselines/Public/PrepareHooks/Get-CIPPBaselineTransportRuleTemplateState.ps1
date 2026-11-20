@@ -43,7 +43,7 @@ function Get-CIPPBaselineTransportRuleTemplateState {
     # baseline was saved - the classic filtered on $_.value for exactly that reason.
     $Reference = $Item.Variables.transportRuleTemplate
     if ($Reference -is [System.Management.Automation.PSCustomObject] -and $Reference.PSObject.Properties.Name -contains 'value') { $Reference = $Reference.value }
-    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null; ConfigError = $true } }
 
     $Table = Get-CippTable -tablename 'templates'
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
@@ -52,7 +52,7 @@ function Get-CIPPBaselineTransportRuleTemplateState {
     # Graded and deployed under the tenant's resolved %variables%, so a templated name matches the rule it created.
     if ($Body) { $Body = Resolve-CIPPTransportRuleTemplate -Template $Body -TenantFilter $TenantFilter }
     $RuleName = "$($Body.name)"
-    if (-not $Body -or [string]::IsNullOrWhiteSpace($RuleName)) { return @{ Current = $null } }
+    if (-not $Body -or [string]::IsNullOrWhiteSpace($RuleName)) { return @{ Current = $null; ConfigError = $true } }
 
     $Deployed = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($Rule in $Rules) {

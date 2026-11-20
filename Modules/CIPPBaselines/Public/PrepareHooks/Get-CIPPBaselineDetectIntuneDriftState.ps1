@@ -98,13 +98,13 @@ function Get-CIPPBaselineDetectIntuneDriftState {
             # Unmanaged: expected empty (the policy should be covered by a baseline
             # template or removed), current carries the identifying facts - including the
             # Graph resource the delete executor needs if an operator denies it.
-            $Expected | Add-Member -NotePropertyName $Key -NotePropertyValue $null -Force
-            $Current | Add-Member -NotePropertyName $Key -NotePropertyValue ([PSCustomObject]@{
+            $Expected.PSObject.Properties.Remove($Key); $Expected.PSObject.Properties.Add([psnoteproperty]::new($Key, $null))
+            $Current.PSObject.Properties.Remove($Key); $Current.PSObject.Properties.Add([psnoteproperty]::new($Key, ([PSCustomObject]@{
                     policyType = $Family.Label
                     id         = "$($Policy.id)"
                     status     = 'Not covered by any baseline template'
                     resource   = "$Resource"
-                }) -Force
+                })))
         }
     }
 

@@ -46,7 +46,7 @@ function Get-CIPPBaselineGroupTemplateState {
     if ("$($Template.groupType)" -eq 'dynamicDistribution') {
         # Dynamic Distribution Groups are not supported by CIPP: do not grade them (a graded DDL reads as
         # permanent drift and its executor write throws). Return not-applicable, consistent with the executor skip.
-        return @{ Current = $null }
+        return @{ Current = $null; ConfigError = $true }
     }
 
     $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')

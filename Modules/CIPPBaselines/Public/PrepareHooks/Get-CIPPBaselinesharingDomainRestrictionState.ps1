@@ -20,7 +20,7 @@ function Get-CIPPBaselinesharingDomainRestrictionState {
     if (-not $Settings) { return @{ Current = $null } }
 
     $Mode = "$($Item.Variables.Mode.value ?? $Item.Variables.Mode)"
-    if ($Mode -notin @('none', 'allowList', 'blockList')) { return @{ Current = $null } }
+    if ($Mode -notin @('none', 'allowList', 'blockList')) { return @{ Current = $null; ConfigError = $true } }
 
     if ($Mode -eq 'none') {
         return @{
@@ -30,7 +30,7 @@ function Get-CIPPBaselinesharingDomainRestrictionState {
     }
 
     $Domains = @("$($Item.Variables.Domains)".Split(',').Trim() | Where-Object { $_ } | Sort-Object)
-    if ($Domains.Count -eq 0) { return @{ Current = $null } }
+    if ($Domains.Count -eq 0) { return @{ Current = $null; ConfigError = $true } }
     $CurrentList = if ($Mode -eq 'allowList') { @($Settings.sharingAllowedDomainList) } else { @($Settings.sharingBlockedDomainList) }
 
     @{

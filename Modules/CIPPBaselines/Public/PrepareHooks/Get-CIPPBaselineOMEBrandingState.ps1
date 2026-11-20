@@ -49,7 +49,7 @@ function Get-CIPPBaselineOMEBrandingState {
         $Current | Add-Member -NotePropertyName 'logoApplied' -NotePropertyValue $false
     }
 
-    if (@($Expected.PSObject.Properties).Count -eq 0) { return @{ Current = $null } }
+    if (@($Expected.PSObject.Properties).Count -eq 0) { return @{ Current = $null; ConfigError = $true } }
 
     $Current | Add-Member -NotePropertyName 'omeIdentity' -NotePropertyValue "$($Config.Identity ?? 'OME Configuration')"
 

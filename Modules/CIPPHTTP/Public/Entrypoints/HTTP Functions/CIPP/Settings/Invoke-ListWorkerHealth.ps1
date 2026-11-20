@@ -17,8 +17,14 @@ function Invoke-ListWorkerHealth {
         switch ($Action) {
             'Snapshot' {
                 $Snapshot = [Craft.Services.WorkerMetricsBridge]::GetSnapshot()
-                try { $Snapshot.Memory | Add-Member -NotePropertyName 'TestDataCacheCount' -NotePropertyValue ([CIPP.TestDataCache]::Count) -ErrorAction SilentlyContinue } catch {}
-                $Body = @{ Results = $Snapshot }
+                # The snapshot is a typed object, so the cache count goes on an ordered copy of it.
+                $Results = [ordered]@{}
+                foreach ($Property in $Snapshot.PSObject.Properties) { $Results[$Property.Name] = $Property.Value }
+                $Memory = [ordered]@{}
+                foreach ($Property in $Snapshot.Memory.PSObject.Properties) { $Memory[$Property.Name] = $Property.Value }
+                $Memory['TestDataCacheCount'] = [CIPP.TestDataCache]::Count
+                $Results['Memory'] = $Memory
+                $Body = @{ Results = $Results }
             }
             'Summary' {
                 $Summary = [Craft.Services.WorkerMetricsBridge]::GetSummary()

@@ -39,7 +39,7 @@ function Get-CIPPBaselineQuarantineTemplateState {
     $PolicyName = $V.displayName
     if ($PolicyName -is [System.Management.Automation.PSCustomObject] -and $PolicyName.PSObject.Properties.Name -contains 'value') { $PolicyName = $PolicyName.value }
     $PolicyName = "$PolicyName"
-    if ([string]::IsNullOrWhiteSpace($PolicyName)) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace($PolicyName)) { return @{ Current = $null; ConfigError = $true } }
 
     $ReleaseAction = "$($V.ReleaseAction)"
     if ($V.ReleaseAction -is [System.Management.Automation.PSCustomObject] -and $V.ReleaseAction.PSObject.Properties.Name -contains 'value') { $ReleaseAction = "$($V.ReleaseAction.value)" }

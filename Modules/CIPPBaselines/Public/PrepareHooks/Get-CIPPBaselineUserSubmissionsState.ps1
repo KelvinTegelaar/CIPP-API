@@ -29,11 +29,11 @@ function Get-CIPPBaselineUserSubmissionsState {
     $Rule = $Rules | Select-Object -First 1
 
     $State = "$($Item.Variables.state.value ?? $Item.Variables.state)"
-    if ($State -notin @('enable', 'disable')) { return @{ Current = $null } }
+    if ($State -notin @('enable', 'disable')) { return @{ Current = $null; ConfigError = $true } }
     $Email = "$($Item.Variables.email)"
     if (-not [string]::IsNullOrWhiteSpace($Email)) {
         $Email = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Email
-        if ($Email -notmatch '@') { return @{ Current = $null } }
+        if ($Email -notmatch '@') { return @{ Current = $null; ConfigError = $true } }
     }
 
     # 'Send reported items to' only applies when an address is configured; blank or missing

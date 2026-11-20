@@ -66,7 +66,11 @@ function Get-CIPPTestData {
 
         # Emit records page by page without caching them; for one-pass reads of fields too large to keep
         [Parameter(Mandatory = $false)]
-        [switch]$Stream
+        [switch]$Stream,
+
+        # Read only the records with these ids, without caching them; for lookups of a few records with fields too large to keep
+        [Parameter(Mandatory = $false)]
+        [string[]]$Id
     )
 
     # Enforce tenant lock when running inside custom script execution
@@ -88,6 +92,12 @@ function Get-CIPPTestData {
     # Normalize the field set (sorted + de-duplicated) so that callers asking for the same
     # fields in a different order share one cache entry instead of parsing twice.
     $NormalizedFields = if ($EffectiveFields) { @($EffectiveFields | Sort-Object -Unique) } else { $null }
+
+    if ($PSBoundParameters.ContainsKey('Id')) {
+        $Request = @{ TenantFilter = $TenantFilter; Type = $Type; Id = $Id }
+        if ($NormalizedFields) { $Request.Fields = $NormalizedFields }
+        return New-CIPPDbRequest @Request
+    }
 
     $CacheKey = if ($NormalizedFields) {
         '{0}|{1}|{2}' -f $TenantFilter, $Type, ($NormalizedFields -join ',')

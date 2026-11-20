@@ -21,7 +21,7 @@ function Get-CIPPBaselineGlobalQuarantineNotificationsState {
     if (-not $Policy) { return @{ Current = $null } }
 
     $Wanted = "$($Item.Variables.NotificationInterval.value ?? $Item.Variables.NotificationInterval)"
-    $WantedHours = try { [int]([timespan]$Wanted).TotalHours } catch { return @{ Current = $null } }
+    $WantedHours = try { [int]([timespan]$Wanted).TotalHours } catch { return @{ Current = $null; ConfigError = $true } }
 
     $CurrentHours = switch ("$($Policy.EndUserSpamNotificationFrequency)") {
         'PT4H' { 4 }

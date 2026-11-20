@@ -86,12 +86,12 @@ function Get-CIPPBaselineDetectCADriftState {
         if (-not $PolicyName) { continue }
         if ($ManagedNames.Contains($PolicyName)) { continue }
         if ($SharePointAccessManaged -and $PolicyName.StartsWith('[SharePoint admin center]')) { continue }
-        $Expected | Add-Member -NotePropertyName $PolicyName -NotePropertyValue $null -Force
-        $Current | Add-Member -NotePropertyName $PolicyName -NotePropertyValue ([PSCustomObject]@{
+        $Expected.PSObject.Properties.Remove($PolicyName); $Expected.PSObject.Properties.Add([psnoteproperty]::new($PolicyName, $null))
+        $Current.PSObject.Properties.Remove($PolicyName); $Current.PSObject.Properties.Add([psnoteproperty]::new($PolicyName, ([PSCustomObject]@{
                 state  = "$($Policy.state)"
                 id     = "$($Policy.id)"
                 status = 'Not covered by any baseline template'
-            }) -Force
+            })))
     }
 
     return @{ Expected = $Expected; Current = $Current }

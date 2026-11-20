@@ -65,7 +65,7 @@ function Get-CIPPBaselineAuthenticationMethodsState {
     # changes nothing about what this hook returns.
     $PasswordChange = "$($V.PasswordChangeAfterSecureSignIn.value ?? $V.PasswordChangeAfterSecureSignIn)"
     $ManagePasswordChange = $PasswordChange -in @('true', 'false')
-    if ($Configured.Count -eq 0 -and -not $ManagePasswordChange) { return @{ Current = $null } }
+    if ($Configured.Count -eq 0 -and -not $ManagePasswordChange) { return @{ Current = $null; ConfigError = $true } }
 
     $Configs = @{}
     foreach ($Config in @($Policy.authenticationMethodConfigurations)) { $Configs["$($Config.id)"] = $Config }

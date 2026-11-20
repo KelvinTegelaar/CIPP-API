@@ -43,7 +43,8 @@ function Write-LogMessage {
 
     if (!$tenant) { $tenant = 'None' }
     if (!$username) { $username = 'CIPP' }
-    $TzId = if ($env:CIPP_TIMEZONE) { $env:CIPP_TIMEZONE } else { 'UTC' }
+    $TzId = [System.Environment]::GetEnvironmentVariable('CIPP_TIMEZONE')
+    if (-not $TzId) { $TzId = 'UTC' }
     $LocalNow = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, $TzId)
     $PartitionKey = $LocalNow.ToString('yyyyMMdd')
     # Inverted-ticks RowKey: the table service returns rows in ascending RowKey order, so
@@ -61,7 +62,7 @@ function Write-LogMessage {
         'sentAsAlert'  = $false
         'PartitionKey' = [string]$PartitionKey
         'RowKey'       = [string]$RowKey
-        'FunctionNode' = [string]$env:WEBSITE_SITE_NAME
+        'FunctionNode' = [string][System.Environment]::GetEnvironmentVariable('WEBSITE_SITE_NAME')
         'LogData'      = [string]$LogData
     }
     if ($IPAddress) {

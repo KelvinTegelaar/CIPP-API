@@ -40,7 +40,7 @@ function Get-CIPPBaselineSensitivityLabelTemplateState {
     # baseline was saved.
     $Reference = $Item.Variables.sensitivityLabelTemplate
     if ($Reference -is [System.Management.Automation.PSCustomObject] -and $Reference.PSObject.Properties.Name -contains 'value') { $Reference = $Reference.value }
-    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null; ConfigError = $true } }
 
     $Table = Get-CippTable -tablename 'templates'
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
@@ -49,7 +49,7 @@ function Get-CIPPBaselineSensitivityLabelTemplateState {
     # A deleted or unreadable template is not a compliant tenant - the standard cannot
     # evaluate, so it reports No Data rather than an empty success.
     $TemplateName = "$($Template.Name)"
-    if (-not $Template -or [string]::IsNullOrWhiteSpace($TemplateName)) { return @{ Current = $null } }
+    if (-not $Template -or [string]::IsNullOrWhiteSpace($TemplateName)) { return @{ Current = $null; ConfigError = $true } }
 
     $Deployed = [bool]($Labels | Where-Object { "$($_.Name)" -eq $TemplateName -or "$($_.DisplayName)" -eq $TemplateName })
 

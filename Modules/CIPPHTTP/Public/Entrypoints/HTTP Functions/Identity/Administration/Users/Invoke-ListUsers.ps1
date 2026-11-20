@@ -123,13 +123,19 @@ Function Invoke-ListUsers {
 
     $GraphRequest = foreach ($User in $UserData) {
         $SkuID = $User.AssignedLicenses.skuid
-        $User | Add-Member -NotePropertyMembers ([ordered]@{
-                onPremisesSyncEnabled = [bool]($User.onPremisesSyncEnabled)
-                username              = ($User.userPrincipalName -split '@' | Select-Object -First 1)
-                Aliases               = ($User.ProxyAddresses -join ', ')
-                LicJoined             = (@(foreach ($Sku in $SkuID) { if ($SkuNames.ContainsKey([string]$Sku)) { $SkuNames[[string]$Sku] } }) -join ', ')
-                primDomain            = @{value = ($User.userPrincipalName -split '@' | Select-Object -Last 1); label = ($User.userPrincipalName -split '@' | Select-Object -Last 1); }
-            }) -Force
+        $UpnParts = $User.userPrincipalName -split '@'
+        $Added = [ordered]@{
+            onPremisesSyncEnabled = [bool]($User.onPremisesSyncEnabled)
+            username              = $UpnParts[0]
+            Aliases               = ($User.ProxyAddresses -join ', ')
+            LicJoined             = (@(foreach ($Sku in $SkuID) { if ($SkuNames.ContainsKey([string]$Sku)) { $SkuNames[[string]$Sku] } }) -join ', ')
+            primDomain            = @{value = $UpnParts[-1]; label = $UpnParts[-1]; }
+        }
+        $Properties = $User.PSObject.Properties
+        foreach ($Name in $Added.Keys) {
+            $Properties.Remove($Name)
+            $Properties.Add([psnoteproperty]::new($Name, $Added[$Name]))
+        }
         $User
     }
 

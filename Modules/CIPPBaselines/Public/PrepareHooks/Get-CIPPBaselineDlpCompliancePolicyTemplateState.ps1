@@ -25,13 +25,13 @@ function Get-CIPPBaselineDlpCompliancePolicyTemplateState {
 
     $Reference = $Item.Variables.dlpCompliancePolicyTemplate
     if ($Reference -is [System.Management.Automation.PSCustomObject] -and $Reference.PSObject.Properties.Name -contains 'value') { $Reference = $Reference.value }
-    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null; ConfigError = $true } }
 
     $Table = Get-CippTable -tablename 'templates'
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
     $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'DlpCompliancePolicyTemplate' and RowKey eq '$SafeReference'" | Select-Object -First 1
     $Template = $(if ($Entity -and -not [string]::IsNullOrWhiteSpace($Entity.JSON)) { try { $Entity.JSON | ConvertFrom-Json -Depth 50 -ErrorAction Stop } catch { $null } })
-    if (-not $Template) { return @{ Current = $null } }
+    if (-not $Template) { return @{ Current = $null; ConfigError = $true } }
 
     $Comparison = try {
         Compare-CIPPDlpCompliancePolicy -TenantFilter $TenantFilter -Template $Template -ErrorAction Stop

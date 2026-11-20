@@ -34,18 +34,18 @@ function Get-CIPPBaselineReusableSettingsTemplateState {
 
     $Reference = $Item.Variables.reusableSettingsTemplate
     if ($Reference -is [System.Management.Automation.PSCustomObject] -and $Reference.PSObject.Properties.Name -contains 'value') { $Reference = $Reference.value }
-    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null; ConfigError = $true } }
 
     $Table = Get-CippTable -tablename 'templates'
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
     $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'IntuneReusableSettingTemplate' and RowKey eq '$SafeReference'" | Select-Object -First 1
     $Template = $(if ($Entity -and -not [string]::IsNullOrWhiteSpace($Entity.JSON)) { try { $Entity.JSON | ConvertFrom-Json -Depth 50 -ErrorAction Stop } catch { $null } })
-    if (-not $Template) { return @{ Current = $null } }
+    if (-not $Template) { return @{ Current = $null; ConfigError = $true } }
 
     $DisplayName = "$($Template.DisplayName ?? $Template.Name)"
     $RawJSON = $Template.RawJSON ?? $Template.JSON
     $Body = $(try { $RawJSON | ConvertFrom-Json -Depth 50 -ErrorAction Stop } catch { $null })
-    if ([string]::IsNullOrWhiteSpace($DisplayName) -or -not $Body) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace($DisplayName) -or -not $Body) { return @{ Current = $null; ConfigError = $true } }
 
     $Existing = $Settings | Where-Object { "$($_.displayName)" -eq $DisplayName } | Select-Object -First 1
 

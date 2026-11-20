@@ -11,8 +11,10 @@ BeforeAll {
     function Get-CippDbRole { param($TenantFilter, [switch]$IncludePrivilegedRoles) $script:PrivRoles }
     function Get-CippDbRoleMembers { param($TenantFilter, $RoleTemplateId) $script:RoleMembers[$RoleTemplateId] }
     function Get-CIPPTestData {
-        param($TenantFilter, $Type, $Fields, [switch]$Stream)
-        $script:Data[$Type]
+        param($TenantFilter, $Type, $Fields, [switch]$Stream, [string[]]$Id)
+        $Records = $script:Data[$Type]
+        if ($PSBoundParameters.ContainsKey('Id')) { return @($Records).Where({ $Id -contains $_.id }) }
+        $Records
     }
     function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) $script:Licences -contains $Preset }
     function Add-CippTestResult { param($TenantFilter, $TestId, $TestType, $Status, $ResultMarkdown, $Risk, $Name, $UserImpact, $ImplementationEffort, $Category) $script:Result = @{ Status = $Status; Markdown = "$ResultMarkdown" } }

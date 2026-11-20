@@ -135,10 +135,12 @@ function Invoke-ListScheduledItems {
                 $Task.Parameters.PSObject.Properties.Remove('Headers')
             }
         } else {
-            $Task | Add-Member -NotePropertyName Parameters -NotePropertyValue @{}
+            $Task.PSObject.Properties.Remove('Parameters')
+            $Task.PSObject.Properties.Add([psnoteproperty]::new('Parameters', @{}))
         }
         if (!$Task.Recurrence) {
-            $Task | Add-Member -NotePropertyName Recurrence -NotePropertyValue 'Once' -Force
+            $Task.PSObject.Properties.Remove('Recurrence')
+            $Task.PSObject.Properties.Add([psnoteproperty]::new('Recurrence', 'Once'))
         } elseif ($Task.Recurrence -eq 0 -or [string]::IsNullOrEmpty($Task.Recurrence)) {
             $Task.Recurrence = 'Once'
         }
@@ -160,7 +162,8 @@ function Invoke-ListScheduledItems {
                         value = $TenantGroupObject.value
                         type  = 'Group'
                     }
-                    $Task | Add-Member -NotePropertyName TenantGroupInfo -NotePropertyValue $TenantGroupForDisplay -Force
+                    $Task.PSObject.Properties.Remove('TenantGroupInfo')
+                    $Task.PSObject.Properties.Add([psnoteproperty]::new('TenantGroupInfo', $TenantGroupForDisplay))
                     # Update the tenant to show the group object for proper formatting
                     $Task.Tenant = $TenantGroupForDisplay
                 }
@@ -170,7 +173,8 @@ function Invoke-ListScheduledItems {
             }
         } else {
             if (!$Task.Tenant) {
-                $Task | Add-Member -NotePropertyName Tenant -NotePropertyValue 'None' -Force
+                $Task.PSObject.Properties.Remove('Tenant')
+                $Task.PSObject.Properties.Add([psnoteproperty]::new('Tenant', 'None'))
             } else {
                 $TenantValue = [string]$Task.Tenant
                 if ($TenantLookup.ContainsKey($TenantValue)) {
@@ -187,7 +191,8 @@ function Invoke-ListScheduledItems {
             try {
                 $TriggerObject = $Task.Trigger | ConvertFrom-Json -ErrorAction SilentlyContinue
                 if ($TriggerObject) {
-                    $Task | Add-Member -NotePropertyName Trigger -NotePropertyValue $TriggerObject -Force
+                    $Task.PSObject.Properties.Remove('Trigger')
+                    $Task.PSObject.Properties.Add([psnoteproperty]::new('Trigger', $TriggerObject))
                 }
             } catch {
                 Write-Warning "Failed to parse trigger information for task $($Task.RowKey): $($_.Exception.Message)"

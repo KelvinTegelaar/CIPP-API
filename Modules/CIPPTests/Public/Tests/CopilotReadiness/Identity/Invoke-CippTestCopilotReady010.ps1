@@ -13,14 +13,9 @@ function Invoke-CippTestCopilotReady010 {
     try {
         $UserRegistrationDetails = Get-CIPPTestData -TenantFilter $Tenant -Type 'UserRegistrationDetails'
         # Plans are streamed: kept for every licensed user they are too large to cache
-        $UsersSeen = $false
-        $LicensedUsers = [System.Collections.Generic.List[object]]::new()
-        Get-CIPPTestData -TenantFilter $Tenant -Type 'Users' -Fields 'userPrincipalName', 'accountEnabled', 'assignedPlans' -Stream | ForEach-Object {
-            $UsersSeen = $true
-            if ($_.userPrincipalName -and $_.accountEnabled -eq $true -and $_.assignedPlans.Where({ $_.capabilityStatus -eq 'Enabled' }, 'First').Count) {
-                $LicensedUsers.Add([pscustomobject]@{ userPrincipalName = $_.userPrincipalName })
-            }
-        }
+        $CopilotUsers = Get-CippCopilotReadinessUsers -Tenant $Tenant
+        $UsersSeen = $CopilotUsers.Seen
+        $LicensedUsers = $CopilotUsers.Licensed
 
         if (-not $UserRegistrationDetails -or -not $UsersSeen) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady010' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No MFA registration or user data found in database. Data collection may not yet have run for this tenant.' -Risk 'High' -Name 'All licensed users have MFA registered' -UserImpact 'High' -ImplementationEffort 'Medium' -Category 'Copilot Readiness'

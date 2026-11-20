@@ -6,15 +6,12 @@ function Invoke-CippTestZTNA21882 {
     param($Tenant)
 
     try {
-        # Members are streamed: kept for every group they are too large to cache
-        $GroupsSeen = $false
-        $RoleAssignableGroups = [System.Collections.Generic.List[object]]::new()
-        Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'displayName', 'isAssignableToRole', 'members' -Stream | ForEach-Object {
-            $GroupsSeen = $true
-            if ($_.isAssignableToRole -eq $true) { $RoleAssignableGroups.Add($_) }
-        }
+        $Groups = Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups'
+        # Members are too large to cache, so only the role-assignable groups are read with them
+        $RoleAssignableIds = @(@($Groups).Where({ $_.isAssignableToRole -eq $true }).id)
+        $RoleAssignableGroups = if ($RoleAssignableIds.Count -gt 0) { @(Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'displayName', 'isAssignableToRole', 'members' -Id $RoleAssignableIds) } else { @() }
 
-        if (-not $GroupsSeen) {
+        if (-not $Groups) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21882' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'No nested groups in PIM for groups' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Access Control'
             return
         }

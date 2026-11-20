@@ -35,7 +35,7 @@ function Get-CIPPBaselineEnrollmentRestrictionTemplateState {
 
     $Reference = $Item.Variables.enrollmentRestrictionTemplate
     if ($Reference -is [System.Management.Automation.PSCustomObject] -and $Reference.PSObject.Properties.Name -contains 'value') { $Reference = $Reference.value }
-    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null; ConfigError = $true } }
 
     $Table = Get-CippTable -tablename 'templates'
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
@@ -43,7 +43,7 @@ function Get-CIPPBaselineEnrollmentRestrictionTemplateState {
     $Template = $(if ($Entity -and -not [string]::IsNullOrWhiteSpace($Entity.JSON)) {
             try { ConvertTo-CIPPEnrollmentRestrictionSettings -InputObject ($Entity.JSON | ConvertFrom-Json -Depth 20 -ErrorAction Stop) } catch { $null }
         })
-    if (-not $Template -or [string]::IsNullOrWhiteSpace($Template.displayName) -or [string]::IsNullOrWhiteSpace($Template.platform)) { return @{ Current = $null } }
+    if (-not $Template -or [string]::IsNullOrWhiteSpace($Template.displayName) -or [string]::IsNullOrWhiteSpace($Template.platform)) { return @{ Current = $null; ConfigError = $true } }
 
     $Existing = @(ConvertFrom-CIPPEnrollmentRestrictionConfiguration -Configurations $Configurations) |
         Where-Object { $_.displayName -eq $Template.displayName -and $_.platform -eq $Template.platform } | Select-Object -First 1

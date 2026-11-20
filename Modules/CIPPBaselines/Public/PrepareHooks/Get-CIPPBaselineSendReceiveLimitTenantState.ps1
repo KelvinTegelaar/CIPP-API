@@ -25,7 +25,7 @@ function Get-CIPPBaselineSendReceiveLimitTenantState {
 
     $SendLimit = [int]"$($Item.Variables.SendLimit)"
     $ReceiveLimit = [int]"$($Item.Variables.ReceiveLimit)"
-    if ($SendLimit -lt 1 -or $SendLimit -gt 150 -or $ReceiveLimit -lt 1 -or $ReceiveLimit -gt 150) { return @{ Current = $null } }
+    if ($SendLimit -lt 1 -or $SendLimit -gt 150 -or $ReceiveLimit -lt 1 -or $ReceiveLimit -gt 150) { return @{ Current = $null; ConfigError = $true } }
 
     # The collector stores whole MB ($null = Unlimited); pre-normalization rows still hold
     # display strings with a byte suffix, which reduce to the same MB value.

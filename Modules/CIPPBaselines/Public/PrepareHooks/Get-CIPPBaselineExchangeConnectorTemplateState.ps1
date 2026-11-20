@@ -25,16 +25,16 @@ function Get-CIPPBaselineExchangeConnectorTemplateState {
 
     $Reference = $Item.Variables.exConnectorTemplate
     if ($Reference -is [System.Management.Automation.PSCustomObject] -and $Reference.PSObject.Properties.Name -contains 'value') { $Reference = $Reference.value }
-    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null; ConfigError = $true } }
 
     $Table = Get-CippTable -tablename 'templates'
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
     $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ExConnectorTemplate' and RowKey eq '$SafeReference'" | Select-Object -First 1
-    if (-not $Entity -or [string]::IsNullOrWhiteSpace($Entity.JSON)) { return @{ Current = $null } }
+    if (-not $Entity -or [string]::IsNullOrWhiteSpace($Entity.JSON)) { return @{ Current = $null; ConfigError = $true } }
     $Body = $(try { $Entity.JSON | ConvertFrom-Json -Depth 20 -ErrorAction Stop } catch { $null })
     $Direction = "$($Entity.direction)".ToLower()
     $ConnectorName = "$($Body.name)"
-    if (-not $Body -or [string]::IsNullOrWhiteSpace($ConnectorName) -or $Direction -notin @('inbound', 'outbound')) { return @{ Current = $null } }
+    if (-not $Body -or [string]::IsNullOrWhiteSpace($ConnectorName) -or $Direction -notin @('inbound', 'outbound')) { return @{ Current = $null; ConfigError = $true } }
 
     $CacheType = if ($Direction -eq 'inbound') { 'ExoInboundConnector' } else { 'ExoOutboundConnector' }
     $Connectors = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type $CacheType)

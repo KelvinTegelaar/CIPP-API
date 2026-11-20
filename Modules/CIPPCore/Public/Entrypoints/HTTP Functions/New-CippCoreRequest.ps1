@@ -44,7 +44,7 @@ function New-CippCoreRequest {
         }
     }
 
-    $DisabledEndpoint = @($FeatureFlags).Where({ $_.Enabled -eq $false -and $_.Endpoints -contains $Request.Params.CIPPEndpoint }, 'First')[0]
+    $DisabledEndpoint = foreach ($Flag in @($FeatureFlags)) { if ($Flag.Enabled -eq $false -and $Flag.Endpoints -contains $Request.Params.CIPPEndpoint) { $Flag; break } }
 
     if ($DisabledEndpoint) {
         Write-Information "Endpoint $($Request.Params.CIPPEndpoint) is disabled via feature flag: $($DisabledEndpoint.Name)"
@@ -63,7 +63,7 @@ function New-CippCoreRequest {
     }
 
     # Block all API calls except /api/me when subscription has ended
-    if ($env:cipp_hosted_subscription_ended -and $Request.Params.CIPPEndpoint -ne 'me') {
+    if ([System.Environment]::GetEnvironmentVariable('cipp_hosted_subscription_ended') -and $Request.Params.CIPPEndpoint -ne 'me') {
         $HttpTotalStopwatch.Stop()
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::Forbidden
@@ -94,7 +94,7 @@ function New-CippCoreRequest {
     # A request names a tenant (tenantFilter) or a tenant group (tenantGroup), in the query or the body, never both. A group
     # runs the endpoint's All Tenants path with the request scope narrowed to the group, so endpoints see
     # tenantFilter=AllTenants and tenantGroup in the query, on a copy.
-    $BodyTenantFilter = @($Request.Body.tenantFilter).Where({ $_ }, 'First')[0]
+    $BodyTenantFilter = foreach ($Value in @($Request.Body.tenantFilter)) { if ($Value) { $Value; break } }
     $BodyTenantFilter = [string]($BodyTenantFilter.value ?? $BodyTenantFilter)
     if ([string]$Request.Query.tenantFilter -like 'group:*' -or $BodyTenantFilter -like 'group:*') {
         return ([HttpResponseContext]@{
@@ -102,7 +102,7 @@ function New-CippCoreRequest {
                 Body       = 'Send a tenant group as tenantGroup, not tenantFilter.'
             })
     }
-    $TenantGroup = $Request.Query.tenantGroup ?? @($Request.Body.tenantGroup).Where({ $_ }, 'First')[0]
+    $TenantGroup = $Request.Query.tenantGroup ?? $(foreach ($Value in @($Request.Body.tenantGroup)) { if ($Value) { $Value; break } })
     if ($TenantGroup) {
         if (@($FeatureFlags).Where({ $_.Id -eq 'TenantGroupSelector' -and -not $_.Enabled }).Count) {
             return ([HttpResponseContext]@{
@@ -205,7 +205,7 @@ function New-CippCoreRequest {
                 $script:CippAllowedGroupsStorage.Value = $null
             }
 
-            $ErrorMark = $global:Error[0]
+            $ErrorMark = if ($global:Error.Count) { $global:Error[0] }
             $HttpResponse = $null
             try {
                 Write-Debug "Access: $Access"
@@ -238,7 +238,7 @@ function New-CippCoreRequest {
                     $HttpTimings['InvokeEndpoint'] = $swInvoke.Elapsed.TotalMilliseconds
 
                     # Filter to only return HttpResponseContext objects
-                    $HttpResponse = @($Response).Where({ $_.PSObject.TypeNames -eq 'Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext' }, 'First')[0]
+                    $HttpResponse = foreach ($Item in @($Response)) { if ($Item.PSObject.TypeNames -eq 'Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext') { $Item; break } }
                     if (-not $HttpResponse) {
                         # If no valid response context found, create a default success response
                         $HttpResponse = if ($Response.PSObject.Properties.Name -contains 'StatusCode' -and $Response.PSObject.Properties.Name -contains 'Body') {

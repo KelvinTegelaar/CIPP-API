@@ -45,8 +45,8 @@ function Get-CIPPBaselineDefaultPlatformRestrictionsState {
     $Expected = [PSCustomObject]@{}
     $Current = [PSCustomObject]@{}
     foreach ($Entry in $Map) {
-        $Expected | Add-Member -NotePropertyName $Entry.e -NotePropertyValue ([bool]($V.($Entry.e) -eq $true))
-        $Current | Add-Member -NotePropertyName $Entry.e -NotePropertyValue ([bool]$Config.($Entry.c).($Entry.p))
+        $Expected.PSObject.Properties.Remove($Entry.e); $Expected.PSObject.Properties.Add([psnoteproperty]::new($Entry.e, ([bool]($V.($Entry.e) -eq $true))))
+        $Current.PSObject.Properties.Remove($Entry.e); $Current.PSObject.Properties.Add([psnoteproperty]::new($Entry.e, ([bool]$Config.($Entry.c).($Entry.p))))
     }
 
     # Minimum/maximum OS version per platform. macOS is intentionally absent - the Intune
@@ -66,11 +66,11 @@ function Get-CIPPBaselineDefaultPlatformRestrictionsState {
     )
     foreach ($Entry in $VersionMap) {
         if ([string]::IsNullOrWhiteSpace("$($V.($Entry.e))")) { continue }
-        $Expected | Add-Member -NotePropertyName $Entry.e -NotePropertyValue "$($V.($Entry.e))"
-        $Current | Add-Member -NotePropertyName $Entry.e -NotePropertyValue "$($Config.($Entry.c).($Entry.p))"
+        $Expected.PSObject.Properties.Remove($Entry.e); $Expected.PSObject.Properties.Add([psnoteproperty]::new($Entry.e, "$($V.($Entry.e))"))
+        $Current.PSObject.Properties.Remove($Entry.e); $Current.PSObject.Properties.Add([psnoteproperty]::new($Entry.e, "$($Config.($Entry.c).($Entry.p))"))
     }
 
-    $Current | Add-Member -NotePropertyName 'configurationId' -NotePropertyValue "$($Config.id)"
+    $Current.PSObject.Properties.Remove('configurationId'); $Current.PSObject.Properties.Add([psnoteproperty]::new('configurationId', "$($Config.id)"))
 
     @{ Expected = $Expected; Current = $Current }
 }

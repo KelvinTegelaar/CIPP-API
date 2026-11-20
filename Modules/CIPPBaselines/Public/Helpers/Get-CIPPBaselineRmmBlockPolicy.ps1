@@ -47,30 +47,30 @@ function Get-CIPPBaselineRmmBlockPolicy {
     # One entry per rule, with every tool that owns it.
     $Rules = [ordered]@{}
     foreach ($Product in $Products) {
-        $Entries = if ($Platform -eq 'Windows') {
-            @($Product.Value.paths | Where-Object { $_ } | ForEach-Object { [PSCustomObject]@{ Key = "$_".ToLowerInvariant(); Path = "$_" } })
-        } else {
-            @($Product.Value.macos.rules | Where-Object { $_ } | ForEach-Object { [PSCustomObject]@{ Key = "$($_.teamId) $($_.signingId)"; TeamId = "$($_.teamId)"; SigningId = "$($_.signingId)" } })
-        }
-        foreach ($Entry in $Entries) {
-            if (-not $Rules.Contains($Entry.Key)) {
-                $Entry | Add-Member -NotePropertyName Owners -NotePropertyValue ([System.Collections.Generic.List[string]]::new())
-                $Rules[$Entry.Key] = $Entry
+        $Sources = if ($Platform -eq 'Windows') { $Product.Value.paths } else { $Product.Value.macos.rules }
+        foreach ($Source in @($Sources)) {
+            if (-not $Source) { continue }
+            $Key = if ($Platform -eq 'Windows') { "$Source".ToLowerInvariant() } else { "$($Source.teamId) $($Source.signingId)" }
+            if (-not $Rules.Contains($Key)) {
+                $Rules[$Key] = if ($Platform -eq 'Windows') {
+                    [PSCustomObject]@{ Key = $Key; Path = "$Source"; Owners = [System.Collections.Generic.List[string]]::new() }
+                } else {
+                    [PSCustomObject]@{ Key = $Key; TeamId = "$($Source.teamId)"; SigningId = "$($Source.signingId)"; Owners = [System.Collections.Generic.List[string]]::new() }
+                }
             }
-            $Rules[$Entry.Key].Owners.Add($Product.Name)
+            $Rules[$Key].Owners.Add($Product.Name)
         }
     }
-    $Kept = @($Rules.Values | Where-Object { @($_.Owners | Where-Object { $Allowed.Contains($_) }).Count -eq 0 })
+    $Kept = @(foreach ($Rule in $Rules.Values) { if ($Rule.Owners.Where({ $Allowed.Contains($_) }, 'First').Count -eq 0) { $Rule } })
     if ($Kept.Count -eq 0) { return }
 
-    $Hash = { param([string]$Text) [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($Text))) }
 
     if ($Platform -eq 'Windows') {
         $Deny = [System.Text.StringBuilder]::new()
         $Refs = [System.Text.StringBuilder]::new()
         foreach ($Rule in $Kept) {
             if (-not $Rule.Path.StartsWith('*\')) { throw "RMM block list: path must start with *\: $($Rule.Path)" }
-            $Id = 'ID_DENY_A_{0}' -f (& $Hash $Rule.Key).Substring(0, 32)
+            $Id = 'ID_DENY_A_{0}' -f [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($Rule.Key))).Substring(0, 32)
             $null = $Deny.Append(('    <Deny ID="{0}" FriendlyName="{1}" FilePath="{2}" />' -f $Id, [System.Security.SecurityElement]::Escape(($Rule.Owners -join '; ')), [System.Security.SecurityElement]::Escape($Rule.Path))).Append("`n")
             $null = $Refs.Append(('          <FileRuleRef RuleID="{0}" />' -f $Id)).Append("`n")
         }
@@ -147,7 +147,7 @@ $($Refs.ToString())        </FileRulesRef>
         $Content = ($Kept | ForEach-Object { $_.Key }) -join "`n"
     }
 
-    $Fingerprint = (& $Hash "$Content`n$AssignmentKey").Substring(0, 16)
+    $Fingerprint = [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes("$Content`n$AssignmentKey"))).Substring(0, 16)
     $Description = if ($Platform -eq 'Windows') {
         "Blocks $($Kept.Count) file and folder rules of unapproved RMM and remote access tools with App Control for Business. Needs Windows 11 24H2 or newer. Tool list $($List.version) from RMM Guard by Lewis Barry and Roy Klooster. Managed by CIPP. [cfg:$Fingerprint]"
     } else {

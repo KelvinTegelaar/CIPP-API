@@ -25,7 +25,7 @@ function Get-CIPPBaselineSPOVersionControlState {
     $AutoTrim = [bool]($Item.Variables.EnableAutoTrim -eq $true -or "$($Item.Variables.EnableAutoTrim)" -eq 'True')
     $MajorLimit = [int]"$($Item.Variables.MajorVersionLimit ?? 50)"
     $ExpireDays = [int]"$($Item.Variables.ExpireVersionsAfterDays ?? 0)"
-    if (-not $AutoTrim -and $ExpireDays -ne 0 -and ($ExpireDays -lt 30 -or $ExpireDays -gt 36500)) { return @{ Current = $null } }
+    if (-not $AutoTrim -and $ExpireDays -ne 0 -and ($ExpireDays -lt 30 -or $ExpireDays -gt 36500)) { return @{ Current = $null; ConfigError = $true } }
 
     if ($AutoTrim) {
         return @{

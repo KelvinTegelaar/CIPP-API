@@ -27,7 +27,7 @@ function Get-CIPPBaselineCustomBannedPasswordListState {
 
     $Words = @("$($Item.Variables.BannedWords)" -split '[,;\r\n]+' | ForEach-Object { $_.Trim() } |
             Where-Object { $_.Length -ge 4 -and $_.Length -le 16 } | Select-Object -Unique)
-    if ($Words.Count -eq 0 -or $Words.Count -gt 1000) { return @{ Current = $null } }
+    if ($Words.Count -eq 0 -or $Words.Count -gt 1000) { return @{ Current = $null; ConfigError = $true } }
 
     $Existing = @($Settings | Where-Object { "$($_.templateId)" -eq '5cf42378-d67d-4f36-ba46-e8b86229381d' }) | Select-Object -First 1
     $CurrentWords = @()

@@ -107,27 +107,27 @@ function Get-CIPPBaselineAntiPhishPolicyState {
             enableTargetedUserProtection        = [bool]$Policy.EnableTargetedUserProtection
             enableOrganizationDomainsProtection = [bool]$Policy.EnableOrganizationDomainsProtection
         }
-        foreach ($Key in $MdoExpected.Keys) { $Expected | Add-Member -NotePropertyName $Key -NotePropertyValue $MdoExpected[$Key] }
-        foreach ($Key in $MdoCurrent.Keys) { $Current | Add-Member -NotePropertyName $Key -NotePropertyValue $MdoCurrent[$Key] }
+        foreach ($Key in $MdoExpected.Keys) { $Expected.PSObject.Properties.Remove($Key); $Expected.PSObject.Properties.Add([psnoteproperty]::new($Key, $MdoExpected[$Key])) }
+        foreach ($Key in $MdoCurrent.Keys) { $Current.PSObject.Properties.Remove($Key); $Current.PSObject.Properties.Add([psnoteproperty]::new($Key, $MdoCurrent[$Key])) }
     }
 
-    $Expected | Add-Member -NotePropertyName 'rule' -NotePropertyValue ([PSCustomObject]@{
+    $Expected.PSObject.Properties.Remove('rule'); $Expected.PSObject.Properties.Add([psnoteproperty]::new('rule', ([PSCustomObject]@{
             name = $RuleName; policy = $PolicyName; priority = 0; recipientDomainIs = @($AcceptedDomains)
-        })
-    $Current | Add-Member -NotePropertyName 'rule' -NotePropertyValue ([PSCustomObject]@{
+        })))
+    $Current.PSObject.Properties.Remove('rule'); $Current.PSObject.Properties.Add([psnoteproperty]::new('rule', ([PSCustomObject]@{
             name              = "$($Rule.Name)"
             policy            = "$($Rule.AntiPhishPolicy)"
             priority          = $(if ($null -eq $Rule.Priority) { -1 } else { [int]$Rule.Priority })
             recipientDomainIs = @(@($Rule.RecipientDomainIs) | Where-Object { $_ } | Sort-Object)
-        })
+        })))
 
-    $Current | Add-Member -NotePropertyName 'policyName' -NotePropertyValue $PolicyName
-    $Current | Add-Member -NotePropertyName 'ruleName' -NotePropertyValue $RuleName
-    $Current | Add-Member -NotePropertyName 'policyExists' -NotePropertyValue ([bool]$Policy)
-    $Current | Add-Member -NotePropertyName 'ruleExists' -NotePropertyValue ([bool]$Rule)
-    $Current | Add-Member -NotePropertyName 'ruleLinkedPolicy' -NotePropertyValue "$($Rule.AntiPhishPolicy)"
-    $Current | Add-Member -NotePropertyName 'acceptedDomains' -NotePropertyValue @($AcceptedDomains)
-    $Current | Add-Member -NotePropertyName 'mdoLicensed' -NotePropertyValue $MDOLicensed
+    $Current.PSObject.Properties.Remove('policyName'); $Current.PSObject.Properties.Add([psnoteproperty]::new('policyName', $PolicyName))
+    $Current.PSObject.Properties.Remove('ruleName'); $Current.PSObject.Properties.Add([psnoteproperty]::new('ruleName', $RuleName))
+    $Current.PSObject.Properties.Remove('policyExists'); $Current.PSObject.Properties.Add([psnoteproperty]::new('policyExists', ([bool]$Policy)))
+    $Current.PSObject.Properties.Remove('ruleExists'); $Current.PSObject.Properties.Add([psnoteproperty]::new('ruleExists', ([bool]$Rule)))
+    $Current.PSObject.Properties.Remove('ruleLinkedPolicy'); $Current.PSObject.Properties.Add([psnoteproperty]::new('ruleLinkedPolicy', "$($Rule.AntiPhishPolicy)"))
+    $Current.PSObject.Properties.Remove('acceptedDomains'); $Current.PSObject.Properties.Add([psnoteproperty]::new('acceptedDomains', @($AcceptedDomains)))
+    $Current.PSObject.Properties.Remove('mdoLicensed'); $Current.PSObject.Properties.Add([psnoteproperty]::new('mdoLicensed', $MDOLicensed))
     # DERIVED write params the static remediate spec cannot express. Same derivations as
     # the graded Expected above, so grade and write can never disagree - these fifteen
     # were graded but never written, drifting forever. Blank optional actions/tags are
@@ -150,7 +150,7 @@ function Get-CIPPBaselineAntiPhishPolicyState {
             if (-not [string]::IsNullOrWhiteSpace("$($V.$ActionParam)")) { $ExtraPolicyParams[$ActionParam] = "$($V.$ActionParam)" }
         }
     }
-    $Current | Add-Member -NotePropertyName 'extraPolicyParams' -NotePropertyValue ([PSCustomObject]$ExtraPolicyParams)
+    $Current.PSObject.Properties.Remove('extraPolicyParams'); $Current.PSObject.Properties.Add([psnoteproperty]::new('extraPolicyParams', ([PSCustomObject]$ExtraPolicyParams)))
 
     @{ Expected = $Expected; Current = $Current }
 }

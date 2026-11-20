@@ -47,7 +47,7 @@ function Get-CIPPBaselineAppManagementPolicyState {
             [PSCustomObject]@{ restrictionType = 'asymmetricKeyLifetime'; state = 'enabled'; maxLifetime = "P$($KeyLifetimeDays)D"; restrictForAppsCreatedAfterDateTime = '0001-01-01T00:00:00Z' }
         })
 
-    if ($PasswordCredentials.Count -eq 0 -and @($KeyCredentials).Count -eq 0) { return @{ Current = $null } }
+    if ($PasswordCredentials.Count -eq 0 -and @($KeyCredentials).Count -eq 0) { return @{ Current = $null; ConfigError = $true } }
 
     $SortedPassword = @($PasswordCredentials | Sort-Object { $_.restrictionType })
     $SortedKey = @($KeyCredentials | Sort-Object { $_.restrictionType })

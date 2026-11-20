@@ -190,7 +190,8 @@ function Invoke-ListTests {
                         if ($MdContent) {
                             $Description = ($MdContent -split '<!--- Results --->')[0].Trim()
                             $Description = ($Description -split '%TestResult%')[0].Trim()
-                            $TestResult | Add-Member -NotePropertyName 'Description' -NotePropertyValue $Description -Force
+                            $TestResult.PSObject.Properties.Remove('Description')
+                            $TestResult.PSObject.Properties.Add([psnoteproperty]::new('Description', $Description))
                         }
                     } catch {
                         #Test
@@ -201,11 +202,10 @@ function Invoke-ListTests {
                     $ScriptGuid = ($TestResult.RowKey -replace '^CustomScript-', '')
                     if (-not [string]::IsNullOrWhiteSpace($ScriptGuid) -and $CustomScriptMetadataLookup.ContainsKey($ScriptGuid)) {
                         $CustomMetadata = $CustomScriptMetadataLookup[$ScriptGuid]
-                        $TestResult | Add-Member -NotePropertyMembers ([ordered]@{
-                                Description      = ($CustomMetadata.Description)
-                                ReturnType       = ($CustomMetadata.ReturnType)
-                                MarkdownTemplate = ($CustomMetadata.MarkdownTemplate)
-                            }) -Force
+                        foreach ($Name in 'Description', 'ReturnType', 'MarkdownTemplate') {
+                            $TestResult.PSObject.Properties.Remove($Name)
+                            $TestResult.PSObject.Properties.Add([psnoteproperty]::new($Name, $CustomMetadata.$Name))
+                        }
                     }
                 }
             }

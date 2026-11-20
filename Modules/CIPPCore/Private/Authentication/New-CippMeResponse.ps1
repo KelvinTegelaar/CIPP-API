@@ -76,16 +76,16 @@ function New-CippMeResponse {
     }
 
     # Hosted payment status checks — shown to all users (no permission gating)
-    if ($env:cipp_hosted_subscription_ended) {
+    if ([System.Environment]::GetEnvironmentVariable('cipp_hosted_subscription_ended')) {
         $MeResponse['hostedSubscriptionEnded'] = $true
     }
-    if ($env:cipp_hosted_failed_payments) {
+    if ([System.Environment]::GetEnvironmentVariable('cipp_hosted_failed_payments')) {
         $MeResponse['hostedFailedPayments'] = $true
     }
     # CyberDrain-hosted instance (CIPP_HOSTED is set by the hosted deployment templates).
     # Lets the frontend point at the management portal for anything the instance's own
     # identity cannot do, such as custom domains on the shared App Service plan.
-    $MeResponse['hosted'] = $env:CIPP_HOSTED -eq 'true'
+    $MeResponse['hosted'] = [System.Environment]::GetEnvironmentVariable('CIPP_HOSTED') -eq 'true'
     # CIPP-NG (container web app on an App Service plan) versus a legacy function app plus
     # static web app - the backend page shows different resources for each.
     $MeResponse['ng'] = $env:CIPPNG -eq 'true'
@@ -113,7 +113,7 @@ function New-CippMeResponse {
         # scope, so an unconfigured instance doesn't hit storage on every poll.
         $NowUnix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
         $LastAttempt = [int64]0
-        $null = [int64]::TryParse($env:CippMeAuthReloadAt, [ref]$LastAttempt)
+        $null = [int64]::TryParse([System.Environment]::GetEnvironmentVariable('CippMeAuthReloadAt'), [ref]$LastAttempt)
         if (($NowUnix - $LastAttempt) -ge 30) {
             $env:CippMeAuthReloadAt = [string]$NowUnix
             $null = Get-CIPPAuthentication
@@ -128,7 +128,7 @@ function New-CippMeResponse {
     # to run first, and ExecSSOSetup needs the SAM app to create the CIPP-SSO
     # registration.
     $InitialSetupComplete = $SamState.Complete
-    if ($env:CIPP_SSO_MIGRATION_APPID -and $CanManageAppSettings -and $InitialSetupComplete) {
+    if ([System.Environment]::GetEnvironmentVariable('CIPP_SSO_MIGRATION_APPID') -and $CanManageAppSettings -and $InitialSetupComplete) {
         $MeResponse['forceSsoMigration'] = @{
             appId  = $env:CIPP_SSO_MIGRATION_APPID
             status = 'pending'

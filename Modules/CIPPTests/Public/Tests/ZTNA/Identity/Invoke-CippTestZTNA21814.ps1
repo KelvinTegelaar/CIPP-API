@@ -26,10 +26,10 @@ function Invoke-CippTestZTNA21814 {
             }
         }
 
-        # Members are streamed: kept for every group they are too large to cache, so only role-assigned groups are kept
+        # Members are too large to cache, so only the role-assigned groups are read
         $GroupsById = @{}
         if ($GroupIds.Count -gt 0) {
-            Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'members' -Stream | ForEach-Object {
+            Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'members' -Id @($GroupIds) | ForEach-Object {
                 if ($GroupIds.Contains([string]$_.id)) { $GroupsById[[string]$_.id] = $_ }
             }
         }

@@ -37,23 +37,23 @@ function Get-CIPPBaselineDeployContactTemplatesState {
 
     $Reference = $Item.Variables.contactTemplate
     if ($Reference -is [System.Management.Automation.PSCustomObject] -and $Reference.PSObject.Properties.Name -contains 'value') { $Reference = $Reference.value }
-    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null } }
+    if ([string]::IsNullOrWhiteSpace("$Reference")) { return @{ Current = $null; ConfigError = $true } }
 
     $Table = Get-CippTable -tablename 'templates'
     $SafeReference = ConvertTo-CIPPODataFilterValue -Value "$Reference"
     $Entity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ContactTemplate' and RowKey eq '$SafeReference'" | Select-Object -First 1
     $Template = $(if ($Entity -and -not [string]::IsNullOrWhiteSpace($Entity.JSON)) { try { $Entity.JSON | ConvertFrom-Json -Depth 20 -ErrorAction Stop } catch { $null } })
-    if (-not $Template) { return @{ Current = $null } }
+    if (-not $Template) { return @{ Current = $null; ConfigError = $true } }
 
     $ContactName = "$($Template.displayName)"
     $Email = "$($Template.email)"
     if ([string]::IsNullOrWhiteSpace($ContactName) -or [string]::IsNullOrWhiteSpace($Email)) {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Contact template '$Reference' is missing a display name or email address and cannot be evaluated." -Sev 'Error'
-        return @{ Current = $null }
+        return @{ Current = $null; ConfigError = $true }
     }
     try { $null = [System.Net.Mail.MailAddress]::new($Email) } catch {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Contact template '$ContactName' has an invalid email address '$Email' and cannot be evaluated." -Sev 'Error'
-        return @{ Current = $null }
+        return @{ Current = $null; ConfigError = $true }
     }
 
     $Existing = $Contacts | Where-Object { "$($_.DisplayName)" -eq $ContactName } | Select-Object -First 1

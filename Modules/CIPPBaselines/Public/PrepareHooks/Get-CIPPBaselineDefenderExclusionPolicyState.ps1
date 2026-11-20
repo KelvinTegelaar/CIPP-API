@@ -31,7 +31,7 @@ function Get-CIPPBaselineDefenderExclusionPolicyState {
     # exclusions never materializes, so grading policyExists against an all-empty config
     # demanded a policy the write cannot produce.
     if ($ExpectedExtensions.Count -eq 0 -and $ExpectedPaths.Count -eq 0 -and $ExpectedProcesses.Count -eq 0) {
-        return @{ Current = $null }
+        return @{ Current = $null; ConfigError = $true }
     }
 
     $CurrentExtensions = @()
