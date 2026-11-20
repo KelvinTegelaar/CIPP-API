@@ -70,7 +70,7 @@ function Push-DomainAnalyserTenant {
             }
 
             if ($DomainCount -gt 0) {
-                Write-Host "############# $DomainCount tenant Domains"
+                Write-Information "############# $DomainCount tenant Domains"
                 $TenantDomainObjects = [System.Collections.Generic.List[object]]::new()
                 try {
                     foreach ($TenantDomain in $TenantDomains) {
@@ -134,7 +134,7 @@ function Push-DomainAnalyserTenant {
                             }
                         }
                         Start-CIPPOrchestrator -InputObject $InputObject
-                        Write-Host "Started analysis for $DomainCount tenant domains in $($Tenant.defaultDomainName)"
+                        Write-Information "Started analysis for $DomainCount tenant domains in $($Tenant.defaultDomainName)"
                         Write-LogMessage -Tenant $Tenant.defaultDomainName -TenantId $Tenant.customerId -API 'DomainAnalyser' -message "Started analysis for $DomainCount tenant domains" -sev Info
                     } catch {
                         Write-LogMessage -Tenant $Tenant.defaultDomainName -TenantId $Tenant.customerId -API 'DomainAnalyser' -message 'Domain Analyser GetTenantDomains error' -sev 'Error' -LogData (Get-CippException -Exception $_)

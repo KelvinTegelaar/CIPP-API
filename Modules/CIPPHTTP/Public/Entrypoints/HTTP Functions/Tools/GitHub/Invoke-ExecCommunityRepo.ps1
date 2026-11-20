@@ -220,7 +220,7 @@ function Invoke-ExecCommunityRepo {
 
                         $MigrationTable = $Files | Where-Object { $_.name -eq 'MigrationTable' } | Select-Object -Last 1
                         if ($MigrationTable) {
-                            Write-Host "Found a migration table, getting contents for $FullName"
+                            Write-Information "Found a migration table, getting contents for $FullName"
                             $MigrationTable = (Get-GitHubFileContents -FullName $FullName -Branch $Branch -Path $MigrationTable.path).content | ConvertFrom-Json
                         }
 

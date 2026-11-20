@@ -72,7 +72,7 @@ function Invoke-EditGroup {
                 mailEnabled     = $OrgGroup.mailEnabled
                 securityEnabled = $SecurityEnabled
             }
-            Write-Host "body: $($PatchObj | ConvertTo-Json -Depth 10 -Compress)" -ForegroundColor Yellow
+            Write-Information "body: $($PatchObj | ConvertTo-Json -Depth 10 -Compress)"
             if ($UserObj.membershipRules) { $PatchObj | Add-Member -MemberType NoteProperty -Name 'membershipRule' -Value $UserObj.membershipRules -Force }
             try {
                 $null = New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/groups/$($GroupId)" -tenantid $UserObj.tenantFilter -body ($PatchObj | ConvertTo-Json -Depth 10 -Compress)

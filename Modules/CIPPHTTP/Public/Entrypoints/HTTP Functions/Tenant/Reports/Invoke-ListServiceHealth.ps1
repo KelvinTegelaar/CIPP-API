@@ -17,7 +17,7 @@ Function Invoke-ListServiceHealth {
             Import-Module '.\Modules\AzBobbyTables'
             Import-Module '.\Modules\CIPPCore'
             $TenantName = $_.displayName
-            Write-Host "Processed Service Health for $TenantName via AllTenants"
+            Write-Information "Processed Service Health for $TenantName via AllTenants"
             $prop = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/admin/serviceAnnouncement/issues?`$filter=endDateTime eq null" -tenantid $_.defaultDomainName
             $prop | Add-Member -NotePropertyMembers ([ordered]@{
                     tenant            = $TenantName
@@ -31,7 +31,7 @@ Function Invoke-ListServiceHealth {
         $ResultHealthSummary = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/admin/serviceAnnouncement/issues?`$filter=endDateTime eq null" -tenantid $TenantFilter
         $ResultHealthSummary | Add-Member -NotePropertyName 'tenant' -NotePropertyValue $TenantName
         $ResultHealthSummary | Add-Member -NotePropertyName 'defaultDomainName' -NotePropertyValue $DefaultDomainName
-        Write-Host "Processed Service Health for $TenantName"
+        Write-Information "Processed Service Health for $TenantName"
     }
     $Results = foreach ($h in $ResultHealthSummary) {
         [PSCustomObject]@{

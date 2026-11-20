@@ -137,8 +137,8 @@ function New-GraphBulkRequest {
                 if ($NoPaginateIds -contains $MoreData.id) {
                     continue
                 }
-                Write-Host 'Getting more'
-                Write-Host $MoreData.body.'@odata.nextLink'
+                Write-Information 'Getting more'
+                Write-Information $MoreData.body.'@odata.nextLink'
                 # Re-batch nextLink pagination instead of sequential calls
                 $NextLinkQueue = [System.Collections.Generic.Queue[PSCustomObject]]::new()
                 $InitialNextUrl = $MoreData.body.'@odata.nextLink' -replace 'https://graph.microsoft.com/(v1\.0|beta)', ''
@@ -222,7 +222,7 @@ function New-GraphBulkRequest {
             }
 
         } catch {
-            Write-Host 'updating graph table because something failed.'
+            Write-Information 'updating graph table because something failed.'
             $ErrorRecord = $_ # $_ is the parse error inside the nested catch
             # Try to parse ErrorDetails.Message as JSON
             $ErrorBody = [string]$ErrorRecord.ErrorDetails.Message

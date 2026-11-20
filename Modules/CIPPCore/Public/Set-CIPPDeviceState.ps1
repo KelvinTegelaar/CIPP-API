@@ -66,7 +66,7 @@
                 $ActionResult = New-GraphPOSTRequest -uri $Url -type PATCH -tenantid $TenantFilter -body '{"accountEnabled": true }'
             }
         }
-        Write-Host $ActionResult
+        Write-Information $ActionResult
         Write-LogMessage -headers $Headers -API $APIName -message "Executed action $($Action) on $($DeviceID)" -Sev Info
         return "Executed action $($Action) on $($DeviceID)"
     } catch {

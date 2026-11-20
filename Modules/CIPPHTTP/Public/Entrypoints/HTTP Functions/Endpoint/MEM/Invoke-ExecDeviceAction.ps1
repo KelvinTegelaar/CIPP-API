@@ -35,7 +35,7 @@ function Invoke-ExecDeviceAction {
             }
             'users' {
                 $ActionBody = @{ '@odata.id' = "https://graph.microsoft.com/beta/users('$($Request.Body.user.value)')" } | ConvertTo-Json -Compress
-                Write-Host "ActionBody: $ActionBody"
+                Write-Information "ActionBody: $ActionBody"
                 break
             }
             'wipe' {

@@ -14,7 +14,7 @@ function Invoke-NinjaOneExtensionScheduler {
         Add-AzDataTableEntity @Table -Entity $AddObject -Force
     }
 
-    Write-Host "Ninja Time Setting: $TimeSetting"
+    Write-Information "Ninja Time Setting: $TimeSetting"
 
     try {
         $LastRunTime = Get-Date(($Settings | Where-Object { $_.RowKey -eq 'NinjaLastRunTime' }).SettingValue)
@@ -22,12 +22,12 @@ function Invoke-NinjaOneExtensionScheduler {
         $LastRunTime = $Null
     }
 
-    Write-Host "Last Run: $LastRunTime"
+    Write-Information "Last Run: $LastRunTime"
 
     $CurrentTime = Get-Date
     $CurrentInterval = ($CurrentTime.Hour * 4) + [math]::Floor($CurrentTime.Minute / 15)
 
-    Write-Host "Current Interval: $CurrentInterval"
+    Write-Information "Current Interval: $CurrentInterval"
 
     $CIPPMapping = Get-CIPPTable -TableName CippMapping
     $Filter = "PartitionKey eq 'NinjaOneMapping'"
@@ -44,7 +44,7 @@ function Invoke-NinjaOneExtensionScheduler {
     }
 
     if ($Null -eq $LastRunTime -or $LastRunTime -le (Get-Date).addhours(-25) -or $TimeSetting -eq $CurrentInterval) {
-        Write-Host 'Executing'
+        Write-Information 'Executing'
         if ($TenantsToProcess -and -not (& $ApiCheck)) {
             Write-LogMessage -API 'NinjaOneSync' -message "NinjaOne API check failed, daily synchronization not queued for $(($TenantsToProcess | Measure-Object).count) tenants. Test the NinjaOne integration in Extensions." -Sev 'Error'
             $TenantsToProcess = @()
@@ -69,7 +69,7 @@ function Invoke-NinjaOneExtensionScheduler {
             }
             #Write-Host ($InputObject | ConvertTo-Json)
             $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
-            Write-Host "Started permissions orchestration with ID = '$InstanceId'"
+            Write-Information "Started permissions orchestration with ID = '$InstanceId'"
         }
 
         $AddObject = @{
@@ -121,7 +121,7 @@ function Invoke-NinjaOneExtensionScheduler {
                 }
                 #Write-Host ($InputObject | ConvertTo-Json)
                 $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
-                Write-Host "Started permissions orchestration with ID = '$InstanceId'"
+                Write-Information "Started permissions orchestration with ID = '$InstanceId'"
             }
 
             if (($CatchupTenants | Measure-Object).count -gt 0) {

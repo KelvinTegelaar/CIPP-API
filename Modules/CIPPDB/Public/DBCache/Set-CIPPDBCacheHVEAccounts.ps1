@@ -50,7 +50,7 @@ function Set-CIPPDBCacheHVEAccounts {
                     }
                 }
             } catch {
-                Write-Host "Could not bulk-retrieve billing policies: $($_.Exception.Message)"
+                Write-Information "Could not bulk-retrieve billing policies: $($_.Exception.Message)"
             }
         }
 

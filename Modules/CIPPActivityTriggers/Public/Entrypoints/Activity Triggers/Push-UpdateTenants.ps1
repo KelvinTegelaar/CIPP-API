@@ -22,7 +22,7 @@ function Push-UpdateTenants {
         $QueueTask.Status = 'Completed'
         Set-CippQueueTask @QueueTask
     } catch {
-        Write-Host "Queue Error: $($_.Exception.Message)"
+        Write-Information "Queue Error: $($_.Exception.Message)"
         Update-CippQueueEntry -RowKey $Queue.RowKey -Status 'Failed'
         $QueueTask.Status = 'Failed'
         Set-CippQueueTask @QueueTask

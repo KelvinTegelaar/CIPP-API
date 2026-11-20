@@ -54,7 +54,7 @@ function Invoke-EditTenant {
         $AliasEntity = $Existing | Where-Object { $_.RowKey -eq 'Alias' }
         if (!$tenantAlias) {
             if ($AliasEntity) {
-                Write-Host 'Removing alias'
+                Write-Information 'Removing alias'
                 Remove-CIPPAzDataTableEntity @PropertiesTable -Entity $AliasEntity
                 $null = Get-Tenants -TenantFilter $customerId -TriggerRefresh
                 Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant.defaultDomainName -TenantId $Tenant.customerId -message "Removed tenant alias for $($Tenant.defaultDomainName)" -Sev 'Info'
@@ -66,7 +66,7 @@ function Invoke-EditTenant {
                 Value        = $tenantAlias
             }
             $null = Add-CIPPAzDataTableEntity @PropertiesTable -Entity $aliasEntity -Force
-            Write-Host "Setting alias to $tenantAlias"
+            Write-Information "Setting alias to $tenantAlias"
             $Tenant | Add-Member -NotePropertyName 'originalDisplayName' -NotePropertyValue $tenant.displayName -Force
             $Tenant.displayName = $tenantAlias
             $null = Add-CIPPAzDataTableEntity @TenantTable -Entity $Tenant -Force
@@ -115,7 +115,7 @@ function Invoke-EditTenant {
                     Add-CIPPAzDataTableEntity @GroupMembersTable -Entity $NewEntry -Force
                     Remove-CIPPAzDataTableEntity @GroupMembersTable -Entity $Entry
                 } catch {
-                    Write-Host "Error migrating entry: $($_.Exception.Message)"
+                    Write-Information "Error migrating entry: $($_.Exception.Message)"
                 }
             }
         }

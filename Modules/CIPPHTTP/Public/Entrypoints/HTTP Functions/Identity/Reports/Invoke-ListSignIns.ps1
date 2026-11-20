@@ -37,7 +37,7 @@ Function Invoke-ListSignIns {
             $endTime = $ts.ToString('yyyy-MM-dd')
             "createdDateTime ge $($endTime) and userDisplayName ne 'On-Premises Directory Synchronization Service Account' $FailedLogons"
         }
-        Write-Host $Filters
+        Write-Information $Filters
         Write-LogMessage -headers $Headers -API $APINAME -message 'Retrieved sign in report' -Sev 'Debug' -tenant $TenantFilter
 
         # Single page only: full-range paging belongs to ListGraphRequest with manualPagination.

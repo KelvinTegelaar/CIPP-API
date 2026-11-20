@@ -83,7 +83,7 @@ function Invoke-CustomDataSync {
         foreach ($Row in $Rows) {
             #Write-Warning 'Processing row'
             #Write-Information ($Row | ConvertTo-Json -Depth 10)
-            Write-Host "Comparing $SourceMatchProperty $($Row.$SourceMatchProperty) to $($DirectoryObjects.Count) directory objects on $DestinationMatchProperty"
+            Write-Information "Comparing $SourceMatchProperty $($Row.$SourceMatchProperty) to $($DirectoryObjects.Count) directory objects on $DestinationMatchProperty"
             if ($DestinationMatchProperty.Count -gt 1) {
                 foreach ($Prop in $DestinationMatchProperty) {
                     $DirectoryObject = $DirectoryObjects | Where-Object { $_.$Prop -eq $Row.$SourceMatchProperty }
@@ -103,7 +103,7 @@ function Invoke-CustomDataSync {
 
                 # check if key in patch objects already exists otherwise create one with object url
                 if (!$PatchObjects.ContainsKey($ObjectUrl)) {
-                    Write-Host "Creating new object for $($ObjectUrl)"
+                    Write-Information "Creating new object for $($ObjectUrl)"
                     $PatchObjects[$ObjectUrl] = @{}
                 }
 
@@ -111,11 +111,11 @@ function Invoke-CustomDataSync {
                     if ($CustomDataAttribute -match '\.') {
                         $Props = @($CustomDataAttribute -split '\.')
                         if (!$PatchObjects[$ObjectUrl].ContainsKey($Props[0])) {
-                            Write-Host "Creating new object for $($Props[0])"
+                            Write-Information "Creating new object for $($Props[0])"
                             $PatchObjects[$ObjectUrl][$Props[0]] = @{}
                         }
                         if (!$PatchObjects[$ObjectUrl][$Props[0]].ContainsKey($Props[1])) {
-                            Write-Host "Creating new object for $($Props[1])"
+                            Write-Information "Creating new object for $($Props[1])"
                             $PatchObjects[$ObjectUrl][$Props[0]][$Props[1]] = $Row.$ExtensionSyncProperty
                         }
                     } else {
@@ -157,7 +157,7 @@ function Invoke-CustomDataSync {
             })
     }
 
-    Write-Host ($BulkRequests | ConvertTo-Json -Depth 10)
+    Write-Information ($BulkRequests | ConvertTo-Json -Depth 10)
     if ($BulkRequests.Count -gt 0) {
         Write-Information "Sending $($BulkRequests.Count) requests to Graph API"
         $Responses = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkRequests)

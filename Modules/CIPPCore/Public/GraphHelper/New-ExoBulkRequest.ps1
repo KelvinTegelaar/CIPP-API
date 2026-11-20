@@ -137,7 +137,7 @@ function New-ExoBulkRequest {
                         $ConcRequest.Headers = $ConcHeaders
                         $ConcRequests.Add($ConcRequest)
                     }
-                    foreach ($ConcResult in [CIPP.CIPPRestClient]::SendConcurrent($ConcRequests, $Concurrency, 3)) {
+                    foreach ($ConcResult in [CIPP.CIPPRestClient]::SendConcurrent($ConcRequests, $Concurrency, 3, ($PSCmdlet.PipelineStopToken ?? $global:CraftPipelineStopToken))) {
                         $Parsed = $null
                         if (-not $ConcResult.Error -and $ConcResult.IsSuccess) {
                             try { $Parsed = [CIPP.CippJson]::ConvertFromResponse($ConcResult.Result) } catch { $Parsed = $null }
@@ -150,7 +150,7 @@ function New-ExoBulkRequest {
                         # retry loop below and anything else reaches the caller as a per-item error instead of vanishing.
                         $RetryAfter = if ($ConcResult.Result) { @($ConcResult.Result.ResponseHeaders['Retry-After'])[0] }
                         $Detail = if ($ConcResult.Error) { $ConcResult.Error } elseif ($ConcResult.Result.HasContent) { $ConcResult.Result.Content.Substring(0, [Math]::Min(300, $ConcResult.Result.Content.Length)) }
-                        Write-Host "EXO bulk batch failed (HTTP $($ConcResult.StatusCode), $($ConcResult.Attempts) attempt(s), Retry-After $RetryAfter): $Detail"
+                        Write-Information "EXO bulk batch failed (HTTP $($ConcResult.StatusCode), $($ConcResult.Attempts) attempt(s), Retry-After $RetryAfter): $Detail"
                         $Status = if ($ConcResult.StatusCode -eq 429) { 429 } elseif ($ConcResult.TimedOut) { 504 } elseif ($ConcResult.StatusCode -ge 400) { $ConcResult.StatusCode } else { 502 }
                         foreach ($Id in $Payloads[$ConcResult.Index].Ids) {
                             $Out.Add([pscustomobject]@{
@@ -232,7 +232,7 @@ function New-ExoBulkRequest {
                     $NextBatchRequests.Add($ContinuationRequest)
                 }
 
-                Write-Host "Fetching next page for $($NextBatchRequests.Count) request(s)"
+                Write-Information "Fetching next page for $($NextBatchRequests.Count) request(s)"
                 $NextBatchBody = @{ requests = @($NextBatchRequests) }
                 $NextBatchBodyJson = [CIPP.CippJson]::ToJson($NextBatchBody, 10) ?? (ConvertTo-Json -InputObject $NextBatchBody -Depth 10)
                 $NextBatchBodyJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $NextBatchBodyJson

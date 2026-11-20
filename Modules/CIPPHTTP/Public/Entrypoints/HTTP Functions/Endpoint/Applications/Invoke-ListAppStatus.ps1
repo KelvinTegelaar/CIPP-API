@@ -12,7 +12,7 @@ Function Invoke-ListAppStatus {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $appFilter = $Request.Query.AppFilter
-    Write-Host "Using $appFilter"
+    Write-Information "Using $appFilter"
     $body = @"
 {"select":["DeviceName","UserPrincipalName","Platform","AppVersion","InstallState","InstallStateDetail","LastModifiedDateTime","DeviceId","ErrorCode","UserName","UserId","ApplicationId","AssignmentFilterIdsList","AppInstallState","AppInstallStateDetails","HexErrorCode"],"skip":0,"top":999,"filter":"(ApplicationId eq '$Appfilter')","orderBy":[]}
 "@

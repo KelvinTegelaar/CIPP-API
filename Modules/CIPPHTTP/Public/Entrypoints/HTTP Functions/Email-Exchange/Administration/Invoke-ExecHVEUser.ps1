@@ -100,7 +100,7 @@ function Invoke-ExecHVEUser {
                         HVEAccount = $true
                     } -Select 'ExternalDirectoryObjectId'
                 } catch {
-                    Write-Host "Could not retrieve HVE account details for cache cleanup: $($_.Exception.Message)"
+                    Write-Information "Could not retrieve HVE account details for cache cleanup: $($_.Exception.Message)"
                 }
 
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Remove-MailUser' -cmdParams @{
@@ -113,7 +113,7 @@ function Invoke-ExecHVEUser {
                     try {
                         Remove-CIPPDbItem -TenantFilter $Tenant -Type 'HVEAccounts' -ItemId $MailUser.ExternalDirectoryObjectId
                     } catch {
-                        Write-Host "Could not remove HVE account from cache: $($_.Exception.Message)"
+                        Write-Information "Could not remove HVE account from cache: $($_.Exception.Message)"
                     }
                 }
 

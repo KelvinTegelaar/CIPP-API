@@ -34,7 +34,6 @@ Describe 'Start-BackupRetentionCleanup' {
         Mock New-CIPPAzStorageRequest {}
         Mock New-CIPPAzStorageRequest -ParameterFilter { $Resource -eq 'backups/fail.json' } { throw 'blob gone' }
         Mock Write-LogMessage {}
-        Mock Write-Host {}
     }
 
     It 'deletes old backups a page of 1000 at a time until a short page' {

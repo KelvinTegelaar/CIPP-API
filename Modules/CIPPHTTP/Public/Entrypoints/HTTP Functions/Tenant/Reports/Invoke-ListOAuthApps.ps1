@@ -29,7 +29,7 @@ function Invoke-ListOAuthApps {
                 $GraphRequest = Get-CIPPOAuthAppsReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK
             } catch {
-                Write-Host "Error retrieving OAuth apps from report database: $($_.Exception.Message)"
+                Write-Information "Error retrieving OAuth apps from report database: $($_.Exception.Message)"
                 $StatusCode = [HttpStatusCode]::InternalServerError
                 $GraphRequest = $_.Exception.Message
             }

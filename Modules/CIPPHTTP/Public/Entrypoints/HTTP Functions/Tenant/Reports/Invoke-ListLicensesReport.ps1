@@ -55,7 +55,7 @@ function Invoke-ListLicensesReport {
                         SkipLog          = $true
                     }
                     $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
-                    Write-Host "Started licenses orchestration with ID = '$InstanceId'"
+                    Write-Information "Started licenses orchestration with ID = '$InstanceId'"
 
                     $Metadata.Queued = $true
                     $Metadata.QueueMessage = 'Loading data for all tenants. Please check back after the job completes'

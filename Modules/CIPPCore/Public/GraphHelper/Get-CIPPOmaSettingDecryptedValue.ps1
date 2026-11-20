@@ -38,7 +38,7 @@ function Get-CIPPOmaSettingDecryptedValue {
     )
 
     try {
-        Write-Host "Checking for encrypted OMA settings in device configuration: $($DeviceConfiguration.displayName)"
+        Write-Information "Checking for encrypted OMA settings in device configuration: $($DeviceConfiguration.displayName)"
         # Check if the device configuration has OMA settings
         if (-not $DeviceConfiguration.omaSettings -or $DeviceConfiguration.omaSettings.Count -eq 0) {
             Write-Verbose 'No OMA settings found in device configuration'

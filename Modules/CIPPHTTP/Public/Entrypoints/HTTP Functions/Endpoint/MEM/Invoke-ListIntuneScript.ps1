@@ -71,7 +71,7 @@ function Invoke-ListIntuneScript {
         $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-Host "Failed to retrieve scripts. Error: $($ErrorMessage.NormalizedError)"
+        Write-Information "Failed to retrieve scripts. Error: $($ErrorMessage.NormalizedError)"
     }
 
     # Extract groups for resolving assignment names
@@ -127,7 +127,7 @@ function Invoke-ListIntuneScript {
         }
 
         $scripts | Add-Member -MemberType NoteProperty -Name scriptType -Value $scriptId
-        Write-Host "$scriptId scripts count: $($scripts.Count)"
+        Write-Information "$scriptId scripts count: $($scripts.Count)"
         $Results.AddRange(@($scripts))
     }
 

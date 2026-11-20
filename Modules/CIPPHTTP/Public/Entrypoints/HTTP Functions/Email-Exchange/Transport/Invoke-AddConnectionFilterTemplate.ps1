@@ -12,12 +12,12 @@ function Invoke-AddConnectionFilterTemplate {
     $Headers = $Request.Headers
 
 
-    Write-Host ($request | ConvertTo-Json -Compress)
+    Write-Information ($request | ConvertTo-Json -Compress)
 
     try {
         $GUID = (New-Guid).GUID
         $JSON = if ($request.body.PowerShellCommand) {
-            Write-Host 'PowerShellCommand'
+            Write-Information 'PowerShellCommand'
             $request.body.PowerShellCommand | ConvertFrom-Json
         } else {
             $GUID = (New-Guid).GUID

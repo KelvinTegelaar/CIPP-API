@@ -24,7 +24,7 @@ function Get-CIPPAlertStaleEntraDevices {
             }
 
             $Lookup = (Get-Date).AddDays(-$inactiveDays).ToUniversalTime()
-            Write-Host "Checking for inactive Entra devices since $Lookup (excluding disabled: $excludeDisabled)"
+            Write-Information "Checking for inactive Entra devices since $Lookup (excluding disabled: $excludeDisabled)"
             # Build base filter - cannot filter accountEnabled server-side
             $BaseFilter = if ($excludeDisabled) { 'accountEnabled eq true' } else { '' }
 

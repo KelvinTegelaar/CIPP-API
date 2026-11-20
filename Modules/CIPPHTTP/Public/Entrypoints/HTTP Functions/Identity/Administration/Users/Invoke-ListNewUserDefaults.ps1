@@ -10,7 +10,7 @@ function Invoke-ListNewUserDefaults {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    Write-Host 'Listing New User Default Templates'
+    Write-Information 'Listing New User Default Templates'
 
     # Get the TenantFilter from query parameters
     $TenantFilter = $Request.Query.TenantFilter

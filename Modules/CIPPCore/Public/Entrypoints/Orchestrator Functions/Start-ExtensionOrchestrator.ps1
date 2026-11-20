@@ -16,7 +16,7 @@ function Start-ExtensionOrchestrator {
         $Configuration = @{}
     }
 
-    Write-Host 'Started Scheduler for Extensions'
+    Write-Information 'Started Scheduler for Extensions'
 
     # NinjaOne Extension
     if ($Configuration.NinjaOne.Enabled -eq $true) {

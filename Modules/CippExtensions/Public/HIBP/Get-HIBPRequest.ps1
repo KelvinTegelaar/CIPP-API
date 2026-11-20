@@ -11,7 +11,7 @@ function Get-HIBPRequest {
         if ($_.Exception.Response -and $_.Exception.Response.StatusCode -eq 404) {
             return @()
         } elseif ($_.Exception.Response -and $_.Exception.Response.StatusCode -eq 429) {
-            Write-Host 'Rate limited hit for hibp.'
+            Write-Information 'Rate limited hit for hibp.'
             return @{
                 Wait         = ($_.Exception.Response.headers | Where-Object -Property key -EQ 'Retry-After').value
                 'rate-limit' = $true

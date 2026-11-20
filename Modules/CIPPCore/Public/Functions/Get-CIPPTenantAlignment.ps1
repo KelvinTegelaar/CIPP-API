@@ -285,7 +285,7 @@ function Get-CIPPTenantAlignment {
 
                         if ($CATemplate.'TemplateList-Tags') {
                             foreach ($Tag in $CATemplate.'TemplateList-Tags') {
-                                Write-Host "Processing CA Tag: $($Tag.value)"
+                                Write-Information "Processing CA Tag: $($Tag.value)"
                                 $CAActions = if ($CATemplate.action) { $CATemplate.action } else { @() }
                                 $CAReportingEnabled = ($CAActions | Where-Object { $_.value -and ($_.value.ToLower() -eq 'report' -or $_.value.ToLower() -eq 'remediate') }).Count -gt 0
                                 $TagValue = if ($Tag.value) { $Tag.value } else { $Tag }

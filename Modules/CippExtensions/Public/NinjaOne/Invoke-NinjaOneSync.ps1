@@ -32,7 +32,7 @@ function Invoke-NinjaOneSync {
             }
             #Write-Host ($InputObject | ConvertTo-Json)
             $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
-            Write-Host "Started permissions orchestration with ID = '$InstanceId'"
+            Write-Information "Started permissions orchestration with ID = '$InstanceId'"
         }
 
         $AddObject = @{

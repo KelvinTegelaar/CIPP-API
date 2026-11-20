@@ -79,7 +79,7 @@ function Invoke-ListScheduledItems {
 
     $Filter = $ScheduledItemFilter -join ' and '
 
-    Write-Host "Filter: $Filter"
+    Write-Information "Filter: $Filter"
     $Table = Get-CIPPTable -TableName 'ScheduledTasks'
     $Tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     Write-Information "Retrieved $($Tasks.Count) scheduled tasks from storage."

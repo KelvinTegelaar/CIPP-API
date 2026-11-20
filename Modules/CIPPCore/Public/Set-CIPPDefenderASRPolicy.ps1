@@ -78,10 +78,10 @@ function Set-CIPPDefenderASRPolicy {
     if ('ASR Default rules' -in $CheckExistingASR.Name) {
         "$($TenantFilter): ASR Policy already exists. Skipping"
     } else {
-        Write-Host $ASRbody
+        Write-Information $ASRbody
         if (($ASRSettings | Measure-Object).Count -gt 0) {
             $ASRRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $TenantFilter -type POST -body $ASRbody
-            Write-Host ($ASRRequest.id)
+            Write-Information ($ASRRequest.id)
             if ($ASR.AssignTo -and $ASR.AssignTo -ne 'none') {
                 $AssignBody = if ($ASR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($ASR.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
                 $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ASRRequest.id)')/assign" -tenantid $TenantFilter -type POST -body $AssignBody

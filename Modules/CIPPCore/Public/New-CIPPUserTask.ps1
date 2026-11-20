@@ -69,7 +69,7 @@ function New-CIPPUserTask {
         $Results.Add("Failed to create the Aliases: $($_.Exception.Message)")
     }
     if ($UserObj.copyFrom.value) {
-        Write-Host "Copying from $($UserObj.copyFrom.value)"
+        Write-Information "Copying from $($UserObj.copyFrom.value)"
         $CopyFrom = Set-CIPPCopyGroupMembers -Headers $Headers -CopyFromId $UserObj.copyFrom.value -UserID $CreationResults.Username -TenantFilter $UserObj.tenantFilter -DeferExchange
         $CopyFrom.Success | ForEach-Object { $Results.Add($_) }
         $CopyFrom.Error | ForEach-Object { $Results.Add($_) }

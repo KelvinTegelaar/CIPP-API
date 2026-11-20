@@ -9,7 +9,7 @@ function Invoke-ListGroupTemplates {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    Write-Host $Request.query.id
+    Write-Information $Request.query.id
 
     #List new policies
     $Table = Get-CippTable -tablename 'templates'

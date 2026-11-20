@@ -13,15 +13,15 @@ function New-BreachTenantSearch {
     $usersResults = foreach ($domain in $LatestBreach) {
         $ExistingBreaches = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($domain.name)'"
         if ($null -eq $domain.Group) {
-            Write-Host "No breaches found for domain $($domain.name)"
+            Write-Information "No breaches found for domain $($domain.name)"
             continue
         }
         $SumOfBreaches = $domain.Count
         if ($ExistingBreaches.sum -eq $SumOfBreaches) {
             if ($Force.IsPresent -eq $true) {
-                Write-Host "Forcing update for tenant $TenantFilter"
+                Write-Information "Forcing update for tenant $TenantFilter"
             } else {
-                Write-Host "No new breaches found for tenant $TenantFilter"
+                Write-Information "No new breaches found for tenant $TenantFilter"
                 continue
             }
         }

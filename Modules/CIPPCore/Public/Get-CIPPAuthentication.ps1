@@ -21,7 +21,7 @@ function Get-CIPPAuthentication {
                     Set-Item -Path env:$Var -Value $Secret.$Var -Force -ErrorAction Stop
                 }
             }
-            Write-Host "Got secrets from dev storage. ApplicationID: $env:ApplicationID"
+            Write-Information "Got secrets from dev storage. ApplicationID: $env:ApplicationID"
         } else {
             $keyvaultname = Get-CippKeyVaultName
             $Variables | ForEach-Object {

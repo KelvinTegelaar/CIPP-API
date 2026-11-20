@@ -23,7 +23,7 @@ function Get-ExtensionRateLimit($ExtensionName, $ExtensionPartitionKey, $RateLim
         $ActiveJobs = 'FirstRun'
     }
     if (($ActiveJobs | Measure-Object).count -ge $RateLimit) {
-        Write-Host "Rate Limiting. Currently $($ActiveJobs.count) Active Jobs"
+        Write-Information "Rate Limiting. Currently $($ActiveJobs.count) Active Jobs"
         $CurrentMap = Get-ExtensionRateLimit -ExtensionName $ExtensionName -ExtensionPartitionKey $ExtensionPartitionKey -RateLimit $RateLimit -WaitTime $WaitTime
     }
 

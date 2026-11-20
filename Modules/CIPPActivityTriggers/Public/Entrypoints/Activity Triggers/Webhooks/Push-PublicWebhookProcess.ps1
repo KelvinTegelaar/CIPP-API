@@ -17,7 +17,7 @@ function Push-PublicWebhookProcess {
             Invoke-CippPartnerWebhookProcessing -Data ($Webhook.Data | ConvertFrom-Json) -PartnerTenantId $Webhook.CIPPID
         }
     } catch {
-        Write-Host "Webhook Exception: $($_.Exception.Message)"
+        Write-Information "Webhook Exception: $($_.Exception.Message)"
     } finally {
         $Entity = $Webhook | Select-Object -Property RowKey, PartitionKey
         Remove-CIPPAzDataTableEntity -Force @Table -Entity $Entity

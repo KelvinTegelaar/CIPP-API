@@ -16,7 +16,7 @@ function Start-CIPPDBCacheOrchestrator {
 
     try {
         Write-LogMessage -API 'CIPPDBCache' -message 'Starting database cache orchestration' -sev Info
-        Write-Host 'Starting database cache orchestration'
+        Write-Information 'Starting database cache orchestration'
         $TenantList = Get-Tenants | Where-Object { $null -ne $_.defaultDomainName }
 
         if ($TenantList.Count -eq 0) {
@@ -36,7 +36,7 @@ function Start-CIPPDBCacheOrchestrator {
             }
         }
 
-        Write-Host "Created queue $($Queue.RowKey) for database cache collection of $($TenantList.Count) tenants"
+        Write-Information "Created queue $($Queue.RowKey) for database cache collection of $($TenantList.Count) tenants"
 
         # Phase 2 via PostExecution: Aggregate all task lists and start flat execution orchestrator
         $InputObject = [PSCustomObject]@{

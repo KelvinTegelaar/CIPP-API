@@ -108,7 +108,7 @@ function Invoke-ExecStandardConvert {
 
             $OldStd = $OldStandard.Standards.$StdKey
             $NewStdKey = if ($StdKey -eq 'ConditionalAccess') {
-                Write-Host 'Converting ConditionalAccess to ConditionalAccessTemplate'
+                Write-Information 'Converting ConditionalAccess to ConditionalAccessTemplate'
                 'ConditionalAccessTemplate'
             } else { $StdKey }
             $IsArrayStandard = ($NewStdKey -eq 'IntuneTemplate' -or $NewStdKey -eq 'ConditionalAccessTemplate')

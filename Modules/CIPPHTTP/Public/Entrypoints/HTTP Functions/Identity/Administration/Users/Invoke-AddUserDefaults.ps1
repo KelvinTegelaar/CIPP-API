@@ -17,7 +17,7 @@ function Invoke-AddUserDefaults {
         $TemplateName = $Request.Body.templateName
         $DefaultForTenant = $Request.Body.defaultForTenant
 
-        Write-Host "Creating template '$TemplateName' for tenant: $TenantFilter"
+        Write-Information "Creating template '$TemplateName' for tenant: $TenantFilter"
 
         # User fields
         $GivenName = $Request.Body.givenName

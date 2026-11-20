@@ -59,11 +59,11 @@ function Test-CIPPRerun {
             return $false
         } elseif ($RerunData) {
             if ($Settings -and $RerunData.Settings) {
-                Write-Host 'Testing rerun settings'
+                Write-Information 'Testing rerun settings'
                 $PreviousSettings = $RerunData.Settings
                 $NewSettings = $($Settings | ConvertTo-Json -Depth 10 -Compress)
                 if ($NewSettings.Length -ne $PreviousSettings.Length) {
-                    Write-Host "$($NewSettings.Length) vs $($PreviousSettings.Length) - settings have changed."
+                    Write-Information "$($NewSettings.Length) vs $($PreviousSettings.Length) - settings have changed."
                     $RerunData | Add-Member -MemberType NoteProperty -Name 'EstimatedNextRun' -Value $EstimatedNextRun -Force
                     $RerunData | Add-Member -MemberType NoteProperty -Name 'LastScheduledTime' -Value "$AnchorTime" -Force
                     $RerunData | Add-Member -MemberType NoteProperty -Name 'Settings' -Value "$($Settings | ConvertTo-Json -Depth 10 -Compress)" -Force
@@ -105,7 +105,7 @@ function Test-CIPPRerun {
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-Host "Could not detect if this is a rerun: $($ErrorMessage.NormalizedError)"
+        Write-Information "Could not detect if this is a rerun: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $API -message "Could not detect if this is a rerun: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         return $false
     }

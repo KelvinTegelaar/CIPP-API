@@ -12,7 +12,7 @@ function Get-CIPPAlertAppSecretExpiry {
     )
 
     try {
-        Write-Host "Checking app expire for $($TenantFilter)"
+        Write-Information "Checking app expire for $($TenantFilter)"
         $appList = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications?`$select=appId,displayName,passwordCredentials" -tenantid $TenantFilter
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
@@ -24,11 +24,11 @@ function Get-CIPPAlertAppSecretExpiry {
 
     foreach ($App in $applist) {
         if ($App.displayName -match 'ConnectSyncProvisioning') { continue }
-        Write-Host "checking $($App.displayName)"
+        Write-Information "checking $($App.displayName)"
         if ($App.passwordCredentials) {
             foreach ($Credential in $App.passwordCredentials) {
                 if ($Credential.endDateTime -lt (Get-Date).AddDays(30) -and $Credential.endDateTime -gt (Get-Date).AddDays(-7)) {
-                    Write-Host ("Application '{0}' has secrets expiring on {1}" -f $App.displayName, $Credential.endDateTime)
+                    Write-Information ("Application '{0}' has secrets expiring on {1}" -f $App.displayName, $Credential.endDateTime)
 
                     $Message = [PSCustomObject]@{
                         AppName    = $App.displayName

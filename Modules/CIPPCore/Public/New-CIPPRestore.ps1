@@ -8,7 +8,7 @@ function New-CIPPRestore {
         $Headers
     )
 
-    Write-Host "Scheduled Restore psproperties: $(([pscustomobject]$RestoreValues).psobject.Properties)"
+    Write-Information "Scheduled Restore psproperties: $(([pscustomobject]$RestoreValues).psobject.Properties)"
     Write-LogMessage -headers $Headers -API $APINAME -message 'Restored backup' -Sev 'Debug'
     $RestoreData = foreach ($ScheduledBackup in ([pscustomobject]$RestoreValues).psobject.Properties | Where-Object { $_.Value -eq $true -and $_.Name -notin 'email', 'webhook', 'psa', 'backup', 'overwrite' } | Select-Object -ExpandProperty Name) {
         Write-Information "Restoring $ScheduledBackup for tenant $TenantFilter"

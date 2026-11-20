@@ -69,7 +69,7 @@ function Set-CIPPDefenderEDRPolicy {
         }
         if ($TemplateOnly) { return $EDRBodyObj }
         $EDRbody = ConvertTo-Json -Depth 15 -Compress -InputObject $EDRBodyObj
-        Write-Host ($EDRbody)
+        Write-Information ($EDRbody)
         $CheckExistingEDR = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $TenantFilter | Where-Object -Property Name -EQ 'EDR Configuration'
         if ($CheckExistingEDR) {
             "$($TenantFilter): EDR Policy already exists. Skipping"

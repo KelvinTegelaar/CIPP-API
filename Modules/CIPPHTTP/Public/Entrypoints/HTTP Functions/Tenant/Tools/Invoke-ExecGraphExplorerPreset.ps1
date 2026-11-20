@@ -96,7 +96,7 @@ function Invoke-ExecGraphExplorerPreset {
                 }
                 $Success = $true
             } else {
-                Write-Host "username in table: $($Entity.Owner). Username in request: $Username"
+                Write-Information "username in table: $($Entity.Owner). Username in request: $Username"
                 $Message = 'Error: You can only modify your own presets.'
                 $Success = $false
             }

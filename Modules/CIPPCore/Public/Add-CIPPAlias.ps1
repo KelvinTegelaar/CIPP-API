@@ -11,10 +11,10 @@ function Add-CIPPAlias {
 
     try {
         foreach ($Alias in $Aliases) {
-            Write-Host "Adding alias $Alias to $User"
+            Write-Information "Adding alias $Alias to $User"
             New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$User" -tenantid $TenantFilter -type 'patch' -body "{`"mail`": `"$Alias`"}" -verbose
         }
-        Write-Host "Resetting primary alias to $User"
+        Write-Information "Resetting primary alias to $User"
         New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$User" -tenantid $TenantFilter -type 'patch' -body "{`"mail`": `"$User`"}" -verbose
         Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "Added alias $($Alias) to $($UserPrincipalName)" -Sev 'Info'
         return ("Added Aliases: $($Aliases -join ',')")

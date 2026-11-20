@@ -68,7 +68,7 @@ function Push-ExecJITAdminListAllTenants {
                 # Add to Azure Table
                 foreach ($result in $Results) {
                     $GUID = (New-Guid).Guid
-                    Write-Host ($result | ConvertTo-Json -Depth 10 -Compress)
+                    Write-Information ($result | ConvertTo-Json -Depth 10 -Compress)
                     $GraphRequest = @{
                         JITAdminUser = [string]($result | ConvertTo-Json -Depth 10 -Compress)
                         RowKey       = [string]$GUID
@@ -81,10 +81,10 @@ function Push-ExecJITAdminListAllTenants {
                 }
             } else {
                 # No users with JIT Admin attributes found, or no users at all
-                Write-Host "No JIT Admin users or no users found to process for tenant $DomainName."
+                Write-Information "No JIT Admin users or no users found to process for tenant $DomainName."
             }
         } else {
-            Write-Host "No users found for tenant $DomainName."
+            Write-Information "No users found for tenant $DomainName."
         }
 
     } catch {

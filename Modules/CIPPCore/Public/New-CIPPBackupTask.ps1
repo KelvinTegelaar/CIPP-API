@@ -88,7 +88,7 @@ function New-CIPPBackupTask {
                             }
                         }
                     } catch {
-                        Write-Host "Failed to backup $url"
+                        Write-Information "Failed to backup $url"
                     }
                 }
             }

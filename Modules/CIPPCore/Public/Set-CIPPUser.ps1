@@ -78,7 +78,7 @@ function Set-CIPPUser {
         if ($UserObj.defaultAttributes) {
             $UserObj.defaultAttributes | Get-Member -MemberType NoteProperty | ForEach-Object {
                 if (-not [string]::IsNullOrWhiteSpace($UserObj.defaultAttributes.$($_.Name).value)) {
-                    Write-Host "Editing user and adding $($_.Name) with value $($UserObj.defaultAttributes.$($_.Name).value)"
+                    Write-Information "Editing user and adding $($_.Name) with value $($UserObj.defaultAttributes.$($_.Name).value)"
                     $BodyToShip | Add-Member -NotePropertyName $_.Name -NotePropertyValue $UserObj.defaultAttributes.$($_.Name).value -Force
                 }
             }
@@ -86,7 +86,7 @@ function Set-CIPPUser {
         if ($UserObj.customData) {
             $UserObj.customData | Get-Member -MemberType NoteProperty | ForEach-Object {
                 if (-not [string]::IsNullOrWhiteSpace($UserObj.customData.$($_.Name))) {
-                    Write-Host "Editing user and adding custom data $($_.Name) with value $($UserObj.customData.$($_.Name))"
+                    Write-Information "Editing user and adding custom data $($_.Name) with value $($UserObj.customData.$($_.Name))"
                     $BodyToShip | Add-Member -NotePropertyName $_.Name -NotePropertyValue $UserObj.customData.$($_.Name) -Force
                 }
             }
@@ -146,7 +146,7 @@ function Set-CIPPUser {
                 $CurrentLicenses = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter
                 #if the list of skuIds in $CurrentLicenses.assignedLicenses is EXACTLY the same as $licenses, we don't need to do anything, but the order in both can be different.
                 if (($CurrentLicenses.assignedLicenses.skuId -join ',') -eq ($licenses -join ',') -and $UserObj.removeLicenses -eq $false) {
-                    Write-Host "$($CurrentLicenses.assignedLicenses.skuId -join ',') $(($licenses -join ','))"
+                    Write-Information "$($CurrentLicenses.assignedLicenses.skuId -join ',') $(($licenses -join ','))"
                     $Results.Add( 'Success. User license is already correct.' )
                 } else {
                     if ($UserObj.removeLicenses) {
@@ -174,7 +174,7 @@ function Set-CIPPUser {
     #Add Aliases, removal currently not supported.
     try {
         if ($Aliases) {
-            Write-Host ($Aliases | ConvertTo-Json)
+            Write-Information ($Aliases | ConvertTo-Json)
             foreach ($Alias in $Aliases) {
                 $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type 'patch' -body "{`"mail`": `"$Alias`"}" -Verbose
             }
@@ -241,15 +241,15 @@ function Set-CIPPUser {
             $GroupID = $_.value
             $GroupType = $ResolvedGroupTypes[$GroupID] ?? $_.addedFields.groupType
             $GroupName = $_.label
-            Write-Host "About to add $($UserObj.userPrincipalName) to $GroupName. Group ID is: $GroupID and type is: $GroupType"
+            Write-Information "About to add $($UserObj.userPrincipalName) to $GroupName. Group ID is: $GroupID and type is: $GroupType"
 
             try {
                 if (Test-CIPPGroupIsExchangeBacked -AddedFields $_.addedFields -ResolvedType $ResolvedGroupTypes[$GroupID]) {
-                    Write-Host 'Adding to group via Add-DistributionGroupMember'
+                    Write-Information 'Adding to group via Add-DistributionGroupMember'
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
                 } else {
-                    Write-Host 'Adding to group via Graph'
+                    Write-Information 'Adding to group via Graph'
                     $UserBody = [PSCustomObject]@{
                         '@odata.id' = "https://graph.microsoft.com/beta/directoryObjects/$($UserObj.id)"
                     }
@@ -273,15 +273,15 @@ function Set-CIPPUser {
             $GroupID = $_.value
             $GroupType = $ResolvedGroupTypes[$GroupID] ?? $_.addedFields.groupType
             $GroupName = $_.label
-            Write-Host "About to remove $($UserObj.userPrincipalName) from $GroupName. Group ID is: $GroupID and type is: $GroupType"
+            Write-Information "About to remove $($UserObj.userPrincipalName) from $GroupName. Group ID is: $GroupID and type is: $GroupType"
 
             try {
                 if (Test-CIPPGroupIsExchangeBacked -AddedFields $_.addedFields -ResolvedType $ResolvedGroupTypes[$GroupID]) {
-                    Write-Host 'Removing From group via Remove-DistributionGroupMember'
+                    Write-Information 'Removing From group via Remove-DistributionGroupMember'
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Remove-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
                 } else {
-                    Write-Host 'Removing From group via Graph'
+                    Write-Information 'Removing From group via Graph'
                     $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$GroupID/members/$($UserObj.id)/`$ref" -tenantid $UserObj.tenantFilter -type DELETE
                 }
                 Write-LogMessage -headers $Headers -API $APIName -tenant $UserObj.tenantFilter -message "Removed $($UserObj.DisplayName) from $GroupName group" -Sev Info

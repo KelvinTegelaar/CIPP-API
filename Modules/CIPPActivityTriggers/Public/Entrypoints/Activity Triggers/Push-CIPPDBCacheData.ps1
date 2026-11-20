@@ -19,7 +19,7 @@ function Push-CIPPDBCacheData {
     #>
     [CmdletBinding()]
     param($Item)
-    Write-Host "Building cache task list for tenant: $($Item.TenantFilter)"
+    Write-Information "Building cache task list for tenant: $($Item.TenantFilter)"
     $TenantFilter = $Item.TenantFilter
     $QueueId = $Item.QueueId
 
@@ -32,7 +32,7 @@ function Push-CIPPDBCacheData {
                     $Licensed[$License] = Test-CIPPStandardLicense -StandardName "$($License)LicenseCheck" -TenantFilter $TenantFilter -Preset $License -SkipLog
                 }
                 if (-not $Licensed[$License]) {
-                    Write-Host "Skipping $($Entry.Key) data collection for $TenantFilter - no $License license"
+                    Write-Information "Skipping $($Entry.Key) data collection for $TenantFilter - no $License license"
                     continue
                 }
             }

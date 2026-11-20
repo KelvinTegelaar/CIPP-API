@@ -86,7 +86,7 @@ function New-CIPPRestoreTask {
 
     switch ($Task) {
         'CippCustomVariables' {
-            Write-Host "Restore Custom Variables for $TenantFilter"
+            Write-Information "Restore Custom Variables for $TenantFilter"
             $ReplaceTable = Get-CIPPTable -TableName 'CippReplacemap'
             $Backup = if ($BackupData.CippCustomVariables -is [string]) { $BackupData.CippCustomVariables | ConvertFrom-Json } else { $BackupData.CippCustomVariables }
 
@@ -137,7 +137,7 @@ function New-CIPPRestoreTask {
             $currentUsers = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&select=id,userPrincipalName' -tenantid $TenantFilter
             $backupUsers = if ($BackupData.users -is [string]) { $BackupData.users | ConvertFrom-Json } else { $BackupData.users }
 
-            Write-Host "Restore users for $TenantFilter"
+            Write-Information "Restore users for $TenantFilter"
             Write-Information "User count in backup: $($backupUsers.Count)"
             # A task queued without Identity.PrivilegedUser.ReadWrite leaves privileged users as they are.
             $CurrentIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@($currentUsers.id), [System.StringComparer]::OrdinalIgnoreCase)
@@ -230,7 +230,7 @@ function New-CIPPRestoreTask {
             }
         }
         'groups' {
-            Write-Host "Restore groups for $TenantFilter"
+            Write-Information "Restore groups for $TenantFilter"
             $backupGroups = if ($BackupData.groups -is [string]) { $BackupData.groups | ConvertFrom-Json } else { $BackupData.groups }
             $Groups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $TenantFilter
             $BackupGroups | ForEach-Object {
@@ -273,7 +273,7 @@ function New-CIPPRestoreTask {
             }
         }
         'ca' {
-            Write-Host "Restore Conditional Access Policies for $TenantFilter"
+            Write-Information "Restore Conditional Access Policies for $TenantFilter"
             $BackupCAPolicies = if ($BackupData.ca -is [string]) { $BackupData.ca | ConvertFrom-Json } else { $BackupData.ca }
             $BackupCAPolicies | ForEach-Object {
                 $JSON = $_
@@ -692,7 +692,7 @@ function New-CIPPRestoreTask {
             }
         }
         'teamsvoice' {
-            Write-Host "Restore Teams phone number assignments for $TenantFilter"
+            Write-Information "Restore Teams phone number assignments for $TenantFilter"
             $Backup = if ($BackupData.teamsvoice -is [string]) { $BackupData.teamsvoice | ConvertFrom-Json } else { $BackupData.teamsvoice }
             $BaseUri = 'https://graph.microsoft.com/v1.0/admin/teams/telephoneNumberManagement/numberAssignments'
             try {
@@ -764,7 +764,7 @@ function New-CIPPRestoreTask {
             }
         }
         'CippWebhookAlerts' {
-            Write-Host "Restore Webhook Alerts for $TenantFilter"
+            Write-Information "Restore Webhook Alerts for $TenantFilter"
             $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'
             $Backup = if ($BackupData.CippWebhookAlerts -is [string]) { $BackupData.CippWebhookAlerts | ConvertFrom-Json } else { $BackupData.CippWebhookAlerts }
             try {
@@ -778,7 +778,7 @@ function New-CIPPRestoreTask {
             }
         }
         'CippScriptedAlerts' {
-            Write-Host "Restore Scripted Alerts for $TenantFilter"
+            Write-Information "Restore Scripted Alerts for $TenantFilter"
             $ScheduledTasks = Get-CIPPTable -TableName 'ScheduledTasks'
             $Backup = if ($BackupData.CippScriptedAlerts -is [string]) { $BackupData.CippScriptedAlerts | ConvertFrom-Json } else { $BackupData.CippScriptedAlerts }
             try {

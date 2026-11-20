@@ -32,7 +32,7 @@ function Invoke-ListMDEOnboarding {
                 $GraphRequest = Get-CIPPMDEOnboardingReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK
             } catch {
-                Write-Host "Error retrieving MDE onboarding status from report database: $($_.Exception.Message)"
+                Write-Information "Error retrieving MDE onboarding status from report database: $($_.Exception.Message)"
                 $StatusCode = [HttpStatusCode]::InternalServerError
                 $GraphRequest = $_.Exception.Message
             }

@@ -28,7 +28,7 @@ function Invoke-ExecCreateSAMApp {
             $AppId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications?`$filter=displayName eq 'CIPP-SAM'" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method GET -ContentType 'application/json').value | Select-Object -Last 1
             #Check if the appId has the redirect URI, if not, add it.
             if ($AppId) {
-                Write-Host "Found existing app: $($AppId.id). Reusing."
+                Write-Information "Found existing app: $($AppId.id). Reusing."
                 $state = 'updated'
                 #remove the entire web object from the app registration
                 $SamManifestFile = Get-Item (Join-Path $env:CIPPRootPath 'Config\SAMManifest.json')

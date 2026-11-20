@@ -8,7 +8,7 @@
     $Tenant = Get-Tenants -TenantFilter $Item.customerId
     $domainName = $Tenant.defaultDomainName
     $Table = Get-CIPPTable -TableName cacheQuarantineMessages
-    Write-Host "PowerShell queue trigger function processed work item: $($Tenant.defaultDomainName)"
+    Write-Information "PowerShell queue trigger function processed work item: $($Tenant.defaultDomainName)"
 
     try {
         $PageSize = 1000
@@ -28,7 +28,7 @@
                 } while (@($Results).Count -eq $PageSize)
             } catch {
                 if ($EntityType -eq 'Email') { throw }
-                Write-Host "Could not get $EntityType quarantine messages for $domainName : $($_.Exception.Message)"
+                Write-Information "Could not get $EntityType quarantine messages for $domainName : $($_.Exception.Message)"
             }
         }
         foreach ($message in $quarantineMessages) {

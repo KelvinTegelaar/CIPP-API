@@ -15,7 +15,7 @@ Function Invoke-AddSpamFilterTemplate {
     try {
         $GUID = (New-Guid).GUID
         $JSON = if ($Request.Body.PowerShellCommand) {
-            Write-Host 'PowerShellCommand'
+            Write-Information 'PowerShellCommand'
             $Request.Body.PowerShellCommand | ConvertFrom-Json
         } else {
         ([pscustomobject]$Request.Body | Select-Object name, AddXHeaderValue, AdminDisplayName, AllowedSenderDomains, AllowedSenders, BlockedSenderDomains, BlockedSenders, BulkQuarantineTag, BulkSpamAction, BulkThreshold, Confirm, DownloadLink, EnableEndUserSpamNotifications, EnableLanguageBlockList, EnableRegionBlockList, EndUserSpamNotificationCustomFromAddress, EndUserSpamNotificationCustomFromName, EndUserSpamNotificationCustomSubject, EndUserSpamNotificationFrequency, EndUserSpamNotificationLanguage, EndUserSpamNotificationCustomFromAddress, HighConfidencePhishAction, HighConfidencePhishQuarantineTag, HighConfidenceSpamAction, HighConfidenceSpamQuarantineTag, IncreaseScoreWithBizOrInfoUrls, IncreaseScoreWithImageLinks, IncreaseScoreWithNumericIps, IncreaseScoreWithRedirectToOtherPort, InlineSafetyTipsEnabled, LanguageBlockList, MarkAsSpamBulkMail, MarkAsSpamEmbedTagsInHtml, MarkAsSpamEmptyMessages, MarkAsSpamFormTagsInHtml, MarkAsSpamFramesInHtml, MarkAsSpamFromAddressAuthFail, MarkAsSpamJavaScriptInHtml, MarkAsSpamNdrBackscatter, MarkAsSpamObjectTagsInHtml, MarkAsSpamSensitiveWordList, MarkAsSpamSpfRecordHardFail, MarkAsSpamWebBugsInHtml, ModifySubjectValue, PhishQuarantineTag, PhishSpamAction, PhishZapEnabled, QuarantineRetentionPeriod, RecommendedPolicyType, RedirectToRecipients, RegionBlockList, SpamAction, SpamQuarantineTag, SpamZapEnabled, TestModeAction, TestModeBccToRecipients ) | ForEach-Object {

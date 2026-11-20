@@ -16,7 +16,7 @@ function Invoke-ListUserGroups {
         return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'userId is required' } })
     }
     $URI = "https://graph.microsoft.com/beta/users/$UserID/memberOf/$/microsoft.graph.group?`$select=id,displayName,mailEnabled,securityEnabled,groupTypes,onPremisesSyncEnabled,mail,isAssignableToRole&`$orderby=displayName asc"
-    Write-Host $URI
+    Write-Information $URI
 
     $GraphRequest = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -Verbose | Select-Object id,
     @{ Name = 'DisplayName'; Expression = { $_.displayName } },

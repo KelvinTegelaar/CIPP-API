@@ -161,7 +161,6 @@ Describe 'New-ExoBulkRequest whole-batch failures on the concurrent path' {
         $script:Server.Hits = 0
         $script:Retried = [System.Collections.Generic.List[object]]::new()
         Mock Start-Sleep {}
-        Mock Write-Host {}
         Mock Invoke-CIPPRestMethod {
             $Requests = @(($Body | ConvertFrom-Json).requests)
             foreach ($Request in $Requests) { $script:Retried.Add($Request.id) }

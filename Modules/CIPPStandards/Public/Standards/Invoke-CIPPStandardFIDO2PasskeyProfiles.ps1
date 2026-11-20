@@ -126,7 +126,7 @@ function Invoke-CIPPStandardFIDO2PasskeyProfiles {
                     passkeyProfiles = @($UpdatedProfiles)
                 } | ConvertTo-Json -Compress -Depth 10
 
-                Write-Host "FIDO2PasskeyProfiles: Request body: $Body"
+                Write-Information "FIDO2PasskeyProfiles: Request body: $Body"
 
                 $null = New-GraphPostRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/Fido2' -Type PATCH -Body $Body -ContentType 'application/json' -AsApp $true
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "FIDO2PasskeyProfiles: Successfully configured default passkey profile with $($AAGUIDs.Count) AAGUID(s), passkey types '$PasskeyTypes', attestation '$AttestationEnforcement'." -sev Info

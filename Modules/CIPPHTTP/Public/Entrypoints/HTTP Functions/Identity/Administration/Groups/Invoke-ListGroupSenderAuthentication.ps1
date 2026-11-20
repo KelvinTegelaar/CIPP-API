@@ -22,11 +22,11 @@ function Invoke-ListGroupSenderAuthentication {
     try {
         switch ($GroupType) {
             'Distribution List' {
-                Write-Host 'Checking DL'
+                Write-Information 'Checking DL'
                 $State = (New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams $params -UseSystemMailbox $true).RequireSenderAuthenticationEnabled
             }
             'Microsoft 365' {
-                Write-Host 'Checking M365 Group'
+                Write-Information 'Checking M365 Group'
                 $State = (New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-UnifiedGroup' -cmdParams $params -UseSystemMailbox $true).RequireSenderAuthenticationEnabled
 
             }

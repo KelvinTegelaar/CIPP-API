@@ -19,7 +19,7 @@ function Import-CommunityTemplate {
 
     try {
         if ($Template.RowKey) {
-            Write-Host "This is going to be a direct write to table, it's a CIPP template. We're writing $($Template.RowKey)"
+            Write-Information "This is going to be a direct write to table, it's a CIPP template. We're writing $($Template.RowKey)"
             # LinkedTemplates is the repo file's manifest of the templates it links, not a table column
             $Template = $Template | Select-Object * -ExcludeProperty Timestamp, LinkedTemplates
 
@@ -123,7 +123,7 @@ function Import-CommunityTemplate {
             $id = [guid]::NewGuid().ToString()
             if ($Template.mailNickname) { $Type = 'Group' }
             if ($Template.'@odata.type' -like '*conditionalAccessPolicy*') { $Type = 'ConditionalAccessPolicy' }
-            Write-Host "The type is $Type"
+            Write-Information "The type is $Type"
 
             switch -Wildcard ($Type) {
                 '*Group*' {
@@ -184,7 +184,7 @@ function Import-CommunityTemplate {
                     break
                 }
                 '*conditionalAccessPolicy*' {
-                    Write-Host $MigrationTable
+                    Write-Information $MigrationTable
                     $Template = ([pscustomobject]$Template) | ForEach-Object {
                         $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
                         $_ | Select-Object -Property $NonEmptyProperties

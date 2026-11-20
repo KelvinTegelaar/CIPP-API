@@ -89,7 +89,7 @@ function Invoke-AddPolicy {
                 throw "Not deployed to $Tenant : $($Validation.Errors -join ' ')"
             }
 
-            Write-Host 'Calling Adding policy'
+            Write-Information 'Calling Adding policy'
             $params = @{
                 # Resolved type: a template stored before Type was recorded arrives with none.
                 TemplateType     = $Validation.Type

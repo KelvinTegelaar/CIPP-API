@@ -16,7 +16,7 @@ function Invoke-ListTenants {
 
     # Interact with query parameters or the body of the request.
     $TenantAccess = Test-CIPPAccess -Request $Request -TenantList
-    Write-Host "Tenant Access: $TenantAccess"
+    Write-Information "Tenant Access: $TenantAccess"
 
     $AllTenantSelector = $Request.Query.AllTenantSelector -eq $true -and -not (Test-CippAllTenantsBlocked)
 

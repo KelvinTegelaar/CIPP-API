@@ -99,7 +99,7 @@ Function Invoke-ExecSendOrgMessage {
             }
         }
         $tmpbody = ConvertTo-Json -Depth 15 -Compress -InputObject $object
-        Write-Host $tmpbody
+        Write-Information $tmpbody
 
         $GraphRequest = New-GraphPOSTRequest -noauthcheck $true -type 'POST' -uri 'https://graph.microsoft.com/beta/deviceManagement/organizationalMessageDetails' -tenantid $tenantfilter -body $tmpbody
         $Result = "Successfully sent organizational message of type '$MessageType'"

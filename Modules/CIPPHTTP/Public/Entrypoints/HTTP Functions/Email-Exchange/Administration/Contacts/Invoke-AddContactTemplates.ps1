@@ -10,7 +10,7 @@ Function Invoke-AddContactTemplates {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-Host ($request | ConvertTo-Json -Depth 10 -Compress)
+    Write-Information ($request | ConvertTo-Json -Depth 10 -Compress)
 
     try {
         $GUID = (New-Guid).GUID

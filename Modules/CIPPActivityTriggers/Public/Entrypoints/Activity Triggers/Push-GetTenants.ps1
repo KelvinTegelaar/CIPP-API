@@ -13,6 +13,6 @@ function Push-GetTenants {
             Get-Tenants @Params | Select-Object customerId, @{n = 'FunctionName'; e = { $Item.DurableName } }
         }
     } catch {
-        Write-Host "GetTenants Exception $($_.Exception.Message)"
+        Write-Information "GetTenants Exception $($_.Exception.Message)"
     }
 }

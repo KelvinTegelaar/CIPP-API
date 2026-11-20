@@ -38,30 +38,30 @@ Function Invoke-EditUserAliases {
             }
 
             $CurrentProxyAddresses = @($CurrentMailbox.EmailAddresses)
-            Write-Host "Current proxy addresses: $($CurrentProxyAddresses -join ', ')"
+            Write-Information "Current proxy addresses: $($CurrentProxyAddresses -join ', ')"
             $NewProxyAddresses = @($CurrentProxyAddresses)
 
             # Handle setting primary address
             if ($UserObj.MakePrimary) {
                 $PrimaryAddress = $UserObj.MakePrimary
-                Write-Host "Attempting to set primary address: $PrimaryAddress"
+                Write-Information "Attempting to set primary address: $PrimaryAddress"
 
                 # Normalize the primary address format
                 if ($PrimaryAddress -notlike 'SMTP:*') {
                     $PrimaryAddress = "SMTP:$($PrimaryAddress -replace '^smtp:', '')"
                 }
-                Write-Host "Normalized primary address: $PrimaryAddress"
+                Write-Information "Normalized primary address: $PrimaryAddress"
 
                 # Check if the address exists in the current addresses (case-insensitive)
                 $ExistingAddress = $CurrentProxyAddresses | Where-Object {
                     $current = $_.ToLower()
                     $target = $PrimaryAddress.ToLower()
-                    Write-Host "Comparing: '$current' with '$target'"
+                    Write-Information "Comparing: '$current' with '$target'"
                     $current -eq $target
                 }
 
                 if (-not $ExistingAddress) {
-                    Write-Host "Available addresses: $($CurrentProxyAddresses -join ', ')"
+                    Write-Information "Available addresses: $($CurrentProxyAddresses -join ', ')"
                     throw "Cannot set primary address. Address $($PrimaryAddress -replace '^SMTP:', '') not found in user's addresses."
                 }
 

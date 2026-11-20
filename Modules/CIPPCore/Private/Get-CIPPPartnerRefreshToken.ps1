@@ -43,7 +43,7 @@ function Get-CIPPPartnerRefreshToken {
             }
         }
     } catch {
-        Write-Host "Failed to retrieve refresh token for partner tenant $PartnerTenantId - $($_.Exception.Message)"
+        Write-Information "Failed to retrieve refresh token for partner tenant $PartnerTenantId - $($_.Exception.Message)"
     }
 
     return (Get-Item -Path "env:\$SecretName" -ErrorAction SilentlyContinue).Value

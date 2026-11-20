@@ -14,7 +14,7 @@ Function Invoke-ExecExcludeTenant {
 
     # $username = $Request.Headers.'x-ms-client-principal-name'
     $Username = $Headers.'x-ms-client-principal-name' ?? ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
-    Write-Host ($Username | ConvertTo-Json -Depth 10)
+    Write-Information ($Username | ConvertTo-Json -Depth 10)
     $Date = (Get-Date).ToString('yyyy-MM-dd')
     $TenantsTable = Get-CippTable -tablename Tenants
     $StatusCode = [HttpStatusCode]::OK

@@ -242,7 +242,7 @@ function Invoke-ExecUpdateDriftDeviation {
                     }
                     if ($Deviation.status -eq 'deniedDelete') {
                         $Policy = $Deviation.receivedValue | ConvertFrom-Json -ErrorAction SilentlyContinue
-                        Write-Host "Policy is $($Policy)"
+                        Write-Information "Policy is $($Policy)"
                         if ($Deviation.standardName -like '*ConditionalAccessTemplates*') {
                             $URLName = 'identity/conditionalAccess/policies'
                         } else {
@@ -250,7 +250,7 @@ function Invoke-ExecUpdateDriftDeviation {
                         }
                         $ID = $Policy.ID
                         if ($Policy -and $URLName) {
-                            Write-Host "Going to delete Policy with ID $($Policy.ID) Deviation Name is $($Deviation.standardName)"
+                            Write-Information "Going to delete Policy with ID $($Policy.ID) Deviation Name is $($Deviation.standardName)"
                             try {
                                 $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/$($URLName)/$($ID)" -type DELETE -tenantid $TenantFilter -ApprovalJustification $Justification
                                 "Deleted Policy $($ID)"

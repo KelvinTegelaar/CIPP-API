@@ -40,7 +40,7 @@ function Invoke-ListMailboxes {
                 $GraphRequest = Get-CIPPMailboxesReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK
             } catch {
-                Write-Host "Error retrieving mailboxes from report database: $($_.Exception.Message)"
+                Write-Information "Error retrieving mailboxes from report database: $($_.Exception.Message)"
                 $StatusCode = [HttpStatusCode]::InternalServerError
                 $GraphRequest = $_.Exception.Message
             }

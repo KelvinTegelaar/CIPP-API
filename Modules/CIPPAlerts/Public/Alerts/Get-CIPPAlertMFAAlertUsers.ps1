@@ -11,8 +11,8 @@ function Get-CIPPAlertMFAAlertUsers {
         $TenantFilter
     )
     try {
-        Write-Host "Checking MFA status for users in tenant '$TenantFilter'..."
-        $MFAReport = try { Get-CIPPMFAStateReport -TenantFilter $TenantFilter | Where-Object { $_.DisplayName -ne 'On-Premises Directory Synchronization Service Account' } } catch { Write-Host "Could not get cached report for tenant '$TenantFilter' $_" }
+        Write-Information "Checking MFA status for users in tenant '$TenantFilter'..."
+        $MFAReport = try { Get-CIPPMFAStateReport -TenantFilter $TenantFilter | Where-Object { $_.DisplayName -ne 'On-Premises Directory Synchronization Service Account' } } catch { Write-Information "Could not get cached report for tenant '$TenantFilter' $_" }
 
         $Users = if ($MFAReport) {
             $MFAReport | Where-Object { $_.IsAdmin -ne $true -and $_.MFARegistration -eq $false -and $_.UserType -ne 'Guest' -and $_.UPN -notmatch '^package_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}@' }
@@ -35,7 +35,7 @@ function Get-CIPPAlertMFAAlertUsers {
                     }
                 }
             } catch {
-                Write-Host "Could not load user createdDateTime from reporting DB for tenant '$TenantFilter': $_"
+                Write-Information "Could not load user createdDateTime from reporting DB for tenant '$TenantFilter': $_"
             }
 
             # No usable cache — same fields from live Graph, same filter rules below.
@@ -47,7 +47,7 @@ function Get-CIPPAlertMFAAlertUsers {
                         }
                     }
                 } catch {
-                    Write-Host "Could not load user createdDateTime from Graph for tenant '$TenantFilter': $_"
+                    Write-Information "Could not load user createdDateTime from Graph for tenant '$TenantFilter': $_"
                 }
             }
 
@@ -67,7 +67,7 @@ function Get-CIPPAlertMFAAlertUsers {
                     })
             }
         }
-        Write-Host "Completed MFA status check for tenant '$TenantFilter'. Found $($Users.Count) users without MFA registered."
+        Write-Information "Completed MFA status check for tenant '$TenantFilter'. Found $($Users.Count) users without MFA registered."
 
         if ($Users) {
             $AlertData = foreach ($user in $Users) {
@@ -76,7 +76,7 @@ function Get-CIPPAlertMFAAlertUsers {
                     DisplayName       = $user.DisplayName
                 }
             }
-            Write-Host 'Writing alert trace'
+            Write-Information 'Writing alert trace'
         }
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 

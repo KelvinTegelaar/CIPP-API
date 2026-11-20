@@ -22,7 +22,7 @@ Function Invoke-ExecMaintenanceScripts {
             '##SUBSCRIPTION##'  = Get-CIPPAzFunctionAppSubId
             '##TOKENIP##'       = $AccessTokenDetails.IPAddress
         }
-    } catch { Write-Host $_.Exception.Message }
+    } catch { Write-Information $_.Exception.Message }
     #$ReplacementStrings | Format-Table
 
     $StatusCode = [HttpStatusCode]::OK

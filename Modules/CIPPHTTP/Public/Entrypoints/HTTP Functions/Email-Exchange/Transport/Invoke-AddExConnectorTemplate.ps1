@@ -12,7 +12,7 @@ Function Invoke-AddExConnectorTemplate {
     $Headers = $Request.Headers
 
 
-    Write-Host ($Request | ConvertTo-Json -Compress)
+    Write-Information ($Request | ConvertTo-Json -Compress)
 
     try {
         $GUID = (New-Guid).GUID

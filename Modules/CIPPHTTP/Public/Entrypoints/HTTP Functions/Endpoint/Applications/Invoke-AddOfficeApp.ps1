@@ -30,7 +30,7 @@ function Invoke-AddOfficeApp {
                 if (-not $ObjBody) {
                     throw 'No Office configuration could be built from the supplied settings.'
                 }
-                Write-Host ($ObjBody | ConvertTo-Json -Compress)
+                Write-Information ($ObjBody | ConvertTo-Json -Compress)
                 $OfficeAppID = New-graphPostRequest -Uri 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps' -tenantid $tenant -Body (ConvertTo-Json -InputObject $ObjBody -Depth 10) -type POST
             } else {
                 "Office deployment already exists for $($Tenant)"

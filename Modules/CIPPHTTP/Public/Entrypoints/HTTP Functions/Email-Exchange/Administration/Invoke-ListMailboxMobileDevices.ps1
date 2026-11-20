@@ -13,8 +13,8 @@ Function Invoke-ListMailboxMobileDevices {
     $TenantFilter = $Request.Query.tenantFilter
     $Mailbox = $Request.Query.Mailbox
 
-    Write-Host $TenantFilter
-    Write-Host $Mailbox
+    Write-Information $TenantFilter
+    Write-Information $Mailbox
 
     $Bytes = [System.Text.Encoding]::UTF8.GetBytes($Mailbox)
     $base64IdentityParam = [Convert]::ToBase64String($Bytes)

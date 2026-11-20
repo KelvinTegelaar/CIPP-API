@@ -49,7 +49,7 @@ Function Invoke-ExecGDAPRemoveGArole {
         }
     } catch {
         $Message = "Unexpected error patching GDAP relationship: $($_.Exception.Message)"
-        Write-Host "GDAP ERROR: $($_.Exception.Message)"
+        Write-Information "GDAP ERROR: $($_.Exception.Message)"
         Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

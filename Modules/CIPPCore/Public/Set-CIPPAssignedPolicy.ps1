@@ -31,19 +31,19 @@ function Set-CIPPAssignedPolicy {
         default { $Type }
     }
 
-    Write-Host "Assigning policy $PolicyId ($PlatformType/$Type) to $GroupName"
+    Write-Information "Assigning policy $PolicyId ($PlatformType/$Type) to $GroupName"
 
     try {
         # Resolve assignment filter name to ID if provided
         $ResolvedFilterId = $null
         if ($AssignmentFilterName) {
-            Write-Host "Looking up assignment filter by name: $AssignmentFilterName"
+            Write-Information "Looking up assignment filter by name: $AssignmentFilterName"
             $AllFilters = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/assignmentFilters' -tenantid $TenantFilter
             $MatchingFilter = $AllFilters | Where-Object { $_.displayName -like $AssignmentFilterName } | Select-Object -First 1
 
             if ($MatchingFilter) {
                 $ResolvedFilterId = $MatchingFilter.id
-                Write-Host "Found assignment filter: $($MatchingFilter.displayName) with ID: $ResolvedFilterId"
+                Write-Information "Found assignment filter: $($MatchingFilter.displayName) with ID: $ResolvedFilterId"
             } else {
                 $ErrorMessage = "No assignment filter found matching the name: $AssignmentFilterName. Policy not assigned."
                 Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -sev 'Warning' -tenant $TenantFilter
@@ -80,7 +80,7 @@ function Set-CIPPAssignedPolicy {
                 $resolvedGroupIds = @()
                 if ($GroupIds -and @($GroupIds).Count -gt 0) {
                     $resolvedGroupIds = @($GroupIds)
-                    Write-Host "Using provided GroupIds: $($resolvedGroupIds -join ', ')"
+                    Write-Information "Using provided GroupIds: $($resolvedGroupIds -join ', ')"
                 } elseif ($GroupName) {
                     $GroupNames = $GroupName.Split(',').Trim()
                     $resolvedGroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter |
@@ -118,10 +118,10 @@ function Set-CIPPAssignedPolicy {
             # Prefer explicit group IDs (from the picker); fall back to name resolution
             # for templates/wizards/API callers that still send ExcludeGroup names.
             if ($ExcludeGroupIds -and @($ExcludeGroupIds).Count -gt 0) {
-                Write-Host "Excluding custom group(s) by id: $($ExcludeGroupIds -join ', ')"
+                Write-Information "Excluding custom group(s) by id: $($ExcludeGroupIds -join ', ')"
                 $ResolvedExcludeIds = @($ExcludeGroupIds)
             } else {
-                Write-Host "We're supposed to exclude a custom group. The group is $ExcludeGroup"
+                Write-Information "We're supposed to exclude a custom group. The group is $ExcludeGroup"
                 $ExcludeGroupNames = $ExcludeGroup.Split(',').Trim()
                 $AllGroups = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter)
                 $ResolvedExcludeIds = [System.Collections.Generic.List[string]]::new()
@@ -154,7 +154,7 @@ function Set-CIPPAssignedPolicy {
 
         # Add assignment filter to each assignment if specified
         if ($ResolvedFilterId) {
-            Write-Host "Adding assignment filter $ResolvedFilterId with type $AssignmentFilterType to assignments"
+            Write-Information "Adding assignment filter $ResolvedFilterId with type $AssignmentFilterType to assignments"
             foreach ($assignment in $assignmentsList) {
                 # Don't add filters to exclusion targets
                 if ($assignment.target.'@odata.type' -ne '#microsoft.graph.exclusionGroupAssignmentTarget') {
@@ -182,7 +182,7 @@ function Set-CIPPAssignedPolicy {
             try {
                 $uri = "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assignments"
                 $ExistingAssignments = New-GraphGetRequest -uri $uri -tenantid $TenantFilter
-                Write-Host "Found $($ExistingAssignments.Count) existing assignments for policy $PolicyId"
+                Write-Information "Found $($ExistingAssignments.Count) existing assignments for policy $PolicyId"
             } catch {
                 $ErrorMessage = "Unable to retrieve existing assignments for $PolicyId. Existing assignments must be preserved for assignment mode '$AssignmentMode' and direction '$AssignmentDirection'. Aborting to avoid removing assignments. Error: $($_.Exception.Message)"
                 Write-Warning $ErrorMessage

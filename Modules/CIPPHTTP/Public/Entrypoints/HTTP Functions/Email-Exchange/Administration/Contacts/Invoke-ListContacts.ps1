@@ -85,7 +85,7 @@ function Invoke-ListContacts {
     try {
         if (![string]::IsNullOrWhiteSpace($ContactID)) {
             # Single contact request - keep existing complex formatting
-            Write-Host "Getting specific contact: $ContactID"
+            Write-Information "Getting specific contact: $ContactID"
 
             $Contact = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-Contact' -cmdParams @{
                 Identity = $ContactID
@@ -103,7 +103,7 @@ function Invoke-ListContacts {
 
         } else {
             # Get all contacts - simplified approach
-            Write-Host 'Getting all contacts'
+            Write-Information 'Getting all contacts'
 
             $ContactResponse = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-Contact' -cmdParams @{
                 Filter     = "RecipientTypeDetails -eq 'MailContact'"
@@ -131,7 +131,7 @@ function Invoke-ListContacts {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
         $ContactResponse = $ErrorMessage
-        Write-Host "Error in ListContacts: $ErrorMessage"
+        Write-Information "Error in ListContacts: $ErrorMessage"
     }
 
     return ([HttpResponseContext]@{

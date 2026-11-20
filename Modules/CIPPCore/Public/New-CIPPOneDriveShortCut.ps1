@@ -12,7 +12,7 @@ function New-CIPPOneDriveShortCut {
         [string]$Destination = 'root',
         [string]$ShortcutName
     )
-    Write-Host "Received $Username and $UserId. We're using $URL and $TenantFilter (destination=$Destination)"
+    Write-Information "Received $Username and $UserId. We're using $URL and $TenantFilter (destination=$Destination)"
     try {
         # OneDrive item-name rules; rejected rather than stripped so the admin sees what to fix
         if (-not [string]::IsNullOrWhiteSpace($ShortcutName)) {
@@ -35,7 +35,7 @@ function New-CIPPOneDriveShortCut {
             $ServerRelativePath = [Uri]::UnescapeDataString($matches[1])
             $ParsedUri = [System.Uri]$URL
             $URL = "$($ParsedUri.Scheme)://$($ParsedUri.Host)$ServerRelativePath"
-            Write-Host "Resolved browser URL to: $URL"
+            Write-Information "Resolved browser URL to: $URL"
         }
 
         # Strip list view paths so Shared Documents/Forms/AllItems.aspx resolves as the library

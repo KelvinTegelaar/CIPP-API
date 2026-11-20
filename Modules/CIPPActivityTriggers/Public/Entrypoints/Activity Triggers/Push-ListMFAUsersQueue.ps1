@@ -6,7 +6,7 @@ function Push-ListMFAUsersQueue {
     param($Item)
 
     # Write out the queue message and metadata to the information log.
-    Write-Host "PowerShell queue trigger function processed work item: $($Item.defaultDomainName)"
+    Write-Information "PowerShell queue trigger function processed work item: $($Item.defaultDomainName)"
 
     try {
         #Update-CippQueueEntry -RowKey $Item.QueueId -Status 'Running' -Name $Item.displayName

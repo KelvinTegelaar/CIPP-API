@@ -14,7 +14,7 @@ function Remove-CIPPAutopilotProfile {
         try {
             $DisplayName = $null -eq $DisplayName ? $ProfileId : $DisplayName
             if ($Assignments.Count -gt 0) {
-                Write-Host "Profile $ProfileId has $($Assignments.Count) assignments, removing them first"
+                Write-Information "Profile $ProfileId has $($Assignments.Count) assignments, removing them first"
                 throw
             }
 

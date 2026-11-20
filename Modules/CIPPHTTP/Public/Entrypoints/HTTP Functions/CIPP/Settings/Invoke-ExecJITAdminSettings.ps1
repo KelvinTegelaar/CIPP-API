@@ -40,7 +40,7 @@ function Invoke-ExecJITAdminSettings {
             }
             'Set' {
                 $MaxDuration = $Request.Body.MaxDuration.value
-                Write-Host "MAx dur: $($MaxDuration)"
+                Write-Information "MAx dur: $($MaxDuration)"
                 # Validate ISO 8601 duration format if provided
                 if (![string]::IsNullOrWhiteSpace($MaxDuration)) {
                     try {

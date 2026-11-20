@@ -125,10 +125,10 @@ function Get-CippStandardFieldSchema {
                 $map[$StandardKey] = $Fields
             }
         } else {
-            Write-Host "Get-CippStandardFieldSchema: standards catalog not found at $Path"
+            Write-Information "Get-CippStandardFieldSchema: standards catalog not found at $Path"
         }
     } catch {
-        Write-Host "Get-CippStandardFieldSchema: failed to build schema: $($_.Exception.Message)"
+        Write-Information "Get-CippStandardFieldSchema: failed to build schema: $($_.Exception.Message)"
     }
 
     $script:CippStandardFieldSchema = $map

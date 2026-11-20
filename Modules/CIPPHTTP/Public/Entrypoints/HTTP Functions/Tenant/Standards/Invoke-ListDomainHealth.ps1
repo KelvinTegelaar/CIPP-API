@@ -126,7 +126,7 @@ function Invoke-ListDomainHealth {
                                         'DkimSelectors'  = $DkimSelectors
                                     }
                                 }
-                                Write-Host $DomainInfo
+                                Write-Information $DomainInfo
                                 Add-CIPPAzDataTableEntity @DomainTable -Entity $DomainInfo -Force
                             }
                         } elseif (![string]::IsNullOrEmpty($DomainInfo.DkimSelectors)) {

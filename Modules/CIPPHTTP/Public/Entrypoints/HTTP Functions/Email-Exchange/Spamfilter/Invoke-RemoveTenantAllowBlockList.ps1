@@ -19,7 +19,7 @@ function Invoke-RemoveTenantAllowBlockList {
 
     try {
 
-        Write-Host "List type is $listType"
+        Write-Information "List type is $listType"
         $ExoRequest = @{
             tenantid  = $TenantFilter
             cmdlet    = 'Remove-TenantAllowBlockListItems'
@@ -30,7 +30,7 @@ function Invoke-RemoveTenantAllowBlockList {
         }
 
         $Results = New-ExoRequest @ExoRequest
-        Write-Host $Results
+        Write-Information $Results
 
         $Result = "Successfully removed $($Entries) with type $ListType from Block/Allow list"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'

@@ -7,7 +7,7 @@ function Push-ExecAddMultiTenantApp {
     param($Item)
     try {
         $Item = $Item | ConvertTo-Json -Depth 10 | ConvertFrom-Json
-        Write-Host "$($Item | ConvertTo-Json -Depth 10)"
+        Write-Information "$($Item | ConvertTo-Json -Depth 10)"
         $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -tenantid $Item.Tenant
         if ($Item.AppId -Notin $ServicePrincipalList.appId) {
             $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Item.tenant -body "{ `"appId`": `"$($Item.appId)`" }"

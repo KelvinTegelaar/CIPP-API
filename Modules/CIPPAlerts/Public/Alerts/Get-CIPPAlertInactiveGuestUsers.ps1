@@ -29,7 +29,7 @@ function Get-CIPPAlertInactiveGuestUsers {
 
 
             $Lookup = (Get-Date).AddDays(-$inactiveDays).ToUniversalTime()
-            Write-Host "Checking for guest users inactive since $Lookup (excluding disabled: $excludeDisabled)"
+            Write-Information "Checking for guest users inactive since $Lookup (excluding disabled: $excludeDisabled)"
             # Build base filter - cannot filter assignedLicenses server-side
             $BaseFilter = if ($excludeDisabled) { 'accountEnabled eq true' } else { '' }
 

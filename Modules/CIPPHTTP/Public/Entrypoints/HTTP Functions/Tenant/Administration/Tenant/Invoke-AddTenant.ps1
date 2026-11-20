@@ -71,7 +71,7 @@ function Invoke-AddTenant {
                 $PartnerCenterUri = 'https://api.partnercenter.microsoft.com/accountenrollments/v1/accountexternalresourcekeys?accountIds={0}&keyType=mpnId' -f $env:TenantID
                 $MPNId = New-GraphGetRequest -uri $PartnerCenterUri -scope 'https://api.partnercenter.microsoft.com/.default' -NoAuthCheck $true
                 $AssociatedPartnerId = $MpnId.items[0].keyValue
-                Write-Host "Tier 2 CSP - Associated Partner ID: $AssociatedPartnerId"
+                Write-Information "Tier 2 CSP - Associated Partner ID: $AssociatedPartnerId"
                 $CanCreateCustomers = $true
             } elseif ($PartnerType -eq 'resellerPartnerDelegatedAdmin') {
                 # Tier 1 CSP

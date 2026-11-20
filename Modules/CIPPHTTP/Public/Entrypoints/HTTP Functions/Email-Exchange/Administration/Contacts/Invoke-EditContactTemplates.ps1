@@ -13,7 +13,7 @@ function Invoke-EditContactTemplates {
     }
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-Host ($request | ConvertTo-Json -Depth 10 -Compress)
+    Write-Information ($request | ConvertTo-Json -Depth 10 -Compress)
 
     # Get the ContactTemplateID from the request body
     $ContactTemplateID = $Request.body.ContactTemplateID

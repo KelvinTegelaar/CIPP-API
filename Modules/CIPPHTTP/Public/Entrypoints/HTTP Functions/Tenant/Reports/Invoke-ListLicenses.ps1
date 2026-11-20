@@ -36,7 +36,7 @@ function Invoke-ListLicenses {
                 }
                 #Write-Host ($InputObject | ConvertTo-Json)
                 $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject
-                Write-Host "Started permissions orchestration with ID = '$InstanceId'"
+                Write-Information "Started permissions orchestration with ID = '$InstanceId'"
             }
         } else {
             $GraphRequest = $Rows | Select-CippAllowedTenantData -TenantProperty 'RowKey' | ForEach-Object {

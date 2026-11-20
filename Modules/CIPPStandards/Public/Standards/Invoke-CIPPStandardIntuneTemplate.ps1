@@ -39,7 +39,7 @@ function Invoke-CIPPStandardIntuneTemplate {
     #>
     param($Tenant, $Settings)
 
-    Write-Host 'INTUNETEMPLATERUN'
+    Write-Information 'INTUNETEMPLATERUN'
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     $lap = $sw.Elapsed
 
@@ -73,7 +73,7 @@ function Invoke-CIPPStandardIntuneTemplate {
         }
     } catch {
         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to sync reusable policy settings for template $($Settings.TemplateList.value): $($_.Exception.Message)" -sev 'Error'
-        Write-Host "IntuneTemplate: $($Settings.TemplateList.value) - Failed to sync reusable policy settings. Skipping this template."
+        Write-Information "IntuneTemplate: $($Settings.TemplateList.value) - Failed to sync reusable policy settings. Skipping this template."
         return $true
     }
     Write-Information "[IntuneTemplate][$Tenant] ReusableSync: $([int]($sw.Elapsed - $lap).TotalMilliseconds)ms"

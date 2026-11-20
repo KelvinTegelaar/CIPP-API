@@ -40,6 +40,6 @@ function Write-CippFunctionStats {
 
         Add-CIPPAzDataTableEntity @Table -Entity $StatEntity -Force
     } catch {
-        Write-Host "Exception logging stats $($_.Exception.Message)"
+        Write-Information "Exception logging stats $($_.Exception.Message)"
     }
 }

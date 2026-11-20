@@ -19,11 +19,11 @@ Function Invoke-RemoveGroupTemplate {
     $ID = $request.Query.ID ?? $Request.Body.ID
     try {
         $Table = Get-CippTable -tablename 'templates'
-        Write-Host $ID
+        Write-Information $ID
 
         $SafeID = ConvertTo-CIPPODataFilterValue -Value $ID -Type Guid
         $Filter = "PartitionKey eq 'GroupTemplate' and RowKey eq '$SafeID'"
-        Write-Host $Filter
+        Write-Information $Filter
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-CIPPAzDataTableEntity -Force @Table -Entity $ClearRow
         $Result = "Removed Group Template with ID $ID"

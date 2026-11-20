@@ -31,7 +31,7 @@ function Invoke-ListTenantAllowBlockList {
                 $Results = Get-CIPPTenantAllowBlockListReport -TenantFilter $TenantFilter -ErrorAction Stop
                 $StatusCode = [HttpStatusCode]::OK
             } catch {
-                Write-Host "Error retrieving Tenant Allow/Block List from report database: $($_.Exception.Message)"
+                Write-Information "Error retrieving Tenant Allow/Block List from report database: $($_.Exception.Message)"
                 $StatusCode = [HttpStatusCode]::InternalServerError
                 $Results = $_.Exception.Message
             }

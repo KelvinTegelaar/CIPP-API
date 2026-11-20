@@ -9,7 +9,7 @@ function Set-SherwebMapping {
         Remove-CIPPAzDataTableEntity -Force @CIPPMapping -Entity $_
     }
     foreach ($Mapping in $Request.Body) {
-        Write-Host "Adding mapping for $($mapping.IntegrationId)"
+        Write-Information "Adding mapping for $($mapping.IntegrationId)"
         $AddObject = @{
             PartitionKey    = 'SherwebMapping'
             RowKey          = "$($mapping.TenantId)"

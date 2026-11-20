@@ -32,7 +32,7 @@ function Invoke-AddTransportRule {
         $Existing = New-ExoRequest -ErrorAction SilentlyContinue -tenantid $tenantFilter -cmdlet 'Get-TransportRule' -useSystemMailbox $true | Where-Object -Property Identity -EQ $TenantParams.name
         try {
             if ($Existing) {
-                Write-Host 'Found existing'
+                Write-Information 'Found existing'
                 $TenantParams | Add-Member -NotePropertyValue $Existing.Identity -NotePropertyName Identity -Force
                 # Set-TransportRule rejects Enabled; state changes go through Enable-/Disable-TransportRule.
                 $null = New-ExoRequest -tenantid $tenantFilter -cmdlet 'Set-TransportRule' -cmdParams ($TenantParams | Select-Object -Property * -ExcludeProperty UseLegacyRegex, Enabled) -useSystemMailbox $true
@@ -42,7 +42,7 @@ function Invoke-AddTransportRule {
                 }
                 "Successfully set transport rule for $tenantFilter."
             } else {
-                Write-Host 'Creating new'
+                Write-Information 'Creating new'
                 $null = New-ExoRequest -tenantid $tenantFilter -cmdlet 'New-TransportRule' -cmdParams $TenantParams -useSystemMailbox $true
                 "Successfully created transport rule for $tenantFilter."
             }

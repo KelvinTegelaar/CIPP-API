@@ -245,7 +245,7 @@ function Invoke-ListGraphRequest {
         if ($Results | Where-Object { $_.PSObject.Properties.Name -contains 'nextLink' }) {
             $NextLink = $Results.nextLink | Where-Object { $_ } | Select-Object -Last 1
             if ($NextLink -and $Request.Query.TenantFilter -ne 'AllTenants') {
-                Write-Host "NextLink: $NextLink"
+                Write-Information "NextLink: $NextLink"
                 $Metadata['nextLink'] = $NextLink
             } else {
                 $Metadata.Remove('nextLink')

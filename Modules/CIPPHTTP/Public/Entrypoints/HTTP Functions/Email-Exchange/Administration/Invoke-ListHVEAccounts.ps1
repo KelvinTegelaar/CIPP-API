@@ -42,7 +42,7 @@ function Invoke-ListHVEAccounts {
                     Identity = $Identity
                 }
             } catch {
-                Write-Host "Could not retrieve HVE settings for $Identity : $($_.Exception.Message)"
+                Write-Information "Could not retrieve HVE settings for $Identity : $($_.Exception.Message)"
             }
 
             $BillingPolicy = $null
@@ -51,7 +51,7 @@ function Invoke-ListHVEAccounts {
                     Identity = $Identity
                 }
             } catch {
-                Write-Host "Could not retrieve billing policy for $Identity : $($_.Exception.Message)"
+                Write-Information "Could not retrieve billing policy for $Identity : $($_.Exception.Message)"
             }
 
             $GraphRequest = [PSCustomObject]@{
@@ -109,7 +109,7 @@ function Invoke-ListHVEAccounts {
                 $GraphRequest = @(& $ReadAccounts $TenantFilter)
                 $StatusCode = [HttpStatusCode]::OK
             } catch {
-                Write-Host "Error retrieving HVE accounts from report database: $($_.Exception.Message)"
+                Write-Information "Error retrieving HVE accounts from report database: $($_.Exception.Message)"
                 $StatusCode = [HttpStatusCode]::InternalServerError
                 $GraphRequest = $_.Exception.Message
             }

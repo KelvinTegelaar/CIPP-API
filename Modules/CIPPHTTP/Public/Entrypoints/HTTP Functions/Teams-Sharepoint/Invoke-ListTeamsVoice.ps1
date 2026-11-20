@@ -44,7 +44,7 @@ function Invoke-ListTeamsVoice {
         $LocationLookup = Get-CippTeamsLocationLookup -TenantFilter $TenantFilter
         $Skip = 0
         $GraphRequest = do {
-            Write-Host "Getting page $Skip"
+            Write-Information "Getting page $Skip"
             $Results = New-TeamsRequestV2 -TenantFilter $TenantFilter -Path "Skype.TelephoneNumberMgmt/Tenants/$TenantId/telephone-numbers" `
                 -QueryParameters @{ skip = $Skip; locale = 'en-US'; top = 999 } `
                 -AdditionalHeaders @{ 'x-ms-tnm-applicationid' = '045268c0-445e-4ac1-9157-d58f67b167d9' }
@@ -70,8 +70,8 @@ function Invoke-ListTeamsVoice {
         $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
-    Write-Host "Graph request is: $($GraphRequest)"
-    Write-Host 'Returning the response'
+    Write-Information "Graph request is: $($GraphRequest)"
+    Write-Information 'Returning the response'
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GraphRequest | Where-Object { $_.TelephoneNumber })

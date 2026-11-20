@@ -7,10 +7,10 @@ function Invoke-PublicWebhooks {
     #>
     param($Request, $TriggerMetadata)
     $Headers = $Request.Headers
-    Write-Host 'Received request'
+    Write-Information 'Received request'
     $url = ($Headers.'x-ms-original-url').split('/API') | Select-Object -First 1
     $CIPPURL = [string]$url
-    Write-Host $url
+    Write-Information $url
 
     # Graph (and Partner Center) validate a new subscription by POSTing a token and comparing the raw
     # response body to it byte for byte. The response has to be the bare token as text/plain - the
@@ -18,17 +18,17 @@ function Invoke-PublicWebhooks {
     # subscription with "did not return the expected validation token".
     $ContentType = 'application/json'
     if ($Request.Query.ValidationToken) {
-        Write-Host 'Validation token received - query ValidationToken'
+        Write-Information 'Validation token received - query ValidationToken'
         $body = [string]$Request.Query.ValidationToken
         $ContentType = 'text/plain'
         $StatusCode = [HttpStatusCode]::OK
     } elseif ($Request.Body.validationCode) {
-        Write-Host 'Validation token received - body validationCode'
+        Write-Information 'Validation token received - body validationCode'
         $body = [string]$Request.Body.validationCode
         $ContentType = 'text/plain'
         $StatusCode = [HttpStatusCode]::OK
     } elseif ($Request.Query.validationCode) {
-        Write-Host 'Validation token received - query validationCode'
+        Write-Information 'Validation token received - query validationCode'
         $body = [string]$Request.Query.validationCode
         $ContentType = 'text/plain'
         $StatusCode = [HttpStatusCode]::OK
@@ -37,15 +37,15 @@ function Invoke-PublicWebhooks {
         $WebhookTable = Get-CIPPTable -TableName webhookTable
         $Webhookinfo = Get-CIPPAzDataTableEntity @WebhookTable -Filter "RowKey eq '$CIPPID'" -First 1
         if (-not $Webhookinfo) {
-            Write-Host "No matching CIPPID found: $($Request.Query.CIPPID)"
+            Write-Information "No matching CIPPID found: $($Request.Query.CIPPID)"
             $Body = 'This webhook is not authorized.'
             $StatusCode = [HttpStatusCode]::Forbidden
         } elseif ($Webhookinfo.Resource -eq 'M365AuditLogs') {
-            Write-Host "Found M365AuditLogs - This is an old entry, we'll deny so Microsoft stops sending it."
+            Write-Information "Found M365AuditLogs - This is an old entry, we'll deny so Microsoft stops sending it."
             $Body = 'This webhook is not authorized, its an old entry.'
             $StatusCode = [HttpStatusCode]::Forbidden
         } else {
-            Write-Host 'Found matching CIPPID'
+            Write-Information 'Found matching CIPPID'
             $WebhookIncoming = Get-CIPPTable -TableName WebhookIncoming
 
             if ($Request.Query.Type -eq 'GraphSubscription') {

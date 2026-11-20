@@ -32,7 +32,7 @@ function Get-CIPPMFAState {
     try {
         $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $TenantFilter ).IsEnabled
     } catch {
-        Write-Host "Secure Defaults not available: $($_.Exception.Message)"
+        Write-Information "Secure Defaults not available: $($_.Exception.Message)"
         $Errors.Add(@{Step = 'SecureDefaults'; Message = $_.Exception.Message })
         $SecureDefaultsState = $null
     }
@@ -50,7 +50,7 @@ function Get-CIPPMFAState {
         if ($_.Exception.Message -ne "Tenant is not a B2C tenant and doesn't have premium licenses") {
             $Errors.Add(@{Step = 'MFARegistration'; Message = $_.Exception.Message })
         }
-        Write-Host "User registration details not available: $($_.Exception.Message)"
+        Write-Information "User registration details not available: $($_.Exception.Message)"
     }
 
     if ($null -ne $MFARegistration) {
@@ -162,7 +162,7 @@ function Get-CIPPMFAState {
                     if ($GroupDetail.status -eq 200 -and $GroupDetail.body) {
                         $GroupNameLookup[($GroupDetail.id -replace '^details-', '')] = $GroupDetail.body.displayName
                     } else {
-                        Write-Host "Failed to get group details: $($GroupDetail.id) - Status: $($GroupDetail.status)"
+                        Write-Information "Failed to get group details: $($GroupDetail.id) - Status: $($GroupDetail.status)"
                     }
                 }
 
@@ -260,7 +260,7 @@ function Get-CIPPMFAState {
             $DomainTenantLookup = $TenantResolution.Lookup
             $UnresolvedDomains = $TenantResolution.Unresolved
             if ($TenantResolution.Error) {
-                Write-Host "External tenant lookup failed: $($TenantResolution.Error)"
+                Write-Information "External tenant lookup failed: $($TenantResolution.Error)"
                 $Errors.Add(@{Step = 'ExternalTenants'; Message = $TenantResolution.Error })
             }
             if ($UnresolvedDomains.Count -gt 0) {

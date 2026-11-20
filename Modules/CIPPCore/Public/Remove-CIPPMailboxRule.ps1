@@ -15,9 +15,9 @@ function Remove-CIPPMailboxRule {
     if ($RemoveAllRules.IsPresent -eq $true) {
         # Delete all rules
         try {
-            Write-Host "Checking rules for $Username"
+            Write-Information "Checking rules for $Username"
             $Rules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $Username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' }
-            Write-Host "$($Rules.count) rules found"
+            Write-Information "$($Rules.count) rules found"
             if ($null -eq $Rules) {
                 $Message = "No rules found for $($Username) to delete"
                 Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Info' -tenant $TenantFilter

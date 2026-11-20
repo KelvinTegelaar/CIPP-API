@@ -23,7 +23,7 @@ function Invoke-ListCVEManagement {
             $SortedCves = $GraphRequest
             Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'running cve report' -sev 'info'
         } catch {
-            Write-Host "Error retrieving CVEs from report database: $($_.Exception.Message)"
+            Write-Information "Error retrieving CVEs from report database: $($_.Exception.Message)"
             $StatusCode = [HttpStatusCode]::InternalServerError
             $GraphRequest = $_.Exception.Message
             Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'Error retrieving' -sev 'info'
@@ -196,7 +196,7 @@ function Invoke-ListCVEManagement {
             }
 
         } catch {
-            Write-Host "Error retrieving CVEs: $($_.Exception.Message)"
+            Write-Information "Error retrieving CVEs: $($_.Exception.Message)"
             $StatusCode = [HttpStatusCode]::InternalServerError
             $SortedCves = $_.Exception.Message
         }

@@ -13,7 +13,7 @@ function Invoke-ExecCPVPermissions {
     $StatusCode = [HttpStatusCode]::OK
 
     if ($Tenant) {
-        Write-Host "Our tenant is $($Tenant.displayName) - $($Tenant.defaultDomainName)"
+        Write-Information "Our tenant is $($Tenant.displayName) - $($Tenant.defaultDomainName)"
 
         $CPVConsentParams = @{
             TenantFilter = $TenantFilter

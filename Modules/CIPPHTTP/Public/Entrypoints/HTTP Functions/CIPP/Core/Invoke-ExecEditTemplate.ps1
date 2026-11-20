@@ -29,7 +29,7 @@ function Invoke-ExecEditTemplate {
         $JSON = ConvertTo-Json -Compress -Depth 100 -InputObject ($request.Body | Select-Object * -ExcludeProperty GUID, source, isSynced, package)
 
         if ($Type -eq 'IntuneTemplate') {
-            Write-Host 'Intune Template'
+            Write-Information 'Intune Template'
             $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type String
             $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$SafeGUID'"
             $OriginalJSON = $Template.JSON

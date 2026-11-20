@@ -75,7 +75,7 @@ function Get-GraphToken {
         }
     }
     try {
-        if (!$env:SetFromProfile) { $CIPPAuth = Get-CIPPAuthentication; Write-Host 'Could not get Refreshtoken from environment variable. Reloading token.' }
+        if (!$env:SetFromProfile) { $CIPPAuth = Get-CIPPAuthentication; Write-Information 'Could not get Refreshtoken from environment variable. Reloading token.' }
         $ConfigTable = Get-CippTable -tablename 'Config'
         $Filter = "PartitionKey eq 'AppCache' and RowKey eq 'AppCache'"
         $AppCache = Get-CIPPAzDataTableEntity @ConfigTable -Filter $Filter
@@ -85,7 +85,7 @@ function Get-GraphToken {
             if ($env:ApplicationID -and $env:ApplicationID -ne $AppCache.ApplicationId) {
                 # KV and AppCache genuinely diverged — reconcile the marker to KV so we
                 # don't reload on every subsequent token call.
-                Write-Host "AppCache ApplicationId ($($AppCache.ApplicationId)) differs from KV ($env:ApplicationID); reconciling AppCache."
+                Write-Information "AppCache ApplicationId ($($AppCache.ApplicationId)) differs from KV ($env:ApplicationID); reconciling AppCache."
                 $null = Add-CIPPAzDataTableEntity @ConfigTable -Entity @{
                     PartitionKey = 'AppCache'; RowKey = 'AppCache'; ApplicationId = "$env:ApplicationID"
                 } -Force
@@ -104,12 +104,12 @@ function Get-GraphToken {
         $Filter = "PartitionKey eq 'Tenants' and delegatedPrivilegeStatus eq 'directTenant'"
         $ClientType = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter | Where-Object { $_.customerId -eq $tenantid -or $_.defaultDomainName -eq $tenantid }
         if ($tenantid -ne $env:TenantID -and $clientType.delegatedPrivilegeStatus -eq 'directTenant') {
-            Write-Host "Using direct tenant refresh token for $($clientType.customerId)"
+            Write-Information "Using direct tenant refresh token for $($clientType.customerId)"
             $ClientRefreshToken = Get-Item -Path "env:\$($clientType.customerId)" -ErrorAction SilentlyContinue
 
             if ($null -eq $ClientRefreshToken) {
                 # Lazy load the refresh token from Key Vault only when needed
-                Write-Host "Fetching refresh token for direct tenant $($clientType.customerId) from Key Vault"
+                Write-Information "Fetching refresh token for direct tenant $($clientType.customerId) from Key Vault"
                 try {
                     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
                         # Development environment - get from table storage
@@ -130,7 +130,7 @@ function Get-GraphToken {
                         }
                     }
                 } catch {
-                    Write-Host "Failed to retrieve refresh token for direct tenant $($clientType.customerId): $($_.Exception.Message)"
+                    Write-Information "Failed to retrieve refresh token for direct tenant $($clientType.customerId): $($_.Exception.Message)"
                 }
             }
 
@@ -141,10 +141,10 @@ function Get-GraphToken {
             if ($OwningPartner -ne $env:TenantID) {
                 $PartnerRefreshToken = Get-CIPPPartnerRefreshToken -PartnerTenantId $OwningPartner
                 if ($PartnerRefreshToken) {
-                    Write-Host "Using refresh token of partner tenant $OwningPartner for $tenantid"
+                    Write-Information "Using refresh token of partner tenant $OwningPartner for $tenantid"
                     $refreshToken = $PartnerRefreshToken
                 } else {
-                    Write-Host "No refresh token stored for partner tenant $OwningPartner - falling back to the primary partner token for $tenantid"
+                    Write-Information "No refresh token stored for partner tenant $OwningPartner - falling back to the primary partner token for $tenantid"
                 }
             }
         }

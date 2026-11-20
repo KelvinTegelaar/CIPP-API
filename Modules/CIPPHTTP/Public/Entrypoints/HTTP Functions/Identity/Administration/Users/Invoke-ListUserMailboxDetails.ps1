@@ -83,7 +83,7 @@ function Invoke-ListUserMailboxDetails {
         )
         $usernames = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/users?$select=id,userPrincipalName,displayName,mailNickname&$top=999'
         $Results = New-ExoBulkRequest -TenantId $TenantFilter -CmdletArray $Requests -returnWithCommand $true -Anchor $username
-        Write-Host "First line of usernames is $($usernames[0] | ConvertTo-Json)"
+        Write-Information "First line of usernames is $($usernames[0] | ConvertTo-Json)"
 
         # Assign variables from $Results
         $MailboxDetailedRequest = $Results.'Get-Mailbox'

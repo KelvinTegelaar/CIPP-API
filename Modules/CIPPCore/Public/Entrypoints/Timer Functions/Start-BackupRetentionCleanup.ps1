@@ -29,7 +29,7 @@ function Start-BackupRetentionCleanup {
             $RetentionDays = 7
         }
 
-        Write-Host "Starting backup cleanup with retention of $RetentionDays days"
+        Write-Information "Starting backup cleanup with retention of $RetentionDays days"
 
         # Calculate cutoff date
         $CutoffDate = (Get-Date).AddDays(-$RetentionDays).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
@@ -80,9 +80,9 @@ function Start-BackupRetentionCleanup {
             if ($TotalDeleted -gt 0) {
                 $DeletedCounts.Add($TotalDeleted)
                 Write-LogMessage -API 'BackupRetentionCleanup' -message "Deleted $TotalDeleted old $($Target.Label) backups ($BlobDeletedCount blobs, $TableDeletedCount table entries)" -Sev 'Info'
-                Write-Host "Deleted $TotalDeleted old $($Target.Label) backups"
+                Write-Information "Deleted $TotalDeleted old $($Target.Label) backups"
             } else {
-                Write-Host "No old $($Target.Label) backups found"
+                Write-Information "No old $($Target.Label) backups found"
             }
         }
 

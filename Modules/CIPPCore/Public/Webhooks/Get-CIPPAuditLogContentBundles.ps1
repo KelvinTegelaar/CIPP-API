@@ -93,6 +93,6 @@ function Get-CIPPAuditLogContentBundles {
             Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookConfig -Force
             Write-LogMessage -API 'Webhooks' -message 'This tenant may not have an Exchange Online license. Audit log subscription disabled.' -sev Error -LogData (Get-CippException -Exception $_)
         }
-        Write-Host ( 'Audit log collection error {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message)
+        Write-Information ( 'Audit log collection error {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message)
     }
 }

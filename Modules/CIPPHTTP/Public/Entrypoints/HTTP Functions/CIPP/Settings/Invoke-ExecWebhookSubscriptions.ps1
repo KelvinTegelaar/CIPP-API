@@ -86,7 +86,7 @@ function Invoke-ExecWebhookSubscriptions {
                 })
         }
         'Resubscribe' {
-            Write-Host "Resubscribing to $($Request.Query.WebhookID)"
+            Write-Information "Resubscribing to $($Request.Query.WebhookID)"
             $Row = Get-AzDataTableEntity @Table -Filter "RowKey eq '$SafeWebhookId'"
             if ($Row) {
                 $NewSubParams = @{
@@ -102,9 +102,9 @@ function Invoke-ExecWebhookSubscriptions {
                 }
                 try {
                     $NewSub = New-CIPPGraphSubscription @NewSubParams
-                    Write-Host ($NewSub | ConvertTo-Json -Depth 5 -Compress)
+                    Write-Information ($NewSub | ConvertTo-Json -Depth 5 -Compress)
                 } catch {
-                    Write-Host $_.Exception.Message
+                    Write-Information $_.Exception.Message
                 }
                 return ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK

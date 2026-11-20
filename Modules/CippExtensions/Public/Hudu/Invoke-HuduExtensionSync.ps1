@@ -74,7 +74,7 @@ function Invoke-HuduExtensionSync {
         $company_id = $TenantMap.IntegrationId
         $HuduCompany = Get-HuduCompanies -Id $company_id
         if ($HuduCompany.archived -eq $true) {
-            Write-Host "Company $($HuduCompany.name) is archived. Skipping sync."
+            Write-Information "Company $($HuduCompany.name) is archived. Skipping sync."
             $ReturnObject = [PSCustomObject]@{
                 Name    = $Tenant.displayName
                 Users   = 0
@@ -139,10 +139,10 @@ function Invoke-HuduExtensionSync {
             $CreateUsers = $false
             $People = [System.Collections.Generic.List[object]]::new()
             $CompanyResult.Errors.add("Company: Unable to fetch People $_")
-            Write-Host "Hudu People - Error: $_"
+            Write-Information "Hudu People - Error: $_"
         }
 
-        Write-Host "Configuration: $($Configuration | ConvertTo-Json)"
+        Write-Information "Configuration: $($Configuration | ConvertTo-Json)"
 
         try {
             if (![string]::IsNullOrEmpty($DeviceLayoutId)) {
@@ -181,7 +181,7 @@ function Invoke-HuduExtensionSync {
             $CreateDevices = $false
             $HuduDevices = [System.Collections.Generic.List[object]]::new()
             $CompanyResult.Errors.add("Company: Unable to fetch Devices $_")
-            Write-Host "Hudu Devices - Error: $_"
+            Write-Information "Hudu Devices - Error: $_"
         }
 
         # Hudu people by the addresses they can match: Email Address field values, primary_mail, and ConnectWise Manage and Halo contact emails.

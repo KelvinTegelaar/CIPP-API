@@ -39,6 +39,6 @@ function Push-UploadApplication {
             }
         }
     } catch {
-        Write-Host "Error pushing application: $($_.Exception.Message)"
+        Write-Information "Error pushing application: $($_.Exception.Message)"
     }
 }

@@ -6,10 +6,10 @@ function Push-GetStandards {
     Param($Item)
 
     $Params = $Item.StandardParams | ConvertTo-Json | ConvertFrom-Json -AsHashtable
-    Write-Host "My params are $($Params | ConvertTo-Json -Depth 5 -Compress)"
+    Write-Information "My params are $($Params | ConvertTo-Json -Depth 5 -Compress)"
     try {
         $AllTasks = Get-CIPPStandards @Params
-        Write-Host "AllTasks: $($AllTasks | ConvertTo-Json -Depth 5 -Compress)"
+        Write-Information "AllTasks: $($AllTasks | ConvertTo-Json -Depth 5 -Compress)"
         foreach ($task in $AllTasks) {
             [PSCustomObject]@{
                 Tenant       = $task.Tenant
@@ -22,7 +22,7 @@ function Push-GetStandards {
             }
         }
     } catch {
-        Write-Host "GetStandards Exception $($_.Exception.Message)"
+        Write-Information "GetStandards Exception $($_.Exception.Message)"
     }
 
 }

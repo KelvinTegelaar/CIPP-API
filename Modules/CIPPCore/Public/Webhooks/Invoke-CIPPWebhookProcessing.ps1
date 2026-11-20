@@ -76,7 +76,7 @@ function Invoke-CippWebhookProcessing {
             Write-LogMessage -API $APIName -tenant $TenantFilter -message "Audit log $($Data.Id) matched a $(if ($NewerEvent) { 'claim for an earlier event' } else { 'claim older than 7 days' }). Treating it as a new event." -sev 'Info'
             Add-CIPPAzDataTableEntity @AuditLogTable -Entity $ClaimRow -Force
         } else {
-            Write-Host "Audit log $($Data.Id) already claimed or already processed. Skipping."
+            Write-Information "Audit log $($Data.Id) already claimed or already processed. Skipping."
             return
         }
     }
@@ -108,7 +108,7 @@ function Invoke-CippWebhookProcessing {
             Tenant  = $Tenant
         }
     }
-    Write-Host "Received data. Our Action List is $($Data.CIPPAction)"
+    Write-Information "Received data. Our Action List is $($Data.CIPPAction)"
 
     $ActionList = ($Data.CIPPAction | ConvertFrom-Json -ErrorAction SilentlyContinue).value
     $ActionResults = foreach ($action in $ActionList) {
@@ -123,7 +123,7 @@ function Invoke-CippWebhookProcessing {
                 try {
                     Set-CIPPSignInState -TenantFilter $TenantFilter -User $Data.UserId -AccountEnabled $false -APIName 'Alert Engine' -Headers 'Alert Engine'
                 } catch {
-                    Write-Host "Failed to disable user $($Data.UserId)`: $($_.Exception.Message)"
+                    Write-Information "Failed to disable user $($Data.UserId)`: $($_.Exception.Message)"
                 }
             }
             'becremediate' {
@@ -138,7 +138,7 @@ function Invoke-CippWebhookProcessing {
                     $ContainmentRows = Invoke-CIPPBecContainment -TenantFilter $TenantFilter -UserId $Data.UserId -UserPrincipalName $Username -Actions $BecActions -Confirmed -Redacted -Headers 'Alert Engine' -APIName 'Alert Engine'
                     foreach ($Row in @($ContainmentRows)) { "$($Row.Action) ($($Row.state)): $($Row.resultText)" }
                 } catch {
-                    Write-Host "BEC containment failed for $Username`: $($_.Exception.Message)"
+                    Write-Information "BEC containment failed for $Username`: $($_.Exception.Message)"
                     "BEC containment failed for $Username`: $($_.Exception.Message)"
                 }
                 "Completed BEC Remediate for $Username"
@@ -154,7 +154,7 @@ function Invoke-CippWebhookProcessing {
                 & $action.command.value @CommandSplat
             }#>
             default {
-                Write-Host "Unknown action: $action"
+                Write-Information "Unknown action: $action"
             }
         }
     }
@@ -253,7 +253,7 @@ function Invoke-CippWebhookProcessing {
         }
     }
 
-    Write-Host 'Going to create the content'
+    Write-Information 'Going to create the content'
     foreach ($action in $ActionList ) {
         switch ($action) {
             'generatemail' {
@@ -264,9 +264,9 @@ function Invoke-CippWebhookProcessing {
                     HTMLContent  = $GenerateEmail.htmlcontent
                     TenantFilter = $TenantFilter
                 }
-                Write-Host 'Going to send the mail'
+                Write-Information 'Going to send the mail'
                 Send-CIPPAlert @CIPPAlert
-                Write-Host 'email should be sent'
+                Write-Information 'email should be sent'
             }
             'generatePSA' {
                 $GeneratePSA = New-CIPPAlertTemplate -format 'psa' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -Tenant $Tenant.defaultDomainName -AuditLogLink $AuditLogLink -AlertComment $AlertComment -CustomSubject $Data.CIPPCustomSubject
@@ -300,7 +300,7 @@ function Invoke-CippWebhookProcessing {
                     SchemaSource    = 'Audit Log Alert'
                     InvokingCommand = 'Start-AuditLogProcessingOrchestrator'
                 }
-                Write-Host 'Sending Webhook Content'
+                Write-Information 'Sending Webhook Content'
                 Send-CIPPAlert @CippAlert
             }
         }

@@ -25,7 +25,7 @@ function Invoke-ListAppConsentRequests {
                 'InProgress' {
                     $FilterQuery = "userConsentRequests/any (u:u/status eq '$RequestStatus')"
                     $Uri = "$Uri`?`$filter=$([System.Web.HttpUtility]::UrlEncode($FilterQuery))"
-                    Write-Host "Applying server-side filter for RequestStatus: $RequestStatus"
+                    Write-Information "Applying server-side filter for RequestStatus: $RequestStatus"
                     $ServerSideFilteringApplied = $true
                 }
                 default {
@@ -67,7 +67,7 @@ function Invoke-ListAppConsentRequests {
         # Apply filtering if requested. Has to be done before and after the foreach loop, as the serverside filter is only supported for InProgress.
         if ($Filter -eq $true -and $ServerSideFilteringApplied -eq $false) {
             if ($RequestStatus) {
-                Write-Host "Filtering by RequestStatus: $RequestStatus"
+                Write-Information "Filtering by RequestStatus: $RequestStatus"
                 $Results = $Results | Where-Object { $_.requestStatus -eq $RequestStatus }
             }
         }

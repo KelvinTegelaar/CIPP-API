@@ -63,7 +63,7 @@ function Invoke-NinjaOneDeviceWebhook {
 
                     $Null = Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/device/$($Device.NinjaOneID)/custom-fields" -Method PATCH -Body $ComplianceBodyJson -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8'
 
-                    Write-Host 'Updated NinjaOne Device Compliance'
+                    Write-Information 'Updated NinjaOne Device Compliance'
                 } catch {
                     $Message = if ($_.ErrorDetails.Message) {
                         Get-NormalizedError -Message $_.ErrorDetails.Message

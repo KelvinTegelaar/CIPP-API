@@ -6,11 +6,11 @@ function Push-ListLicensesQueue {
     param($Item)
 
     # Write out the queue message and metadata to the information log.
-    Write-Host "PowerShell queue trigger function processed work item: $($Item.defaultDomainName)"
+    Write-Information "PowerShell queue trigger function processed work item: $($Item.defaultDomainName)"
 
     $domainName = $Item.defaultDomainName
     try {
-        Write-Host "Processing $domainName"
+        Write-Information "Processing $domainName"
         $Licenses = Get-CIPPLicenseOverview -TenantFilter $domainName
     } catch {
         $Licenses = [pscustomobject]@{

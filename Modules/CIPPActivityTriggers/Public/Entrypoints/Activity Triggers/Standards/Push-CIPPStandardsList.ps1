@@ -25,7 +25,7 @@ function Push-CIPPStandardsList {
             Write-Information "No standards found for tenant $TenantFilter"
             return @()
         }
-        Write-Host "Retrieved $($AllStandards.Count) standards for tenant $TenantFilter before filtering."
+        Write-Information "Retrieved $($AllStandards.Count) standards for tenant $TenantFilter before filtering."
         # Build hashtable for efficient lookup
         $ComputedStandards = @{}
         foreach ($Standard in $AllStandards) {
@@ -142,13 +142,13 @@ function Push-CIPPStandardsList {
 
                         $PolicyTimestamps[$Result.id] = $Changed
                         $PolicyNamesByType[$Result.id] = @($Result.body.value | ForEach-Object { $_.displayName; $_.name } | Where-Object { $_ })
-                        Write-Host "POLICY TYPE CHANGE CHECK: $($Result.id) -> Changed=$Changed (GraphCount=$GraphCount, CachedCount=$($Cached.PolicyCount), IdChanged=$IdChanged)"
+                        Write-Information "POLICY TYPE CHANGE CHECK: $($Result.id) -> Changed=$Changed (GraphCount=$GraphCount, CachedCount=$($Cached.PolicyCount), IdChanged=$IdChanged)"
                     }
 
                     # Filter unchanged templates
                     $TemplateTable = Get-CippTable -tablename 'templates'
                     $IntuneKeys = @($ComputedStandards.Keys | Where-Object { $_ -like '*IntuneTemplate*' })
-                    Write-Host "INTUNE FILTER: Processing $($IntuneKeys.Count) IntuneTemplate standards for $TenantFilter"
+                    Write-Information "INTUNE FILTER: Processing $($IntuneKeys.Count) IntuneTemplate standards for $TenantFilter"
 
                     # Build compliance lookup - keyed by "standards.IntuneTemplate.<templateValue>"
                     $IntuneComplianceLookup = @{}
@@ -164,7 +164,7 @@ function Push-CIPPStandardsList {
                     } catch {
                         Write-Warning "Failed to get tenant alignment data for $TenantFilter : $($_.Exception.Message)"
                     }
-                    Write-Host "COMPLIANCE LOOKUP: Found $($IntuneComplianceLookup.Count) IntuneTemplate entries in alignment data"
+                    Write-Information "COMPLIANCE LOOKUP: Found $($IntuneComplianceLookup.Count) IntuneTemplate entries in alignment data"
 
                     # Cache writes are deferred until after the loop: policies sharing a standards
                     # template must all compare against the timestamp cached before this run.
@@ -174,13 +174,13 @@ function Push-CIPPStandardsList {
                         $TemplateEntity = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$($Template.Settings.TemplateList.value)'"
 
                         if (-not $TemplateEntity) {
-                            Write-Host "SKIP: $Key - no IntuneTemplate entity found for RowKey '$($Template.Settings.TemplateList.value)'"
+                            Write-Information "SKIP: $Key - no IntuneTemplate entity found for RowKey '$($Template.Settings.TemplateList.value)'"
                             continue
                         }
 
                         $ParsedTemplate = $TemplateEntity.JSON | ConvertFrom-Json
                         if (-not $ParsedTemplate.Type) {
-                            Write-Host "SKIP: $Key - template has no Type property"
+                            Write-Information "SKIP: $Key - template has no Type property"
                             continue
                         }
 
@@ -190,7 +190,7 @@ function Push-CIPPStandardsList {
                         } else {
                             [bool]$PolicyTimestamps[$PolicyType]
                         }
-                        Write-Host "TEMPLATE CHECK: $Key | PolicyType=$PolicyType | PolicyChanged=$PolicyChanged"
+                        Write-Information "TEMPLATE CHECK: $Key | PolicyType=$PolicyType | PolicyChanged=$PolicyChanged"
 
                         # Check StandardTemplate changes
                         $StandardTemplate = Get-CIPPAzDataTableEntity @TemplateTable -Filter "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$($Template.TemplateId)'"
@@ -204,10 +204,10 @@ function Push-CIPPStandardsList {
                                 $CachedStandardTimeUtc = ([DateTimeOffset]$CachedStandardTemplate.CachedTimestamp).UtcDateTime
                                 $TimeDiff = [Math]::Abs(($StandardTimeUtc - $CachedStandardTimeUtc).TotalSeconds)
                                 $StandardTemplateChanged = ($TimeDiff -gt 60)
-                                Write-Host "STDTEMPLATE CHECK: TemplateId=$($Template.TemplateId) | TimeDiff=${TimeDiff}s | Changed=$StandardTemplateChanged"
+                                Write-Information "STDTEMPLATE CHECK: TemplateId=$($Template.TemplateId) | TimeDiff=${TimeDiff}s | Changed=$StandardTemplateChanged"
                             } else {
                                 $StandardTemplateChanged = $true
-                                Write-Host "STDTEMPLATE CHECK: TemplateId=$($Template.TemplateId) | No cached timestamp - treating as changed"
+                                Write-Information "STDTEMPLATE CHECK: TemplateId=$($Template.TemplateId) | No cached timestamp - treating as changed"
                             }
 
                             $StandardTemplateTimestamps[$Template.TemplateId] = $StandardTemplate.Timestamp
@@ -217,7 +217,7 @@ function Push-CIPPStandardsList {
                             $AlignmentKey = "standards.IntuneTemplate.$($Template.Settings.TemplateList.value)"
                             $IsDeployed = $IntuneComplianceLookup.ContainsKey($AlignmentKey)
                             $IsCompliant = $IsDeployed -and ($IntuneComplianceLookup[$AlignmentKey] -eq $true)
-                            Write-Host "COMPLIANCE CHECK: $AlignmentKey | InLookup=$IsDeployed | Compliant=$IsCompliant | LookupValue=$($IntuneComplianceLookup[$AlignmentKey])"
+                            Write-Information "COMPLIANCE CHECK: $AlignmentKey | InLookup=$IsDeployed | Compliant=$IsCompliant | LookupValue=$($IntuneComplianceLookup[$AlignmentKey])"
 
                             if ($IsCompliant) {
                                 # Verify the policy still exists in Graph before trusting compliance
@@ -229,16 +229,16 @@ function Push-CIPPStandardsList {
                                 }
                                 if ($TypeNames -contains $TemplateDisplayName) {
                                     # Policy unchanged, exists in Graph, and compliant - safe to skip
-                                    Write-Host "NO INTUNE CHANGE: Filtering out $Key for $TenantFilter (compliant)"
+                                    Write-Information "NO INTUNE CHANGE: Filtering out $Key for $TenantFilter (compliant)"
                                     [void]$ComputedStandards.Remove($Key)
                                 } else {
-                                    Write-Host "KEEPING: $Key - policy '$TemplateDisplayName' not found in Graph for type $PolicyType (deleted?)"
+                                    Write-Information "KEEPING: $Key - policy '$TemplateDisplayName' not found in Graph for type $PolicyType (deleted?)"
                                 }
                             } else {
-                                Write-Host "KEEPING: $Key - not compliant or not in lookup (InLookup=$IsDeployed, Compliant=$IsCompliant)"
+                                Write-Information "KEEPING: $Key - not compliant or not in lookup (InLookup=$IsDeployed, Compliant=$IsCompliant)"
                             }
                         } else {
-                            Write-Host "KEEPING: $Key - changed (PolicyChanged=$PolicyChanged, StdTemplateChanged=$StandardTemplateChanged)"
+                            Write-Information "KEEPING: $Key - changed (PolicyChanged=$PolicyChanged, StdTemplateChanged=$StandardTemplateChanged)"
                         }
                     }
                     if ($StandardTemplateTimestamps.Count -gt 0) {
@@ -289,7 +289,7 @@ function Push-CIPPStandardsList {
             }
         }
 
-        Write-Host "Returning $($ComputedStandards.Count) standards for tenant $TenantFilter after filtering."
+        Write-Information "Returning $($ComputedStandards.Count) standards for tenant $TenantFilter after filtering."
         # Return filtered standards
         $QueuedTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
         $FilteredStandards = $ComputedStandards.Values | ForEach-Object {
@@ -302,7 +302,7 @@ function Push-CIPPStandardsList {
                 QueuedTime   = $QueuedTime
             }
         }
-        Write-Host "Sending back $($FilteredStandards.Count) standards"
+        Write-Information "Sending back $($FilteredStandards.Count) standards"
         return @($FilteredStandards)
     } catch {
         Write-Warning "Error listing standards for $TenantFilter : $($_.Exception.Message)"

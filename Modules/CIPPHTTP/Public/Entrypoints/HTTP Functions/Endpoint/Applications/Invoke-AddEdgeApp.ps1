@@ -27,7 +27,7 @@ function Invoke-AddEdgeApp {
                 if (-not $ObjBody) {
                     throw 'No Edge configuration could be built from the supplied settings.'
                 }
-                Write-Host ($ObjBody | ConvertTo-Json -Compress)
+                Write-Information ($ObjBody | ConvertTo-Json -Compress)
                 $EdgeAppID = New-GraphPostRequest -Uri 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps' -tenantid $Tenant -Body (ConvertTo-Json -InputObject $ObjBody -Depth 10) -Type POST
             } else {
                 "Edge deployment already exists for $($Tenant)"

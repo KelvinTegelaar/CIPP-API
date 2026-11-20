@@ -27,7 +27,7 @@ Function Invoke-ListHaloClients {
                 value = $_.id
             }
         }
-        Write-Host "Found $($HaloClients.Count) Halo Clients"
+        Write-Information "Found $($HaloClients.Count) Halo Clients"
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

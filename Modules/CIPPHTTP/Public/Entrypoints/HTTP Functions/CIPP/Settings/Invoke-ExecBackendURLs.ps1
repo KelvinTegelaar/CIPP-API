@@ -13,7 +13,7 @@ function Invoke-ExecBackendURLs {
     $SWAName = $env:WEBSITE_SITE_NAME -replace 'cipp', 'CIPP-SWA-'
 
     # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    Write-Information 'PowerShell HTTP trigger function processed a request.'
 
     try {
         $RGName = Get-CIPPFunctionAppResourceGroup

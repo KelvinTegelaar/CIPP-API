@@ -42,7 +42,7 @@ function Invoke-CIPPStandardEnableExchangeCloudManagement {
     $TestResult = Test-CIPPStandardLicense -StandardName 'EnableExchangeCloudManagement' -TenantFilter $Tenant -Preset Exchange
 
     if ($TestResult -eq $false) {
-        Write-Host "We're exiting as the correct license is not present for this standard."
+        Write-Information "We're exiting as the correct license is not present for this standard."
         return $true
     }
 
@@ -87,7 +87,7 @@ function Invoke-CIPPStandardEnableExchangeCloudManagement {
                 $BatchResults | ForEach-Object {
                     if ($_.error) {
                         $ErrorMessage = Get-NormalizedError -Message $_.error
-                        Write-Host "Failed to set mailbox management to $StateText for $($_.Target). Error: $ErrorMessage"
+                        Write-Information "Failed to set mailbox management to $StateText for $($_.Target). Error: $ErrorMessage"
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set mailbox management to $StateText for $($_.Target). Error: $ErrorMessage" -sev Error
                         $FailCount++
                     } else {

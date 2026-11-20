@@ -13,7 +13,7 @@ Function Invoke-ListApplicationQueue {
     $QueuedApps = (Get-CIPPAzDataTableEntity @Table)
 
     $CurrentApps = @(foreach ($QueueFile in $QueuedApps) {
-        Write-Host $QueueFile
+        Write-Information $QueueFile
         $ApplicationFile = $QueueFile.JSON | ConvertFrom-Json -Depth 10
         [PSCustomObject]@{
             tenantName      = $ApplicationFile.tenant

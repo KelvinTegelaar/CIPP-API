@@ -3,7 +3,7 @@ function Push-NinjaOneQueue {
     param($Item)
 
     # Write out the queue message and metadata to the information log.
-    Write-Host "PowerShell NinjaOne queue trigger function processed work item: $($Item.NinjaAction)"
+    Write-Information "PowerShell NinjaOne queue trigger function processed work item: $($Item.NinjaAction)"
 
     Switch ($Item.NinjaAction) {
         'StartAutoMapping' { Invoke-NinjaOneOrgMapping }
