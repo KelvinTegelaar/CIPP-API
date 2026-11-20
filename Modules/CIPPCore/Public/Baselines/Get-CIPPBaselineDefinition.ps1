@@ -24,7 +24,7 @@ function Get-CIPPBaselineDefinition {
     foreach ($File in $Files) {
         try {
             $script:CippBaselineDefinitionText[$File] ??= [System.IO.File]::ReadAllText($File)
-            $script:CippBaselineDefinitionText[$File] | ConvertFrom-Json -ErrorAction Stop
+            [CIPP.CippJson]::ConvertFromJson($script:CippBaselineDefinitionText[$File])
         } catch {
             Write-Information "Get-CIPPBaselineDefinition: failed to parse $([System.IO.Path]::GetFileName($File)): $($_.Exception.Message)"
         }

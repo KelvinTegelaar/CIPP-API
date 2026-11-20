@@ -3,6 +3,7 @@
 
 BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    Add-Type -Path (Join-Path $script:RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
     $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
     $env:CIPPRootPath = $script:RepoRoot
 

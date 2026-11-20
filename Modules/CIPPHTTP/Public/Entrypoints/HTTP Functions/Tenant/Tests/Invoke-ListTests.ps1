@@ -171,31 +171,31 @@ function Invoke-ListTests {
                 }
             }
 
-            # Add descriptions from markdown files to each test result
-            $MdFileLookup = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-            foreach ($MdPath in [System.IO.Directory]::EnumerateFiles($TestsRootPath, '*.md', [System.IO.SearchOption]::AllDirectories)) {
-                $MdKey = [System.IO.Path]::GetFileNameWithoutExtension($MdPath)
-                if (-not $MdFileLookup.ContainsKey($MdKey)) {
-                    $MdFileLookup[$MdKey] = $MdPath
-                }
-            }
-
-            foreach ($TestResult in $TestResultsData.TestResults) {
-                $MdFile = $null
-                [void]$MdFileLookup.TryGetValue(('Invoke-CippTest{0}' -f $TestResult.RowKey), [ref]$MdFile)
-
-                if ($MdFile) {
+            # Descriptions from the markdown beside each test. They only change with a release, so each worker reads them once.
+            if (-not $script:CippTestDescriptions) {
+                $Descriptions = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                $SeenKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                foreach ($MdPath in [System.IO.Directory]::EnumerateFiles($TestsRootPath, '*.md', [System.IO.SearchOption]::AllDirectories)) {
+                    $MdKey = [System.IO.Path]::GetFileNameWithoutExtension($MdPath)
+                    if (-not $SeenKeys.Add($MdKey)) { continue }
                     try {
-                        $MdContent = [System.IO.File]::ReadAllText($MdFile)
+                        $MdContent = [System.IO.File]::ReadAllText($MdPath)
                         if ($MdContent) {
                             $Description = ($MdContent -split '<!--- Results --->')[0].Trim()
-                            $Description = ($Description -split '%TestResult%')[0].Trim()
-                            $TestResult.PSObject.Properties.Remove('Description')
-                            $TestResult.PSObject.Properties.Add([psnoteproperty]::new('Description', $Description))
+                            $Descriptions[$MdKey] = ($Description -split '%TestResult%')[0].Trim()
                         }
                     } catch {
                         #Test
                     }
+                }
+                $script:CippTestDescriptions = $Descriptions
+            }
+
+            foreach ($TestResult in $TestResultsData.TestResults) {
+                $Description = $null
+                if ($script:CippTestDescriptions.TryGetValue(('Invoke-CippTest{0}' -f $TestResult.RowKey), [ref]$Description)) {
+                    $TestResult.PSObject.Properties.Remove('Description')
+                    $TestResult.PSObject.Properties.Add([psnoteproperty]::new('Description', $Description))
                 }
 
                 if ($TestResult.TestType -eq 'Custom') {
