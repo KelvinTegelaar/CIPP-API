@@ -75,7 +75,8 @@ function Get-CippAuditLogPlannedWindows {
     }
 
     # Established tenant: backfill missing windows from the lower bound up to NewestEnd (oldest first).
-    $EarliestExisting = ($ExistingStarts | Measure-Object -Minimum).Minimum
+    $EarliestExisting = $ExistingStarts[0]
+    foreach ($Start in $ExistingStarts) { if ($Start -lt $EarliestExisting) { $EarliestExisting = $Start } }
     $LowerEnd = if ($EarliestExisting -gt $HorizonStart) { $EarliestExisting.AddMinutes($WindowMinutes) } else { $HorizonStart.AddMinutes($WindowMinutes) }
 
     $Owed = [System.Collections.Generic.List[object]]::new()
