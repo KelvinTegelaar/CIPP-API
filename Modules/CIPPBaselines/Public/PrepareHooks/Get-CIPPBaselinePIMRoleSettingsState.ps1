@@ -58,13 +58,13 @@ function Get-CIPPBaselinePIMRoleSettingsState {
         # Case-insensitive like the Graph eq filters they replace; first match wins.
         $UsersByUpn = @{}
         if ($Approvers -match '@') {
-            foreach ($User in @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users')) {
+            foreach ($User in @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users' -Fields 'DisplayName', 'Id', 'userPrincipalName')) {
                 if ($User.userPrincipalName -and -not $UsersByUpn.ContainsKey("$($User.userPrincipalName)")) { $UsersByUpn["$($User.userPrincipalName)"] = $User }
             }
         }
         $GroupsByName = @{}
         if ($Approvers -notmatch '@') {
-            foreach ($Group in @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')) {
+            foreach ($Group in @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'DisplayName', 'Id')) {
                 if ($Group.displayName -and -not $GroupsByName.ContainsKey("$($Group.displayName)")) { $GroupsByName["$($Group.displayName)"] = $Group }
             }
         }

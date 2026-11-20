@@ -28,7 +28,7 @@ function Get-CIPPBaselineUsageLocationState {
         $TenantFilter
     )
 
-    $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' | Where-Object { $_ })
+    $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' -Fields 'displayName', 'id', 'usageLocation', 'userPrincipalName', 'userType' | Where-Object { $_ })
     if ($Users.Count -eq 0) { return @{ Current = $null } }
 
     $Wanted = "$($Item.Variables.usageLocation.value ?? $Item.Variables.usageLocation)".Trim().ToUpperInvariant()
@@ -52,7 +52,7 @@ function Get-CIPPBaselineUsageLocationState {
     $IncludedIds = @{}
     $ExcludedIds = @{}
     if ($IncludeNames.Count -gt 0 -or $ExcludeNames.Count -gt 0) {
-        $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')
+        $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id')
         $GroupIdsByName = @{}
         foreach ($Group in $Groups) {
             $Name = "$($Group.displayName)".Trim()

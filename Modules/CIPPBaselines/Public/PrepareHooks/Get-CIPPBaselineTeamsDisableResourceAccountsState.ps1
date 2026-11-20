@@ -32,7 +32,7 @@ function Get-CIPPBaselineTeamsDisableResourceAccountsState {
     }
 
     # Users is the SECOND cache - see Get-CIPPBaselineCacheRows.
-    $Users = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users')
+    $Users = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users' -Fields 'accountEnabled', 'displayName', 'id', 'onPremisesSyncEnabled', 'userPrincipalName')
     $EnabledIds = @{}
     foreach ($User in $Users) {
         if ($User.accountEnabled -eq $true -and $User.onPremisesSyncEnabled -ne $true) { $EnabledIds["$($User.id)"] = $true }

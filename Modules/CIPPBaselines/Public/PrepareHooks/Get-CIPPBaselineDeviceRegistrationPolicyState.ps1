@@ -48,7 +48,7 @@ function Get-CIPPBaselineDeviceRegistrationPolicyState {
     $Wanted = @(("$($Item.Variables.allowedToJoinGroups)" -split ',').ForEach({ $_.Trim() }).Where({ $_ }) | Select-Object -Unique)
     if ($Wanted.Count -eq 0) { return @{ Current = $null; NoDataReason = 'Selected groups is chosen but no groups are configured'; ConfigError = $true } }
 
-    $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')
+    $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id')
     if ($Groups.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'Groups')) { return @{ Current = $null; NoDataReason = 'the groups cache could not be collected for this tenant' } }
     $ById = @{}
     $IdsByName = @{}

@@ -20,7 +20,7 @@ function Get-CIPPBaselineSecureScoreRemediationState {
         $TenantFilter
     )
 
-    $Profiles = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'SecureScoreControlProfiles')
+    $Profiles = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'SecureScoreControlProfiles' -Fields 'controlStateUpdates', 'id')
     if ($Profiles.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'SecureScoreControlProfiles')) {
         return @{ Current = $null }
     }

@@ -17,7 +17,7 @@ function Get-CIPPBaselineRestrictThirdPartyStorageServicesState {
         $TenantFilter
     )
 
-    $ServicePrincipals = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ServicePrincipals')
+    $ServicePrincipals = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ServicePrincipals' -Fields 'accountEnabled', 'appId')
     if ($ServicePrincipals.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'ServicePrincipals')) {
         return @{ Current = $null }
     }

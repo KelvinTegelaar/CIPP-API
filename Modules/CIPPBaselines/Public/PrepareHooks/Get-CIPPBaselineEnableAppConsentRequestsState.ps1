@@ -51,7 +51,7 @@ function Get-CIPPBaselineEnableAppConsentRequestsState {
     $UserNames = @(@($Item.Variables.ReviewerUsers) | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     $MissingUsers = @()
     if ($UserNames.Count -gt 0) {
-        $Users = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users')
+        $Users = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users' -Fields 'displayName', 'id', 'userPrincipalName')
         $MissingUsers = @($UserNames | Where-Object {
                 $Name = $_
                 $Covered = @($Users) | Where-Object { $_.displayName -eq $Name } | Where-Object {
@@ -65,7 +65,7 @@ function Get-CIPPBaselineEnableAppConsentRequestsState {
     $GroupNames = @(@($Item.Variables.ReviewerGroups) | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     $MissingGroups = @()
     if ($GroupNames.Count -gt 0) {
-        $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')
+        $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id')
         $MissingGroups = @($GroupNames | Where-Object {
                 $Name = $_
                 $Covered = @($Groups) | Where-Object { $_.displayName -eq $Name } | Where-Object {

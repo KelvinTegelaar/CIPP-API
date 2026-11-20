@@ -22,7 +22,7 @@ function Get-CIPPBaselineColleagueImpersonationAlertState {
         $TenantFilter
     )
 
-    $Mailboxes = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Mailboxes')
+    $Mailboxes = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'recipientTypeDetails', 'AccountDisabled', 'displayName')
     $Rules = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ExoTransportRules')
     $AcceptedDomains = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ExoAcceptedDomains')
     if ($Mailboxes.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'Mailboxes')) {

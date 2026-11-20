@@ -12,7 +12,7 @@ function Get-CIPPBaselineDelegateSentItemsState {
     [CmdletBinding()]
     param($Item, $TenantFilter)
 
-    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' | Where-Object { $_ })
+    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'recipientTypeDetails', 'MessageCopyForSendOnBehalfEnabled', 'MessageCopyForSentAsEnabled' | Where-Object { $_ })
     if ($Mailboxes.Count -eq 0) { return @{ Current = $null } }
 
     $Types = if ("$($Item.Variables.IncludeUserMailboxes)" -in @('False', 'false', '0')) { @('SharedMailbox') } else { @('UserMailbox', 'SharedMailbox') }

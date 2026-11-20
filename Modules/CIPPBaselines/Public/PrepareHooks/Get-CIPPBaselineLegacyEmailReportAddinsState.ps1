@@ -17,7 +17,7 @@ function Get-CIPPBaselineLegacyEmailReportAddinsState {
         $TenantFilter
     )
 
-    $Apps = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Apps' | Where-Object { $_ })
+    $Apps = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Apps' -Fields 'addIns', 'id' | Where-Object { $_ })
     if ($Apps.Count -eq 0) {
         # No app registrations at all means neither legacy add-in is installed, which is the
         # compliant state - but only once the type has actually been collected.

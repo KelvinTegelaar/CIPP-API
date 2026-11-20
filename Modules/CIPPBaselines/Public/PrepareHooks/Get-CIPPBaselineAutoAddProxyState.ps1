@@ -17,7 +17,7 @@ function Get-CIPPBaselineAutoAddProxyState {
     [CmdletBinding()]
     param($Item, $TenantFilter)
 
-    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' | Where-Object { $_ })
+    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'primarySmtpAddress', 'AdditionalEmailAddresses' | Where-Object { $_ })
     if ($Mailboxes.Count -eq 0) { return @{ Current = $null } }
 
     $Domains = @((Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ExoAcceptedDomains').DomainName | Where-Object { $_ })

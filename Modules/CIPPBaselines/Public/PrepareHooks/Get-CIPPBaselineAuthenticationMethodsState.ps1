@@ -72,7 +72,7 @@ function Get-CIPPBaselineAuthenticationMethodsState {
 
     $Groups = $null
     $NeedsGroups = @($Configured | Where-Object { $_.Enabled -and (-not [string]::IsNullOrWhiteSpace($_.GroupName) -or -not [string]::IsNullOrWhiteSpace($_.ExcludeGroupName)) }).Count -gt 0
-    if ($NeedsGroups) { $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups') }
+    if ($NeedsGroups) { $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'Id') }
     $GroupIdCache = @{}
     $ResolveGroup = {
         param($Name)

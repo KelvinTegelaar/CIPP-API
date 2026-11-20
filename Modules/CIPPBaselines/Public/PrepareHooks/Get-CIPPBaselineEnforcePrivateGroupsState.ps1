@@ -15,7 +15,7 @@ function Get-CIPPBaselineEnforcePrivateGroupsState {
         $TenantFilter
     )
 
-    $Groups = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Groups' | Where-Object { $_ })
+    $Groups = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'groupTypes', 'id', 'visibility' | Where-Object { $_ })
     if ($Groups.Count -eq 0) { return @{ Current = $null } }
 
     $Keywords = @(@($Item.Variables.ExcludedGroupNames) | ForEach-Object {

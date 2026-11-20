@@ -41,7 +41,7 @@ function Get-CIPPBaselineNudgeMFAState {
 
     $Groups = @()
     if ($IncludeEntries.Count -gt 0 -or $ExcludeEntries.Count -gt 0) {
-        $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')
+        $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id')
     }
     $Resolve = {
         param($Entries)

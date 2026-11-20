@@ -34,7 +34,7 @@ function Get-CIPPBaselinePlannerBlockTaskDeleteState {
     $ExcludedIds = @{}
     if ($IncludeNames.Count -gt 0 -or $ExcludeNames.Count -gt 0) {
         $GroupIdsByName = @{}
-        foreach ($Group in @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')) {
+        foreach ($Group in @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id')) {
             $Name = "$($Group.displayName)".Trim()
             if (-not $Name -or -not $Group.id) { continue }
             if (-not $GroupIdsByName.ContainsKey($Name)) { $GroupIdsByName[$Name] = [System.Collections.Generic.List[string]]::new() }

@@ -26,7 +26,7 @@ function Get-CIPPBaselineCreateSharedMailboxState {
         $TenantFilter
     )
 
-    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' | Where-Object { $_ })
+    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'primarySmtpAddress', 'displayName', 'recipientTypeDetails', 'AccountDisabled', 'ExternalDirectoryObjectId' | Where-Object { $_ })
     if ($Mailboxes.Count -eq 0) { return @{ Current = $null } }
 
     $V = $Item.Variables

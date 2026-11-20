@@ -28,7 +28,7 @@ function Get-CIPPBaselineDisableM365GroupUsersState {
     $AllowedGroupName = "$($Item.Variables.AllowedGroupName)"
     $DesiredGroupId = $null
     if (-not [string]::IsNullOrWhiteSpace($AllowedGroupName)) {
-        $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')
+        $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id')
         $DesiredGroupId = "$((@($Groups | Where-Object { "$($_.displayName)" -eq $AllowedGroupName }) | Select-Object -First 1).id)"
     }
 

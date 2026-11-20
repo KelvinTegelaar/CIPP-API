@@ -17,7 +17,7 @@ function Get-CIPPBaselineOneDriveLicensedQuotaState {
         $TenantFilter
     )
 
-    $Users = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users')
+    $Users = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users' -Fields 'accountEnabled', 'assignedPlans', 'id', 'userPrincipalName')
     if ($Users.Count -eq 0) { return @{ Current = $null; NoDataReason = 'the Users cache has no data for this tenant' } }
 
     $QualifyingPlanIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@(

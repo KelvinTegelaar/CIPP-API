@@ -15,7 +15,7 @@ function Get-CIPPBaselineUserPreferredLanguageState {
         $TenantFilter
     )
 
-    $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' | Where-Object { $_ })
+    $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' -Fields 'onPremisesSyncEnabled', 'preferredLanguage', 'userPrincipalName', 'userType' | Where-Object { $_ })
     if ($Users.Count -eq 0) { return @{ Current = $null } }
 
     $Wanted = "$($Item.Variables.preferredLanguage)"

@@ -20,7 +20,7 @@ function Invoke-CIPPBaselineAppDeploy {
     )
 
     try {
-        $ServicePrincipals = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals')
+        $ServicePrincipals = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals' -Fields 'appId', 'applicationTemplateId', 'displayName')
     } catch {
         # Without this, a storage hiccup here surfaces as a bare transport error with no hint
         # of what AppDeploy was doing.

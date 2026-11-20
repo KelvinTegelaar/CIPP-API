@@ -28,7 +28,7 @@ function Get-CIPPBaselineDisableInactiveUsersState {
     $CheckDays = if ([string]::IsNullOrWhiteSpace("$($Item.Variables.days)")) { 180 } else { [int]$Item.Variables.days }
     if ($CheckDays -lt 30) { throw "DisableInactiveUsers: a threshold of $CheckDays days is below the 30-day floor - refusing to run to prevent mass account changes." }
 
-    $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' | Where-Object { $_ })
+    $Users = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Users' -Fields 'accountEnabled', 'createdDateTime', 'id', 'onPremisesSyncEnabled', 'signInActivity', 'userPrincipalName', 'userType' | Where-Object { $_ })
     if ($Users.Count -eq 0) { return @{ Current = $null } }
 
     $Cutoff = (Get-Date).AddDays(-$CheckDays).ToUniversalTime()

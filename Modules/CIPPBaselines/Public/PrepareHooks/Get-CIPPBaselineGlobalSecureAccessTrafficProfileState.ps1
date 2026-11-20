@@ -71,7 +71,7 @@ function Get-CIPPBaselineGlobalSecureAccessTrafficProfileState {
             }
             'DoNotAssign' {}
             default {
-                $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')
+                $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id')
                 $Missing = [System.Collections.Generic.List[string]]::new()
                 $Resolved = [System.Collections.Generic.List[string]]::new()
                 foreach ($Ref in $GroupRefs) {

@@ -76,8 +76,8 @@ function Get-CIPPBaselineGlobalSecureAccessCompliantNetworkState {
     $Expected.policyExcludedRoles = $RoleIds -join ','
     $Current.policyExcludedRoles = @($RoleIds | Where-Object { $LiveRoles -contains $_ }) -join ','
     if ($UserRefs.Count -gt 0 -or $GroupRefs.Count -gt 0) {
-        $Users = if ($UserRefs.Count -gt 0) { @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users') } else { @() }
-        $Groups = if ($GroupRefs.Count -gt 0) { @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups') } else { @() }
+        $Users = if ($UserRefs.Count -gt 0) { @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users' -Fields 'displayName', 'id', 'state', 'userPrincipalName') } else { @() }
+        $Groups = if ($GroupRefs.Count -gt 0) { @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id') } else { @() }
         $ExcludedIds = @($Policy.conditions.users.excludeUsers) + @($Policy.conditions.users.excludeGroups)
         $Resolved = @($UserRefs | ForEach-Object { $Ref = $_; ($Users | Where-Object { $_.userPrincipalName -eq $Ref -or $_.displayName -eq $Ref -or $_.id -eq $Ref } | Select-Object -First 1).id }) +
         @($GroupRefs | ForEach-Object { $Ref = $_; ($Groups | Where-Object { $_.displayName -eq $Ref -or $_.id -eq $Ref } | Select-Object -First 1).id })

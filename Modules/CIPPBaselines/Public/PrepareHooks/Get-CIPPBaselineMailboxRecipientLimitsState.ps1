@@ -24,7 +24,7 @@ function Get-CIPPBaselineMailboxRecipientLimitsState {
         $TenantFilter
     )
 
-    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' | Where-Object { $_ })
+    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN', 'MailboxPlanId', 'RecipientLimits' | Where-Object { $_ })
     if ($Mailboxes.Count -eq 0) { return @{ Current = $null } }
 
     $Plans = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'ExoMailboxPlans')

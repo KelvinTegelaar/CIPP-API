@@ -23,7 +23,7 @@ function Get-CIPPBaselineSafeSendersDisableState {
 
     $Explanation = 'This is a remediate only standard. This means we cannot read the status, and always resolve it for all items'
 
-    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' | Where-Object { $_ })
+    $Mailboxes = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Mailboxes' -Fields 'UPN' | Where-Object { $_ })
 
     @{
         Expected = [PSCustomObject]@{ state = $Explanation }
