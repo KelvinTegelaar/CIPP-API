@@ -114,6 +114,7 @@ function Get-CIPPDBCacheSchedule {
                 'ExoMailContacts'
                 'ExoTenantAllowBlockListSpoofItems'
                 'ExoPhishSimConfig'
+                'ExoSecOpsConfig'
             )
         }
         ExchangeData                     = @{

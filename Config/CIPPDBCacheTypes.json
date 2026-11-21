@@ -762,6 +762,18 @@
     "description": "Advanced delivery URL allow entries for phishing simulations"
   },
   {
+    "type": "ExoSecOpsOverridePolicy",
+    "collectedBy": "ExoSecOpsConfig",
+    "friendlyName": "SecOps Override Policy",
+    "description": "Advanced delivery SecOps mailbox override policy"
+  },
+  {
+    "type": "ExoSecOpsOverrideRule",
+    "collectedBy": "ExoSecOpsConfig",
+    "friendlyName": "SecOps Override Rule",
+    "description": "Advanced delivery SecOps mailbox override rule and the policy it is bound to"
+  },
+  {
     "type": "ComplianceRetentionPolicies",
     "friendlyName": "Retention Compliance Policies",
     "description": "Microsoft Purview retention compliance policies from the compliance portal"

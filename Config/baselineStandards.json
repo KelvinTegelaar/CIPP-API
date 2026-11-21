@@ -13377,6 +13377,49 @@
     "addedComponent": []
   },
   {
+    "name": "standards.SecOpsMailbox",
+    "cat": "Exchange Standards",
+    "tag": [],
+    "helpText": "Adds mailboxes to the SecOps mailbox list in Defender advanced delivery, so mail sent to them is delivered unfiltered. Use it for the reporting mailbox behind the Report button, as Microsoft requires.",
+    "docsDescription": "Microsoft requires the mailbox that receives user-reported messages to be a SecOps mailbox, especially where a non-Microsoft product reads the reports. Without it, Exchange Online Protection can quarantine a reported message as high confidence phish before the reporting mailbox receives it. Grades two legs: the SecOps override policy is enabled and lists the configured mailboxes, and exactly one override rule exists in Enforce mode, enabled and bound to that policy. The mailbox list is additive unless strict ownership is enabled. Remediation enables the policy or creates it, adds missing mailboxes, removes any override rule that is not valid (Microsoft's documented fix for a rule pending deletion), and creates the rule when no valid one remains. Supports %defaultdomain% in the addresses.",
+    "executiveText": "Ensures messages users report as phishing reach the security team's reporting mailbox instead of being quarantined on the way, so real threats get reviewed.",
+    "label": "Configure SecOps Mailboxes (Advanced Delivery)",
+    "impact": "Medium Impact",
+    "impactColour": "warning",
+    "addedDate": "2026-11-21",
+    "powershellEquivalent": "New-SecOpsOverridePolicy, Set-SecOpsOverridePolicy, New-ExoSecOpsOverrideRule or Remove-ExoSecOpsOverrideRule",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "EXCHANGE_S_STANDARD",
+      "EXCHANGE_S_ENTERPRISE",
+      "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_ENTERPRISE_GOV",
+      "EXCHANGE_LITE"
+    ],
+    "secureScoreImpact": 0,
+    "disabledFeatures": {
+      "report": false,
+      "warn": false,
+      "remediate": false
+    },
+    "addedComponent": [
+      {
+        "name": "standards.SecOpsMailbox.SentTo",
+        "type": "autoComplete",
+        "required": true,
+        "creatable": true,
+        "label": "SecOps mailboxes",
+        "multiple": true
+      },
+      {
+        "name": "standards.SecOpsMailbox.RemoveExtraMailboxes",
+        "default": false,
+        "type": "switch",
+        "label": "Remove SecOps mailboxes outside the configured list"
+      }
+    ]
+  },
+  {
     "name": "standards.SecureScoreRemediation",
     "cat": "Global Standards",
     "tag": [],
