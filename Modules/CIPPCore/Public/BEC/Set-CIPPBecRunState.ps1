@@ -6,6 +6,7 @@ function Set-CIPPBecRunState {
         Every phase of a run is its own job, so what a phase collects is handed to the later ones
         through the BecRunState table: one row per phase (PartitionKey = case id, RowKey = the
         phase's order and key) holding its values as JSON. Get-CIPPBecRunState reads them back.
+        A section named 'z-<Value>' holds one large value that is read only when asked for by name.
         -Clear deletes every row of the case (the start of a run and the end of the last phase).
     .FUNCTIONALITY
         Internal

@@ -31,7 +31,19 @@ Function Invoke-ExecOneDriveShortCut {
         $TenantFilter = $Entry.tenantFilter
         $Username = $Entry.username
         $UserId = $Entry.userid
-        $URL = if ($Entry.siteUrl -is [psobject] -and $Entry.siteUrl.PSObject.Properties['value']) { $Entry.siteUrl.value } else { $Entry.siteUrl }
+        # Site, optional document library (its URL) and optional folder in that library; siteUrl is the single-URL form
+        $Location = $Entry.location
+        $Library = [string]($Location.library.value ?? $Location.library)
+        $URL = if ($Library) {
+            $Library
+        } elseif ($Location.site) {
+            [string]($Location.site.value ?? $Location.site)
+        } elseif ($Entry.siteUrl -is [psobject] -and $Entry.siteUrl.PSObject.Properties['value']) {
+            $Entry.siteUrl.value
+        } else {
+            $Entry.siteUrl
+        }
+        if ($Library -and $Location.folder) { $URL = '{0}/{1}' -f $URL.TrimEnd('/'), ([string]$Location.folder).Trim('/') }
         $Destination = $Entry.destination
         if ($Destination -is [psobject] -and $Destination.PSObject.Properties['value']) {
             $Destination = $Destination.value

@@ -886,8 +886,9 @@ function Push-BECRun {
                 Write-Information 'Full scope: risk state'
                 $Risk = if ($HasEntraP2) { & $Collect 'RiskState' { Get-CIPPBecRiskState -TenantFilter $TenantFilter -UserId $SuspectUser -StartDate $startDate } } else { & $Skip 'requires Entra ID P2 (Identity Protection)' }
                 & $Mark 'RiskState' $Risk
-                # MailRecords: the raw records, for the attacker-activity pass (not part of the case)
-                & $Save @{ MailActivity = @($Activity.Data); MailActivitySummary = $Activity.Summary; MailRecords = @($Activity.Records | Where-Object { $_ }); RiskState = $Risk.Data }
+                & $Save @{ MailActivity = @($Activity.Data); MailActivitySummary = $Activity.Summary; RiskState = $Risk.Data }
+                # The raw records are for the attacker-activity pass only (not part of the case), so they get a row no other phase reads
+                Set-CIPPBecRunState -CaseId $CaseId -Section 'z-MailRecords' -Values @{ MailRecords = @($Activity.Records | Where-Object { $_ }) }
             }
 
             { $_ -in @('IPAnalysis', 'IPPeers') } {

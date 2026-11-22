@@ -114,4 +114,19 @@ Describe 'Invoke-ExecOneDriveShortCut' {
         $Response.StatusCode | Should -Be 400
         Should -Invoke New-CIPPOneDriveShortCut -Times 0
     }
+
+    It 'targets <Name> from the library picker' -ForEach @(
+        @{ Name = 'the chosen library and folder'; Library = 'https://contoso.sharepoint.com/sites/Sales/Contracts'; Folder = '/2026/Q1/'; Expected = 'https://contoso.sharepoint.com/sites/Sales/Contracts/2026/Q1' }
+        @{ Name = 'the chosen library'; Library = 'https://contoso.sharepoint.com/sites/Sales/Contracts'; Folder = $null; Expected = 'https://contoso.sharepoint.com/sites/Sales/Contracts' }
+        @{ Name = 'the site default library when no library is chosen'; Library = $null; Folder = $null; Expected = 'https://contoso.sharepoint.com/sites/Sales' }
+    ) {
+        $Entry = New-Entry 'one@contoso.com'
+        $Entry.PSObject.Properties.Remove('siteUrl')
+        $Location = @{ site = @{ label = 'Sales'; value = 'https://contoso.sharepoint.com/sites/Sales' }; folder = $Folder }
+        if ($Library) { $Location.library = @{ label = 'Contracts'; value = $Library } }
+        $Entry | Add-Member -NotePropertyName location -NotePropertyValue ([pscustomobject]$Location)
+
+        Invoke-ExecOneDriveShortCut -Request (New-Request -Body @($Entry)) -TriggerMetadata $null | Out-Null
+        Should -Invoke New-CIPPOneDriveShortCut -Times 1 -Exactly -ParameterFilter { $URL -eq $Expected }
+    }
 }

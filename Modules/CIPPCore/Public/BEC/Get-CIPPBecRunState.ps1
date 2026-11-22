@@ -7,7 +7,9 @@ function Get-CIPPBecRunState {
         phase order so a later phase's value (rows re-saved with their IP verdicts, for one) wins.
         Each phase's Completeness markers are merged into one ordered Completeness dictionary.
         -Name reads only those values: the others are never built, so a phase does not pay for the
-        large rows (sign-ins, mail records) it does not use.
+        large rows (sign-ins) it does not use. A row whose section is 'z-<Value>' holds one value
+        too large to download in every phase (the raw mail records); it is fetched only when that
+        value is named in -Name.
     .FUNCTIONALITY
         Internal
     #>
@@ -21,7 +23,9 @@ function Get-CIPPBecRunState {
     $State = @{}
     $Completeness = [ordered]@{}
     $Fields = if ($Name) { [string[]]@(@($Name) + 'Completeness') } else { $null }
-    foreach ($Row in @(Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($CaseId -replace "'", "''")'" | Where-Object { $_.Data } | Sort-Object -Property RowKey)) {
+    $Rows = @("RowKey lt 'z'") + @(foreach ($Value in @($Name)) { if ($Value) { "RowKey eq 'z-$($Value -replace "'", "''")'" } })
+    $Filter = "PartitionKey eq '$($CaseId -replace "'", "''")' and ($($Rows -join ' or '))"
+    foreach ($Row in @(Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Data } | Sort-Object -Property RowKey)) {
         $Values = [CIPP.CippJson]::ConvertFromJson([string]$Row.Data, $Fields)
         foreach ($Property in $Values.PSObject.Properties) {
             if ($Property.Name -eq 'Completeness') {
