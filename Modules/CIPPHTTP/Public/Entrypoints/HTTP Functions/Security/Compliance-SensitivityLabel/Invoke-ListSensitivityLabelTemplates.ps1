@@ -20,6 +20,12 @@ Function Invoke-ListSensitivityLabelTemplates {
 
     if ($Request.Query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.Query.ID }
 
+    # Purview label priority first (numeric, missing last), then name.
+    $Templates = @($Templates | Sort-Object -Property @(
+            @{ Expression = { $P = 0.0; [double]::TryParse("$($_.Priority)", [ref]$P) ? $P : [double]::MaxValue } }
+            @{ Expression = { $_.DisplayName ?? $_.Name } }
+        ))
+
     return ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Templates)
