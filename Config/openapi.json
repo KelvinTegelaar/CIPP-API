@@ -26330,6 +26330,10 @@
                         "type": "string",
                         "description": "Optional. Show the \"What Is Already In Place\" page (deployed policies and enforced settings, with their values). A boolean; defaults to true."
                       },
+                      "licenseGaps": {
+                        "type": "string",
+                        "description": "Optional. Show the \"Available With Better Licensing\" section (baseline protections skipped because the tenant is not licensed for them). A boolean; defaults to false."
+                      },
                       "rolloutStages": {
                         "type": "string",
                         "description": "Optional. Show the \"How The Rollout Works\" section (the remaining waves and when they arrive). A boolean; defaults to true."
