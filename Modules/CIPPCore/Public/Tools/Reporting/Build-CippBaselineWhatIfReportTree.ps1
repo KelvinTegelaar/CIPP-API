@@ -18,7 +18,7 @@ function Build-CippBaselineWhatIfReportTree {
         TenantName; tenant (rows[] from Get-CIPPBaselineAlignment); stageStates[]; assignedTemplates[]
         and simulatedTemplates[] (baselines as Get-CIPPBaseline -ResolveIdentityLabels returns them);
         catalog[] (Get-CIPPBaselineDefinition); resolvers (caByGuid / intuneByGuid: stored template
-        content keyed by template id); sectionConfig (alreadyAligned / rolloutStages, both default on).
+        content keyed by template id); sectionConfig (alreadyAligned / rolloutStages default on; licenseGaps default off).
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory)][hashtable]$Data)
@@ -560,6 +560,7 @@ function Build-CippBaselineWhatIfReportTree {
     # Section toggles are on unless explicitly false (the client's `!== false`).
     $alreadyAligned = pv $Data.sectionConfig 'alreadyAligned'
     $rolloutStages = pv $Data.sectionConfig 'rolloutStages'
+    $licenseGaps = pv $Data.sectionConfig 'licenseGaps'
     $fullyAligned = $rows.Count -gt 0 -and $changes.Count -eq 0 -and $pendingCount -eq 0 -and $simulatedTemplates.Count -eq 0
     $showAligned = -not ($alreadyAligned -is [bool] -and -not $alreadyAligned) -and ($alignedCa.Count + $alignedIntune.Count + $alignedSettings.Count) -gt 0
     $showStages = -not ($rolloutStages -is [bool] -and -not $rolloutStages) -and $waveBullets.Count -gt 0
@@ -687,6 +688,29 @@ function Build-CippBaselineWhatIfReportTree {
         if (@($settingChanges | Where-Object { $_.simulated }).Count -gt 0) {
             $blocks.Add((New-CippReportParagraph -Text $simulatedFootnote))
         }
+    }
+
+    # -- Available With Better Licensing (opt-in) --
+    $licenseGapRows = [System.Collections.Generic.List[object]]::new()
+    if ($licenseGaps -is [bool] -and $licenseGaps) {
+        $seenGaps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+        foreach ($row in $rows) {
+            if ($row.status -cne 'Skipped - No License') { continue }
+            if (-not $seenGaps.Add((baseNameOf $row.standardName))) { continue }
+            $definition = definitionFor $row
+            $licenseGapRows.Add(@{
+                    protection  = (orEmpty ($row.standardLabel ?? (pv $definition 'label') ?? $row.standardName))
+                    description = (descriptionOf $definition)
+                })
+        }
+    }
+    if ($licenseGapRows.Count -gt 0) {
+        $blocks.Add((New-CippReportPage -Title 'Available With Better Licensing' -Subtitle 'Protections in the baseline that need a licence upgrade'))
+        $blocks.Add((New-CippReportParagraph -Text 'These protections are part of the baseline but could not be applied, because they need a licence upgrade.'))
+        $blocks.Add((New-CippReportTable -Limit 150 -Columns @(
+                    @{ header = 'Protection'; key = 'protection'; width = 1.6; bold = $true }
+                    @{ header = 'What it does'; key = 'description'; width = 2.8 }
+                ) -Rows @($licenseGapRows)))
     }
 
     # -- Rollout Plan --

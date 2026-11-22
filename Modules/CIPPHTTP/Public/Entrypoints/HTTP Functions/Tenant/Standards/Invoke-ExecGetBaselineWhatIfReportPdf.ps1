@@ -32,12 +32,18 @@ function Invoke-ExecGetBaselineWhatIfReportPdf {
         # Optional. Show the "How The Rollout Works" section (the remaining waves and when they
         # arrive). A boolean; defaults to true.
         $RolloutStages = $Request.Body.sectionConfig.rolloutStages
+        # Optional. Show the "Available With Better Licensing" section (baseline protections skipped
+        # because the tenant is not licensed for them). A boolean; defaults to false.
+        $LicenseGaps = $Request.Body.sectionConfig.licenseGaps
         # Only a real boolean is accepted: a string would read as true ([bool]'false' is $true).
         if ($null -ne $AlreadyAligned -and $AlreadyAligned -isnot [bool]) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'sectionConfig.alreadyAligned must be true or false.' })
         }
         if ($null -ne $RolloutStages -and $RolloutStages -isnot [bool]) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'sectionConfig.rolloutStages must be true or false.' })
+        }
+        if ($null -ne $LicenseGaps -and $LicenseGaps -isnot [bool]) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'sectionConfig.licenseGaps must be true or false.' })
         }
 
         # Optional. The GUIDs of baselines NOT assigned to the tenant, whose additions are shown in the
@@ -104,7 +110,7 @@ function Invoke-ExecGetBaselineWhatIfReportPdf {
             simulatedTemplates = @($SimulatedTemplates)
             catalog            = @(Get-CIPPBaselineDefinition)
             resolvers          = @{ caByGuid = $CaByGuid; intuneByGuid = $IntuneByGuid }
-            sectionConfig      = @{ alreadyAligned = ($AlreadyAligned ?? $true); rolloutStages = ($RolloutStages ?? $true) }
+            sectionConfig      = @{ alreadyAligned = ($AlreadyAligned ?? $true); rolloutStages = ($RolloutStages ?? $true); licenseGaps = ($LicenseGaps ?? $false) }
         }
 
         $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter `

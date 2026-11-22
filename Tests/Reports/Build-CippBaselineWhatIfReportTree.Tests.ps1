@@ -267,6 +267,23 @@ Describe 'Build-CippBaselineWhatIfReportTree' {
         $r.Blocks.title | Should -Contain 'Agreed Exceptions We Will Not Change'
     }
 
+    It 'adds the better-licensing section only when asked, once per standard' {
+        $Gap = @{ standardName = 'unmanagedSync'; standardLabel = 'Restrict unmanaged devices'; status = 'Skipped - No License'; expectedValue = $null; currentValue = $null }
+        $Data = @{ TenantName = 'Contoso'; catalog = @(@{ name = 'unmanagedSync'; label = 'Restrict unmanaged devices'; executiveText = 'Limits files to managed devices.' })
+            tenant = @{ rows = @($Gap, $Gap) }; sectionConfig = @{ licenseGaps = $true } }
+        $r = Build-CippBaselineWhatIfReportTree -Data $Data
+        Get-PageTitle $r | Should -Contain 'Available With Better Licensing'
+        $Rows = (Get-After $r 'Available With Better Licensing' 'richtable').rows
+        $Rows.Count | Should -Be 1
+        $Rows[0].protection | Should -Be 'Restrict unmanaged devices'
+        $Rows[0].description | Should -Be 'Limits files to managed devices.'
+        Test-Pdf $r
+        $Data.sectionConfig = @{ licenseGaps = $false }
+        Get-PageTitle (Build-CippBaselineWhatIfReportTree -Data $Data) | Should -Not -Contain 'Available With Better Licensing'
+        $Data.Remove('sectionConfig')
+        Get-PageTitle (Build-CippBaselineWhatIfReportTree -Data $Data) | Should -Not -Contain 'Available With Better Licensing'
+    }
+
     It 'shows a fully aligned tenant with the clear box, its settings and a single unprefixed wave' {
         $r = Build-CippBaselineWhatIfReportTree -Data $script:Sparse
         Get-PageTitle $r | Should -Be @('Executive Summary', 'What Is Already In Place', 'Rollout Plan')
@@ -369,6 +386,7 @@ Describe 'Invoke-ExecGetBaselineWhatIfReportPdf' {
         @{ case = 'a missing tenantFilter'; body = @{}; expected = 'A tenantFilter is required' }
         @{ case = 'an unknown baseline id'; body = @{ tenantFilter = 'contoso.onmicrosoft.com'; simulatedTemplateIds = @('nope') }; expected = "Unknown baseline id 'nope'." }
         @{ case = 'a section toggle that is not a boolean'; body = @{ tenantFilter = 'contoso.onmicrosoft.com'; sectionConfig = @{ alreadyAligned = 'false' } }; expected = 'sectionConfig.alreadyAligned must be true or false.' }
+        @{ case = 'a better-licensing toggle that is not a boolean'; body = @{ tenantFilter = 'contoso.onmicrosoft.com'; sectionConfig = @{ licenseGaps = 'true' } }; expected = 'sectionConfig.licenseGaps must be true or false.' }
     ) {
         $Response = Invoke-Report $body
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
