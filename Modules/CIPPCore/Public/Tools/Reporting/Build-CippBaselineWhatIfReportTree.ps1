@@ -18,7 +18,7 @@ function Build-CippBaselineWhatIfReportTree {
         TenantName; tenant (rows[] from Get-CIPPBaselineAlignment); stageStates[]; assignedTemplates[]
         and simulatedTemplates[] (baselines as Get-CIPPBaseline -ResolveIdentityLabels returns them);
         catalog[] (Get-CIPPBaselineDefinition); resolvers (caByGuid / intuneByGuid: stored template
-        content keyed by template id); sectionConfig (alreadyAligned / rolloutStages default on; licenseGaps default off).
+        content keyed by template id); sectionConfig (alreadyAligned / rolloutStages default on; licenseGaps / laterWaves default off).
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory)][hashtable]$Data)
@@ -525,6 +525,15 @@ function Build-CippBaselineWhatIfReportTree {
         $types.Count -eq 0 -or $types -ccontains 'manual'
     }
 
+    # When a wave is expected: a dated estimate for the next one, else after the previous wave has settled in.
+    function waveTiming($state, [int]$wave, $stage) {
+        if ($wave -eq [int]$state.currentStage + 1) {
+            $date = formatAdvanceDate $state.estimatedAdvanceAt
+            return '{0}{1}' -f $(if ($date) { "Expected around $date" } else { 'Deploys once the current wave has settled in' }), $(if (truthy $state.manualAdvance) { ', after we approve the move together' })
+        }
+        'Follows once wave {0} has settled in{1}' -f ($wave - 1), $(if (needsApproval $stage) { ', after we approve the move together' })
+    }
+
     # The rollout, one bullet per wave, in plain words - what each wave holds and when the next one
     # lands. Never the raw graduation conditions.
     $waveBullets = [System.Collections.Generic.List[object]]::new()
@@ -537,8 +546,7 @@ function Build-CippBaselineWhatIfReportTree {
                 text  = ('live now{0}.' -f $(if ($liveCount -gt 0) { ", covering $liveCount $(plural $liveCount 'protection')" }))
             })
         if (truthy $state.nextStage) {
-            $date = formatAdvanceDate $state.estimatedAdvanceAt
-            $text = '{0}. {1}{2}.' -f (waveAdds $state.nextStage.standards), $(if ($date) { "Expected around $date" } else { 'Deploys once the current wave has settled in' }), $(if (truthy $state.manualAdvance) { ', after we approve the move together' })
+            $text = '{0}. {1}.' -f (waveAdds $state.nextStage.standards), (waveTiming $state ([int]$state.currentStage + 1) $state.nextStage)
             $nextName = if (truthy $state.nextStageName) { " ('$(jsStr $state.nextStageName)')" } else { '' }
             $waveBullets.Add(@{
                     label = ('{0}Wave {1}{2}:' -f $prefix, (jsStr ($state.currentStage + 1)), $nextName)
@@ -551,7 +559,7 @@ function Build-CippBaselineWhatIfReportTree {
                 $laterName = if (truthy $stage.name) { " ('$(jsStr $stage.name)')" } else { '' }
                 $waveBullets.Add(@{
                         label = ('{0}Wave {1}{2}:' -f $prefix, $wave, $laterName)
-                        text  = ('{0}. Follows once wave {1} has settled in{2}.' -f (waveAdds $stage.standards), ($wave - 1), $(if (needsApproval $stage) { ', after we approve the move together' }))
+                        text  = ('{0}. {1}.' -f (waveAdds $stage.standards), (waveTiming $state $wave $stage))
                     })
             }
         }
@@ -561,6 +569,7 @@ function Build-CippBaselineWhatIfReportTree {
     $alreadyAligned = pv $Data.sectionConfig 'alreadyAligned'
     $rolloutStages = pv $Data.sectionConfig 'rolloutStages'
     $licenseGaps = pv $Data.sectionConfig 'licenseGaps'
+    $laterWaves = pv $Data.sectionConfig 'laterWaves'
     $fullyAligned = $rows.Count -gt 0 -and $changes.Count -eq 0 -and $pendingCount -eq 0 -and $simulatedTemplates.Count -eq 0
     $showAligned = -not ($alreadyAligned -is [bool] -and -not $alreadyAligned) -and ($alignedCa.Count + $alignedIntune.Count + $alignedSettings.Count) -gt 0
     $showStages = -not ($rolloutStages -is [bool] -and -not $rolloutStages) -and $waveBullets.Count -gt 0
@@ -711,6 +720,52 @@ function Build-CippBaselineWhatIfReportTree {
                     @{ header = 'Protection'; key = 'protection'; width = 1.6; bold = $true }
                     @{ header = 'What it does'; key = 'description'; width = 2.8 }
                 ) -Rows @($licenseGapRows)))
+    }
+
+    # -- Full detail for later waves (opt-in): what each wave after the current one will set, from the baseline's own configuration --
+    if ($laterWaves -is [bool] -and $laterWaves) {
+        foreach ($state in $stageStates) {
+            $prefix = if ($stageStates.Count -gt 1) { "$(orEmpty $state.templateName) $Dash " } else { '' }
+            $stages = arr (@($assignedTemplates | Where-Object { $_.GUID -ceq $state.templateId })[0]).stages
+            for ($wave = [int]$state.currentStage + 1; $wave -le $stages.Count; $wave++) {
+                $stage = $stages[$wave - 1]
+                $stageName = if (truthy $stage.name) { " ('$(jsStr $stage.name)')" } else { '' }
+                $waveRows = [System.Collections.Generic.List[object]]::new()
+                foreach ($instance in (arr $stage.standards)) {
+                    $instanceKey = [string]$instance
+                    $config = $null
+                    foreach ($candidate in (arr $stage.standardsConfig)) {
+                        if (($candidate.instance ?? $candidate.standard) -ceq $instanceKey) { $config = $candidate; break }
+                    }
+                    $base = baseNameOf $instanceKey
+                    $variables = $config.variables ?? @{}
+                    $definition = defOf $base
+                    $expectedValue = resolveConfiguredExpected $base $variables
+                    if ($policyFamilies -ccontains $base) {
+                        $item = @{ variables = $variables; expectedValue = $expectedValue; label = ((pv $definition 'label') ?? $base) }
+                        $waveRows.Add(@{
+                                protection  = (policyDisplayName $item)
+                                description = $(if ($caFamilies -ccontains $base -and $null -ne $expectedValue) { caLightDescription $expectedValue } else { descriptionOf $definition })
+                                change      = $(if ($caFamilies -ccontains $base -and $null -ne $expectedValue) { "Deployed $(caStateLabel ((pv $expectedValue 'state') ?? (unwrap (pv $variables 'state'))))" } else { 'Deployed and kept in line with the template' })
+                            })
+                    } else {
+                        $waveRows.Add(@{
+                                protection  = (orEmpty ((pv $definition 'label') ?? $base))
+                                description = (descriptionOf $definition)
+                                change      = (describeChange $definition $expectedValue)
+                            })
+                    }
+                }
+                if ($waveRows.Count -eq 0) { continue }
+                $blocks.Add((New-CippReportPage -Title ('{0}Wave {1} of {2}{3}: planned changes' -f $prefix, $wave, (jsStr ($state.totalStages ?? $stages.Count)), $stageName) -Subtitle 'Planned, not yet checked against your environment'))
+                $blocks.Add((New-CippReportParagraph -Text ('These changes are planned for this wave and have not been checked against your environment yet. {0}.' -f (waveTiming $state $wave $stage))))
+                $blocks.Add((New-CippReportTable -Limit 150 -Columns @(
+                            @{ header = 'Protection'; key = 'protection'; width = 1.6; bold = $true }
+                            @{ header = 'What it does'; key = 'description'; width = 2.4 }
+                            @{ header = 'What it will set'; key = 'change'; width = 1.6 }
+                        ) -Rows @($waveRows)))
+            }
+        }
     }
 
     # -- Rollout Plan --

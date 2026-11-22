@@ -35,6 +35,9 @@ function Invoke-ExecGetBaselineWhatIfReportPdf {
         # Optional. Show the "Available With Better Licensing" section (baseline protections skipped
         # because the tenant is not licensed for them). A boolean; defaults to false.
         $LicenseGaps = $Request.Body.sectionConfig.licenseGaps
+        # Optional. Add a detailed section for each wave after the tenant's current one (what the
+        # baseline will set, not yet checked against the tenant). A boolean; defaults to false.
+        $LaterWaves = $Request.Body.sectionConfig.laterWaves
         # Only a real boolean is accepted: a string would read as true ([bool]'false' is $true).
         if ($null -ne $AlreadyAligned -and $AlreadyAligned -isnot [bool]) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'sectionConfig.alreadyAligned must be true or false.' })
@@ -44,6 +47,9 @@ function Invoke-ExecGetBaselineWhatIfReportPdf {
         }
         if ($null -ne $LicenseGaps -and $LicenseGaps -isnot [bool]) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'sectionConfig.licenseGaps must be true or false.' })
+        }
+        if ($null -ne $LaterWaves -and $LaterWaves -isnot [bool]) {
+            return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'sectionConfig.laterWaves must be true or false.' })
         }
 
         # Optional. The GUIDs of baselines NOT assigned to the tenant, whose additions are shown in the
@@ -110,7 +116,7 @@ function Invoke-ExecGetBaselineWhatIfReportPdf {
             simulatedTemplates = @($SimulatedTemplates)
             catalog            = @(Get-CIPPBaselineDefinition)
             resolvers          = @{ caByGuid = $CaByGuid; intuneByGuid = $IntuneByGuid }
-            sectionConfig      = @{ alreadyAligned = ($AlreadyAligned ?? $true); rolloutStages = ($RolloutStages ?? $true); licenseGaps = ($LicenseGaps ?? $false) }
+            sectionConfig      = @{ alreadyAligned = ($AlreadyAligned ?? $true); rolloutStages = ($RolloutStages ?? $true); licenseGaps = ($LicenseGaps ?? $false); laterWaves = ($LaterWaves ?? $false) }
         }
 
         $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter `

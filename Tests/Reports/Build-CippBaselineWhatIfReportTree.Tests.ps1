@@ -118,8 +118,8 @@ Describe 'Build-CippBaselineWhatIfReportTree' {
         $Sample = $script:SampleJson | ConvertFrom-Json -AsHashtable
         $Row = @{
             standardName = 'DefaultSharingLink'; standardLabel = 'Set Default Sharing Link Settings'; status = 'Drift'; templateId = 'tpl-core'
-            expectedValue = @{ DefaultSharingLinkType = 1; DefaultLinkPermission = 1 }
-            currentValue = @{ DefaultSharingLinkType = 3; DefaultLinkPermission = 2 }
+            expectedValue = [ordered]@{ DefaultSharingLinkType = 1; DefaultLinkPermission = 1 }
+            currentValue = [ordered]@{ DefaultSharingLinkType = 3; DefaultLinkPermission = 2 }
         }
         $r = Build-CippBaselineWhatIfReportTree -Data (ConvertTo-ReportData $Sample @{ simulatedTemplates = @(); tenant = @{ rows = @($Row) } })
         $Change = (Get-After $r 'Settings We Will Change' 'richtable').rows[0]
@@ -284,6 +284,35 @@ Describe 'Build-CippBaselineWhatIfReportTree' {
         Get-PageTitle (Build-CippBaselineWhatIfReportTree -Data $Data) | Should -Not -Contain 'Available With Better Licensing'
     }
 
+    It 'adds a planned-changes page per later wave only when asked' {
+        $Data = @{ TenantName = 'Contoso'
+            catalog           = @(
+                @{ name = 'AuditLog'; label = 'Enable the Unified Audit Log'; executiveText = 'Records admin activity.'; variables = @{ enabled = @{ label = 'Turn it on' } }; expected = @{ UnifiedAuditLogIngestionEnabled = '%enabled%' } }
+                @{ name = 'IntuneTemplate'; label = 'Intune Template'; executiveText = 'Configures devices.'; expected = @{ displayName = '%intuneTemplate%' }; variables = @{ intuneTemplate = @{ label = 'Template' } } }
+            )
+            resolvers         = @{ intuneByGuid = @{ 'g-1' = @{ displayName = 'Windows - Defender' } } }
+            tenant            = @{ rows = @(@{ standardName = 'DisableAppCreation'; standardLabel = 'x'; status = 'Compliant'; templateId = 'tpl-w' }) }
+            stageStates       = @(@{ templateId = 'tpl-w'; templateName = 'Waves'; currentStage = 1; totalStages = 3; stageName = 'One'; estimatedAdvanceAt = 1791374400; nextStage = @{ standards = @('AuditLog') } })
+            assignedTemplates = @(@{ GUID = 'tpl-w'; templateName = 'Waves'; stages = @(
+                    @{ name = 'One'; standards = @('DisableAppCreation'); standardsConfig = @() }
+                    @{ name = 'Two'; standards = @('AuditLog'); standardsConfig = @(@{ instance = 'AuditLog'; variables = @{ enabled = $true } }); conditions = @(@{ type = 'time' }) }
+                    @{ name = 'Three'; standards = @('IntuneTemplate#a'); standardsConfig = @(@{ instance = 'IntuneTemplate#a'; variables = @{ intuneTemplate = 'g-1' } }) }
+                ) })
+        }
+        Get-PageTitle (Build-CippBaselineWhatIfReportTree -Data $Data) | Should -Not -Contain "Wave 2 of 3 ('Two'): planned changes"
+        $Data.sectionConfig = @{ laterWaves = $true }
+        $r = Build-CippBaselineWhatIfReportTree -Data $Data
+        Get-PageTitle $r | Should -Contain "Wave 2 of 3 ('Two'): planned changes"
+        Get-PageTitle $r | Should -Contain "Wave 3 of 3 ('Three'): planned changes"
+        $Two = (Get-After $r "Wave 2 of 3 ('Two'): planned changes" 'richtable').rows
+        $Two[0].protection | Should -Be 'Enable the Unified Audit Log'
+        $Two[0].description | Should -Be 'Records admin activity.'
+        $Two[0].change | Should -Be 'Turn it on: On'
+        (Get-After $r "Wave 3 of 3 ('Three'): planned changes" 'richtable').rows[0].protection | Should -Be 'Windows - Defender'
+        ($r.Blocks.text -match 'Follows once wave 2 has settled in, after we approve').Count | Should -Be 1
+        Test-Pdf $r
+    }
+
     It 'shows a fully aligned tenant with the clear box, its settings and a single unprefixed wave' {
         $r = Build-CippBaselineWhatIfReportTree -Data $script:Sparse
         Get-PageTitle $r | Should -Be @('Executive Summary', 'What Is Already In Place', 'Rollout Plan')
@@ -387,6 +416,7 @@ Describe 'Invoke-ExecGetBaselineWhatIfReportPdf' {
         @{ case = 'an unknown baseline id'; body = @{ tenantFilter = 'contoso.onmicrosoft.com'; simulatedTemplateIds = @('nope') }; expected = "Unknown baseline id 'nope'." }
         @{ case = 'a section toggle that is not a boolean'; body = @{ tenantFilter = 'contoso.onmicrosoft.com'; sectionConfig = @{ alreadyAligned = 'false' } }; expected = 'sectionConfig.alreadyAligned must be true or false.' }
         @{ case = 'a better-licensing toggle that is not a boolean'; body = @{ tenantFilter = 'contoso.onmicrosoft.com'; sectionConfig = @{ licenseGaps = 'true' } }; expected = 'sectionConfig.licenseGaps must be true or false.' }
+        @{ case = 'a later-waves toggle that is not a boolean'; body = @{ tenantFilter = 'contoso.onmicrosoft.com'; sectionConfig = @{ laterWaves = 'true' } }; expected = 'sectionConfig.laterWaves must be true or false.' }
     ) {
         $Response = Invoke-Report $body
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
