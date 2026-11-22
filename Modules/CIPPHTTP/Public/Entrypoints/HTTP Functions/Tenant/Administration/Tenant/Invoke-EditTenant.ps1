@@ -67,9 +67,7 @@ function Invoke-EditTenant {
             }
             $null = Add-CIPPAzDataTableEntity @PropertiesTable -Entity $aliasEntity -Force
             Write-Information "Setting alias to $tenantAlias"
-            $Tenant | Add-Member -NotePropertyName 'originalDisplayName' -NotePropertyValue $tenant.displayName -Force
-            $Tenant.displayName = $tenantAlias
-            $null = Add-CIPPAzDataTableEntity @TenantTable -Entity $Tenant -Force
+            $null = Add-CIPPAzDataTableEntity @TenantTable -Entity @{ PartitionKey = $Tenant.PartitionKey; RowKey = $Tenant.RowKey; displayName = $tenantAlias } -OperationType UpsertMerge
             Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant.defaultDomainName -TenantId $Tenant.customerId -message "Set tenant alias to '$tenantAlias'" -Sev 'Info'
         }
 

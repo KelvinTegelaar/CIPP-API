@@ -22,6 +22,13 @@ BeforeAll {
 
     . (Join-Path (Split-Path -Parent $FunctionPath) 'Get-CIPPForeignPrincipalInfo.ps1')
     . $FunctionPath
+    # The foreign-principal check treats $env:TenantID as one of our partners, so pin it.
+    $script:OriginalTenantID = $env:TenantID
+    $env:TenantID = 'cipp-partner'
+}
+
+AfterAll {
+    $env:TenantID = $script:OriginalTenantID
 }
 
 Describe 'Get-CIPPPIMRoleAssignments foreign principals' {

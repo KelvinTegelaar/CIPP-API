@@ -49,11 +49,14 @@ function Get-CIPPBaselineGroupTemplateState {
         return @{ Current = $null; ConfigError = $true }
     }
 
-    $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups')
+    $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'id', 'displayName')
     if ($Groups.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'Groups')) {
         return @{ Current = $null; NoDataReason = 'the groups cache could not be collected for this tenant' }
     }
-    $Existing = $Groups | Where-Object { "$($_.displayName)" -eq $GroupName } | Select-Object -First 1
+    $Existing = $null
+    foreach ($Group in $Groups) { if ("$($Group.displayName)" -eq $GroupName) { $Existing = $Group; break } }
+    # The executor patches from the whole group, so only the match is read in full
+    if ($Existing) { foreach ($Full in (New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Groups' -Id $Existing.id)) { $Existing = $Full; break } }
 
     $Current = [PSCustomObject]@{ deployed = [bool]$Existing }
     # Carried for the executor, not graded.

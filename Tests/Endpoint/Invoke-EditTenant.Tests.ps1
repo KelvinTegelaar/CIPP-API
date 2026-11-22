@@ -24,7 +24,7 @@ BeforeAll {
 
     function Get-CippTable { param($TableName) }
     function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
-    function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
+    function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force, $OperationType) }
     function Remove-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Get-Tenants { param($TenantFilter, [switch]$TriggerRefresh) }
     function Get-TenantGroups { param([switch]$SkipCache) }
@@ -41,13 +41,13 @@ BeforeAll {
     $script:DynamicGroupId = '33333333-3333-3333-3333-333333333333'
 
     function New-EditRequest {
-        param($TenantGroups)
+        param($TenantGroups, $TenantAlias)
         [pscustomobject]@{
             Params  = @{ CIPPEndpoint = 'EditTenant' }
             Headers = @{ }
             Body    = [pscustomobject]@{
                 customerId   = $script:CustomerId
-                tenantAlias  = $null
+                tenantAlias  = $TenantAlias
                 tenantGroups = $TenantGroups
             }
             Query   = [pscustomobject]@{ }
@@ -72,7 +72,7 @@ Describe 'Invoke-EditTenant tenant groups' {
         Mock -CommandName Get-TenantGroups -MockWith { }
         Mock -CommandName Assert-CippTenantAccess -MockWith { }
         Mock -CommandName Get-Tenants -MockWith {
-            [pscustomobject]@{ customerId = $script:CustomerId; defaultDomainName = 'contoso.onmicrosoft.com'; displayName = 'Contoso' }
+            [pscustomobject]@{ PartitionKey = 'Tenants'; RowKey = $script:CustomerId; customerId = $script:CustomerId; defaultDomainName = 'contoso.onmicrosoft.com'; displayName = 'Contoso' }
         }
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
             switch ($Context) {
@@ -235,5 +235,17 @@ Describe 'Invoke-EditTenant tenant groups' {
         $Response.Body.Results | Should -BeLike "*tenant group 'Whatever - Do this'*"
         Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
         Should -Invoke Remove-CIPPAzDataTableEntity -Times 0 -Exactly
+    }
+
+    # A whole-row write would put back fields a background refresh changed since the read.
+    It 'merges only the display name into the tenant row when setting an alias' {
+        $Response = Invoke-EditTenant -Request (New-EditRequest -TenantAlias 'Contoso Ltd') -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+            $Context -eq 'Tenants' -and $OperationType -eq 'UpsertMerge' -and -not $Force -and
+            $Entity.PartitionKey -eq 'Tenants' -and $Entity.RowKey -eq $script:CustomerId -and $Entity.displayName -eq 'Contoso Ltd' -and
+            @($Entity.Keys).Count -eq 3
+        }
     }
 }

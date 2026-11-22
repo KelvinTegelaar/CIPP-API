@@ -41,6 +41,7 @@ BeforeAll {
     }
 
     . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Authentication/New-CIPPAPIConfig.ps1')
+    $script:OriginalTenantID = $env:TenantID
     $env:TenantID = 'partner-tenant'
     $script:Concurrent = 'Error due to concurrent requests being made to the tenant. Please wait briefly and retry.'
 }
@@ -79,4 +80,8 @@ Describe 'New-CIPPAPIConfig -ResetSecret' {
         $Result.Results.state | Should -Be 'warning'
         $Result.Results.resultText | Should -Match '1 old secret'
     }
+}
+
+AfterAll {
+    $env:TenantID = $script:OriginalTenantID
 }

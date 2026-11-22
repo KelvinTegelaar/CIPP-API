@@ -7,7 +7,7 @@ BeforeAll {
     $script:RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $Baselines = Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public'
 
-    function New-CIPPDbRequest { param($TenantFilter, $Type) }
+    function New-CIPPDbRequest { param($TenantFilter, $Type, $Fields, $Id) }
     function Write-LogMessage { param($API, $tenant, $message, $Sev, $LogData) }
     function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$CountsOnly) }
     function Get-CippTable { param($tablename) @{ TableName = $tablename } }
@@ -160,6 +160,18 @@ Describe 'Get-CIPPBaselineGroupTemplateState' {
         }
         $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ groupTemplate = 'tpl-g' } }
         (Get-CIPPBaselineGroupTemplateState -Item $Item -TenantFilter $script:Tenant).Current.deployed | Should -BeTrue
+    }
+
+    It 'finds the group from a projected read and hands the executor the full group' {
+        Mock Get-CIPPAzDataTableEntity { [PSCustomObject]@{ RowKey = 'tpl-g'; JSON = '{"displayName":"Sec Group","groupType":"security"}' } }
+        Mock New-CIPPDbRequest {
+            if ($Id) { @(@{ id = 'g1'; displayName = 'Sec Group'; description = 'full row' } | ConvertTo-Cached) } else { @(@{ id = 'g1'; displayName = 'Sec Group' } | ConvertTo-Cached) }
+        }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ groupTemplate = 'tpl-g' } }
+        $Prepared = Get-CIPPBaselineGroupTemplateState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Current.existingGroup.description | Should -Be 'full row'
+        Should -Invoke New-CIPPDbRequest -Times 1 -Exactly -ParameterFilter { -not $Id -and $Fields -contains 'displayName' }
+        Should -Invoke New-CIPPDbRequest -Times 1 -Exactly -ParameterFilter { $Id -eq 'g1' }
     }
 
     It 'matches a %token% name by its resolved value and hands the executor the resolved body' {
