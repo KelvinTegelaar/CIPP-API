@@ -118,13 +118,19 @@ Describe 'Get-CIPPBaselineDeviceRegistrationPolicyState selected join groups' {
             @{ id = 'cccc-3'; displayName = 'Twin' }
             @{ id = 'dddd-4'; displayName = 'Twin' }
         ) | ConvertTo-Cached
-        function New-JoinItem { param($Groups) [PSCustomObject]@{ Variables = [PSCustomObject]@{ allowedToJoin = @{ label = 'Selected groups'; value = $script:Enumerated }; allowedToJoinGroups = $Groups } } }
+        $script:Users = @(
+            @{ id = 'uuuu-1'; userPrincipalName = 'itadmin@contoso.com' }
+            @{ id = 'uuuu-2'; userPrincipalName = 'tech@contoso.com' }
+        ) | ConvertTo-Cached
+        function New-JoinItem { param($Groups, $Users) [PSCustomObject]@{ Variables = [PSCustomObject]@{ allowedToJoin = @{ label = 'Selected users and groups'; value = $script:Enumerated }; allowedToJoinGroups = $Groups; allowedToJoinUsers = $Users } } }
     }
     BeforeEach {
         $script:PolicyGroups = @('bbbb-2', 'aaaa-1')
+        $script:PolicyUsers = @()
         Mock New-CIPPDbRequest {
             if ($Type -eq 'Groups') { return $script:Groups }
-            @(@{ azureADJoin = @{ isAdminConfigurable = $true; allowedToJoin = @{ '@odata.type' = $script:Enumerated; users = @(); groups = $script:PolicyGroups } } } | ConvertTo-Cached)
+            if ($Type -eq 'Users') { return $script:Users }
+            @(@{ azureADJoin = @{ isAdminConfigurable = $true; allowedToJoin = @{ '@odata.type' = $script:Enumerated; users = $script:PolicyUsers; groups = $script:PolicyGroups } } } | ConvertTo-Cached)
         }
     }
 
@@ -146,6 +152,45 @@ Describe 'Get-CIPPBaselineDeviceRegistrationPolicyState selected join groups' {
             $Prepared.Current | Should -BeNullOrEmpty
             $Prepared.ConfigError | Should -BeTrue
         }
+    }
+
+    It 'resolves users by UPN or id alongside groups and grades them compliant' {
+        $script:PolicyUsers = @('uuuu-2', 'uuuu-1')
+        $Prepared = Get-CIPPBaselineDeviceRegistrationPolicyState -Item (New-JoinItem 'Device Joiners, IT Staff' 'ITADMIN@contoso.com, uuuu-2') -TenantFilter $script:Tenant
+        $Prepared.Current.allowedToJoinUserIds | Should -Be @('uuuu-1', 'uuuu-2')
+        $Prepared.Expected.allowedToJoinUsers | Should -Be 'itadmin@contoso.com (uuuu-1), tech@contoso.com (uuuu-2)'
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'accepts users with no groups and leaves the tenant groups ungraded' {
+        $script:PolicyUsers = @('uuuu-1')
+        $Prepared = Get-CIPPBaselineDeviceRegistrationPolicyState -Item (New-JoinItem '' 'itadmin@contoso.com') -TenantFilter $script:Tenant
+        $Prepared.ConfigError | Should -BeNullOrEmpty
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'allowedToJoinGroups'
+        $Prepared.Current.allowedToJoinGroupIds | Should -BeNullOrEmpty
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+        Should -Invoke New-CIPPDbRequest -Times 0 -ParameterFilter { $Type -eq 'Groups' }
+    }
+
+    It 'leaves the tenant users ungraded when the baseline lists no users' {
+        $script:PolicyUsers = @('uuuu-2')
+        $Prepared = Get-CIPPBaselineDeviceRegistrationPolicyState -Item (New-JoinItem 'Device Joiners, IT Staff') -TenantFilter $script:Tenant
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'allowedToJoinUsers'
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'drifts when the tenant allows a different set of users' {
+        $script:PolicyUsers = @('uuuu-2')
+        $Prepared = Get-CIPPBaselineDeviceRegistrationPolicyState -Item (New-JoinItem 'Device Joiners, IT Staff' 'itadmin@contoso.com') -TenantFilter $script:Tenant
+        $Prepared.Current.allowedToJoinUsers | Should -Be 'tech@contoso.com (uuuu-2)'
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 1
+    }
+
+    It 'refuses to grade a user it cannot find' {
+        $Prepared = Get-CIPPBaselineDeviceRegistrationPolicyState -Item (New-JoinItem 'Device Joiners' 'nobody@contoso.com') -TenantFilter $script:Tenant
+        $Prepared.Current | Should -BeNullOrEmpty
+        $Prepared.ConfigError | Should -BeTrue
+        $Prepared.NoDataReason | Should -BeLike "*user 'nobody@contoso.com' was not found*"
     }
 
     It 'leaves the other modes to the definition and never reads groups' {

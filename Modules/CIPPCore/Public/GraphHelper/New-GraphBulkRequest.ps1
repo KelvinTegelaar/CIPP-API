@@ -260,6 +260,6 @@ function New-GraphBulkRequest {
         }
         return $ReturnedData.responses
     } else {
-        Write-Error (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Graph bulk request')
+        throw (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Graph bulk request')
     }
 }

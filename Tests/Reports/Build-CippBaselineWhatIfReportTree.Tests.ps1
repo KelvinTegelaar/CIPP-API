@@ -114,6 +114,37 @@ Describe 'Build-CippBaselineWhatIfReportTree' {
         $Aligned[0].excludes | Should -Be 'BreakGlass Admin'
     }
 
+    It 'names a tenant value no variable option covers from the definition valueLabels' {
+        $Sample = $script:SampleJson | ConvertFrom-Json -AsHashtable
+        $Row = @{
+            standardName = 'DefaultSharingLink'; standardLabel = 'Set Default Sharing Link Settings'; status = 'Drift'; templateId = 'tpl-core'
+            expectedValue = @{ DefaultSharingLinkType = 1; DefaultLinkPermission = 1 }
+            currentValue = @{ DefaultSharingLinkType = 3; DefaultLinkPermission = 2 }
+        }
+        $r = Build-CippBaselineWhatIfReportTree -Data (ConvertTo-ReportData $Sample @{ simulatedTemplates = @(); tenant = @{ rows = @($Row) } })
+        $Change = (Get-After $r 'Settings We Will Change' 'richtable').rows[0]
+        $Change.today | Should -Be "Default Sharing Link Type: Anyone - Anyone with the link`nDefault Link Permission: Edit"
+        $Change.change | Should -Be "Default Sharing Link Type: Direct - Only the people the user specifies`nDefault Link Permission: View"
+    }
+
+    It 'names each setting by its own key when one variable feeds several of them' {
+        $Sample = $script:SampleJson | ConvertFrom-Json -AsHashtable
+        $Definition = @{
+            name = 'SPAnonymousLinkExpiration'; label = 'Anyone link expiry'; impact = 'Low Impact'
+            expected = @{ FileAnonymousLinkType = '%linkPermission%'; FolderAnonymousLinkType = '%linkPermission%' }
+            variables = @{ linkPermission = @{ label = 'Anyone link permission for files and folders'; options = @(@{ label = 'View only'; value = 1 }, @{ label = 'View and edit'; value = 2 }) } }
+        }
+        $Row = @{
+            standardName = 'SPAnonymousLinkExpiration'; standardLabel = 'Anyone link expiry'; status = 'Drift'; templateId = 'tpl-core'
+            expectedValue = [ordered]@{ FileAnonymousLinkType = 1; FolderAnonymousLinkType = 1 }
+            currentValue = [ordered]@{ FileAnonymousLinkType = 2; FolderAnonymousLinkType = 1 }
+        }
+        $r = Build-CippBaselineWhatIfReportTree -Data (ConvertTo-ReportData $Sample @{ simulatedTemplates = @(); catalog = @(@($Sample.catalog) + $Definition); tenant = @{ rows = @($Row) } })
+        $Change = (Get-After $r 'Settings We Will Change' 'richtable').rows[0]
+        $Change.today | Should -Be "File Anonymous Link Type: View and edit`nFolder Anonymous Link Type: View only"
+        $Change.change | Should -Be "File Anonymous Link Type: View only`nFolder Anonymous Link Type: View only"
+    }
+
     It 'says a single deployment state once, under the table' {
         $Sample = $script:SampleJson | ConvertFrom-Json -AsHashtable
         $r = Build-CippBaselineWhatIfReportTree -Data (ConvertTo-ReportData $Sample @{ simulatedTemplates = @(); tenant = @{ rows = @($Sample.tenant.rows | Where-Object { $_.standardName -eq 'ConditionalAccessTemplate#abc123' }) } })
@@ -153,7 +184,7 @@ Describe 'Build-CippBaselineWhatIfReportTree' {
         $Rows[6].change | Should -Be 'Allow users to create app registrations: Off'
         $Rows[6].why | Should -Be 'Recommended by CIS and CIPP and SMB1001; required for CIS M365 7.0.0 (5.1.2.2); low impact change for users.'
         $Rows[7].today | Should -Be $Dash
-        $Rows[7].change | Should -Be "Default Sharing Link Type: Internal - Only people in your organization`nDefault Link Permission: 1"
+        $Rows[7].change | Should -Be "Default Sharing Link Type: Internal - Only people in your organization`nDefault Link Permission: View"
         # The tenant-token SiteUrl entry is left out; the simulated sharingCapability is already a row.
         $Rows[8].change | Should -Be 'Default Sharing Link Type: Direct'
         $Enforced = (Get-After $r 'Settings Enforced Today' 'richtable').rows

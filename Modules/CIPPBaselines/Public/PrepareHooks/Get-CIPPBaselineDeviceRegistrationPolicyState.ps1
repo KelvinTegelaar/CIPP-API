@@ -44,38 +44,68 @@ function Get-CIPPBaselineDeviceRegistrationPolicyState {
     $JoinType = "$($Item.Variables.allowedToJoin.value ?? $Item.Variables.allowedToJoin)"
     if ($JoinType -ne '#microsoft.graph.enumeratedDeviceRegistrationMembership') { return @{ Current = $Current } }
 
-    # Selected groups: comma separated names or ids; a list variable arrives here already joined with commas
-    $Wanted = @(("$($Item.Variables.allowedToJoinGroups)" -split ',').ForEach({ $_.Trim() }).Where({ $_ }) | Select-Object -Unique)
-    if ($Wanted.Count -eq 0) { return @{ Current = $null; NoDataReason = 'Selected groups is chosen but no groups are configured'; ConfigError = $true } }
+    # Selected users and groups: comma separated names, UPNs or ids; a list variable arrives here already joined with commas.
+    # A blank list expresses no opinion: it is neither graded nor written.
+    $WantedGroups = @(("$($Item.Variables.allowedToJoinGroups)" -split ',').ForEach({ $_.Trim() }).Where({ $_ }) | Select-Object -Unique)
+    $WantedUsers = @(("$($Item.Variables.allowedToJoinUsers)" -split ',').ForEach({ $_.Trim() }).Where({ $_ }) | Select-Object -Unique)
+    if ($WantedGroups.Count -eq 0 -and $WantedUsers.Count -eq 0) { return @{ Current = $null; NoDataReason = 'Selected users and groups is chosen but no users or groups are configured'; ConfigError = $true } }
+    $Join = $Policy.azureADJoin.allowedToJoin
+    $Expected = [ordered]@{ allowedToJoin = $JoinType }
+    $Carried = [ordered]@{}
+    $Problems = [System.Collections.Generic.List[string]]::new()
 
-    $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id')
-    if ($Groups.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'Groups')) { return @{ Current = $null; NoDataReason = 'the groups cache could not be collected for this tenant' } }
-    $ById = @{}
-    $IdsByName = @{}
-    foreach ($Group in $Groups) {
-        if (-not $Group.id) { continue }
-        $ById["$($Group.id)"] = $Group
-        $Name = "$($Group.displayName)".Trim()
-        if (-not $IdsByName.ContainsKey($Name)) { $IdsByName[$Name] = [System.Collections.Generic.List[string]]::new() }
-        $IdsByName[$Name].Add("$($Group.id)")
+    if ($WantedGroups.Count -gt 0) {
+        $Groups = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Groups' -Fields 'displayName', 'id')
+        if ($Groups.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'Groups')) { return @{ Current = $null; NoDataReason = 'the groups cache could not be collected for this tenant' } }
+        $GroupById = @{}
+        $GroupIdsByName = @{}
+        foreach ($Group in $Groups) {
+            if (-not $Group.id) { continue }
+            $GroupById["$($Group.id)"] = $Group
+            $Name = "$($Group.displayName)".Trim()
+            if (-not $GroupIdsByName.ContainsKey($Name)) { $GroupIdsByName[$Name] = [System.Collections.Generic.List[string]]::new() }
+            $GroupIdsByName[$Name].Add("$($Group.id)")
+        }
+        $Resolved = [System.Collections.Generic.List[string]]::new()
+        foreach ($Entry in $WantedGroups) {
+            if ($GroupById.ContainsKey($Entry)) { $Resolved.Add("$($GroupById[$Entry].id)"); continue }
+            $Found = $GroupIdsByName[$Entry]
+            if (-not $Found) { $Problems.Add("group '$Entry' was not found") }
+            elseif ($Found.Count -gt 1) { $Problems.Add("group '$Entry' matches $($Found.Count) groups, use its ID instead") }
+            else { $Resolved.Add($Found[0]) }
+        }
+        $FormatGroups = { param($Ids) (@($Ids) | Where-Object { $_ } | Sort-Object -Unique | ForEach-Object { '{0} ({1})' -f ($GroupById["$_"].displayName ?? 'unknown group'), $_ }) -join ', ' }
+        $Expected.allowedToJoinGroups = & $FormatGroups $Resolved
+        $Carried.allowedToJoinGroups = & $FormatGroups $Join.groups
+        # Carried for the executor, which writes the ids the names resolved to
+        $Carried.allowedToJoinGroupIds = @($Resolved | Sort-Object -Unique)
     }
 
-    $Resolved = [System.Collections.Generic.List[string]]::new()
-    $Problems = foreach ($Entry in $Wanted) {
-        if ($ById.ContainsKey($Entry)) { $Resolved.Add("$($ById[$Entry].id)"); continue }
-        $Found = $IdsByName[$Entry]
-        if (-not $Found) { "'$Entry' was not found" }
-        elseif ($Found.Count -gt 1) { "'$Entry' matches $($Found.Count) groups, use its ID instead" }
-        else { $Resolved.Add($Found[0]) }
+    if ($WantedUsers.Count -gt 0) {
+        $Users = @(Get-CIPPBaselineCacheRows -TenantFilter $TenantFilter -Type 'Users' -Fields 'id', 'userPrincipalName')
+        if ($Users.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'Users')) { return @{ Current = $null; NoDataReason = 'the users cache could not be collected for this tenant' } }
+        $UserById = @{}
+        $UserIdByUpn = @{}
+        foreach ($User in $Users) {
+            if (-not $User.id) { continue }
+            $UserById["$($User.id)"] = $User
+            if ($User.userPrincipalName) { $UserIdByUpn["$($User.userPrincipalName)"] = "$($User.id)" }
+        }
+        $Resolved = [System.Collections.Generic.List[string]]::new()
+        foreach ($Entry in $WantedUsers) {
+            $Id = if ($UserById.ContainsKey($Entry)) { "$($UserById[$Entry].id)" } else { $UserIdByUpn[$Entry] }
+            if ($Id) { $Resolved.Add($Id) } else { $Problems.Add("user '$Entry' was not found") }
+        }
+        $FormatUsers = { param($Ids) (@($Ids) | Where-Object { $_ } | Sort-Object -Unique | ForEach-Object { '{0} ({1})' -f ($UserById["$_"].userPrincipalName ?? 'unknown user'), $_ }) -join ', ' }
+        $Expected.allowedToJoinUsers = & $FormatUsers $Resolved
+        $Carried.allowedToJoinUsers = & $FormatUsers $Join.users
+        $Carried.allowedToJoinUserIds = @($Resolved | Sort-Object -Unique)
     }
-    if ($Problems) { return @{ Current = $null; NoDataReason = "Selected groups: $($Problems -join '; ')"; ConfigError = $true } }
 
-    $Format = { param($Ids) (@($Ids) | Where-Object { $_ } | Sort-Object -Unique | ForEach-Object { '{0} ({1})' -f ($ById["$_"].displayName ?? 'unknown group'), $_ }) -join ', ' }
-    $Current | Add-Member -NotePropertyName 'allowedToJoinGroups' -NotePropertyValue (& $Format $Policy.azureADJoin.allowedToJoin.groups)
-    # Carried for the executor, which writes the ids the names resolved to
-    $Current | Add-Member -NotePropertyName 'allowedToJoinGroupIds' -NotePropertyValue @($Resolved | Sort-Object -Unique)
+    if ($Problems.Count -gt 0) { return @{ Current = $null; NoDataReason = "Selected users and groups: $($Problems -join '; ')"; ConfigError = $true } }
+    $Current | Add-Member -NotePropertyMembers $Carried
     @{
-        Expected = [PSCustomObject]@{ allowedToJoin = $JoinType; allowedToJoinGroups = (& $Format $Resolved) }
+        Expected = [PSCustomObject]$Expected
         Current  = $Current
     }
 }

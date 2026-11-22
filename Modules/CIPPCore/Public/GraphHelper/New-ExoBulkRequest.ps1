@@ -371,6 +371,6 @@ function New-ExoBulkRequest {
         return $FinalData
 
     } else {
-        Write-Error (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Exchange bulk request')
+        throw (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Exchange bulk request')
     }
 }

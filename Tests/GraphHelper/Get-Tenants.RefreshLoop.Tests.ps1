@@ -227,9 +227,11 @@ Describe 'Get-Tenants refresh loop' {
             $script:LookupByTenant[$script:GuidA] = 'contoso.com'
         }
 
-        It 'does not pull GDAP relationships for <Filter>, which no relationship can match' -ForEach @(
+        # The filter can come from a request, so a miss must never cost a GDAP read.
+        It 'does not pull GDAP relationships for <Filter>' -ForEach @(
             @{ Filter = 'unknown.example.com' }
             @{ Filter = 'AllTenants' }
+            @{ Filter = '11111111-1111-1111-1111-111111111111' }
         ) {
             $Result = Get-Tenants -IncludeErrors -TenantFilter $Filter
 
@@ -238,8 +240,8 @@ Describe 'Get-Tenants refresh loop' {
             $Result | Should -BeNullOrEmpty
         }
 
-        It 'still discovers a newly delegated tenant looked up by its customerId' {
-            $Result = Get-Tenants -TenantFilter $script:GuidA
+        It 'discovers a newly delegated tenant when asked to refresh it by customerId' {
+            $Result = Get-Tenants -TriggerRefresh -TenantFilter $script:GuidA
 
             Should -Invoke New-GraphGetRequest -ParameterFilter { $uri -like '*delegatedAdminRelationships*' -and $uri -like "*customer/tenantId eq '$($script:GuidA)'*" } -Times 1 -Exactly
             Should -Invoke Start-CIPPOrchestrator -ParameterFilter { $InputObject.Batch.customerId -contains $script:GuidA } -Times 1 -Exactly

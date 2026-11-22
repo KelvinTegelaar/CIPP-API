@@ -69,6 +69,10 @@
     "FileAnonymousLinkType": "%linkPermission%",
     "FolderAnonymousLinkType": "%linkPermission%"
   },
+  "valueLabels": {
+    "FileAnonymousLinkType": { "0": "None - SharePoint's own default", "1": "View only", "2": "View and edit" },
+    "FolderAnonymousLinkType": { "0": "None - SharePoint's own default", "1": "View only", "2": "View and edit" }
+  },
   "read": {
     "cacheType": "SPOTenant"
   },

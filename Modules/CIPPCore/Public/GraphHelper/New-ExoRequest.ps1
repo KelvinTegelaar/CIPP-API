@@ -180,6 +180,6 @@ function New-ExoRequest {
             return $ReturnedData.value
         }
     } else {
-        Write-Error (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Exchange request')
+        throw (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Exchange request')
     }
 }

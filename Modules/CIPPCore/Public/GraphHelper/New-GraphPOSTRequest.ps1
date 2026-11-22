@@ -176,6 +176,6 @@ function New-GraphPOSTRequest {
             return $ReturnedData
         }
     } else {
-        Write-Error (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Graph request')
+        throw (Get-AuthorisedRequestError -TenantID $tenantid -Context 'Graph request')
     }
 }

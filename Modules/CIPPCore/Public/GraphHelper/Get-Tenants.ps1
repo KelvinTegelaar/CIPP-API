@@ -53,8 +53,8 @@ function Get-Tenants {
 
     $IncludedTenantsCache = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
 
-    # A miss on a domain (or 'AllTenants') can't be fixed by a rebuild: relationships carry no domains, so only a customerId miss can find a new tenant.
-    if (($IncludedTenantsCache | Measure-Object).Count -eq 0 -and $TenantFilter -ne $env:TenantID -and (-not $TenantFilter -or $SafeTenantFilter -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) {
+    # A filtered miss never rebuilds: the filter can come from a request, and new tenants are found through -TriggerRefresh.
+    if (($IncludedTenantsCache | Measure-Object).Count -eq 0 -and -not $TenantFilter) {
         $BuildRequired = $true
     }
 

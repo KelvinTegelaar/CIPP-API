@@ -25,6 +25,6 @@ function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 
         } until ($null -eq $NextURL -or ' ' -eq $NextURL)
         return $ReturnedData
     } else {
-        Write-Error (Get-AuthorisedRequestError -TenantID $TenantID -Context 'Classic API request')
+        throw (Get-AuthorisedRequestError -TenantID $TenantID -Context 'Classic API request')
     }
 }

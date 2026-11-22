@@ -278,6 +278,21 @@ Describe 'Invoke-CIPPBaselineDeviceRegistrationPolicy' {
             ($Join.groups -join ',') -eq 'aaaa-1,bbbb-2' -and @($Join.users).Count -eq 0
         }
     }
+
+    It 'writes the join users the prepare hook resolved and keeps the live groups the baseline leaves blank' {
+        Mock New-GraphGetRequest {
+            $Policy = New-SamplePolicy
+            $Policy.azureADJoin.allowedToJoin = [PSCustomObject]@{ '@odata.type' = '#microsoft.graph.enumeratedDeviceRegistrationMembership'; users = @('portal-user'); groups = @('portal-group') }
+            $Policy
+        }
+        $Spec = @{ set = @{ 'azureADJoin.allowedToJoin' = @{ '@odata.type' = '#microsoft.graph.enumeratedDeviceRegistrationMembership'; users = $null; groups = $null } } } | ConvertTo-Spec
+        $Current = [PSCustomObject]@{ allowedToJoinUserIds = @('uuuu-1') }
+        Invoke-CIPPBaselineDeviceRegistrationPolicy -Remediate $Spec -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-GraphPostRequest -Times 1 -ParameterFilter {
+            $Join = ($Body | ConvertFrom-Json).azureADJoin.allowedToJoin
+            ($Join.users -join ',') -eq 'uuuu-1' -and ($Join.groups -join ',') -eq 'portal-group'
+        }
+    }
 }
 
 Describe 'Invoke-CIPPBaselineGraphBulkSweep' {

@@ -70,7 +70,7 @@ Describe 'New-GraphBulkRequest' {
             @{ id = '1'; method = 'GET'; url = 'users/u1' }
             @{ id = '2'; method = 'GET'; url = '/users/u1/../../organization' }
         )
-        $null = New-GraphBulkRequest -tenantid 'contoso.com' -asapp $true -Requests $Requests -ErrorAction SilentlyContinue
+        { New-GraphBulkRequest -tenantid 'contoso.com' -asapp $true -Requests $Requests } | Should -Throw 'not authorised'
         $script:Sent.Count | Should -Be 0
         Should -Invoke Get-AuthorisedRequest -Times 1 -Exactly -ParameterFilter { $Uri -eq 'https://graph.microsoft.com/beta/users/u1/../../organization' -and $TenantID -eq 'contoso.com' }
     }

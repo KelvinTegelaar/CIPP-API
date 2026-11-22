@@ -52,6 +52,8 @@ function Invoke-CIPPBaselineDeviceRegistrationPolicy {
         }
     }
 
+    # The set below replaces the whole membership object, so keep the live lists for the ones the baseline leaves blank
+    $LiveJoin = $Policy.azureADJoin.allowedToJoin
     $Assigned = 0
     foreach ($Entry in ($Remediate.set ?? [PSCustomObject]@{}).PSObject.Properties) {
         $Segments = @($Entry.Name -split '\.')
@@ -70,11 +72,14 @@ function Invoke-CIPPBaselineDeviceRegistrationPolicy {
     }
     if ($Assigned -eq 0) { throw 'DeviceRegistrationPolicy: nothing configured to write.' }
 
-    # Selected groups are resolved to ids by the prepare hook; the definition can only name the membership type
+    # Selected users and groups are resolved to ids by the prepare hook; the definition can only name the membership type.
+    # A list the baseline leaves blank keeps its live value.
     $Join = $Policy.azureADJoin.allowedToJoin
-    if ($Current.allowedToJoinGroupIds -and "$($Join.'@odata.type')" -eq '#microsoft.graph.enumeratedDeviceRegistrationMembership') {
-        $Join.groups = @($Current.allowedToJoinGroupIds)
-        $Join.users = @()
+    if ("$($Join.'@odata.type')" -eq '#microsoft.graph.enumeratedDeviceRegistrationMembership') {
+        $Join.groups = @(@($LiveJoin.groups).Where({ $_ }))
+        $Join.users = @(@($LiveJoin.users).Where({ $_ }))
+        if ($Current.allowedToJoinGroupIds) { $Join.groups = @($Current.allowedToJoinGroupIds) }
+        if ($Current.allowedToJoinUserIds) { $Join.users = @($Current.allowedToJoinUserIds) }
     }
 
     $null = New-GraphPostRequest -tenantid $TenantFilter -uri $Uri -Type PUT -Body (ConvertTo-Json -Compress -Depth 10 -InputObject $Policy) -ContentType 'application/json'

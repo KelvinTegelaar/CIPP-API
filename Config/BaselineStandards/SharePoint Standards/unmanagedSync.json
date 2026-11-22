@@ -51,6 +51,9 @@
   "expected": {
     "ConditionalAccessPolicy": "%conditionalAccessPolicy%"
   },
+  "valueLabels": {
+    "ConditionalAccessPolicy": { "0": "Allow full access", "1": "Allow limited, web-only access", "2": "Block access" }
+  },
   "read": {
     "cacheType": "SPOTenant"
   },

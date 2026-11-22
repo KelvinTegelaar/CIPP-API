@@ -1191,6 +1191,19 @@
         "DefaultSharingLinkType": "%sharingLinkType%",
         "DefaultLinkPermission": 1
       },
+      "valueLabels": {
+        "DefaultSharingLinkType": {
+          "0": "None - SharePoint's own default",
+          "1": "Direct - Only the people the user specifies",
+          "2": "Internal - Only people in your organization",
+          "3": "Anyone - Anyone with the link"
+        },
+        "DefaultLinkPermission": {
+          "0": "None - SharePoint's own default",
+          "1": "View",
+          "2": "Edit"
+        }
+      },
       "variables": {
         "sharingLinkType": {
           "label": "Default Sharing Link Type",

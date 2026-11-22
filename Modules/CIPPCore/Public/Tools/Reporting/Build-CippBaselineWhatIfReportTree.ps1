@@ -296,15 +296,20 @@ function Build-CippBaselineWhatIfReportTree {
         if ((isArr $values) -or -not (isObj $values)) { return (prettifyValue $values) ?? 'Configured' }
         $expected = pv $definition 'expected'
         $tokenFor = [System.Collections.Generic.Dictionary[string, string]]::new()
+        $tokenUses = [System.Collections.Generic.Dictionary[string, int]]::new()
         foreach ($key in (keysOf $expected)) {
             $template = pv $expected $key
-            if ($template -is [string] -and $template -cmatch '^%([A-Za-z0-9_]+)%\z') { $tokenFor[$key] = $Matches[1] }
+            if ($template -is [string] -and $template -cmatch '^%([A-Za-z0-9_]+)%\z') {
+                $tokenFor[$key] = $Matches[1]
+                $tokenUses[$Matches[1]] = 1 + $(if ($tokenUses.ContainsKey($Matches[1])) { $tokenUses[$Matches[1]] } else { 0 })
+            }
         }
         $parts = [System.Collections.Generic.List[string]]::new()
         foreach ($key in (keysOf $values)) {
             $value = pv $values $key
             $variable = if ($tokenFor.ContainsKey($key)) { pv (pv $definition 'variables') $tokenFor[$key] } else { $null }
-            $label = (pv $variable 'label') ?? (prettifyKey $key)
+            # A variable that feeds several keys would give every one of them the same label, so name each by its key
+            $label = if ($tokenFor.ContainsKey($key) -and $tokenUses[$tokenFor[$key]] -gt 1) { prettifyKey $key } else { (pv $variable 'label') ?? (prettifyKey $key) }
             $display = prettifyValue $value
             if ($null -eq $display) {
                 $display = @(foreach ($nestedKey in (keysOf $value)) {
@@ -314,6 +319,9 @@ function Build-CippBaselineWhatIfReportTree {
                 if (-not $display) { $display = 'configured' }
             }
             $valueText = jsStr $value
+            # valueLabels names the values of keys no variable option covers, such as a fixed or tenant-side value
+            $valueLabel = pv (pv (pv $definition 'valueLabels') $key) $valueText
+            if ($null -ne $valueLabel) { $display = $valueLabel }
             foreach ($option in (arr (pv $variable 'options'))) {
                 if ((jsStr (pv $option 'value')) -ceq $valueText) { $display = pv $option 'label'; break }
             }

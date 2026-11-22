@@ -17345,8 +17345,8 @@
       "NIST SP 800-171 (3.1.2)",
       "NIST SP 800-171 (3.1.5)"
     ],
-    "helpText": "Controls whether users can join devices to Entra: no users, all users, or only members of selected groups. Tenants where Entra reports this setting as not admin-configurable are reported but not written to.",
-    "docsDescription": "Configures whether users can join devices to Entra. With selected groups, only members of the listed groups (comma-separated names or IDs, custom variables including list variables allowed) can join, and the group list is graded against the tenant by ID. When disabled, users are unable to Entra-join devices, which prevents them from creating new Entra-joined (cloud-managed) device identities.",
+    "helpText": "Controls whether users can join devices to Entra: no users, all users, or only selected users and members of selected groups. Tenants where Entra reports this setting as not admin-configurable are reported but not written to.",
+    "docsDescription": "Configures whether users can join devices to Entra. With selected users and groups, only the listed users (comma-separated UPNs or IDs) and members of the listed groups (comma-separated names or IDs) can join; both fields take custom variables, including list variables, and both lists are graded against the tenant by ID. When disabled, users are unable to Entra-join devices, which prevents them from creating new Entra-joined (cloud-managed) device identities.",
     "executiveText": "Controls whether employees can join their devices to the corporate Entra directory. Disabling user device join prevents unauthorized or unmanaged devices from becoming corporate-managed identities, enhancing overall security posture.",
     "label": "Configure user restriction for Entra device join",
     "impact": "High Impact",
@@ -17379,7 +17379,7 @@
             "value": "#microsoft.graph.allDeviceRegistrationMembership"
           },
           {
-            "label": "Selected groups",
+            "label": "Selected users and groups",
             "value": "#microsoft.graph.enumeratedDeviceRegistrationMembership"
           }
         ],
@@ -17391,6 +17391,19 @@
         "type": "textField",
         "label": "Groups allowed to join devices",
         "helperText": "Comma-separated group names or IDs. Custom variables work too, including list variables such as %DeviceJoinGroups%.",
+        "omitWhenBlank": true,
+        "default": "",
+        "condition": {
+          "field": "allowedToJoin",
+          "compareType": "contains",
+          "compareValue": "enumerated"
+        }
+      },
+      {
+        "name": "standards.intuneRestrictUserDeviceJoin.allowedToJoinUsers",
+        "type": "textField",
+        "label": "Users allowed to join devices",
+        "helperText": "Comma-separated user principal names or IDs, such as itadmin@%defaultdomain%. Custom variables work too, including list variables.",
         "omitWhenBlank": true,
         "default": "",
         "condition": {
