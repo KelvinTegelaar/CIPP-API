@@ -34,11 +34,11 @@ BeforeAll {
     function Set-FakeCollection {
         param([string]$ToggleLabel = 'Toggle Setting', [string]$OnLabel = 'On')
         $Collection = @(
-            @{ id = 'setting_toggle'; displayName = $ToggleLabel; description = 'x' * 200
+            @{ id = 'setting_toggle'; displayName = $ToggleLabel; description = 'x' * 200; categoryName = 'Defender'
                 options = @(@{ id = 'setting_toggle_0'; displayName = 'Off' }, @{ id = 'setting_toggle_1'; displayName = $OnLabel })
             }
             @{ id = 'setting_plain'; displayName = 'Plain Setting'; helpText = 'y' * 200 }
-            @{ id = 'setting_multi'; displayName = 'Multi Setting'
+            @{ id = 'setting_multi'; displayName = 'Multi Setting'; categoryName = 'Defender'
                 options = @(@{ id = 'setting_multi_a'; displayName = 'Alpha' }, @{ id = 'setting_multi_b'; displayName = 'Bravo' })
             }
         )
@@ -82,6 +82,13 @@ Describe 'Get-CIPPIntuneDefinitionIndex' {
         $Index = Get-CIPPIntuneDefinitionIndex
         $Index['setting_toggle'].options['setting_toggle_1'] | Should -Be 'On'
         $Index['setting_toggle'].options['setting_toggle_0'] | Should -Be 'Off'
+    }
+
+    It 'projects categoryName with one shared string per category' {
+        $Index = Get-CIPPIntuneDefinitionIndex
+        $Index['setting_toggle'].categoryName | Should -Be 'Defender'
+        [object]::ReferenceEquals($Index['setting_toggle'].categoryName, $Index['setting_multi'].categoryName) | Should -BeTrue
+        $Index['setting_plain'].categoryName | Should -BeNullOrEmpty
     }
 
     It 'leaves options null for definitions that carry none' {

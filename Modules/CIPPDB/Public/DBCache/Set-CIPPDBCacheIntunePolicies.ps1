@@ -226,6 +226,83 @@ function Set-CIPPDBCacheIntunePolicies {
                         }
                     }
                 }
+
+                if ($PolicyType.Type -eq 'ConfigurationPolicies' -and $Policies.Count -gt 0) {
+                    $ReportUri = '/deviceManagement/reports/getConfigurationPolicyDevicesReport'
+                    $ReportTypeFilter = Get-CIPPIntunePolicyReportTypeFilter
+                    # Selecting a _loc column fails the request; selecting its base column returns both
+                    $ReportColumns = @('IntuneDeviceId', 'DeviceName', 'UPN', 'UserId', 'ReportStatus', 'UnifiedPolicyPlatformType', 'PspdpuLastModifiedTimeUtc')
+                    $ReportPageSize = 500
+                    $ReportRequests = @(foreach ($Policy in $Policies) {
+                            @{
+                                id      = $Policy.id
+                                method  = 'POST'
+                                url     = $ReportUri
+                                headers = @{ 'Content-Type' = 'application/json' }
+                                body    = @{
+                                    top     = $ReportPageSize
+                                    skip    = 0
+                                    select  = $ReportColumns
+                                    orderBy = @()
+                                    search  = ''
+                                    filter  = "($ReportTypeFilter) and (PolicyId eq '$($Policy.id)')"
+                                }
+                            }
+                        })
+
+                    for ($Chunk = 0; $Chunk -lt $ReportRequests.Count; $Chunk += 20) {
+                        $ReportResults = $null
+                        try {
+                            $ReportResults = @(New-GraphBulkRequest -Requests @($ReportRequests[$Chunk..([Math]::Min($Chunk + 19, $ReportRequests.Count - 1))]) -tenantid $TenantFilter)
+                        } catch {
+                            & $AddWarning "Failed to fetch device reports for $($PolicyType.Type): $($_.Exception.Message)"
+                            continue
+                        }
+                        foreach ($ReportResult in $ReportResults) {
+                            try {
+                                if ($null -eq $ReportResult.status) { throw 'no HTTP status was returned' }
+                                # Report actions answer application/octet-stream, so $batch returns their bodies (errors too) base64-encoded
+                                $Page = if ($ReportResult.body -is [string]) {
+                                    [CIPP.CippJson]::ConvertFromJson([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ReportResult.body)))
+                                } else {
+                                    $ReportResult.body
+                                }
+                                if ([int]$ReportResult.status -lt 200 -or [int]$ReportResult.status -ge 300) {
+                                    throw "HTTP $($ReportResult.status) - $($Page.error.message ?? 'Unknown Graph error')"
+                                }
+
+                                $ReportRows = if (@($Page.Values).Count -eq $ReportPageSize -and [int]$Page.TotalRowCount -gt $ReportPageSize) {
+                                    Get-CIPPIntuneReportRows -TenantFilter $TenantFilter -Uri "https://graph.microsoft.com/beta$ReportUri" -Filter "($ReportTypeFilter) and (PolicyId eq '$($ReportResult.id)')" -Select $ReportColumns -OrderBy @() -PageSize $ReportPageSize
+                                } else {
+                                    $Columns = @($Page.Schema.Column)
+                                    foreach ($Values in $Page.Values) {
+                                        $Row = @{}
+                                        for ($Index = 0; $Index -lt $Columns.Count; $Index++) { $Row[$Columns[$Index]] = $Values[$Index] }
+                                        $Row
+                                    }
+                                }
+
+                                # The setting search parses "<device id>|<device name>|<user>" from the row key
+                                $DeviceRows = @(foreach ($Row in $ReportRows) {
+                                        $UserKey = if ($Row.UserId) { $Row.UserId } else { $Row.UPN }
+                                        [PSCustomObject]@{
+                                            id                            = "$($Row.IntuneDeviceId)|$($Row.DeviceName)|$UserKey"
+                                            IntuneDeviceId                = $Row.IntuneDeviceId
+                                            DeviceName                    = $Row.DeviceName
+                                            UPN                           = $Row.UPN
+                                            ReportStatus                  = $Row.ReportStatus
+                                            ReportStatus_loc              = $Row.ReportStatus_loc
+                                            UnifiedPolicyPlatformType_loc = $Row.UnifiedPolicyPlatformType_loc
+                                            PspdpuLastModifiedTimeUtc     = $Row.PspdpuLastModifiedTimeUtc
+                                        }
+                                    })
+                                Add-CIPPDbItem -TenantFilter $TenantFilter -Type "IntuneConfigurationPolicyDevices_$($ReportResult.id)" -Data $DeviceRows -AddCount -ClearOnEmpty
+                            } catch {
+                                & $AddWarning "Failed to fetch the device report for $($PolicyType.Type) policy $($ReportResult.id): $($_.Exception.Message)"
+                            }
+                        }
+                    }
+                }
             } catch {
                 & $AddWarning "Failed to process $($PolicyType.Type): $($_.Exception.Message); preserving any rows not replaced by this run"
             }

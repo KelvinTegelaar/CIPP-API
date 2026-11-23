@@ -3,6 +3,7 @@ BeforeAll {
 
     function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) }
     function New-GraphBulkRequest { param($Requests, $tenantid) }
+    function Get-CIPPIntuneReportRows { param($TenantFilter, $Uri, $Filter, $Select, $OrderBy, $PageSize) , @() }
     function Add-CIPPDbItem {
         param(
             $TenantFilter,
@@ -17,6 +18,7 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntunePolicyListDefinitions.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPIntunePolicyListItem.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPDB/Public/DBCache/Set-CIPPDBCacheIntunePolicies.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntunePolicyReportTypeFilter.ps1')
 }
 
 Describe 'Set-CIPPDBCacheIntunePolicies' {

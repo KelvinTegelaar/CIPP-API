@@ -14,6 +14,8 @@ BeforeAll {
     function New-GraphBulkRequest { param($Requests, $tenantid) }
     function Get-CippException { param($Exception) @{ NormalizedError = "$Exception" } }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneReportRows.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntuneDeploymentStatus.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPIntunePolicyReportTypeFilter.ps1')
 
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Endpoint/MEM/Invoke-ListIntuneDeploymentStatus.ps1'
     $EndpointScript = [ScriptBlock]::Create("using namespace System.Net`n" + (Get-Content -LiteralPath $EndpointPath -Raw))
@@ -210,5 +212,143 @@ Describe 'Invoke-ListAppDeploymentStatus' {
         $Response.StatusCode | Should -Be 200
         Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*retrieveDeviceAppInstallationStatusReport' -and ($body | ConvertFrom-Json).filter -eq "(ApplicationId eq 'app-1')" }
         Should -Invoke New-GraphGetRequest -Times 0 -Exactly
+    }
+}
+
+Describe 'Invoke-ListIntuneDeploymentStatus response snapshots' {
+    BeforeAll {
+        $script:Calls = [System.Collections.Generic.List[string]]::new()
+        $script:Fail = $false
+
+        Mock -CommandName New-GraphPOSTRequest -MockWith {
+            if ($script:Fail) { throw 'Forbidden' }
+            $script:Calls.Add("POST $uri $(($body | ConvertFrom-Json).filter)")
+            switch -Wildcard ($uri) {
+                '*retrieveDeviceAppInstallationStatusReport' {
+                    New-Report -Columns @('DeviceId', 'DeviceName', 'UserPrincipalName', 'AppInstallState', 'AppInstallState_loc', 'AppInstallStateDetails_loc', 'HexErrorCode', 'Platform', 'LastModifiedDateTime') -Rows @(
+                        , @('dev-1', 'PC1', 'a@contoso.com', 'failed', 'Failed', 'Download failed', '0x87D1041C', 'Windows', '2026-11-01T10:00:00')
+                        , @('dev-2', 'PC2', 'b@contoso.com', 'notInstalled', $null, $null, $null, 'Windows', '0001-01-01T00:00:00')
+                    )
+                }
+                '*getUserInstallStatusReport' {
+                    New-Report -Columns @('UserPrincipalName', 'UserName', 'InstalledCount', 'FailedCount', 'PendingInstallCount', 'NotInstalledCount', 'NotApplicableCount') -Rows @(
+                        , @('a@contoso.com', 'A', 1, 1, 0, 0, 0)
+                        , @('b@contoso.com', 'B', 0, 0, 1, 0, 0)
+                        , @('c@contoso.com', 'C', 0, 0, 0, 2, 0)
+                        , @('d@contoso.com', 'D', 3, 0, 0, 0, 1)
+                        , @('e@contoso.com', 'E', 0, 0, 0, 0, 0)
+                    )
+                }
+                '*getConfigurationPolicyDevicesReport' {
+                    New-Report -Columns @('IntuneDeviceId', 'DeviceId', 'DeviceName', 'UPN', 'ReportStatus', 'ReportStatus_loc', 'UnifiedPolicyPlatformType_loc', 'PspdpuLastModifiedTimeUtc') -Rows @(
+                        , @('dev-1', '', 'PC1', 'a@contoso.com', 'succeeded', 'Succeeded', 'Windows10', '2026-11-01T10:00:00')
+                        , @('dev-2', '', 'PC2', 'a@contoso.com', 'error', 'Error', 'Windows10', '2026-11-02T10:00:00')
+                        , @('', 'dev-3', 'PC3', '', 'conflict', $null, 'Windows10', '2026-11-03T10:00:00')
+                    )
+                }
+            }
+        }
+
+        Mock -CommandName New-GraphGetRequest -MockWith {
+            if ($script:Fail) { throw 'Forbidden' }
+            $script:Calls.Add("GET $uri")
+            switch -Wildcard ($uri) {
+                '*/deviceStatuses' {
+                    @(
+                        [pscustomobject]@{ id = 'pol_user-a_dev-1'; deviceDisplayName = 'PC1'; userPrincipalName = 'a@contoso.com'; status = 'compliant'; deviceModel = 'Surface'; lastReportedDateTime = '2026-11-01T10:00:00Z' }
+                        [pscustomobject]@{ id = 'pol_user-b_dev-2'; deviceDisplayName = 'PC2'; userPrincipalName = 'b@contoso.com'; status = 'nonCompliant'; deviceModel = 'Latitude'; lastReportedDateTime = '0001-01-01T00:00:00Z' }
+                        [pscustomobject]@{ deviceDisplayName = 'PC3'; userPrincipalName = ''; status = $null; deviceModel = $null; lastReportedDateTime = $null }
+                    )
+                }
+                '*/userStatuses' {
+                    @(
+                        [pscustomobject]@{ userPrincipalName = 'a@contoso.com'; userDisplayName = 'A'; status = 'compliant'; devicesCount = 1; lastReportedDateTime = '2026-11-01T10:00:00Z' }
+                        [pscustomobject]@{ userPrincipalName = ''; userDisplayName = ''; status = 'error'; devicesCount = 3; lastReportedDateTime = '2026-11-02T10:00:00Z' }
+                    )
+                }
+                '*/deviceRunStates*' {
+                    @(
+                        [pscustomobject]@{ runState = 'success'; detectionState = 'success'; remediationState = 'skipped'; errorDescription = $null; lastStateUpdateDateTime = '2026-11-01T10:00:00Z'; managedDevice = [pscustomobject]@{ id = 'dev-1'; deviceName = 'PC1'; userPrincipalName = 'a@contoso.com'; operatingSystem = 'Windows' } }
+                        [pscustomobject]@{ runState = 'scriptError'; detectionState = 'fail'; remediationState = 'remediationFailed'; errorDescription = 'exit 1'; lastStateUpdateDateTime = '2026-11-02T10:00:00Z'; managedDevice = [pscustomobject]@{ id = 'dev-2'; deviceName = 'PC2'; userPrincipalName = 'a@contoso.com'; operatingSystem = 'macOS' } }
+                    )
+                }
+                '*/userRunStates' {
+                    [pscustomobject]@{ userPrincipalName = 'a@contoso.com'; successDeviceCount = 1; errorDeviceCount = 1 }
+                    [pscustomobject]@{ userPrincipalName = 'b@contoso.com'; successDeviceCount = 2; errorDeviceCount = 0 }
+                }
+                '*/managedAppRegistrations*' {
+                    [pscustomobject]@{ userId = 'u1'; deviceName = 'Phone'; deviceType = 'iPhone'; lastSyncDateTime = '2026-11-01T10:00:00Z'; flaggedReasons = @('none'); appIdentifier = [pscustomobject]@{ bundleId = 'com.microsoft.outlook' }; appliedPolicies = @([pscustomobject]@{ id = 'T_abc' }) }
+                    [pscustomobject]@{ userId = 'u2'; deviceName = 'Tablet'; deviceType = 'android'; lastSyncDateTime = '2026-11-02T10:00:00Z'; flaggedReasons = @('rootedDevice'); appIdentifier = [pscustomobject]@{ packageId = 'com.microsoft.teams' }; appliedPolicies = @([pscustomobject]@{ id = 'T_abc' }, [pscustomobject]@{ id = 'T_x' }) }
+                    [pscustomobject]@{ userId = 'u3'; deviceName = 'Other'; flaggedReasons = @(); appIdentifier = [pscustomobject]@{ packageId = 'x' }; appliedPolicies = @([pscustomobject]@{ id = 'T_other' }) }
+                }
+            }
+        }
+
+        Mock -CommandName New-GraphBulkRequest -MockWith {
+            $script:Calls.Add("BULK $(@($Requests.url) -join ' ')")
+            [pscustomobject]@{ id = 'u1'; body = [pscustomobject]@{ id = 'u1'; userPrincipalName = 'a@contoso.com'; displayName = 'A' } }
+        }
+
+        function Get-Snapshot {
+            param([string]$Type, [string]$Id = '3697484d-68b1-4888-b143-5b281cecc156')
+            $script:Calls.Clear()
+            $Response = Invoke-Status -Type $Type -Id $Id
+            [ordered]@{
+                StatusCode = $Response.StatusCode
+                Body       = $Response.Body
+                Calls      = @($script:Calls)
+            } | ConvertTo-Json -Depth 10 -Compress
+        }
+    }
+
+    AfterEach {
+        $script:Fail = $false
+    }
+
+    It 'pins the <Type> response' -ForEach @(
+        @{ Type = 'mobileApps'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":[{"DeviceId":"dev-1","DeviceName":"PC1","UserPrincipalName":"a@contoso.com","Status":"Failed","StatusDetail":"Download failed 0x87D1041C","Platform":"Windows","LastReported":"2026-11-01T10:00:00"},{"DeviceId":"dev-2","DeviceName":"PC2","UserPrincipalName":"b@contoso.com","Status":"Not installed","StatusDetail":"","Platform":"Windows","LastReported":null}],"Users":[{"UserPrincipalName":"a@contoso.com","UserName":"A","Status":"Failed","StatusDetail":"1 installed, 1 failed, 0 pending, 0 not installed, 0 not applicable","DeviceCount":2,"LastReported":null},{"UserPrincipalName":"b@contoso.com","UserName":"B","Status":"Install pending","StatusDetail":"0 installed, 0 failed, 1 pending, 0 not installed, 0 not applicable","DeviceCount":1,"LastReported":null},{"UserPrincipalName":"c@contoso.com","UserName":"C","Status":"Not installed","StatusDetail":"0 installed, 0 failed, 0 pending, 2 not installed, 0 not applicable","DeviceCount":2,"LastReported":null},{"UserPrincipalName":"d@contoso.com","UserName":"D","Status":"Installed","StatusDetail":"3 installed, 0 failed, 0 pending, 0 not installed, 1 not applicable","DeviceCount":4,"LastReported":null},{"UserPrincipalName":"e@contoso.com","UserName":"E","Status":"Not applicable","StatusDetail":"0 installed, 0 failed, 0 pending, 0 not installed, 0 not applicable","DeviceCount":0,"LastReported":null}]}},"Calls":["POST https://graph.microsoft.com/beta/deviceManagement/reports/retrieveDeviceAppInstallationStatusReport (ApplicationId eq ''3697484d-68b1-4888-b143-5b281cecc156'')","POST https://graph.microsoft.com/beta/deviceManagement/reports/getUserInstallStatusReport (ApplicationId eq ''3697484d-68b1-4888-b143-5b281cecc156'')"]}' }
+        @{ Type = 'deviceConfigurations'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":[{"DeviceId":"dev-1","DeviceName":"PC1","UserPrincipalName":"a@contoso.com","Status":"Succeeded","StatusDetail":null,"Platform":"Surface","LastReported":"2026-11-01T10:00:00Z"},{"DeviceId":"dev-2","DeviceName":"PC2","UserPrincipalName":"b@contoso.com","Status":"Non compliant","StatusDetail":null,"Platform":"Latitude","LastReported":null},{"DeviceId":null,"DeviceName":"PC3","UserPrincipalName":"","Status":"Unknown","StatusDetail":null,"Platform":null,"LastReported":null}],"Users":[{"UserPrincipalName":"a@contoso.com","UserName":"A","Status":"Succeeded","StatusDetail":null,"DeviceCount":1,"LastReported":"2026-11-01T10:00:00Z"},{"UserPrincipalName":null,"UserName":"System account","Status":"Error","StatusDetail":null,"DeviceCount":3,"LastReported":"2026-11-02T10:00:00Z"}]}},"Calls":["GET https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations(''3697484d-68b1-4888-b143-5b281cecc156'')/deviceStatuses","GET https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations(''3697484d-68b1-4888-b143-5b281cecc156'')/userStatuses"]}' }
+        @{ Type = 'deviceCompliancePolicies'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":[{"DeviceId":"dev-1","DeviceName":"PC1","UserPrincipalName":"a@contoso.com","Status":"Compliant","StatusDetail":null,"Platform":"Surface","LastReported":"2026-11-01T10:00:00Z"},{"DeviceId":"dev-2","DeviceName":"PC2","UserPrincipalName":"b@contoso.com","Status":"Non compliant","StatusDetail":null,"Platform":"Latitude","LastReported":null},{"DeviceId":null,"DeviceName":"PC3","UserPrincipalName":"","Status":"Unknown","StatusDetail":null,"Platform":null,"LastReported":null}],"Users":[{"UserPrincipalName":"a@contoso.com","UserName":"A","Status":"Compliant","StatusDetail":null,"DeviceCount":1,"LastReported":"2026-11-01T10:00:00Z"},{"UserPrincipalName":null,"UserName":"System account","Status":"Error","StatusDetail":null,"DeviceCount":3,"LastReported":"2026-11-02T10:00:00Z"}]}},"Calls":["GET https://graph.microsoft.com/beta/deviceManagement/deviceCompliancePolicies(''3697484d-68b1-4888-b143-5b281cecc156'')/deviceStatuses","GET https://graph.microsoft.com/beta/deviceManagement/deviceCompliancePolicies(''3697484d-68b1-4888-b143-5b281cecc156'')/userStatuses"]}' }
+        @{ Type = 'mobileAppConfigurations'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":[{"DeviceId":"dev-1","DeviceName":"PC1","UserPrincipalName":"a@contoso.com","Status":"Succeeded","StatusDetail":null,"Platform":"Surface","LastReported":"2026-11-01T10:00:00Z"},{"DeviceId":"dev-2","DeviceName":"PC2","UserPrincipalName":"b@contoso.com","Status":"Non compliant","StatusDetail":null,"Platform":"Latitude","LastReported":null},{"DeviceId":null,"DeviceName":"PC3","UserPrincipalName":"","Status":"Unknown","StatusDetail":null,"Platform":null,"LastReported":null}],"Users":[{"UserPrincipalName":"a@contoso.com","UserName":"A","Status":"Succeeded","StatusDetail":null,"DeviceCount":1,"LastReported":"2026-11-01T10:00:00Z"},{"UserPrincipalName":null,"UserName":"System account","Status":"Error","StatusDetail":null,"DeviceCount":3,"LastReported":"2026-11-02T10:00:00Z"}]}},"Calls":["GET https://graph.microsoft.com/beta/deviceAppManagement/mobileAppConfigurations(''3697484d-68b1-4888-b143-5b281cecc156'')/deviceStatuses","GET https://graph.microsoft.com/beta/deviceAppManagement/mobileAppConfigurations(''3697484d-68b1-4888-b143-5b281cecc156'')/userStatuses"]}' }
+        @{ Type = 'configurationPolicies'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":[{"DeviceId":"dev-1","DeviceName":"PC1","UserPrincipalName":"a@contoso.com","Status":"Succeeded","StatusDetail":null,"Platform":"Windows10","LastReported":"2026-11-01T10:00:00"},{"DeviceId":"dev-2","DeviceName":"PC2","UserPrincipalName":"a@contoso.com","Status":"Error","StatusDetail":null,"Platform":"Windows10","LastReported":"2026-11-02T10:00:00"},{"DeviceId":"dev-3","DeviceName":"PC3","UserPrincipalName":"","Status":"conflict","StatusDetail":null,"Platform":"Windows10","LastReported":"2026-11-03T10:00:00"}],"Users":[{"UserPrincipalName":null,"UserName":"No user","Status":"conflict","StatusDetail":null,"DeviceCount":1,"LastReported":"2026-11-03T10:00:00"},{"UserPrincipalName":"a@contoso.com","UserName":null,"Status":"Error","StatusDetail":null,"DeviceCount":2,"LastReported":"2026-11-02T10:00:00"}]}},"Calls":["POST https://graph.microsoft.com/beta/deviceManagement/reports/getConfigurationPolicyDevicesReport ((PolicyBaseTypeName eq ''Microsoft.Management.Services.Api.DeviceConfiguration'') or (PolicyBaseTypeName eq ''DeviceManagementConfigurationPolicy'') or (PolicyBaseTypeName eq ''DeviceConfigurationAdmxPolicy'') or (PolicyBaseTypeName eq ''Microsoft.Management.Services.Api.DeviceManagementIntent'')) and (PolicyId eq ''3697484d-68b1-4888-b143-5b281cecc156'')"]}' }
+        @{ Type = 'groupPolicyConfigurations'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":[{"DeviceId":"dev-1","DeviceName":"PC1","UserPrincipalName":"a@contoso.com","Status":"Succeeded","StatusDetail":null,"Platform":"Windows10","LastReported":"2026-11-01T10:00:00"},{"DeviceId":"dev-2","DeviceName":"PC2","UserPrincipalName":"a@contoso.com","Status":"Error","StatusDetail":null,"Platform":"Windows10","LastReported":"2026-11-02T10:00:00"},{"DeviceId":"dev-3","DeviceName":"PC3","UserPrincipalName":"","Status":"conflict","StatusDetail":null,"Platform":"Windows10","LastReported":"2026-11-03T10:00:00"}],"Users":[{"UserPrincipalName":null,"UserName":"No user","Status":"conflict","StatusDetail":null,"DeviceCount":1,"LastReported":"2026-11-03T10:00:00"},{"UserPrincipalName":"a@contoso.com","UserName":null,"Status":"Error","StatusDetail":null,"DeviceCount":2,"LastReported":"2026-11-02T10:00:00"}]}},"Calls":["POST https://graph.microsoft.com/beta/deviceManagement/reports/getConfigurationPolicyDevicesReport ((PolicyBaseTypeName eq ''Microsoft.Management.Services.Api.DeviceConfiguration'') or (PolicyBaseTypeName eq ''DeviceManagementConfigurationPolicy'') or (PolicyBaseTypeName eq ''DeviceConfigurationAdmxPolicy'') or (PolicyBaseTypeName eq ''Microsoft.Management.Services.Api.DeviceManagementIntent'')) and (PolicyId eq ''3697484d-68b1-4888-b143-5b281cecc156'')"]}' }
+        @{ Type = 'intents'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":[{"DeviceId":"dev-1","DeviceName":"PC1","UserPrincipalName":"a@contoso.com","Status":"Succeeded","StatusDetail":null,"Platform":"Windows10","LastReported":"2026-11-01T10:00:00"},{"DeviceId":"dev-2","DeviceName":"PC2","UserPrincipalName":"a@contoso.com","Status":"Error","StatusDetail":null,"Platform":"Windows10","LastReported":"2026-11-02T10:00:00"},{"DeviceId":"dev-3","DeviceName":"PC3","UserPrincipalName":"","Status":"conflict","StatusDetail":null,"Platform":"Windows10","LastReported":"2026-11-03T10:00:00"}],"Users":[{"UserPrincipalName":null,"UserName":"No user","Status":"conflict","StatusDetail":null,"DeviceCount":1,"LastReported":"2026-11-03T10:00:00"},{"UserPrincipalName":"a@contoso.com","UserName":null,"Status":"Error","StatusDetail":null,"DeviceCount":2,"LastReported":"2026-11-02T10:00:00"}]}},"Calls":["POST https://graph.microsoft.com/beta/deviceManagement/reports/getConfigurationPolicyDevicesReport ((PolicyBaseTypeName eq ''Microsoft.Management.Services.Api.DeviceConfiguration'') or (PolicyBaseTypeName eq ''DeviceManagementConfigurationPolicy'') or (PolicyBaseTypeName eq ''DeviceConfigurationAdmxPolicy'') or (PolicyBaseTypeName eq ''Microsoft.Management.Services.Api.DeviceManagementIntent'')) and (PolicyId eq ''3697484d-68b1-4888-b143-5b281cecc156'')"]}' }
+        @{ Type = 'deviceManagementScripts'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":[{"DeviceId":"dev-1","DeviceName":"PC1","UserPrincipalName":"a@contoso.com","Status":"Success","StatusDetail":null,"Platform":"Windows","LastReported":"2026-11-01T10:00:00Z"},{"DeviceId":"dev-2","DeviceName":"PC2","UserPrincipalName":"a@contoso.com","Status":"Script error","StatusDetail":"exit 1","Platform":"macOS","LastReported":"2026-11-02T10:00:00Z"}],"Users":[{"UserPrincipalName":"a@contoso.com","UserName":null,"Status":"Error","StatusDetail":"1 succeeded, 1 failed","DeviceCount":2,"LastReported":null},{"UserPrincipalName":"b@contoso.com","UserName":null,"Status":"Success","StatusDetail":"2 succeeded, 0 failed","DeviceCount":2,"LastReported":null}]}},"Calls":["GET https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts(''3697484d-68b1-4888-b143-5b281cecc156'')/deviceRunStates?$expand=managedDevice($select=id,deviceName,userPrincipalName,operatingSystem)","GET https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts(''3697484d-68b1-4888-b143-5b281cecc156'')/userRunStates"]}' }
+        @{ Type = 'deviceShellScripts'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":[{"DeviceId":"dev-1","DeviceName":"PC1","UserPrincipalName":"a@contoso.com","Status":"Success","StatusDetail":null,"Platform":"Windows","LastReported":"2026-11-01T10:00:00Z"},{"DeviceId":"dev-2","DeviceName":"PC2","UserPrincipalName":"a@contoso.com","Status":"Script error","StatusDetail":"exit 1","Platform":"macOS","LastReported":"2026-11-02T10:00:00Z"}],"Users":[{"UserPrincipalName":"a@contoso.com","UserName":null,"Status":"Error","StatusDetail":"1 succeeded, 1 failed","DeviceCount":2,"LastReported":null},{"UserPrincipalName":"b@contoso.com","UserName":null,"Status":"Success","StatusDetail":"2 succeeded, 0 failed","DeviceCount":2,"LastReported":null}]}},"Calls":["GET https://graph.microsoft.com/beta/deviceManagement/deviceShellScripts(''3697484d-68b1-4888-b143-5b281cecc156'')/deviceRunStates?$expand=managedDevice($select=id,deviceName,userPrincipalName,operatingSystem)","GET https://graph.microsoft.com/beta/deviceManagement/deviceShellScripts(''3697484d-68b1-4888-b143-5b281cecc156'')/userRunStates"]}' }
+        @{ Type = 'deviceHealthScripts'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":[{"DeviceId":"dev-1","DeviceName":"PC1","UserPrincipalName":"a@contoso.com","Status":"Success","StatusDetail":"Remediation: Skipped","Platform":"Windows","LastReported":"2026-11-01T10:00:00Z"},{"DeviceId":"dev-2","DeviceName":"PC2","UserPrincipalName":"a@contoso.com","Status":"Fail","StatusDetail":"Remediation: Remediation failed","Platform":"macOS","LastReported":"2026-11-02T10:00:00Z"}],"Users":[{"UserPrincipalName":"a@contoso.com","UserName":null,"Status":"Fail","StatusDetail":null,"DeviceCount":2,"LastReported":"2026-11-02T10:00:00Z"}]}},"Calls":["GET https://graph.microsoft.com/beta/deviceManagement/deviceHealthScripts(''3697484d-68b1-4888-b143-5b281cecc156'')/deviceRunStates?$expand=managedDevice($select=id,deviceName,userPrincipalName,operatingSystem)"]}' }
+        @{ Type = 'windowsFeatureUpdateProfiles'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":null,"Users":null}},"Calls":[]}' }
+        @{ Type = 'hardwareConfigurations'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":null,"Users":null}},"Calls":[]}' }
+    ) {
+        Get-Snapshot -Type $Type | Should -BeExactly $Expected
+    }
+
+    It 'pins the <Type> app protection response' -ForEach @(
+        @{ Type = 'androidManagedAppProtection'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":null,"Users":[{"UserPrincipalName":"a@contoso.com","UserName":"A","Status":"Checked in","StatusDetail":"com.microsoft.outlook on Phone (iPhone)","DeviceCount":null,"LastReported":"2026-11-01T10:00:00Z"},{"UserPrincipalName":"u2","UserName":null,"Status":"Rooted device","StatusDetail":"com.microsoft.teams on Tablet (android)","DeviceCount":null,"LastReported":"2026-11-02T10:00:00Z"}]}},"Calls":["GET https://graph.microsoft.com/beta/deviceAppManagement/managedAppRegistrations?$expand=appliedPolicies($select=id)","BULK /users/u1?$select=id,userPrincipalName,displayName /users/u2?$select=id,userPrincipalName,displayName"]}' }
+        @{ Type = 'iosManagedAppProtections'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":null,"Users":[{"UserPrincipalName":"a@contoso.com","UserName":"A","Status":"Checked in","StatusDetail":"com.microsoft.outlook on Phone (iPhone)","DeviceCount":null,"LastReported":"2026-11-01T10:00:00Z"},{"UserPrincipalName":"u2","UserName":null,"Status":"Rooted device","StatusDetail":"com.microsoft.teams on Tablet (android)","DeviceCount":null,"LastReported":"2026-11-02T10:00:00Z"}]}},"Calls":["GET https://graph.microsoft.com/beta/deviceAppManagement/managedAppRegistrations?$expand=appliedPolicies($select=id)","BULK /users/u1?$select=id,userPrincipalName,displayName /users/u2?$select=id,userPrincipalName,displayName"]}' }
+        @{ Type = 'windowsManagedAppProtection'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":null,"Users":[{"UserPrincipalName":"a@contoso.com","UserName":"A","Status":"Checked in","StatusDetail":"com.microsoft.outlook on Phone (iPhone)","DeviceCount":null,"LastReported":"2026-11-01T10:00:00Z"},{"UserPrincipalName":"u2","UserName":null,"Status":"Rooted device","StatusDetail":"com.microsoft.teams on Tablet (android)","DeviceCount":null,"LastReported":"2026-11-02T10:00:00Z"}]}},"Calls":["GET https://graph.microsoft.com/beta/deviceAppManagement/managedAppRegistrations?$expand=appliedPolicies($select=id)","BULK /users/u1?$select=id,userPrincipalName,displayName /users/u2?$select=id,userPrincipalName,displayName"]}' }
+        @{ Type = 'mdmWindowsInformationProtectionPolicies'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":null,"Users":[{"UserPrincipalName":"a@contoso.com","UserName":"A","Status":"Checked in","StatusDetail":"com.microsoft.outlook on Phone (iPhone)","DeviceCount":null,"LastReported":"2026-11-01T10:00:00Z"},{"UserPrincipalName":"u2","UserName":null,"Status":"Rooted device","StatusDetail":"com.microsoft.teams on Tablet (android)","DeviceCount":null,"LastReported":"2026-11-02T10:00:00Z"}]}},"Calls":["GET https://graph.microsoft.com/beta/deviceAppManagement/managedAppRegistrations?$expand=appliedPolicies($select=id)","BULK /users/u1?$select=id,userPrincipalName,displayName /users/u2?$select=id,userPrincipalName,displayName"]}' }
+        @{ Type = 'windowsInformationProtectionPolicy'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":null,"Users":[{"UserPrincipalName":"a@contoso.com","UserName":"A","Status":"Checked in","StatusDetail":"com.microsoft.outlook on Phone (iPhone)","DeviceCount":null,"LastReported":"2026-11-01T10:00:00Z"},{"UserPrincipalName":"u2","UserName":null,"Status":"Rooted device","StatusDetail":"com.microsoft.teams on Tablet (android)","DeviceCount":null,"LastReported":"2026-11-02T10:00:00Z"}]}},"Calls":["GET https://graph.microsoft.com/beta/deviceAppManagement/managedAppRegistrations?$expand=appliedPolicies($select=id)","BULK /users/u1?$select=id,userPrincipalName,displayName /users/u2?$select=id,userPrincipalName,displayName"]}' }
+        @{ Type = 'targetedManagedAppConfigurations'; Expected = '{"StatusCode":200,"Body":{"Results":{"Devices":null,"Users":[{"UserPrincipalName":"a@contoso.com","UserName":"A","Status":"Checked in","StatusDetail":"com.microsoft.outlook on Phone (iPhone)","DeviceCount":null,"LastReported":"2026-11-01T10:00:00Z"},{"UserPrincipalName":"u2","UserName":null,"Status":"Rooted device","StatusDetail":"com.microsoft.teams on Tablet (android)","DeviceCount":null,"LastReported":"2026-11-02T10:00:00Z"}]}},"Calls":["GET https://graph.microsoft.com/beta/deviceAppManagement/managedAppRegistrations?$expand=appliedPolicies($select=id)","BULK /users/u1?$select=id,userPrincipalName,displayName /users/u2?$select=id,userPrincipalName,displayName"]}' }
+    ) {
+        Get-Snapshot -Type $Type -Id 'T_abc' | Should -BeExactly $Expected
+    }
+
+    It 'pins the response for <Name>' -ForEach @(
+        @{ Name = 'a missing type'; Type = ''; Id = 'abc'; Expected = '{"StatusCode":400,"Body":{"Results":"A valid ID and Type are required."},"Calls":[]}' }
+        @{ Name = 'an invalid id'; Type = 'deviceConfigurations'; Id = 'a/b'; Expected = '{"StatusCode":400,"Body":{"Results":"A valid ID and Type are required."},"Calls":[]}' }
+        @{ Name = 'a missing id'; Type = 'deviceConfigurations'; Id = ''; Expected = '{"StatusCode":400,"Body":{"Results":"A valid ID and Type are required."},"Calls":[]}' }
+    ) {
+        Get-Snapshot -Type $Type -Id $Id | Should -BeExactly $Expected
+    }
+
+    It 'pins the Graph failure response for <Type>' -ForEach @(
+        @{ Type = 'mobileApps'; Expected = '{"StatusCode":500,"Body":{"Results":"Failed to load deployment status for mobileApps 3697484d-68b1-4888-b143-5b281cecc156: Forbidden"},"Calls":[]}' }
+        @{ Type = 'DeviceConfigurations'; Expected = '{"StatusCode":500,"Body":{"Results":"Failed to load deployment status for deviceConfigurations 3697484d-68b1-4888-b143-5b281cecc156: Forbidden"},"Calls":[]}' }
+        @{ Type = 'ConfigurationPolicies'; Expected = '{"StatusCode":500,"Body":{"Results":"Failed to load deployment status for configurationPolicies 3697484d-68b1-4888-b143-5b281cecc156: Forbidden"},"Calls":[]}' }
+        @{ Type = 'deviceHealthScripts'; Expected = '{"StatusCode":500,"Body":{"Results":"Failed to load deployment status for deviceHealthScripts 3697484d-68b1-4888-b143-5b281cecc156: Forbidden"},"Calls":[]}' }
+        @{ Type = 'iosManagedAppProtection'; Expected = '{"StatusCode":500,"Body":{"Results":"Failed to load deployment status for iosManagedAppProtection 3697484d-68b1-4888-b143-5b281cecc156: Forbidden"},"Calls":[]}' }
+    ) {
+        $script:Fail = $true
+        Get-Snapshot -Type $Type | Should -BeExactly $Expected
     }
 }

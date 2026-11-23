@@ -15,6 +15,8 @@ function Get-CIPPIntuneDefinitionIndex {
         is about a third of the size of the parsed collection, then hands the same instance to
         every subsequent caller. Callers must treat the result as read-only.
 
+        Each definition also carries its categoryName, one shared string per distinct category.
+
         Lookups are ordinal-case-insensitive to match the -eq comparisons this replaced. Indexing a
         missing key returns $null, the same as the hashtable it replaced; indexing a $null key
         throws, so callers must keep guarding for that.
@@ -55,6 +57,7 @@ function Get-CIPPIntuneDefinitionIndex {
     }
 
     $Index = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $CategoryNames = [System.Collections.Generic.Dictionary[string, string]]::new([System.StringComparer]::Ordinal)
 
     try {
         # ReadAllText over Get-Content: the file is one 18MB line, so Get-Content pays to split it
@@ -90,6 +93,15 @@ function Get-CIPPIntuneDefinitionIndex {
             }
         }
 
+        $CategoryName = $null
+        if ($Definition.categoryName) {
+            $CategoryKey = "$($Definition.categoryName)"
+            if (-not $CategoryNames.TryGetValue($CategoryKey, [ref]$CategoryName)) {
+                $CategoryName = $CategoryKey
+                $CategoryNames[$CategoryKey] = $CategoryName
+            }
+        }
+
         # A definition with no display name stringifies to '', which is falsy - the call sites
         # already treat that as "no label" and fall back to the setting id.
         $Index[$Id] = @{
@@ -98,6 +110,7 @@ function Get-CIPPIntuneDefinitionIndex {
             requiredChildIds = $RequiredChildIds
             minimumCount     = $Definition.minimumCount
             maximumCount     = $Definition.maximumCount
+            categoryName     = $CategoryName
         }
     }
 
