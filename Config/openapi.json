@@ -19411,6 +19411,10 @@
                     "type": "boolean",
                     "description": "Also return the AllTenants-scoped variables alongside this tenant's own."
                   },
+                  "JoinInherited": {
+                    "type": "boolean",
+                    "description": "A list or collection on a tenant group or tenant adds its entries to the inherited list instead of replacing it."
+                  },
                   "RowKey": {
                     "type": "string"
                   },
@@ -53821,6 +53825,9 @@
                       },
                       "ETag": {
                         "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "JoinInherited": {
                         "x-cipp-field-source": "storage"
                       },
                       "PartitionKey": {
