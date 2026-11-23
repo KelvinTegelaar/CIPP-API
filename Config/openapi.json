@@ -68724,6 +68724,9 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
+                      "Priority": {
+                        "x-cipp-field-source": "frontend"
+                      },
                       "RowKey": {
                         "x-cipp-field-source": "storage"
                       },
