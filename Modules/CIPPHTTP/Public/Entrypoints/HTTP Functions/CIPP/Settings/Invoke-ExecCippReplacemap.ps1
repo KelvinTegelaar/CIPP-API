@@ -162,12 +162,13 @@ function Invoke-ExecCippReplacemap {
                     # Groups that disagree resolve to the global value, so a conflict is listed without hiding it.
                     $GroupVariables = @(foreach ($Entry in (Get-CIPPTenantGroupVariables -CustomerId $customerId).GetEnumerator()) {
                             [pscustomobject]@{
-                                RowKey       = $Entry.Key
-                                Value        = $Entry.Value.Value
-                                VariableType = $Entry.Value.VariableType
-                                Description  = if ($Entry.Value.Conflict) { 'These groups set different values, so the global value applies. Override it on this tenant to choose one.' } else { $Entry.Value.Description }
-                                Scope        = if ($Entry.Value.Conflict) { 'Conflict' } else { 'Group' }
-                                Groups       = $Entry.Value.Groups -join ', '
+                                RowKey        = $Entry.Key
+                                Value         = $Entry.Value.Value
+                                VariableType  = $Entry.Value.VariableType
+                                JoinInherited = $Entry.Value.JoinInherited
+                                Description   = if ($Entry.Value.Conflict) { 'These groups set different values, so the global value applies. Override it on this tenant to choose one.' } else { $Entry.Value.Description }
+                                Scope         = if ($Entry.Value.Conflict) { 'Conflict' } else { 'Group' }
+                                Groups        = $Entry.Value.Groups -join ', '
                             }
                         })
                     # A tenant value that shadows an inherited one is not simply 'Tenant': removing it
@@ -280,9 +281,12 @@ function Invoke-ExecCippReplacemap {
                     }
                 }
 
+                # A list or collection on a tenant group or tenant adds its entries to the inherited list instead of replacing it.
+                $JoinInherited = $customerId -ne 'AllTenants' -and $VariableType -in @('list', 'collection') -and $Request.Body.JoinInherited -eq $true
+
                 if ($Action -eq 'PreviewValue') {
                     $Token = '"%{0}%"' -f $VariableName
-                    $PreviewVariable = @{ Name = $VariableName; Value = $VariableValue; VariableType = $VariableType }
+                    $PreviewVariable = @{ Name = $VariableName; Value = $VariableValue; VariableType = $VariableType; JoinInherited = $JoinInherited }
                     $PreviewTenant = if ($customerId -ne 'AllTenants' -and $customerId -notlike 'group:*') { $customerId } else { '' }
                     $Samples = [ordered]@{
                         'A field'               = $Token
@@ -300,11 +304,12 @@ function Invoke-ExecCippReplacemap {
                 }
 
                 $VariableEntity = @{
-                    PartitionKey = $customerId
-                    RowKey       = $VariableName
-                    Value        = $VariableValue
-                    Description  = $VariableDescription
-                    VariableType = $VariableType
+                    PartitionKey  = $customerId
+                    RowKey        = $VariableName
+                    Value         = $VariableValue
+                    Description   = $VariableDescription
+                    VariableType  = $VariableType
+                    JoinInherited = $JoinInherited
                 }
 
                 Add-CIPPAzDataTableEntity @Table -Entity $VariableEntity -Force

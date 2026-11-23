@@ -275,7 +275,7 @@ function Invoke-ListCustomVariables {
                         Name         = $Entry.Key
                         Variable     = "%$($Entry.Key)%"
                         Description  = "Tenant group custom variable ($($Entry.Value.Groups -join ', '))"
-                        Value        = $Entry.Value.Value
+                        Value        = Merge-CIPPListVariableValue -InheritedValue $VariableMap[$Entry.Key].Value -InheritedType $VariableMap[$Entry.Key].VariableType -Value $Entry.Value.Value -VariableType $Entry.Value.VariableType -JoinInherited $Entry.Value.JoinInherited
                         Type         = 'custom'
                         VariableType = $Entry.Value.VariableType ?? 'string'
                         Category     = 'group'
@@ -299,7 +299,7 @@ function Invoke-ListCustomVariables {
                                 Name         = $Variable.RowKey
                                 Variable     = "%$($Variable.RowKey)%"
                                 Description  = 'Tenant-specific custom variable'
-                                Value        = $Variable.Value
+                                Value        = Merge-CIPPListVariableValue -InheritedValue $VariableMap[$Variable.RowKey].Value -InheritedType $VariableMap[$Variable.RowKey].VariableType -Value $Variable.Value -VariableType $Variable.VariableType -JoinInherited $Variable.JoinInherited
                                 Type         = 'custom'
                                 VariableType = $Variable.VariableType ?? 'string'
                                 Category     = 'tenant-custom'

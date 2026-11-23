@@ -4,8 +4,9 @@ function Get-CIPPTenantGroupVariables {
         Custom variables a tenant inherits from the tenant groups it belongs to
     .DESCRIPTION
         Group variables are CippReplacemap rows partitioned as 'group:<groupId>'. Returns a hashtable of
-        variable name to @{ Value; VariableType; Description; Groups; Conflict }. A name given different
-        values by two of the tenant's groups is a conflict: callers skip it so the global value applies.
+        variable name to @{ Value; VariableType; Description; JoinInherited; Groups; Conflict }. A name given
+        different values by two of the tenant's groups is a conflict: callers skip it so the global value applies.
+        Lists that every group joins to inherited values are combined instead.
         Deliberately not part of Get-CIPPTenantVariables, which dynamic group rules read: a group's own
         variables deciding its membership would be circular.
     .FUNCTIONALITY
@@ -44,15 +45,20 @@ function Get-CIPPTenantGroupVariables {
             $Groups = [System.Collections.Generic.List[string]]::new()
             $Groups.Add($GroupName)
             $Result[$Row.RowKey] = @{
-                Value        = $Row.Value
-                VariableType = $Row.VariableType
-                Description  = $Row.Description
-                Groups       = $Groups
-                Conflict     = $false
+                Value         = $Row.Value
+                VariableType  = $Row.VariableType
+                Description   = $Row.Description
+                JoinInherited = $Row.JoinInherited -eq $true
+                Groups        = $Groups
+                Conflict      = $false
             }
             continue
         }
         $Existing.Groups.Add($GroupName)
+        if ($Existing.JoinInherited -and $Row.JoinInherited -eq $true -and [string]$Existing.VariableType -eq [string]$Row.VariableType) {
+            $Existing.Value = Merge-CIPPListVariableValue -InheritedValue $Existing.Value -InheritedType $Existing.VariableType -Value $Row.Value -VariableType $Row.VariableType -JoinInherited $true
+            continue
+        }
         if ([string]$Existing.Value -cne [string]$Row.Value -or [string]$Existing.VariableType -ne [string]$Row.VariableType) {
             $Existing.Conflict = $true
         }

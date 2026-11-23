@@ -182,6 +182,18 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
             $script:SavedEntity.Value | Should -Be '["tenant-a","tenant-b"]'
         }
 
+        It 'stores the join setting on a tenant or group list only' -ForEach @(
+            @{ TenantId = 'contoso.onmicrosoft.com'; VariableType = 'list'; Expected = $true }
+            @{ TenantId = 'contoso.onmicrosoft.com'; VariableType = 'collection'; Expected = $true }
+            @{ TenantId = 'AllTenants'; VariableType = 'list'; Expected = $false }
+            @{ TenantId = 'contoso.onmicrosoft.com'; VariableType = 'string'; Expected = $false }
+        ) {
+            $Request = New-SaveRequest -Name 'sites' -Value '["Site A"]' -VariableType $VariableType -TenantId $TenantId
+            $Request.Body | Add-Member -NotePropertyName 'JoinInherited' -NotePropertyValue $true
+            $null = Invoke-ExecCippReplacemap -Request $Request
+            $script:SavedEntity.JoinInherited | Should -Be $Expected
+        }
+
         It 'stores a single line as a one item list' {
             $null = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'sites' -Value 'Site A' -VariableType 'list')
             $script:SavedEntity.Value | Should -Be '["Site A"]'
@@ -730,6 +742,7 @@ Describe 'Invoke-ExecCippReplacemap - Preview' {
 Describe 'Invoke-ExecCippReplacemap - PreviewValue' {
     BeforeAll {
         . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPTextReplacement.ps1')
+        . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/TenantGroups/Merge-CIPPListVariableValue.ps1')
         function New-PreviewValueRequest {
             param([string]$TenantId = 'AllTenants', $Value, $VariableType)
             [pscustomobject]@{

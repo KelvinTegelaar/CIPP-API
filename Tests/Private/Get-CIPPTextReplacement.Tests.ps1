@@ -23,6 +23,7 @@ BeforeAll {
     function Write-LogMessage { param($API, $tenant, $message, $sev) }
 
     . $FunctionPath
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/TenantGroups/Merge-CIPPListVariableValue.ps1')
     . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Tools/Convert-AzureAdObjectIdToSid.ps1')
 
     # A CippReplacemap row. Omitting -VariableType produces a row shaped like the ones that existed
@@ -374,6 +375,46 @@ Describe 'Get-CIPPTextReplacement' {
             $script:TenantRows = @(New-VariableRow -Name 'onedrive' -Value 'tenant')
 
             Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%onedrive%' | Should -Be 'tenant'
+        }
+
+        It 'adds a joining tenant group and tenant list to the inherited list, without duplicates' {
+            $script:GlobalRows = @(New-VariableRow -Name 'ranges' -Value '["10.0.0.0/8","192.168.0.0/16"]' -VariableType 'list')
+            $script:GroupVariables = @{ ranges = @{ Value = '["172.16.0.0/12"]'; VariableType = 'list'; JoinInherited = $true; Groups = @('Branches'); Conflict = $false } }
+            $Row = New-VariableRow -Name 'ranges' -Value '["10.0.0.0/8","203.0.113.0/24"]' -VariableType 'list'
+            $Row | Add-Member -NotePropertyName 'JoinInherited' -NotePropertyValue $true
+            $script:TenantRows = @($Row)
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"%ranges%"}' -EscapeForJson |
+                Should -Be '{"v":["10.0.0.0/8","192.168.0.0/16","172.16.0.0/12","203.0.113.0/24"]}'
+        }
+
+        It 'replaces the inherited list when the variable does not join' {
+            $script:GlobalRows = @(New-VariableRow -Name 'ranges' -Value '["10.0.0.0/8"]' -VariableType 'list')
+            $script:TenantRows = @(New-VariableRow -Name 'ranges' -Value '["203.0.113.0/24"]' -VariableType 'list')
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"%ranges%"}' -EscapeForJson |
+                Should -Be '{"v":["203.0.113.0/24"]}'
+        }
+
+        It 'replaces an inherited value that is not a list even when joining' {
+            $script:GlobalRows = @(New-VariableRow -Name 'ranges' -Value '10.0.0.0/8')
+            $Row = New-VariableRow -Name 'ranges' -Value '["203.0.113.0/24"]' -VariableType 'list'
+            $Row | Add-Member -NotePropertyName 'JoinInherited' -NotePropertyValue $true
+            $script:TenantRows = @($Row)
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"%ranges%"}' -EscapeForJson |
+                Should -Be '{"v":["203.0.113.0/24"]}'
+        }
+
+        It 'previews a joining tenant list over the inherited value, not its own saved one' {
+            $script:GlobalRows = @(New-VariableRow -Name 'ranges' -Value '["10.0.0.0/8"]' -VariableType 'list')
+            $Row = New-VariableRow -Name 'ranges' -Value '["198.51.100.0/24"]' -VariableType 'list'
+            $Row | Add-Member -NotePropertyName 'JoinInherited' -NotePropertyValue $true
+            $script:TenantRows = @($Row)
+            $Preview = @{ Name = 'ranges'; Value = '["203.0.113.0/24"]'; VariableType = 'list'; JoinInherited = $true }
+
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '{"v":"%ranges%"}' -EscapeForJson -PreviewVariable $Preview |
+                Should -Be '{"v":["10.0.0.0/8","203.0.113.0/24"]}'
         }
 
         It 'keeps the global value and warns when tenant groups disagree' {

@@ -4,6 +4,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($TableName, $Filter) }
     . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/TenantGroups/Get-CIPPTenantGroupVariables.ps1')
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/TenantGroups/Merge-CIPPListVariableValue.ps1')
 }
 
 Describe 'Get-CIPPTenantGroupVariables' {
@@ -40,6 +41,25 @@ Describe 'Get-CIPPTenantGroupVariables' {
 
     It 'flags a name the tenant groups disagree on' {
         (Get-CIPPTenantGroupVariables -CustomerId 'tenant-1')['aiblock'].Conflict | Should -BeTrue
+    }
+
+    It 'combines lists that every group joins instead of flagging a conflict' {
+        $script:VariableRows += @(
+            [pscustomobject]@{ PartitionKey = 'group:g1'; RowKey = 'ranges'; Value = '["10.0.0.0/8","172.16.0.0/12"]'; VariableType = 'list'; JoinInherited = $true }
+            [pscustomobject]@{ PartitionKey = 'group:g2'; RowKey = 'ranges'; Value = '["172.16.0.0/12","203.0.113.0/24"]'; VariableType = 'list'; JoinInherited = $true }
+        )
+        $Result = (Get-CIPPTenantGroupVariables -CustomerId 'tenant-1')['ranges']
+        $Result.Conflict | Should -BeFalse
+        $Result.JoinInherited | Should -BeTrue
+        $Result.Value | Should -Be '["10.0.0.0/8","172.16.0.0/12","203.0.113.0/24"]'
+    }
+
+    It 'flags lists that differ when a group replaces rather than joins' {
+        $script:VariableRows += @(
+            [pscustomobject]@{ PartitionKey = 'group:g1'; RowKey = 'ranges'; Value = '["10.0.0.0/8"]'; VariableType = 'list'; JoinInherited = $true }
+            [pscustomobject]@{ PartitionKey = 'group:g2'; RowKey = 'ranges'; Value = '["203.0.113.0/24"]'; VariableType = 'list' }
+        )
+        (Get-CIPPTenantGroupVariables -CustomerId 'tenant-1')['ranges'].Conflict | Should -BeTrue
     }
 
     It 'ignores groups the tenant is not in and groups that no longer exist' {
