@@ -125,11 +125,11 @@ function Invoke-ListGroups {
     $SendOnBehalfIds = @()
     if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
         # get the outside the organization RequireSenderAuthenticationEnabled setting
-        $DistributionGroupInfo = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled,GrantSendOnBehalfTo' -useSystemMailbox $true
+        $DistributionGroupInfo = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled,GrantSendOnBehalfTo,EmailAddresses' -useSystemMailbox $true
         $OnlyAllowInternal = $DistributionGroupInfo.RequireSenderAuthenticationEnabled
         $SendOnBehalfIds = @($DistributionGroupInfo.GrantSendOnBehalfTo | Where-Object { $_ })
     } elseif ($GroupType -eq 'Microsoft 365') {
-        $UnifiedGroupInfo = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-UnifiedGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled,subscriptionEnabled,AutoSubscribeNewMembers,HiddenFromExchangeClientsEnabled,GrantSendOnBehalfTo' -useSystemMailbox $true
+        $UnifiedGroupInfo = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-UnifiedGroup' -cmdParams @{Identity = $GroupID } -Select 'RequireSenderAuthenticationEnabled,subscriptionEnabled,AutoSubscribeNewMembers,HiddenFromExchangeClientsEnabled,GrantSendOnBehalfTo,EmailAddresses' -useSystemMailbox $true
         $OnlyAllowInternal = $UnifiedGroupInfo.RequireSenderAuthenticationEnabled
         $SendOnBehalfIds = @($UnifiedGroupInfo.GrantSendOnBehalfTo | Where-Object { $_ })
     } else {
@@ -203,6 +203,8 @@ function Invoke-ListGroups {
                 allowExternal          = (!$OnlyAllowInternal)
                 sendCopies             = $SendCopies
                 hideFromOutlookClients = if ($GroupType -eq 'Microsoft 365') { $UnifiedGroupInfo.HiddenFromExchangeClientsEnabled } else { $null }
+                # Read from Exchange, where aliases are written; Entra's proxyAddresses lags behind it
+                emailAddresses         = @(($UnifiedGroupInfo ?? $DistributionGroupInfo).EmailAddresses | Where-Object { $_ })
                 sendAs                 = $SendAs
                 sendOnBehalf           = $SendOnBehalf
                 SID                    = (Convert-AzureAdObjectIdToSid -ObjectID $((($RawGraphRequest | Where-Object { $_.id -eq 1 }).body).id))

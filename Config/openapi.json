@@ -9984,6 +9984,10 @@
                       }
                     }
                   },
+                  "AddedAliases": {
+                    "type": "string",
+                    "description": "Proxy addresses (aliases) to add to the group, as plain addresses or smtp:-prefixed"
+                  },
                   "AddLicenses": {
                     "type": "array",
                     "items": {
@@ -10114,6 +10118,10 @@
                   "membershipRules": {
                     "type": "string"
                   },
+                  "PrimarySmtpAddress": {
+                    "type": "string",
+                    "description": "New primary email address for the group; the previous primary stays on the group as an alias"
+                  },
                   "RemoveContact": {
                     "type": "array",
                     "items": {
@@ -10135,6 +10143,10 @@
                         }
                       }
                     }
+                  },
+                  "RemovedAliases": {
+                    "type": "string",
+                    "description": "Proxy addresses (aliases) to remove from the group"
                   },
                   "RemoveLicenses": {
                     "type": "array",
