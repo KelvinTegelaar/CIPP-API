@@ -72,3 +72,20 @@ Describe 'Graph request retries' -ForEach @(
         Should -Invoke Start-Sleep -Times 1 -ParameterFilter { $Seconds -ge 1 -and $Seconds -le 4 }
     }
 }
+
+Describe 'New-GraphGetRequest gateway errors' {
+    It 'retries a 502 from the reports gateway' {
+        $script:Calls = 0
+        Mock -CommandName Start-Sleep -MockWith { }
+        Mock -CommandName Invoke-CIPPRestMethod -MockWith {
+            $script:Calls++
+            if ($script:Calls -eq 1) { throw (New-HttpFailure 502) }
+            [PSCustomObject]@{ value = @([PSCustomObject]@{ id = 'ok' }) }
+        }
+
+        $Result = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/getTeamsUserActivityUserDetail' -tenantid 'contoso.com' -NoAuthCheck $true -Headers $script:Headers
+
+        $script:Calls | Should -Be 2
+        @($Result)[0].id | Should -Be 'ok'
+    }
+}

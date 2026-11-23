@@ -27,6 +27,8 @@ Describe 'Invoke-CIPPStandardSPGuestPeoplePicker' {
                 [PSCustomObject]@{ Url = 'https://c-my.sharepoint.com/'; Template = 'SPSMSITEHOST#0'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
                 [PSCustomObject]@{ Url = 'https://c.sharepoint.com/portals/hub'; Template = 'POINTPUBLISHINGHUB#0'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
                 [PSCustomObject]@{ Url = 'https://c.sharepoint.com/portals/Community'; Template = 'POINTPUBLISHINGTOPIC#0'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
+                [PSCustomObject]@{ Url = 'https://c.sharepoint.com/sites/Renamed'; Template = 'REDIRECTSITE#0'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
+                [PSCustomObject]@{ Url = 'http://bot190434-002/sites/83cccd11-2eb6-4db6-9fef-6d0ac592e605'; Template = 'STS#-1'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
                 [PSCustomObject]@{ Url = 'https://c.sharepoint.com/sites/A'; Template = 'GROUP#0'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
             ) }
         Mock Set-CIPPSPOSiteBulk { foreach ($Site in $Sites) { [PSCustomObject]@{ SiteUrl = $Site.SiteUrl; Success = $true } } }

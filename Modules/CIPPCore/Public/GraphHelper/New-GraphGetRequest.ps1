@@ -171,9 +171,9 @@ function New-GraphGetRequest {
                             $ShouldRetry = $true
                         }
                     }
-                    # 503 (SharePoint's internal busy signal) and "Resource temporarily unavailable" / SharePoint CSOM throttling
+                    # 502 (gateway errors on the usage reports), 503 (SharePoint's internal busy signal) and "Resource temporarily unavailable" / SharePoint CSOM throttling
                     # ("Server busy, please retry" is transient and safe to retry).
-                    elseif ($_.Exception.Response.StatusCode -eq 503 -or $Message -like '*Resource temporarily unavailable*' -or $Message -like '*Too many requests*' -or $Message -like '*Server busy*') {
+                    elseif ($_.Exception.Response.StatusCode -in 502, 503 -or $Message -like '*Resource temporarily unavailable*' -or $Message -like '*Too many requests*' -or $Message -like '*Server busy*') {
                         if ($RetryCount -lt $MaxRetries) {
                             $WaitTime = $RetryAfter ? $RetryAfter : (Get-Random -Minimum 1.1 -Maximum 3.1)  # Random sleep between 1-2 seconds
                             Write-Warning "Resource temporarily unavailable. Waiting $WaitTime seconds before retry. Attempt $($RetryCount + 1) of $MaxRetries"

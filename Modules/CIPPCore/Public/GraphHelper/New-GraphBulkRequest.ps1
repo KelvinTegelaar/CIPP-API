@@ -109,7 +109,7 @@ function New-GraphBulkRequest {
             # A throttled or briefly unavailable FIRST page used to come straight back as the item's failure
             # (continuation pages below are retried). Send those items again - twice, waiting the longest
             # Retry-After they asked for, up to 30 s - before a caller sees a failure.
-            $TransientStatus = @(429, 503, 504)
+            $TransientStatus = @(429, 502, 503, 504)
             for ($Attempt = 1; $Attempt -le 2; $Attempt++) {
                 $Transient = @(@($ReturnedData.responses).Where({ ($_.status -as [int]) -in $TransientStatus }))
                 if ($Transient.Count -eq 0) { break }

@@ -47,12 +47,14 @@ Describe 'Get-CIPPBaselineSPGuestPeoplePickerState' {
         @($p.Current.offenders) | Should -BeNullOrEmpty
     }
 
-    It 'ignores the My Site host and PointPublishing sites, which SharePoint refuses the setting on' {
+    It 'ignores the My Site host, redirect, PointPublishing and non-tenant sites, which SharePoint refuses the setting on' {
         Mock Get-CIPPSPOTenant { [PSCustomObject]@{ ShowPeoplePickerSuggestionsForGuestUsers = $true } }
         Mock New-CIPPDbRequest { @(
                 [PSCustomObject]@{ Url = 'https://c-my.sharepoint.com/'; Template = 'SPSMSITEHOST#0'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
                 [PSCustomObject]@{ Url = 'https://c.sharepoint.com/portals/hub'; Template = 'POINTPUBLISHINGHUB#0'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
                 [PSCustomObject]@{ Url = 'https://c.sharepoint.com/portals/Community'; Template = 'POINTPUBLISHINGTOPIC#0'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
+                [PSCustomObject]@{ Url = 'https://c.sharepoint.com/sites/Renamed'; Template = 'REDIRECTSITE#0'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
+                [PSCustomObject]@{ Url = 'http://bot190434-002/sites/83cccd11-2eb6-4db6-9fef-6d0ac592e605'; Template = 'STS#-1'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
                 [PSCustomObject]@{ Url = 'https://c.sharepoint.com/sites/A'; Template = 'STS#3'; ShowPeoplePickerSuggestionsForGuestUsers = $false }
             ) }
         $p = Get-CIPPBaselineSPGuestPeoplePickerState -Item (New-Item2 -ShowGuests $true) -TenantFilter $script:Tenant

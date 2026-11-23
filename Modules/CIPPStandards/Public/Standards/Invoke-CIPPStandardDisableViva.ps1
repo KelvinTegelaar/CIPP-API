@@ -32,7 +32,6 @@ function Invoke-CIPPStandardDisableViva {
     param($Tenant, $Settings)
 
     try {
-        # TODO This does not work without Global Admin permissions for some reason. Throws an "EXCEPTION: Tenant admin role is required" error. -Bobby
         $CurrentSetting = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$Tenant/settings/peopleInsights" -tenantid $Tenant -AsApp $true
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -45,12 +44,12 @@ function Invoke-CIPPStandardDisableViva {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Viva is already disabled.' -sev Info
         } else {
             try {
-                # TODO This does not work without Global Admin permissions for some reason. Throws an "EXCEPTION: Tenant admin role is required" error. -Bobby
                 New-GraphPOSTRequest -Uri "https://graph.microsoft.com/beta/organization/$Tenant/settings/peopleInsights" -tenantid $Tenant -Type PATCH -Body '{"isEnabledInOrganization": false}' -ContentType 'application/json' -AsApp $true
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Disabled Viva insights' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to disable Viva for all users. Error: $ErrorMessage" -sev Error
+                # Microsoft rejects this write with an empty UnknownError unless CIPP-SAM holds Global Administrator in the tenant
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not disable Viva insights. Microsoft only accepts this change when the CIPP-SAM application has the Global Administrator role in the tenant (CIPP > Advanced > Super Admin > SAM App Roles, then a CPV refresh). Error: $ErrorMessage" -sev Warning
             }
         }
     }

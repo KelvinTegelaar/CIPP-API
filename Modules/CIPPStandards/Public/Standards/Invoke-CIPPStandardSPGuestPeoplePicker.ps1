@@ -72,8 +72,8 @@ function Invoke-CIPPStandardSPGuestPeoplePicker {
         return
     }
 
-    # SharePoint refuses this setting on the My Site host and on PointPublishing (/portals/) site collections
-    $Sites = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'SPOSites').Where({ $_ -and $_.Url -and $_.Template -ne 'SPSMSITEHOST#0' -and $_.Template -notlike 'POINTPUBLISHING*' })
+    # SharePoint refuses this setting on the My Site host, redirect stubs, PointPublishing (/portals/) and non-tenant (non-https) sites
+    $Sites = @(New-CIPPDbRequest -TenantFilter $Tenant -Type 'SPOSites').Where({ $_ -and $_.Url -like 'https://*' -and $_.Template -notin @('SPSMSITEHOST#0', 'REDIRECTSITE#0') -and $_.Template -notlike 'POINTPUBLISHING*' })
     $TenantValue = [bool]$CurrentTenant.ShowPeoplePickerSuggestionsForGuestUsers
     $NonCompliantSites = @($Sites | Where-Object { [bool]$_.ShowPeoplePickerSuggestionsForGuestUsers -ne $WantedState })
     $TenantIsCorrect = ($TenantValue -eq $WantedState)

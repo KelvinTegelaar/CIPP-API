@@ -154,6 +154,16 @@ Describe 'New-GraphBulkRequest first-page retry' {
         Should -Invoke Start-Sleep -Times 1 -Exactly -ParameterFilter { $Seconds -eq 7 }
     }
 
+    It 'sends a first page that hit a 502 gateway error again' {
+        $script:Replies.Enqueue((New-BatchReply @((New-PageItem -Id 'Target' -Status 502 -Error 'Bad Gateway'), (New-PageItem -Id 'Actor' -Values @(@{ id = 'a1' })))))
+        $script:Replies.Enqueue((New-BatchReply (New-PageItem -Id 'Target' -Values @(@{ id = 't1' }))))
+
+        $Result = @(New-GraphBulkRequest -Requests $script:Requests -tenantid 'contoso.onmicrosoft.com' -asapp $true)
+
+        ($Result | Where-Object id -eq 'Target').status | Should -Be 200
+        $script:Calls.Count | Should -Be 2
+    }
+
     It 'gives up after two retries and returns the throttled page, and never retries a real error' {
         $Requests = @($script:Requests[0], @{ id = 'Denied'; url = 'x'; method = 'GET' })
         $script:Replies.Enqueue((New-BatchReply @((New-PageItem -Id 'Target' -Status 429 -Error 'throttled'), (New-PageItem -Id 'Denied' -Status 403 -Error 'Forbidden'))))
