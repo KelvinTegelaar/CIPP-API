@@ -198,4 +198,36 @@ Describe 'Invoke-ListConditionalAccessPolicies single tenant' {
         $response.StatusCode | Should -Be 200
         @($response.Body.Results) | Should -HaveCount 0
     }
+
+    It 'shows every named location of a policy by its display name' {
+        Mock -CommandName New-GraphBulkRequest -MockWith {
+            @(
+                @{ id = 'policies'; status = 200; body = @{ value = @(
+                            @{
+                                id          = 'p1'
+                                displayName = 'CA100'
+                                conditions  = @{ locations = @{
+                                        includeLocations = @('All')
+                                        excludeLocations = @('AllTrusted', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222')
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+                @{ id = 'namedLocations'; status = 200; body = @{ value = @(
+                            @{ id = '11111111-1111-1111-1111-111111111111'; displayName = 'Head Office' }
+                            @{ id = '22222222-2222-2222-2222-222222222222'; displayName = 'CT-CA-Anthropic' }
+                        )
+                    }
+                }
+            )
+        }
+
+        $response = Invoke-ListConditionalAccessPolicies -Request $Request -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 200
+        $response.Body.Results[0].includeLocations | Should -Be 'All'
+        $response.Body.Results[0].excludeLocations | Should -Be 'AllTrusted,Head Office,CT-CA-Anthropic'
+    }
 }

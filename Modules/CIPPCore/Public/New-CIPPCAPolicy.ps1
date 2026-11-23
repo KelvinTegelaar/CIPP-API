@@ -20,101 +20,6 @@ function New-CIPPCAPolicy {
         $PreloadedVacationGroups = $null
     )
 
-    # Helper function to replace group display names with GUIDs
-    function Convert-GroupNameToId {
-        param($TenantFilter, $groupNames, $CreateGroups, $GroupTemplates)
-
-        $GroupIds = [System.Collections.Generic.List[string]]::new()
-        $groupNames | ForEach-Object {
-            if (Test-IsGuid -String $_) {
-                Write-LogMessage -Headers $Headers -API $APIName -message "Already GUID, no need to replace: $_" -Sev 'Debug'
-                $GroupIds.Add($_) # it's a GUID, so we keep it
-            } else {
-                $matchedGroups = @($groups | Where-Object -Property displayName -EQ $_)
-                $groupId = $matchedGroups.id # it's a display name, so we get the group ID
-                if ($groupId) {
-                    if ($matchedGroups.Count -gt 1) {
-                        Write-Warning "Multiple groups found with display name '$_'. Using the first match: $($matchedGroups[0].id). IDs found: $($groupId -join ', ')"
-                        $null = Write-LogMessage -Headers $Headers -API $APIName -message "Multiple groups found with display name '$_'. Using first match: $($matchedGroups[0].id)" -Sev 'Warning'
-                        $groupId = @($matchedGroups[0].id)
-                    }
-                    foreach ($gid in $groupId) {
-                        Write-Warning "Replaced group name $_ with ID $gid"
-                        $null = Write-LogMessage -Headers $Headers -API $APIName -message "Replaced group name $_ with ID $gid" -Sev 'Debug'
-                        $GroupIds.Add($gid) # add the ID to the list
-                    }
-                } elseif ($CreateGroups) {
-                    Write-Warning "Creating group $_ as it does not exist in the tenant"
-                    # A template store with duplicate display names returns every match here. Passing that
-                    # array to New-CIPPGroup makes the Graph create body's displayName an array, so the
-                    # create fails ("Unexpected token: StartArray. Path 'resourcePayload.displayName'") and
-                    # leaves an empty group id, which Graph then rejects with the opaque
-                    # "1054: Invalid group value: ." on the whole policy. Select a single template.
-                    $MatchingTemplates = @($GroupTemplates | Where-Object -Property displayName -EQ $_)
-                    if ($MatchingTemplates.Count -gt 0) {
-                        if ($MatchingTemplates.Count -gt 1) {
-                            Write-Warning "Multiple group templates found with display name '$_'. Using the first match."
-                            $null = Write-LogMessage -Headers $Headers -API $APIName -message "Multiple group templates found with display name '$_'. Using the first match; remove the duplicate group template." -Sev 'Warning'
-                        }
-                        Write-Information "Creating group from template for $_"
-                        $NewGroup = New-CIPPGroup -GroupObject ($MatchingTemplates | Select-Object -First 1) -TenantFilter $TenantFilter -APIName $APIName
-                    } else {
-                        Write-Information "No template found, creating security group for $_"
-                        $username = $_ -replace '[^a-zA-Z0-9]', ''
-                        if ($username.Length -gt 64) {
-                            $username = $username.Substring(0, 64)
-                        }
-                        $GroupObject = @{
-                            groupType       = 'generic'
-                            displayName     = $_
-                            username        = $username
-                            securityEnabled = $true
-                        }
-                        $NewGroup = New-CIPPGroup -GroupObject $GroupObject -TenantFilter $TenantFilter -APIName $APIName
-                    }
-                    # Fail closed: never add an empty id. A dropped exclusion silently widens the policy
-                    # (e.g. break-glass accounts no longer excluded), and Graph rejects the empty value
-                    # anyway. Surface why the create failed instead of the opaque 1054 group error.
-                    if (-not $NewGroup.Success -or [string]::IsNullOrWhiteSpace($NewGroup.GroupId)) {
-                        throw "Failed to create group '$_' in tenant $TenantFilter$(if ($NewGroup.Error) { ": $($NewGroup.Error)" }). Resolve the group manually or remove the duplicate group template, then redeploy."
-                    }
-                    $GroupIds.Add($NewGroup.GroupId)
-                } else {
-                    Write-Warning "Group $_ not found in the tenant and CreateGroups is disabled"
-                    throw "Group '$_' not found in tenant $TenantFilter. Enable 'Create groups if they do not exist' or create the group manually before deploying this policy."
-                }
-            }
-        }
-        return $GroupIds
-    }
-
-    function Convert-UserNameToId {
-        param($userNames, [bool]$Strict)
-
-        $UserIds = [System.Collections.Generic.List[string]]::new()
-        $userNames | ForEach-Object {
-            if (Test-IsGuid -String $_) {
-                Write-LogMessage -Headers $Headers -API $APIName -message "Already GUID, no need to replace: $_" -Sev 'Debug'
-                $UserIds.Add($_) # it's a GUID, so we keep it
-            } else {
-                $userId = ($users | Where-Object -Property displayName -EQ $_).id # it's a display name, so we get the user ID
-                if ($userId) {
-                    foreach ($uid in $userId) {
-                        Write-Warning "Replaced user name $_ with ID $uid"
-                        $null = Write-LogMessage -Headers $Headers -API $APIName -message "Replaced user name $_ with ID $uid" -Sev 'Debug'
-                        $UserIds.Add($uid) # add the ID to the list
-                    }
-                } elseif ($Strict) {
-                    throw "User '$_' not found in tenant $TenantFilter."
-                } else {
-                    Write-Warning "User $_ not found in the tenant"
-                    $null = Write-LogMessage -Headers $Headers -API $APIName -message "CA policy user value '$_' did not match any user in the tenant and was dropped from the policy" -Sev 'Warning'
-                }
-            }
-        }
-        return $UserIds
-    }
-
     # Custom variables must be resolved before the dependency lookups below. The only other
     # substitution point is the Graph request layer (New-GraphPOSTRequest), which runs after the
     # named-location / auth-strength / auth-context name matching - leaving those comparing raw
@@ -517,32 +422,7 @@ function New-CIPPCAPolicy {
     }
 
     # A name not defined in LocationInfo refers to a location the tenant already has.
-    $LocationSides = @('includeLocations', 'excludeLocations').Where({ @($JSONobj.conditions.locations.$_).Where({ $_ -and $_ -notin 'All', 'AllTrusted' -and -not (Test-IsGuid -String $_) }).Count -gt 0 })
-    if ($LocationSides.Count -gt 0) {
-        if ($null -eq $AllNamedLocations) {
-            $AllNamedLocations = if ($PreloadedLocations) { $PreloadedLocations } else {
-                try {
-                    New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations?$top=999' -tenantid $TenantFilter -asApp $true
-                } catch {
-                    $ErrorMessage = Get-CippException -Exception $_
-                    throw "Failed to fetch named locations: $($ErrorMessage.NormalizedError)"
-                }
-            }
-        }
-        $TenantLocationIds = @{}
-        foreach ($TenantLocation in @($AllNamedLocations)) {
-            if ($TenantLocation.displayName -and -not $TenantLocationIds.ContainsKey($TenantLocation.displayName)) { $TenantLocationIds[$TenantLocation.displayName] = $TenantLocation.id }
-        }
-        foreach ($Side in $LocationSides) {
-            $JSONobj.conditions.locations.$Side = @(foreach ($Location in @($JSONobj.conditions.locations.$Side)) {
-                    if (-not $Location -or $Location -in 'All', 'AllTrusted' -or (Test-IsGuid -String $Location)) { $Location; continue }
-                    if (-not $TenantLocationIds.ContainsKey($Location)) {
-                        throw [System.Management.Automation.ItemNotFoundException]::new("Named location '$Location' used by policy '$displayName' was not found in $TenantFilter. Add it to the template's named locations or create it in the tenant first.")
-                    }
-                    $TenantLocationIds[$Location]
-                })
-        }
-    }
+    Resolve-CIPPCAPolicyNames -Policy $JSONobj -TenantFilter $TenantFilter -NamedLocations ($AllNamedLocations ?? $PreloadedLocations) -PolicyName $displayName -LocationNotFoundHint "Add it to the template's named locations or create it in the tenant first." -LocationsOnly -Headers $Headers -APIName $APIName
 
     $ResolveNames = $false
     switch ($ReplacePattern) {
@@ -600,14 +480,14 @@ function New-CIPPCAPolicy {
                 # phantom entry and logs a "did not match any user" warning for something nobody asked for.
                 foreach ($userType in 'includeUsers', 'excludeUsers') {
                     if (@($JSONobj.conditions.users.$userType).Count -gt 0 -and $JSONobj.conditions.users.$userType -notin 'All', 'None', 'GuestsOrExternalUsers') {
-                        $JSONobj.conditions.users.$userType = @(Convert-UserNameToId -userNames $JSONobj.conditions.users.$userType -Strict $ResolveNames)
+                        $JSONobj.conditions.users.$userType = @(Convert-CIPPCAUserNameToId -UserNames $JSONobj.conditions.users.$userType -Users $users -Strict $ResolveNames -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName)
                     }
                 }
 
                 # Check the included and excluded groups
                 foreach ($groupType in 'includeGroups', 'excludeGroups') {
                     if (@($JSONobj.conditions.users.$groupType).Count -gt 0) {
-                        $JSONobj.conditions.users.$groupType = @(Convert-GroupNameToId -groupNames $JSONobj.conditions.users.$groupType -CreateGroups $CreateGroups -TenantFilter $TenantFilter -GroupTemplates $GroupTemplates)
+                        $JSONobj.conditions.users.$groupType = @(Convert-CIPPCAGroupNameToId -GroupNames $JSONobj.conditions.users.$groupType -Groups $groups -CreateGroups $CreateGroups -TenantFilter $TenantFilter -GroupTemplates $GroupTemplates -Headers $Headers -APIName $APIName)
                     }
                 }
             } catch {

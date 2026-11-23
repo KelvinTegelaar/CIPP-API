@@ -116,8 +116,8 @@
                 clientAppTypes                              = ($cap.conditions.clientAppTypes) -join ','
                 includePlatforms                            = ($cap.conditions.platforms.includePlatforms) -join ','
                 excludePlatforms                            = ($cap.conditions.platforms.excludePlatforms) -join ','
-                includeLocations                            = (Get-LocationNameFromId -Locations $AllNamedLocations -id $cap.conditions.locations.includeLocations) -join ','
-                excludeLocations                            = (Get-LocationNameFromId -Locations $AllNamedLocations -id $cap.conditions.locations.excludeLocations) -join ','
+                includeLocations                            = ($cap.conditions.locations.includeLocations | ForEach-Object { Get-LocationNameFromId -Locations $AllNamedLocations -id $_ }) -join ','
+                excludeLocations                            = ($cap.conditions.locations.excludeLocations | ForEach-Object { Get-LocationNameFromId -Locations $AllNamedLocations -id $_ }) -join ','
                 includeApplications                         = ($cap.conditions.applications.includeApplications | ForEach-Object { Get-ApplicationNameFromId -Applications $AllApplications -ServicePrincipals $AllServicePrincipals -id $_ }) -join ','
                 excludeApplications                         = ($cap.conditions.applications.excludeApplications | ForEach-Object { Get-ApplicationNameFromId -Applications $AllApplications -ServicePrincipals $AllServicePrincipals -id $_ }) -join ','
                 includeUserActions                          = ($cap.conditions.applications.includeUserActions | Out-String)

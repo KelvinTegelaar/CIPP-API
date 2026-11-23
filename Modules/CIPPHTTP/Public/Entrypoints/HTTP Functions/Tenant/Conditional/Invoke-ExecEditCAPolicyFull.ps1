@@ -42,8 +42,11 @@ function Invoke-ExecEditCAPolicyFull {
         # body deserialised into, then apply the same rules the template deploy path uses: managed
         # keys the body omits are restored as their cleared form (that is how a PATCH clears an
         # assignment) and a condition block Graph would reject half-populated becomes null instead.
-        $PolicyObject = ConvertTo-Json -InputObject $CleanBody -Depth 20 | ConvertFrom-Json
+        # Variables are filled in first so a %variable% location or group resolves to the name it stands for
+        $PolicyJson = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text (ConvertTo-Json -InputObject $CleanBody -Depth 20) -EscapeForJson
+        $PolicyObject = $PolicyJson | ConvertFrom-Json
         Format-CIPPCAPolicy -Policy $PolicyObject
+        Resolve-CIPPCAPolicyNames -Policy $PolicyObject -TenantFilter $TenantFilter -PolicyName ($PolicyBody.displayName ?? $PolicyId) -Headers $Headers -APIName $APIName
         $RawJSON = ConvertTo-Json -InputObject $PolicyObject -Depth 20 -Compress
 
         $null = New-GraphPOSTRequest `
@@ -60,7 +63,7 @@ function Invoke-ExecEditCAPolicyFull {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to update CA policy $PolicyId for ${TenantFilter}: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -API $APIName -tenant $TenantFilter -headers $Headers -message $Result -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return [HttpResponseContext]@{
