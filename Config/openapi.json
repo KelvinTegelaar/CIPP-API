@@ -58852,6 +58852,9 @@
                       "dynamicGroupBool": {
                         "x-cipp-field-source": "backend"
                       },
+                      "emailAddresses": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "groupInfo": {
                         "x-cipp-field-source": "backend"
                       },
