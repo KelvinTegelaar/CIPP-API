@@ -136,6 +136,19 @@ function Get-CIPPCalendarPermissionReport {
                 continue
             }
 
+            # Exchange names internal grantees by display name and external shares by address; a calendar
+            # shared with a consumer address is held by 'ExchangePublishedUser.<address>'
+            $User = [string]$Permission.User
+            $AccessScope = 'Internal'
+            $ExternalAddress = $null
+            if ($User -like 'ExchangePublishedUser.*') {
+                $AccessScope = 'External (published link)'
+                $ExternalAddress = $User.Substring(22)
+            } elseif ($User -match '^[^@\s]+@[^@\s]+\.[^@\s]+$') {
+                $AccessScope = 'External'
+                $ExternalAddress = $User
+            }
+
             $AllPermissions.Add([PSCustomObject]@{
                     MailboxUPN         = if ($Mailbox.UPN) { $Mailbox.UPN } elseif ($Mailbox.primarySmtpAddress) { $Mailbox.primarySmtpAddress } else { $MailboxIdentifier }
                     MailboxDisplayName = $Mailbox.displayName
@@ -144,6 +157,8 @@ function Get-CIPPCalendarPermissionReport {
                     UserKey            = if ($Permission.User -match '@') { $Permission.User.ToLower() } else { $Permission.User }
                     AccessRights       = ($Permission.AccessRights -join ', ')
                     FolderName         = $Permission.FolderName
+                    AccessScope        = $AccessScope
+                    ExternalAddress    = $ExternalAddress
                 })
         }
 
@@ -192,6 +207,8 @@ function Get-CIPPCalendarPermissionReport {
                 [PSCustomObject]@{
                     User                     = $UserDisplay
                     UserMailboxType          = $UserMailboxType
+                    AccessScope              = $_.Group[0].AccessScope
+                    ExternalAddress          = $_.Group[0].ExternalAddress
                     CalendarCount            = $_.Count
                     Permissions              = $PermissionDetails
                     Tenant                   = $TenantFilter
@@ -206,11 +223,15 @@ function Get-CIPPCalendarPermissionReport {
                 $CalendarInfo = $_.Group[0]
 
                 # Build detailed permissions list with user and access rights
-                $PermissionDetails = @($_.Group | ForEach-Object {
+                $SharedExternally = $false
+                $PermissionDetails = @(foreach ($Grant in $_.Group) {
+                        if ($Grant.AccessScope -ne 'Internal') { $SharedExternally = $true }
                         [PSCustomObject]@{
-                            User         = $_.User
-                            AccessRights = $_.AccessRights
-                            FolderName   = $_.FolderName
+                            User            = $Grant.User
+                            AccessScope     = $Grant.AccessScope
+                            ExternalAddress = $Grant.ExternalAddress
+                            AccessRights    = $Grant.AccessRights
+                            FolderName      = $Grant.FolderName
                         }
                     })
 
@@ -219,6 +240,7 @@ function Get-CIPPCalendarPermissionReport {
                     CalendarDisplayName      = $CalendarInfo.MailboxDisplayName
                     CalendarType             = $CalendarInfo.MailboxType
                     FolderName               = $CalendarInfo.FolderName
+                    SharedExternally         = $SharedExternally
                     PermissionCount          = $_.Count
                     Permissions              = $PermissionDetails
                     Tenant                   = $TenantFilter

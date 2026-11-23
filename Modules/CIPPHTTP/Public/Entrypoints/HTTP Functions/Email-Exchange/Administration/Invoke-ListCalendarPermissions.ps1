@@ -71,7 +71,33 @@ function Invoke-ListCalendarPermissions {
         # UserId is what the remove action sends back; without it Exchange only has a display name,
         # which it cannot resolve when two recipients share one.
         $Permissions = Resolve-CIPPFolderPermissionUser -TenantFilter $TenantFilter -FolderIdentity $CalParam.Identity -Permissions $Permissions
-        $GraphRequest = $Permissions | Select-Object Identity, User, UserId, AccessRights, FolderName, @{ Name = 'MailboxInfo'; Expression = { $Mailbox } }
+        # Exchange names internal grantees by display name and external shares by address; a calendar
+        # shared with a consumer address is held by 'ExchangePublishedUser.<address>'. A resolved UserId
+        # is an internal recipient whatever its display name looks like.
+        $GraphRequest = foreach ($Permission in $Permissions) {
+            $User = [string]$Permission.User
+            $AccessScope = $null
+            $ExternalAddress = $null
+            if ($User -like 'ExchangePublishedUser.*') {
+                $AccessScope = 'External (published link)'
+                $ExternalAddress = $User.Substring(22)
+            } elseif (-not $Permission.UserId -and $User -match '^[^@\s]+@[^@\s]+\.[^@\s]+$') {
+                $AccessScope = 'External'
+                $ExternalAddress = $User
+            } elseif ($User -notin 'Default', 'Anonymous') {
+                $AccessScope = 'Internal'
+            }
+            [PSCustomObject]@{
+                Identity        = $Permission.Identity
+                User            = $Permission.User
+                UserId          = $Permission.UserId
+                AccessRights    = $Permission.AccessRights
+                FolderName      = $Permission.FolderName
+                AccessScope     = $AccessScope
+                ExternalAddress = $ExternalAddress
+                MailboxInfo     = $Mailbox
+            }
+        }
 
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Calendar permissions listed for $($TenantFilter)" -sev Debug
         $StatusCode = [HttpStatusCode]::OK
