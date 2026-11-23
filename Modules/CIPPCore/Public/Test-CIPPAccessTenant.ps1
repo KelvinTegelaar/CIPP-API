@@ -184,8 +184,28 @@ function Test-CIPPAccessTenant {
             $ExchangeTest = 'Skipped Exchange access test: tenant does not have an Exchange license capability.'
         } else {
             try {
-                $null = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-OrganizationConfig' -ErrorAction Stop
+                # Exchange fails the odd call (UnknownError, directory partition errors) that succeeds moments later.
+                for ($Attempt = 1; ; $Attempt++) {
+                    try {
+                        $null = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-OrganizationConfig' -ErrorAction Stop
+                        break
+                    } catch {
+                        if ($Attempt -ge 3) { throw }
+                        Start-Sleep -Seconds 2
+                    }
+                }
+                $ExchangeStatus = $true
+                $ExchangeTest = 'Successfully connected to Exchange'
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                $ExchangeTest = "Failed to connect to Exchange: $($ErrorMessage.NormalizedError)"
+                Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message "Tenant access check for Exchange failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+                Write-Warning "Failed to connect to Exchange: $($_.Exception.Message)"
+            }
+        }
 
+        if ($ExchangeStatus -and -not $ExchangeSkippedByLicense) {
+            try {
                 $OrgManagementRoles = New-ExoRequest -tenantid $Tenant.customerId -cmdlet 'Get-ManagementRoleAssignment' -cmdParams @{ Delegating = $false } | Where-Object { $_.RoleAssigneeName -eq 'Organization Management' } | Select-Object -Property Role, Guid
                 Write-Information "Found $($OrgManagementRoles.Count) Organization Management roles in Exchange"
                 $Results.OrgManagementRoles = $OrgManagementRoles
@@ -210,18 +230,11 @@ function Test-CIPPAccessTenant {
                     Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message 'Tenant access check for Exchange failed: Missing Organization Management roles' -sev 'Warning' -LogData $MissingOrgMgmtRoles
                 } else {
                     Write-Warning 'All available Organization Management roles are present in Exchange'
-                    $ExchangeStatus = $true
-                    $ExchangeTest = 'Successfully connected to Exchange'
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                $ReportedError = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue)
-                $Message = if ($ReportedError.error.details.message) { $ReportedError.error.details.message } else { $ReportedError.error.innererror.internalException.message }
-                if ($null -eq $Message) { $Message = $($_.Exception.Message) }
-
-                $ExchangeTest = "Failed to connect to Exchange: $($ErrorMessage.NormalizedError)"
-                Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message "Tenant access check for Exchange failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
-                Write-Warning "Failed to connect to Exchange: $($_.Exception.Message)"
+                $ExchangeTest = "Connected to Exchange, but could not verify the Organization Management roles: $($ErrorMessage.NormalizedError)"
+                Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message "Tenant access check could not read Exchange Organization Management roles: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
             }
         }
 

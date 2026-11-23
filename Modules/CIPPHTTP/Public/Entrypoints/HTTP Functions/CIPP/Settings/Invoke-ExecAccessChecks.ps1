@@ -147,7 +147,24 @@ function Invoke-ExecAccessChecks {
                 # Full-list only: queue a background re-check when the cache is stale or a refresh
                 # was requested. A single tenant refreshes synchronously in the branch above.
                 if (-not $TenantId -and ($SkipCache -or $LastRun -lt $4HoursAgo)) {
-                    $Message = Test-CIPPAccessTenant -Headers $Request.Headers
+                    # The page reads this list from several components at once; an ETag-checked claim lets only one of them queue the run.
+                    # Two minutes covers the gap until the run stores its first result, which makes the cache fresh again.
+                    $RunClaim = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantAccessRun' and RowKey eq 'Queued'"
+                    if (-not $RunClaim -or $RunClaim.Timestamp -lt [DateTimeOffset]::UtcNow.AddMinutes(-2)) {
+                        $Claimed = try {
+                            if ($RunClaim) {
+                                Update-CIPPAzDataTableEntity @Table -Entity @{ PartitionKey = 'TenantAccessRun'; RowKey = 'Queued'; ETag = $RunClaim.ETag }
+                            } else {
+                                Add-CIPPAzDataTableEntity @Table -Entity @{ PartitionKey = 'TenantAccessRun'; RowKey = 'Queued' }
+                            }
+                            $true
+                        } catch {
+                            $false
+                        }
+                        if ($Claimed) {
+                            $Message = Test-CIPPAccessTenant -Headers $Request.Headers
+                        }
+                    }
                 }
             }
         }

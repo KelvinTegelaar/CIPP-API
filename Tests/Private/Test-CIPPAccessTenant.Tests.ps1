@@ -233,6 +233,40 @@ Describe 'Test-CIPPAccessTenant' {
             Should -Invoke -CommandName New-GraphGetRequest -ParameterFilter { $uri -like '*roleManagement/exchange*' } -Times 0 -Exactly
         }
 
+        It 'retries a failed connection before reporting Exchange as unreachable' {
+            Mock -CommandName Start-Sleep -MockWith { }
+            $script:OrgConfigCalls = 0
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-OrganizationConfig' } -MockWith {
+                $script:OrgConfigCalls++
+                if ($script:OrgConfigCalls -lt 3) { throw 'UnknownError' }
+                [pscustomobject]@{ Name = 'exo' }
+            }
+            $Result = Test-CIPPAccessTenant -Tenant 'exo.onmicrosoft.com'
+            $Result.ExchangeStatus | Should -BeTrue
+            $Result.ExchangeTest | Should -Be 'Successfully connected to Exchange'
+            $script:OrgConfigCalls | Should -Be 3
+        }
+
+        It 'reports Exchange as unreachable when every connection attempt fails' {
+            Mock -CommandName Start-Sleep -MockWith { }
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-OrganizationConfig' } -MockWith { throw 'UnknownError' }
+            $Result = Test-CIPPAccessTenant -Tenant 'exo.onmicrosoft.com'
+            $Result.ExchangeStatus | Should -BeFalse
+            $Result.ExchangeTest | Should -BeLike 'Failed to connect to Exchange*'
+            Should -Invoke -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-OrganizationConfig' } -Times 3 -Exactly
+            Should -Invoke -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-ManagementRoleAssignment' } -Times 0 -Exactly
+        }
+
+        It 'stays connected when the role lookup fails after connecting' {
+            Mock -CommandName New-ExoRequest -ParameterFilter { $cmdlet -eq 'Get-ManagementRoleAssignment' } -MockWith {
+                throw "Server SY7PR01A05DC006 doesn't belong to partition auspr01a017"
+            }
+            $Result = Test-CIPPAccessTenant -Tenant 'exo.onmicrosoft.com'
+            $Result.ExchangeStatus | Should -BeTrue
+            $Result.ExchangeTest | Should -BeLike 'Connected to Exchange, but could not verify the Organization Management roles*'
+            @($Result.OrgManagementRolesMissing).Count | Should -Be 0
+        }
+
         It 'reports missing Organization Management roles by display name' {
             $script:AssignedOrgRoles = $script:OrgRoles | Select-Object -Skip 5
             $Result = Test-CIPPAccessTenant -Tenant 'exo.onmicrosoft.com'

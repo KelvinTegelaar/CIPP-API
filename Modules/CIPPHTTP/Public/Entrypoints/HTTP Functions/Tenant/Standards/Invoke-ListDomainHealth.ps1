@@ -158,6 +158,11 @@ function Invoke-ListDomainHealth {
                         }
 
                         $Body = Test-HttpsCertificate @HttpsQuery
+                        # Raw X509Chain / HttpResponseMessage hold native handles the response serialiser can't write
+                        foreach ($Test in $Body.Tests) {
+                            $Test.Chain = $null
+                            $Test.HttpResponse = $null
+                        }
                     }
                     'TestMtaSts' {
                         $HttpsQuery = @{
