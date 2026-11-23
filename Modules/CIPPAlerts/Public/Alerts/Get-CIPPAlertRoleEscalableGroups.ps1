@@ -39,7 +39,7 @@ function Get-CIPPAlertRoleEscalableGroups {
             $roleDefById["$($rd.id)"] = $rd
         }
 
-        $roleAssignments = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$select=id,principalId,roleDefinitionId,directoryScopeId,appScopeId" -tenantid $TenantFilter)
+        $roleAssignments = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$select=id,principalId,roleDefinitionId,directoryScopeId" -tenantid $TenantFilter)
         if (-not $roleAssignments -or $roleAssignments.Count -eq 0) {
             Write-Information "Get-CIPPAlertRoleEscalableGroups: no role assignments returned for $TenantFilter"
             return
