@@ -127,6 +127,48 @@ Describe 'Invoke-ExternalCSPRequest' {
             Should -Throw '*could not process the Quantity request (HTTP 502) and gave no reason*'
     }
 
+    Context 'paged reads' {
+        It 'follows nextLink and returns every page as one list' {
+            Mock Invoke-RestMethod { [pscustomobject]@{ value = @([pscustomobject]@{ sku = 'A' }, [pscustomobject]@{ sku = 'B' }); nextLink = 'https://vendor.example/catalog?page=2' } } -ParameterFilter { $Uri -like '*tenantId=*' }
+            Mock Invoke-RestMethod { [pscustomobject]@{ value = @([pscustomobject]@{ sku = 'C' }) } } -ParameterFilter { $Uri -eq 'https://vendor.example/catalog?page=2' }
+
+            $Result = Invoke-ExternalCSPRequest -Action Catalog -TenantFilter 'contoso.com'
+
+            $Result.sku | Should -Be @('A', 'B', 'C')
+            Should -Invoke Invoke-RestMethod -Times 1 -Exactly -ParameterFilter { $Uri -eq 'https://vendor.example/catalog?page=2' -and $Headers.'x-api-key' -eq 'secret-key' }
+        }
+
+        It 'returns an empty list for a single empty page' {
+            Mock Invoke-RestMethod { [pscustomobject]@{ value = @() } }
+
+            @(Invoke-ExternalCSPRequest -Action Catalog -TenantFilter 'contoso.com').Count | Should -Be 0
+        }
+
+        It 'refuses a nextLink on <Link> without sending credentials there' -ForEach @(
+            @{ Link = 'https://attacker.example/catalog?page=2' }
+            @{ Link = 'http://vendor.example/catalog?page=2' }
+        ) {
+            Mock Invoke-RestMethod { [pscustomobject]@{ value = @([pscustomobject]@{ sku = 'A' }); nextLink = $Link } }
+
+            { Invoke-ExternalCSPRequest -Action Catalog -TenantFilter 'contoso.com' } | Should -Throw '*next page link*'
+            Should -Invoke Invoke-RestMethod -Times 1 -Exactly
+        }
+
+        It 'stops a provider that never stops paging' {
+            Mock Invoke-RestMethod { [pscustomobject]@{ value = @([pscustomobject]@{ sku = 'A' }); nextLink = 'https://vendor.example/catalog?page=again' } }
+
+            { Invoke-ExternalCSPRequest -Action Catalog -TenantFilter 'contoso.com' } | Should -Throw '*more than 100 pages*'
+            Should -Invoke Invoke-RestMethod -Times 100 -Exactly
+        }
+
+        It 'treats a success:false body on a later page as a refusal' {
+            Mock Invoke-RestMethod { [pscustomobject]@{ value = @([pscustomobject]@{ sku = 'A' }); nextLink = 'https://vendor.example/catalog?page=2' } } -ParameterFilter { $Uri -like '*tenantId=*' }
+            Mock Invoke-RestMethod { [pscustomobject]@{ success = $false; message = 'Page expired.' } } -ParameterFilter { $Uri -eq 'https://vendor.example/catalog?page=2' }
+
+            { Invoke-ExternalCSPRequest -Action Catalog -TenantFilter 'contoso.com' } | Should -Throw '*rejected the Catalog request: Page expired.*'
+        }
+    }
+
     It 'makes no call to the provider while the feature flag is off' {
         Mock Get-CIPPFeatureFlag { [pscustomobject]@{ Id = 'ExternalCSP'; Enabled = $false } }
 

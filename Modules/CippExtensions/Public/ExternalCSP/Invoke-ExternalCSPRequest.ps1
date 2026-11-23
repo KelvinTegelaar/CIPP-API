@@ -105,32 +105,56 @@ function Invoke-ExternalCSPRequest {
             @{ $HeaderName = $Secret -replace "^$([regex]::Escape($HeaderName))\s*:\s*", '' }
         }
     }
-    try {
-        if ($IsWrite) {
-            $Body.tenantId = $TenantId
-            $Response = Invoke-RestMethod -Uri $Url -Method POST -Headers $AuthHeader -Body (ConvertTo-Json -Depth 10 -InputObject $Body) -ContentType 'application/json'
-        } elseif ($Action -eq 'Test') {
-            $Response = Invoke-RestMethod -Uri $Url -Method GET -Headers $AuthHeader
-        } else {
-            $Separator = if ($Url -match '\?') { '&' } else { '?' }
-            $Response = Invoke-RestMethod -Uri "$Url${Separator}tenantId=$TenantId" -Method GET -Headers $AuthHeader
-        }
-    } catch {
-        # The contract lets the vendor explain a refusal as { "message": "..." }.
-        $VendorMessage = try { ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop).message } catch { $null }
-        if ($VendorMessage) {
-            throw "The CSP provider rejected the $Action request: $VendorMessage"
-        }
-        $Status = try { [int]$_.Exception.Response.StatusCode } catch { 0 }
-        if ($Status -ge 500) {
-            throw "The CSP provider could not process the $Action request (HTTP $Status) and gave no reason. Check the request in the provider's own portal or logs."
-        }
-        throw "The CSP provider rejected the $Action request: $($_.Exception.Message)"
+    if ($IsWrite -or $Action -eq 'Test') {
+        $Uri = $Url
+    } else {
+        $Separator = if ($Url -match '\?') { '&' } else { '?' }
+        $Uri = "$Url${Separator}tenantId=$TenantId"
     }
-    # Platforms that cannot set an HTTP status (low-code workflow tools) refuse with a 2xx { "success": false, "message": "..." }.
-    if ($Response -is [System.Management.Automation.PSCustomObject] -and $Response.PSObject.Properties.Name -contains 'success' -and "$($Response.success)" -eq 'False') {
-        $Reason = if ($Response.message) { $Response.message } else { 'no reason was given' }
-        throw "The CSP provider rejected the $Action request: $Reason"
+    $LinkHost = ([uri]$Url).Authority
+    $Items = [System.Collections.Generic.List[object]]::new()
+    $Page = 0
+    while ($Uri) {
+        $Page++
+        if ($Page -gt 100) {
+            throw "The CSP provider returned more than 100 pages for the $Action request."
+        }
+        try {
+            if ($IsWrite) {
+                $Body.tenantId = $TenantId
+                $Response = Invoke-RestMethod -Uri $Uri -Method POST -Headers $AuthHeader -Body (ConvertTo-Json -Depth 10 -InputObject $Body) -ContentType 'application/json'
+            } else {
+                $Response = Invoke-RestMethod -Uri $Uri -Method GET -Headers $AuthHeader
+            }
+        } catch {
+            # The contract lets the vendor explain a refusal as { "message": "..." }.
+            $VendorMessage = try { ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop).message } catch { $null }
+            if ($VendorMessage) {
+                throw "The CSP provider rejected the $Action request: $VendorMessage"
+            }
+            $Status = try { [int]$_.Exception.Response.StatusCode } catch { 0 }
+            if ($Status -ge 500) {
+                throw "The CSP provider could not process the $Action request (HTTP $Status) and gave no reason. Check the request in the provider's own portal or logs."
+            }
+            throw "The CSP provider rejected the $Action request: $($_.Exception.Message)"
+        }
+        $IsObject = $Response -is [System.Management.Automation.PSCustomObject]
+        # Platforms that cannot set an HTTP status (low-code workflow tools) refuse with a 2xx { "success": false, "message": "..." }.
+        if ($IsObject -and $null -ne $Response.PSObject.Properties['success'] -and "$($Response.success)" -eq 'False') {
+            $Reason = if ($Response.message) { $Response.message } else { 'no reason was given' }
+            throw "The CSP provider rejected the $Action request: $Reason"
+        }
+        # Reads may be paged as { "value": [...], "nextLink": "..." }; a plain array is a single page.
+        if ($IsWrite -or $Action -eq 'Test' -or -not $IsObject -or $null -eq $Response.PSObject.Properties['value']) {
+            if ($Page -eq 1) { return $Response }
+            throw "The CSP provider returned page $Page of the $Action request without a value list."
+        }
+        foreach ($Item in @($Response.value)) { $Items.Add($Item) }
+        $Uri = [string]$Response.nextLink
+        # The auth headers follow the link, so it must stay on the configured host.
+        if ($Uri -and ($Uri -notmatch '^https://' -or ([uri]$Uri).Authority -ne $LinkHost)) {
+            throw "The CSP provider returned a $Action next page link that is not on $LinkHost over https."
+        }
     }
-    return $Response
+    return $Items.ToArray()
 }
