@@ -51205,6 +51205,12 @@
                       "AccessRights": {
                         "x-cipp-field-source": "backend"
                       },
+                      "AccessScope": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ExternalAddress": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "FolderName": {
                         "x-cipp-field-source": "backend"
                       },
