@@ -80,6 +80,12 @@ function Invoke-ListUserMailboxDetails {
                     Parameters = @{ Identity = $UserID }
                 }
             }
+            @{
+                CmdletInput = @{
+                    CmdletName = 'Get-FocusedInbox'
+                    Parameters = @{ Identity = $UserID }
+                }
+            }
         )
         $usernames = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/users?$select=id,userPrincipalName,displayName,mailNickname&$top=999'
         $Results = New-ExoBulkRequest -TenantId $TenantFilter -CmdletArray $Requests -returnWithCommand $true -Anchor $username
@@ -93,6 +99,7 @@ function Invoke-ListUserMailboxDetails {
         $ArchiveSizeRequest = $Results.'Get-MailboxStatistics'
         $BlockedSender = $Results.'Get-BlockedSenderAddress'
         $PermsRequest2 = $Results.'Get-RecipientPermission'
+        $FocusedInboxRequest = $Results.'Get-FocusedInbox'
 
         $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($TenantFilter)/Mailbox('$($UserID)')/Exchange.GetMailboxStatistics()" -Tenantid $TenantFilter -scope ExchangeOnline -noPagination $true
 
@@ -287,6 +294,7 @@ function Invoke-ListUserMailboxDetails {
         TotalArchiveItemSize             = $TotalArchiveItemSize
         TotalArchiveItemCount            = $TotalArchiveItemCount
         BlockedForSpam                   = $BlockedForSpam
+        FocusedInbox                     = $FocusedInboxRequest.FocusedInboxOn
         ArchiveMailBox                   = $ArchiveEnabled
         AutoExpandingArchive             = $AutoExpandingArchiveEnabled
         AutoExpandingArchiveScope        = $AutoExpandingArchiveScope

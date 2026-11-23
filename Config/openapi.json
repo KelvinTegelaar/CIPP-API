@@ -12174,6 +12174,65 @@
         "x-cipp-role": "Exchange.SpamFilter.ReadWrite"
       }
     },
+    "/api/EditTeam": {
+      "post": {
+        "summary": "EditTeam",
+        "operationId": "EditTeam",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Updates a team's member, guest, messaging and fun settings. Settings left out of the request are not changed.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "TeamID": {
+                    "type": "string",
+                    "description": "Team (Microsoft 365 group) id."
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Teams.Group.ReadWrite"
+      }
+    },
     "/api/EditTenant": {
       "post": {
         "summary": "EditTenant",
@@ -35854,6 +35913,69 @@
         "x-cipp-role": "Identity.Role.ReadWrite"
       }
     },
+    "/api/ExecRemoveAppAssignment": {
+      "post": {
+        "summary": "ExecRemoveAppAssignment",
+        "operationId": "ExecRemoveAppAssignment",
+        "tags": [
+          "Endpoint > Applications"
+        ],
+        "description": "Removes one assignment from an Intune app and keeps the rest.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "AssignmentId": {
+                    "type": "string",
+                    "description": "Id of the assignment to remove."
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "Intune app id."
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.Application.ReadWrite"
+      }
+    },
     "/api/ExecRemoveCippCveException": {
       "post": {
         "summary": "ExecRemoveCippCveException",
@@ -40682,6 +40804,142 @@
         "x-cipp-role": "Identity.User.ReadWrite"
       }
     },
+    "/api/ExecSetDeviceExtensionAttribute": {
+      "post": {
+        "summary": "ExecSetDeviceExtensionAttribute",
+        "operationId": "ExecSetDeviceExtensionAttribute",
+        "tags": [
+          "Identity > Administration > Devices"
+        ],
+        "description": "Sets or clears one extension attribute (1 to 15) on an Entra device.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Attribute": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Extension attribute number, 1 to 15."
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "Entra device object id."
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "Value": {
+                    "type": "string",
+                    "description": "New value. Empty clears the attribute."
+                  }
+                },
+                "required": [
+                  "ID",
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Device.ReadWrite"
+      }
+    },
+    "/api/ExecSetFocusedInbox": {
+      "post": {
+        "summary": "ExecSetFocusedInbox",
+        "operationId": "ExecSetFocusedInbox",
+        "tags": [
+          "Email-Exchange > Administration"
+        ],
+        "description": "Turns Focused Inbox on or off for one mailbox.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "FocusedInboxOn": {
+                    "type": "string",
+                    "description": "True turns Focused Inbox on, false turns it off."
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "Mailbox UPN or address."
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ID",
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.Mailbox.ReadWrite"
+      }
+    },
     "/api/ExecSetLibraryInheritance": {
       "post": {
         "summary": "ExecSetLibraryInheritance",
@@ -44013,6 +44271,161 @@
           }
         ],
         "x-cipp-role": "Endpoint.Application.ReadWrite"
+      }
+    },
+    "/api/ExecTeamAction": {
+      "post": {
+        "summary": "ExecTeamAction",
+        "operationId": "ExecTeamAction",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Archives or unarchives a team; creates, edits, archives or deletes a channel; sets a standard channel's moderation; manages the members of a private or shared channel and a channel's website tabs.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "enum": [
+                      "AddChannelMember",
+                      "AddChannelTab",
+                      "Archive",
+                      "ArchiveChannel",
+                      "CreateChannel",
+                      "DeleteChannel",
+                      "EditChannel",
+                      "EditChannelTab",
+                      "RemoveChannelMember",
+                      "RemoveChannelTab",
+                      "SetChannelMemberRole",
+                      "SetChannelModeration",
+                      "Unarchive",
+                      "UnarchiveChannel"
+                    ],
+                    "description": "Archive, Unarchive, CreateChannel, EditChannel, ArchiveChannel, UnarchiveChannel, DeleteChannel, SetChannelModeration, AddChannelMember, RemoveChannelMember, SetChannelMemberRole, AddChannelTab, EditChannelTab or RemoveChannelTab."
+                  },
+                  "AllowBots": {
+                    "type": "string",
+                    "description": "Moderation: whether bots and connectors can post."
+                  },
+                  "AllowConnectors": {
+                    "type": "string"
+                  },
+                  "ChannelID": {
+                    "type": "string",
+                    "description": "Channel id, for channel actions."
+                  },
+                  "Description": {
+                    "type": "string",
+                    "description": "New channel description."
+                  },
+                  "DisplayName": {
+                    "type": "string",
+                    "description": "New channel name."
+                  },
+                  "MembershipId": {
+                    "type": "string",
+                    "description": "Channel membership id, for removing a member or changing a role."
+                  },
+                  "MembershipType": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "standard, private or shared."
+                  },
+                  "NewMessages": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Moderation: everyone or moderators."
+                  },
+                  "OwnerId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "First owner of a new private or shared channel."
+                  },
+                  "Replies": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Moderation: everyone or authorAndModerators."
+                  },
+                  "Role": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Owner or Member."
+                  },
+                  "TabId": {
+                    "type": "string",
+                    "description": "Channel tab id, for editing or removing a tab."
+                  },
+                  "TeamID": {
+                    "type": "string",
+                    "description": "Team (Microsoft 365 group) id."
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "Url": {
+                    "type": "string",
+                    "description": "Website tab address (https)."
+                  },
+                  "UserId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "User id, for adding a channel member."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Teams.Group.ReadWrite"
       }
     },
     "/api/ExecTeamsVoicePhoneNumberAssignment": {

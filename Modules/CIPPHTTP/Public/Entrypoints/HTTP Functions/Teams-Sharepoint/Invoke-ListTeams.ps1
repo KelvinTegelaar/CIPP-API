@@ -48,6 +48,30 @@ Function Invoke-ListTeams {
         $UserList = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/teams/$($TeamID)/Members" -tenantid $TenantFilter -asapp $true
         $AppsList = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/teams/$($TeamID)/installedApps?`$expand=teamsAppDefinition" -tenantid $TenantFilter -asapp $true
 
+        # Per-channel tab counts, and member counts and owners for private and shared channels, in one batch.
+        $ChannelRequests = foreach ($Channel in @($Channels)) {
+            @{ id = "tabs|$($Channel.id)"; method = 'GET'; url = "teams/$TeamID/channels/$($Channel.id)/tabs?`$select=id" }
+            if ($Channel.membershipType -ne 'standard') {
+                @{ id = "members|$($Channel.id)"; method = 'GET'; url = "teams/$TeamID/channels/$($Channel.id)/members?`$select=displayName,roles" }
+            }
+        }
+        $ChannelDetails = @{}
+        if ($ChannelRequests) {
+            foreach ($Result in @(New-GraphBulkRequest -Requests @($ChannelRequests) -tenantid $TenantFilter -asapp $true)) {
+                $ChannelDetails[$Result.id] = $Result.body.value
+            }
+        }
+        foreach ($Channel in @($Channels)) {
+            # A lookup that failed stays $null so the page shows nothing rather than a wrong count.
+            $ChannelMembers = $ChannelDetails["members|$($Channel.id)"]
+            $ChannelTabs = $ChannelDetails["tabs|$($Channel.id)"]
+            $Channel | Add-Member -NotePropertyMembers @{
+                tabCount    = if ($null -ne $ChannelTabs) { @($ChannelTabs).Count } else { $null }
+                memberCount = if ($null -ne $ChannelMembers) { @($ChannelMembers).Count } else { $null }
+                owners      = @(foreach ($Member in @($ChannelMembers)) { if ($Member.roles -contains 'owner') { $Member.displayName } }) -join ', '
+            } -Force
+        }
+
         $Owners = $UserList | Where-Object -Property Roles -EQ 'Owner'
         $Members = $UserList | Where-Object -Property email -NotIn $owners.email
         $GraphRequest = [PSCustomObject]@{
