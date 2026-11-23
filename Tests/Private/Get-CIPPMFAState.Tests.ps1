@@ -8,6 +8,7 @@ BeforeAll {
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp, $ErrorAction) }
     function New-GraphBulkRequest { param($Requests, $tenantid, $asapp, $Version) }
     function Write-LogMessage { param($headers, $API, $Tenant, $message, $Sev, $LogData) }
+    function Test-CIPPStandardLicense { param($StandardName, $TenantFilter, $Preset, [switch]$SkipLog) $true }
 
     $script:TenantA = 'aaaaaaaa-0000-0000-0000-000000000001'
     $script:TenantB = 'bbbbbbbb-0000-0000-0000-000000000002'
@@ -213,5 +214,35 @@ Describe 'Get-CIPPMFAState guest coverage' {
         Should -Invoke New-GraphBulkRequest -Times 0 -Exactly -ParameterFilter {
             @($Requests.id | Select-Object -Unique).Count -ne @($Requests).Count
         }
+    }
+}
+
+Describe 'Get-CIPPMFAState licensing' {
+    BeforeEach {
+        Mock -CommandName New-GraphGetRequest -MockWith { @() }
+        Mock -CommandName New-GraphGetRequest -MockWith { $script:Users } -ParameterFilter { $uri -like '*/users?*' }
+        Mock -CommandName New-GraphGetRequest -MockWith { [pscustomobject]@{ IsEnabled = $true } } -ParameterFilter { $uri -like '*identitySecurityDefaultsEnforcementPolicy*' }
+        Mock -CommandName Write-LogMessage -MockWith {}
+    }
+
+    It 'skips registration details and logs nothing on a tenant without Entra ID P1' {
+        Mock -CommandName Test-CIPPStandardLicense -MockWith { $false }
+
+        $Rows = @(Get-CIPPMFAState -TenantFilter 'contoso.com')
+
+        $Rows.Count | Should -Be $script:Users.Count
+        $Rows[0].CoveredByCA | Should -Be 'MFA registration not available - licensing required for Conditional Access reporting'
+        $Rows[0].CoveredBySD | Should -BeTrue
+        Should -Invoke New-GraphGetRequest -Times 0 -Exactly -ParameterFilter { $uri -like '*userRegistrationDetails*' }
+        Should -Invoke Write-LogMessage -Times 0 -Exactly
+    }
+
+    It 'logs a registration failure on a licensed tenant' {
+        Mock -CommandName Test-CIPPStandardLicense -MockWith { $true }
+        Mock -CommandName New-GraphGetRequest -MockWith { throw "Tenant is not a B2C tenant and doesn't have premium license" } -ParameterFilter { $uri -like '*userRegistrationDetails*' }
+
+        $null = @(Get-CIPPMFAState -TenantFilter 'contoso.com')
+
+        Should -Invoke Write-LogMessage -Times 1 -Exactly -ParameterFilter { $Sev -eq 'Error' }
     }
 }

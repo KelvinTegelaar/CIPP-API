@@ -387,11 +387,13 @@ Describe 'Get-CIPPBaselineQuarantineTemplateState' {
         (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
     }
 
-    It 'never adopts a built-in policy: the all-zeros Guid is excluded' {
+    It 'never adopts or deploys a built-in policy name: Exchange refuses to create or edit one' {
         $BuiltIn = $script:QPolicy.Clone(); $BuiltIn.Guid = '00000000-0000-0000-0000-000000000000'
         Mock New-CIPPDbRequest { @($BuiltIn | ConvertTo-Cached) }
         $Prepared = Get-CIPPBaselineQuarantineTemplateState -Item $script:QItem -TenantFilter $script:Tenant
-        $Prepared.Current.deployed | Should -BeFalse
+        $Prepared.Current | Should -BeNullOrEmpty
+        $Prepared.ConfigError | Should -BeTrue
+        $Prepared.NoDataReason | Should -BeLike '*built-in*custom name*'
     }
 
     It 'maps the release action to exactly one of the two release permissions on the write' {

@@ -215,10 +215,13 @@ function Invoke-CIPPStandardColleagueImpersonationAlert {
                 ApplyHtmlDisclaimerLocation       = 'Prepend'
                 ApplyHtmlDisclaimerFallbackAction = 'Wrap'
                 ApplyHtmlDisclaimerText           = $ruleHtml
-                ExceptIfSenderDomainIs            = @($exemptDomains)
                 HeaderMatchesMessageHeader        = 'From'
                 HeaderMatchesPatterns             = $names
                 Comments                          = "CIPP managed rule ($range) - Letters $range"
+            }
+            # Exchange rejects an empty list, which every onmicrosoft-only tenant produces
+            if ($exemptDomains.Count -gt 0) {
+                $cmdParams['ExceptIfSenderDomainIs'] = @($exemptDomains)
             }
             if ($exemptSenders.Count -gt 0) {
                 $cmdParams['ExceptIfFromAddressContainsWords'] = @($exemptSenders)

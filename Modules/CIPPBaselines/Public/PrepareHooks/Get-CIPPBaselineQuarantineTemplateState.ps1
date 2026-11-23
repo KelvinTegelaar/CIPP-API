@@ -18,8 +18,8 @@ function Get-CIPPBaselineQuarantineTemplateState {
         there. Per-key is what Set-CIPPQuarantinePolicy actually writes, so the compare and
         the write agree.
 
-        The default quarantine policies carry the all-zeros Guid and are excluded exactly as
-        the classic excluded them - a custom policy named like a default must not adopt one.
+        The default quarantine policies carry the all-zeros Guid and are never adopted. Exchange
+        refuses to create or edit a policy with a default's name, so that is a config error.
     .FUNCTIONALITY
         Internal
     #>
@@ -33,6 +33,7 @@ function Get-CIPPBaselineQuarantineTemplateState {
     if ($Policies.Count -eq 0 -and -not (Test-CIPPBaselineCacheCollected -TenantFilter $TenantFilter -Type 'ExoQuarantinePolicy')) {
         return @{ Current = $null }
     }
+    $BuiltInPolicyNames = $Policies.Where({ "$($_.Guid)" -eq '00000000-0000-0000-0000-000000000000' }).Name
     $Policies = @($Policies.Where({ "$($_.Guid)" -ne '00000000-0000-0000-0000-000000000000' }))
 
     $V = $Item.Variables
@@ -40,6 +41,10 @@ function Get-CIPPBaselineQuarantineTemplateState {
     if ($PolicyName -is [System.Management.Automation.PSCustomObject] -and $PolicyName.PSObject.Properties.Name -contains 'value') { $PolicyName = $PolicyName.value }
     $PolicyName = "$PolicyName"
     if ([string]::IsNullOrWhiteSpace($PolicyName)) { return @{ Current = $null; ConfigError = $true } }
+    # Exchange refuses to create or edit a built-in policy, so a deploy could never succeed
+    if ($PolicyName -in $BuiltInPolicyNames) {
+        return @{ Current = $null; ConfigError = $true; NoDataReason = "$PolicyName is a built-in Microsoft quarantine policy that cannot be created or edited. Give the policy a custom name" }
+    }
 
     $ReleaseAction = "$($V.ReleaseAction)"
     if ($V.ReleaseAction -is [System.Management.Automation.PSCustomObject] -and $V.ReleaseAction.PSObject.Properties.Name -contains 'value') { $ReleaseAction = "$($V.ReleaseAction.value)" }

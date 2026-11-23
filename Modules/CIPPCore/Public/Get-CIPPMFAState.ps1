@@ -37,20 +37,24 @@ function Get-CIPPMFAState {
         $SecureDefaultsState = $null
     }
 
-    try {
-        $MFARegistration = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?`$top=999&`$select=userPrincipalName,isMfaRegistered,isMfaCapable,methodsRegistered" -tenantid $TenantFilter -asapp $true)
-        foreach ($MFAEntry in $MFARegistration) {
-            if ($null -ne $MFAEntry.userPrincipalName) {
-                $MFAIndex[$MFAEntry.userPrincipalName] = $MFAEntry
+    $MFARegistration = $null
+    $NoRegistrationError = 'MFA registration not available - licensing required for Conditional Access reporting'
+    if (Test-CIPPStandardLicense -StandardName 'MFAReport' -TenantFilter $TenantFilter -Preset Entra -SkipLog) {
+        try {
+            $MFARegistration = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?`$top=999&`$select=userPrincipalName,isMfaRegistered,isMfaCapable,methodsRegistered" -tenantid $TenantFilter -asapp $true)
+            foreach ($MFAEntry in $MFARegistration) {
+                if ($null -ne $MFAEntry.userPrincipalName) {
+                    $MFAIndex[$MFAEntry.userPrincipalName] = $MFAEntry
+                }
             }
-        }
-    } catch {
-        $MFARegistration = $null
-        $CAError = 'MFA registration not available - licensing required for Conditional Access reporting'
-        if ($_.Exception.Message -ne "Tenant is not a B2C tenant and doesn't have premium licenses") {
+        } catch {
+            $MFARegistration = $null
+            $CAError = $NoRegistrationError
             $Errors.Add(@{Step = 'MFARegistration'; Message = $_.Exception.Message })
+            Write-Information "User registration details not available: $($_.Exception.Message)"
         }
-        Write-Information "User registration details not available: $($_.Exception.Message)"
+    } else {
+        $CAError = $NoRegistrationError
     }
 
     if ($null -ne $MFARegistration) {
