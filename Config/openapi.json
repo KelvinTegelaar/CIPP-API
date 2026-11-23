@@ -26330,6 +26330,10 @@
                         "type": "string",
                         "description": "Optional. Show the \"What Is Already In Place\" page (deployed policies and enforced settings, with their values). A boolean; defaults to true."
                       },
+                      "laterWaves": {
+                        "type": "string",
+                        "description": "Optional. Add a detailed section for each wave after the tenant's current one (what the baseline will set, not yet checked against the tenant). A boolean; defaults to false."
+                      },
                       "licenseGaps": {
                         "type": "string",
                         "description": "Optional. Show the \"Available With Better Licensing\" section (baseline protections skipped because the tenant is not licensed for them). A boolean; defaults to false."
