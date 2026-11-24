@@ -61,6 +61,29 @@ function Invoke-AddIntuneTemplate {
             # Intune templates store payload in RAWJson; only the content is rewritten to use reusable template GUID placeholders.
             $templateJson = if ($reusableResult.RawJSON) { $reusableResult.RawJSON } else { $Template.TemplateJson }
 
+            $Table = Get-CippTable -tablename 'templates'
+            $Replaced = $null
+            $Dropped = [System.Collections.Generic.HashSet[string]]::new()
+            # Replace the template with this policy's name instead of adding another one.
+            if ($Request.Body.ReplaceExisting -eq $true) {
+                $SameName = @(foreach ($Row in (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'IntuneTemplate'")) {
+                        $Data = $(try { $Row.JSON | ConvertFrom-Json -Depth 100 } catch { $null })
+                        if ($Data.Displayname -eq $Template.DisplayName) { @{ Row = $Row; Data = $Data } }
+                    })
+                if ($SameName.Count -gt 1) {
+                    throw [System.ArgumentException]::new("$($SameName.Count) templates are named '$($Template.DisplayName)'. Rename all but one of them, then capture the policy again.")
+                }
+                foreach ($Candidate in $SameName) { $Replaced = $Candidate }
+                if ($Replaced) {
+                    $GUID = $Replaced.Row.RowKey
+                    # Keep the %variables% added to the stored template where the policy still has those settings.
+                    if ($Request.Body.KeepVariables -eq $true -and $Replaced.Data.RAWJson) {
+                        $Merged = Merge-CIPPTemplateVariable -Existing ($Replaced.Data.RAWJson | ConvertFrom-Json -Depth 100) -Captured ($templateJson | ConvertFrom-Json -Depth 100) -Dropped $Dropped
+                        $templateJson = ConvertTo-Json -InputObject $Merged -Depth 100 -Compress
+                    }
+                }
+            }
+
             $Validation = Test-CIPPIntuneTemplate -RawJSON $templateJson -TemplateType $Template.Type -DisplayName $Template.DisplayName
             if (-not $Validation.IsValid) {
                 throw [System.ArgumentException]::new("The captured policy did not produce a deployable template: $($Validation.Errors -join ' ')")
@@ -74,16 +97,22 @@ function Invoke-AddIntuneTemplate {
                 GUID             = $GUID
                 ReusableSettings = $reusableTemplateRefs
             } | ConvertTo-Json -Compress
-            $Table = Get-CippTable -tablename 'templates'
-            $Table.Force = $true
-            Add-CIPPAzDataTableEntity @Table -Entity @{
+            $Entity = @{
                 JSON         = "$object"
                 RowKey       = "$GUID"
                 PartitionKey = 'IntuneTemplate'
             }
-            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "Created intune policy template $($Request.Body.displayName) with GUID $GUID using an original policy from a tenant" -Sev 'Info'
+            if ($Replaced.Row.Package) { $Entity.Package = $Replaced.Row.Package }
+            Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
+            Write-LogMessage -headers $Headers -API $APIName -tenant 'Global' -message "$(if ($Replaced) { 'Updated' } else { 'Created' }) intune policy template $($Template.DisplayName) with GUID $GUID using an original policy from a tenant" -Sev 'Info'
 
-            $Result = 'Successfully added template'
+            $Result = if ($Replaced) { "Updated template '$($Template.DisplayName)'" } else { 'Successfully added template' }
+            if ($Dropped.Count -gt 0) {
+                $Result = @(
+                    [pscustomobject]@{ state = 'success'; resultText = $Result }
+                    [pscustomobject]@{ state = 'warning'; resultText = "These variables were on settings the policy no longer has, so they were not kept: $(@($Dropped) -join ', ')" }
+                )
+            }
             $StatusCode = [HttpStatusCode]::OK
         }
     } catch {

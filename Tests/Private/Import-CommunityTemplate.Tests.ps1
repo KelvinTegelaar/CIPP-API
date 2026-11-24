@@ -510,4 +510,14 @@ Describe 'Import-CommunityTemplate manual import marker' {
             Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
         }
     }
+
+    Context 'a named location file' {
+        It 'is refused with an explanation and writes nothing' {
+            Mock Add-CIPPAzDataTableEntity {}
+            $Location = [pscustomobject]@{ '@odata.type' = '#microsoft.graph.compliantNetworkNamedLocation'; id = '3d46dbda-8382-466a-856d-eb00cbc6b910'; displayName = 'All Compliant Network locations' }
+            Import-CommunityTemplate -Template $Location -SHA 'abc' -Source 'owner/repo' -Path 'Config/NamedLocations/All Compliant Network locations.json' -ManualImport |
+                Should -BeLike "'All Compliant Network locations' is a named location*"
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
+    }
 }

@@ -134,6 +134,11 @@ function Import-CommunityTemplate {
                 $StatusMessage = "Created template '$($Template.RowKey)' from source '$Source'."
             }
         } else {
+            if ("$($Template.'@odata.type')" -like '*NamedLocation') {
+                $StatusMessage = "'$($Template.displayName)' is a named location, not a template. Named locations are brought in with the Conditional Access templates that use them."
+                Write-Information $StatusMessage
+                return $StatusMessage
+            }
             $id = [guid]::NewGuid().ToString()
             if ($Template.mailNickname) { $Type = 'Group' }
             if ($Template.'@odata.type' -like '*conditionalAccessPolicy*') { $Type = 'ConditionalAccessPolicy' }

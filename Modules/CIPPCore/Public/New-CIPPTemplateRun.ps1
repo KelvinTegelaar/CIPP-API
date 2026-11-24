@@ -63,7 +63,7 @@ function New-CIPPTemplateRun {
             }
 
             foreach ($File in $Files) {
-                if ($File.name -eq 'MigrationTable' -or $file.name -match 'ALLOWED COUNTRIES') { continue }
+                if ($File.name -eq 'MigrationTable' -or $file.name -match 'ALLOWED COUNTRIES' -or $File.path -match '(^|/)NamedLocations/') { continue }
                 Write-Information "Processing template file $($File.name) - Sanitized as $(Get-SanitizedFilename -filename $File.name)"
                 $ExistingTemplate = $ExistingTemplates | Where-Object { (![string]::IsNullOrEmpty($_.displayName) -and (Get-SanitizedFilename -filename $_.displayName) -eq (Get-SanitizedFilename -filename $File.name)) -or (![string]::IsNullOrEmpty($_.templateName) -and (Get-SanitizedFilename -filename $_.templateName) -eq (Get-SanitizedFilename -filename $File.name) ) -and ![string]::IsNullOrEmpty($_.SHA) } | Select-Object -First 1
 

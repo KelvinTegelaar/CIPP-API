@@ -1256,8 +1256,19 @@
                     },
                     "description": "Check if conditions.users exists and is a PSCustomObject (not an array) before accessing properties"
                   },
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "KeepVariables": {
+                    "type": "boolean",
+                    "description": "Keep the %variables% added to the stored template where the policy still has those settings."
+                  },
                   "name": {
                     "type": "string"
+                  },
+                  "ReplaceExisting": {
+                    "type": "boolean",
+                    "description": "Replace the template with this policy's name instead of adding another one."
                   },
                   "sessionControls": {
                     "type": "object",
@@ -1303,9 +1314,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -4930,6 +4938,10 @@
                   "ID": {
                     "type": "string"
                   },
+                  "KeepVariables": {
+                    "type": "boolean",
+                    "description": "Keep the %variables% added to the stored template where the policy still has those settings."
+                  },
                   "ODataType": {
                     "type": "string"
                   },
@@ -4958,6 +4970,10 @@
                         }
                       }
                     }
+                  },
+                  "ReplaceExisting": {
+                    "type": "boolean",
+                    "description": "Replace the template with this policy's name instead of adding another one."
                   },
                   "TemplateType": {
                     "type": "string"

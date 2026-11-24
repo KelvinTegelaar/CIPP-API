@@ -142,7 +142,7 @@ function Invoke-ListCommunityRepoTemplates {
             foreach ($File in $Tree.tree) {
                 if ($File.path -notmatch '\.json$' -or $File.path -match 'NativeImport') { continue }
                 $FileName = (($File.path -split '/')[-1]) -replace '\.json$', ''
-                if ($FileName -eq 'MigrationTable' -or $FileName -match 'ALLOWED COUNTRIES') { continue }
+                if ($FileName -eq 'MigrationTable' -or $FileName -match 'ALLOWED COUNTRIES' -or $File.path -match '(^|/)NamedLocations/') { continue }
 
                 $Segments = $File.path -split '/'
                 $Folders = @($Segments | Select-Object -SkipLast 1)

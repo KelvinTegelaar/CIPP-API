@@ -22,7 +22,10 @@ BeforeAll {
     }
     function Get-GitHubFileTree {
         param($FullName, $Branch)
-        [pscustomobject]@{ tree = @([pscustomobject]@{ path = 'IntuneTemplate/OIB_policy.json'; sha = 'new-sha'; size = 1 }) }
+        [pscustomobject]@{ tree = @(
+                [pscustomobject]@{ path = 'IntuneTemplate/OIB_policy.json'; sha = 'new-sha'; size = 1 }
+                [pscustomobject]@{ path = 'Config/NamedLocations/All Compliant Network locations.json'; sha = 'loc-sha'; size = 1 }
+            ) }
     }
     function Invoke-GitHubApiRequest { param($Path) }
     function Get-CippBulkStatusCode { param($Total, $Failed) 200 }
@@ -62,5 +65,11 @@ Describe 'Invoke-ListCommunityRepoTemplates import badges' {
     It 'shows not imported when neither SHA, path nor name match' {
         $script:Rows = @(New-Row 'Something else' 'old-sha' 'IntuneTemplate/Other.json')
         (Get-CatalogItem).Imported | Should -BeFalse
+    }
+
+    It 'does not list named location files as templates' {
+        $script:Rows = @()
+        $Response = Invoke-ListCommunityRepoTemplates -Request ([pscustomobject]@{ Query = @{} })
+        @($Response.Body.Results.Path) | Should -Be @('IntuneTemplate/OIB_policy.json')
     }
 }
