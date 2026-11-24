@@ -5,6 +5,8 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    $env:CIPPRootPath = $RepoRoot
+    $script:RepoRow = [pscustomobject]@{ Name = 'repo'; FullName = 'Org/repo'; DefaultBranch = 'main'; TemplateTypes = '["IntuneTemplate"]' }
 
     class HttpResponseContext { [object]$StatusCode; [object]$Body }
     $Accelerators = [psobject].Assembly.GetType('System.Management.Automation.TypeAccelerators')
@@ -16,7 +18,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity {
         param($Context, $Filter)
         switch ($Context) {
-            'CommunityRepos' { [pscustomobject]@{ Name = 'repo'; FullName = 'Org/repo'; DefaultBranch = 'main'; TemplateTypes = '["IntuneTemplate"]' } }
+            'CommunityRepos' { $script:RepoRow }
             'templates' { $script:Rows }
         }
     }
@@ -71,5 +73,15 @@ Describe 'Invoke-ListCommunityRepoTemplates import badges' {
         $script:Rows = @()
         $Response = Invoke-ListCommunityRepoTemplates -Request ([pscustomobject]@{ Query = @{} })
         @($Response.Body.Results.Path) | Should -Be @('IntuneTemplate/OIB_policy.json')
+    }
+}
+
+Describe 'Invoke-ListCommunityRepoTemplates built-in repo types' {
+    It 'types a built-in repo from config when its row predates TemplateTypes' {
+        $script:Rows = @()
+        $script:RepoRow = [pscustomobject]@{ Name = 'ConditionalAccessBaseline'; FullName = 'j0eyv/ConditionalAccessBaseline'; DefaultBranch = 'main' }
+        function Get-GitHubFileTree { [pscustomobject]@{ tree = @([pscustomobject]@{ path = 'Policies/CA000-Global-BlockLegacyAuth.json'; sha = 'a'; size = 1 }) } }
+        $Item = Get-CatalogItem
+        $Item.Type | Should -Be 'CATemplate'
     }
 }
