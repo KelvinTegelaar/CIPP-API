@@ -32973,6 +32973,97 @@
         "x-cipp-role": "Exchange.Mailbox.ReadWrite"
       }
     },
+    "/api/ExecMoveBaselineStandards": {
+      "post": {
+        "summary": "Moves or copies a standard, or a whole stage, from one baseline to another.",
+        "operationId": "ExecMoveBaselineStandards",
+        "tags": [
+          "Tenant > Standards"
+        ],
+        "description": "Moves or copies one standard (standard + sourceStage) or a whole stage (stage) into another saved baseline.\nA single standard goes into an existing stage (targetStage) or a new stage of its own with no graduation\nconditions (newStage, end only). A whole stage always becomes a new stage (newStage, default 'end') and keeps its name\nand graduation conditions. A standard that allows one instance is never added to a stage that already has\nit; multi-instance standards get a new instance id. The target is saved first, then the source.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "description": "'move' (default) removes the standards from the source baseline; 'copy' leaves the source unchanged."
+                  },
+                  "newStage": {
+                    "type": "string",
+                    "description": "Where a new stage goes in the target: 'end' or the 0-based index of the stage it goes straight after. A new stage with no graduation conditions (a single standard, or a conditionless stage) must go at the end. Required for a single standard unless targetStage is sent; a whole stage defaults to 'end'."
+                  },
+                  "sourceId": {
+                    "type": "string",
+                    "description": "GUID of the baseline the standards come from."
+                  },
+                  "sourceStage": {
+                    "type": "integer",
+                    "description": "0-based index of the source stage that holds the standard."
+                  },
+                  "stage": {
+                    "type": "integer",
+                    "description": "0-based index of a whole source stage to move. Send instead of standard."
+                  },
+                  "standard": {
+                    "type": "string",
+                    "description": "Instance key of one standard to move, as the editor shows it ('Name' or 'Name#id'). Send with sourceStage."
+                  },
+                  "targetId": {
+                    "type": "string",
+                    "description": "GUID of the baseline the standards go to. Must differ from sourceId."
+                  },
+                  "targetStage": {
+                    "type": "string",
+                    "description": "Single standard only: 0-based index of an existing target stage to add the standard to. Send this or newStage."
+                  }
+                },
+                "required": [
+                  "sourceId",
+                  "targetId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Baselines.ReadWrite"
+      }
+    },
     "/api/ExecNamedLocation": {
       "post": {
         "summary": "ExecNamedLocation",
