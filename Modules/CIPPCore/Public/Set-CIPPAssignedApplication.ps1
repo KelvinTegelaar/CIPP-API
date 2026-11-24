@@ -170,14 +170,26 @@ function Set-CIPPAssignedApplication {
                 $ResolvedExcludeIds = @($ExcludeGroupIds)
             } else {
                 Write-Information "Excluding group(s) from application assignment: $ExcludeGroup"
-                $ExcludeGroupNames = $ExcludeGroup.Split(',').Trim()
-                $ResolvedExcludeIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName' -tenantid $TenantFilter | ForEach-Object {
-                    $Group = $_
-                    foreach ($SingleName in $ExcludeGroupNames) {
-                        if ($Group.displayName -like ($SingleName -replace '\[', '`[' -replace '\]', '`]')) {
-                            $Group.id
-                        }
+                $RequestedExcludeNames = @($ExcludeGroup.Split(',').Trim() | Where-Object { $_ })
+                $AllGroups = @(New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName' -tenantid $TenantFilter)
+                $ResolvedExcludeIds = [System.Collections.Generic.List[string]]::new()
+                $ExcludeGroupNames = [System.Collections.Generic.List[string]]::new()
+                $UnresolvedExcludeNames = [System.Collections.Generic.List[string]]::new()
+                foreach ($SingleName in $RequestedExcludeNames) {
+                    $Pattern = $SingleName -replace '\[', '`[' -replace '\]', '`]'
+                    $Matched = @($AllGroups | Where-Object { $_.displayName -like $Pattern })
+                    if ($Matched.Count -eq 0) { $UnresolvedExcludeNames.Add($SingleName) }
+                    foreach ($m in $Matched) {
+                        $ResolvedExcludeIds.Add($m.id)
+                        # The result message names the groups actually excluded, not the requested patterns.
+                        $ExcludeGroupNames.Add($m.displayName)
                     }
+                }
+                # An unresolved exclusion must not fall through to a broader assignment.
+                if ($UnresolvedExcludeNames.Count -gt 0) {
+                    $ErrorMessage = "No groups found matching the specified exclude group name(s): $($UnresolvedExcludeNames -join ', '). Application not assigned."
+                    Write-LogMessage -headers $Headers -API $APIName -message $ErrorMessage -sev 'Warning' -tenant $TenantFilter
+                    throw $ErrorMessage
                 }
             }
 

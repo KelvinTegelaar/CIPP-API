@@ -103,4 +103,25 @@ Describe 'Set-CIPPAssignedApplication include target' {
             }
         }
     }
+
+    Context 'exclude groups by name' {
+        It 'throws and does not post when an exclude name matches no group' {
+            Mock -CommandName Get-CippException -MockWith { [PSCustomObject]@{ NormalizedError = $Exception.Exception.Message } }
+
+            { Set-CIPPAssignedApplication -GroupName 'AllUsers' -ExcludeGroup 'Sales Users, CIPPTestMissing' -ApplicationId 'app-1' -Intent 'Required' -TenantFilter $script:Tenant -AssignmentMode 'replace' } |
+                Should -Throw -ExpectedMessage '*CIPPTestMissing*'
+
+            Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
+        }
+
+        It 'excludes the resolved group and names it in the result' {
+            $Result = Set-CIPPAssignedApplication -GroupName 'AllUsers' -ExcludeGroup 'Sales*' -ApplicationId 'app-1' -Intent 'Required' -TenantFilter $script:Tenant -AssignmentMode 'replace'
+
+            Should -Invoke New-GraphPOSTRequest -Times 1 -Exactly -ParameterFilter {
+                $Exclusion = ($body | ConvertFrom-Json).mobileAppAssignments | Where-Object { $_.target.'@odata.type' -eq '#microsoft.graph.exclusionGroupAssignmentTarget' }
+                @($Exclusion).Count -eq 1 -and $Exclusion.target.groupId -eq $script:SalesId
+            }
+            $Result | Should -BeLike "*excluding group 'Sales Users'"
+        }
+    }
 }
