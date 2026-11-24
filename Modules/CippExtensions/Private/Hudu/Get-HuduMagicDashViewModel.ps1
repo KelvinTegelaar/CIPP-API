@@ -26,8 +26,9 @@ function Get-HuduMagicDashViewModel {
         [int]$GlobalAdminWarnAt = 5,
         [double]$LicenseWarnPct = 90,
         [int]$PrincipalsShown = 8,
-        [switch]$HideLicenseFull,
-        [switch]$HideLicenseNearFull
+        [switch]$ShowLicenseFull,
+        [switch]$ShowLicenseNearFull,
+        [switch]$ShowGlobalAdminCount
     )
 
     $Inv = [cultureinfo]::InvariantCulture
@@ -41,25 +42,27 @@ function Get-HuduMagicDashViewModel {
             $Active = [double]$L.PrepaidUnits.Enabled
             $Used = [double]$L.ConsumedUnits
             $Pct = [math]::Round($Used / $Active * 100, 2)
-            $Full = ($Used -ge $Active)
-            $Near = (-not $Full -and $Pct -ge $LicenseWarnPct)
+            $Over = ($Used -gt $Active)
+            $Full = ($Used -eq $Active)
+            $Near = (-not $Full -and -not $Over -and $Pct -ge $LicenseWarnPct)
             [ordered]@{
-                Name         = [string]$L.SkuPartNumber
-                Consumed     = $Used
-                ActiveText   = (& $n0 $Active)
-                ConsumedText = (& $n0 $Used)
-                UnusedText   = (& $n0 ([math]::Max(0, $Active - $Used)))
-                Pct          = ([math]::Min(100, $Pct)).ToString('0.##', $Inv)
-                PctText      = $Pct.ToString('0.##', $Culture) + '%'
-                IsFull       = $Full
-                IsNearFull   = $Near
-                Tone         = $(if ($Full -or $Near) { 'warn' } else { 'ok' })
-                Tip          = "$(& $n0 $Used) of $(& $n0 $Active) assigned"
+                Name           = [string]$L.SkuPartNumber
+                Consumed       = $Used
+                ActiveText     = (& $n0 $Active)
+                ConsumedText   = (& $n0 $Used)
+                UnusedText     = (& $n0 ([math]::Max(0, $Active - $Used)))
+                Pct            = ([math]::Min(100, $Pct)).ToString('0.##', $Inv)
+                PctText        = $Pct.ToString('0.##', $Culture) + '%'
+                IsFull         = $Full
+                IsOverAssigned = $Over
+                IsNearFull     = $Near
+                Tone           = $(if ($Full -or $Over -or $Near) { 'warn' } else { 'ok' })
+                Tip            = "$(& $n0 $Used) of $(& $n0 $Active) assigned"
             }
         })
     $InUse = @($LicRows | Where-Object { $_.Consumed -gt 0 } | Sort-Object { $_.Consumed } -Descending)
     $Unassigned = @($LicRows | Where-Object { $_.Consumed -le 0 } | Sort-Object { $_.Name })
-    $FullCount = @($LicRows | Where-Object { $_.IsFull }).Count
+    $FullCount = @($LicRows | Where-Object { $_.IsFull -or $_.IsOverAssigned }).Count
 
     # Roles, including any without members. Members are keyed by principal id because display names are not unique.
     $GaTemplateId = '62e90394-69f5-4237-9190-012177145e10'
@@ -141,7 +144,7 @@ function Get-HuduMagicDashViewModel {
         People    = $People
         Resource  = $Resource
     }
-    $Model.Attention = Get-HuduMagicDashAttentionItems -Model $Model -HideLicenseFull:$HideLicenseFull -HideLicenseNearFull:$HideLicenseNearFull
+    $Model.Attention = Get-HuduMagicDashAttentionItems -Model $Model -ShowLicenseFull:$ShowLicenseFull -ShowLicenseNearFull:$ShowLicenseNearFull -ShowGlobalAdminCount:$ShowGlobalAdminCount
     $Model.Tile = [ordered]@{
         Message = "$(& $Plural $AllUsers.Count 'licensed user' 'licensed users')$(if ($Model.Attention.Count) { " $Dot $(& $Plural $Model.Attention.Count 'item needs attention' 'items need attention')" })"
         Shade   = $(if ($Model.Attention.Count) { 'danger' } else { 'success' })

@@ -39,7 +39,7 @@ BeforeAll {
 Describe 'Get-HuduMagicDashBody' {
     It 'renders every section for a full model' {
         $Params = New-DashParams
-        $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Copilot' 5 0))
+        $Params.Licenses = @((New-License 'Business Premium' 10 12), (New-License 'Copilot' 5 0))
         $Body = Get-HuduMagicDashBody -Model (Get-TestDash $Params) -SyncedAt $script:AsOf
         foreach ($Text in 'Basic info</span></h3>', '>Role holders ', '>Licenses ', 'Assigned roles', '>Licensed users ', 'Resource accounts', 'Purchased but not assigned', 'Everyone else', 'Needs attention', 'Verified domains', 'M365 Admin Portal', 'Defender Portal', 'LAPTOP-1', 'https://hudu.example/a/1') {
             $Body | Should -Match ([regex]::Escape($Text))
@@ -73,7 +73,7 @@ Describe 'Get-HuduMagicDashBody' {
 
     It 'uses no layout CSS that Hudu or its mobile app drops' {
         $Params = New-DashParams
-        $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Copilot' 5 0))
+        $Params.Licenses = @((New-License 'Business Premium' 10 12), (New-License 'Copilot' 5 0))
         $Body = Get-HuduMagicDashBody -Model (Get-TestDash $Params) -SyncedAt $script:AsOf
         $Body | Should -Match 'Needs attention'
         $Body | Should -Not -Match 'display:(inline-)?flex|justify-content|float:|gap:'
@@ -205,7 +205,7 @@ Describe 'Get-HuduMagicDashViewModel' {
 
     It 'sets a danger tile when something needs attention' {
         $Params = New-DashParams
-        $Params.Licenses = @(New-License 'Business Premium' 10 10)
+        $Params.Licenses = @(New-License 'Business Premium' 10 12)
         $Dash = Get-TestDash $Params
         $Dash.Tile.Shade | Should -Be 'danger'
         $Dash.Tile.Message | Should -Be "3 licensed users $([char]0x00B7) 1 item needs attention"
@@ -214,6 +214,8 @@ Describe 'Get-HuduMagicDashViewModel' {
     It 'counts every attention item on the tile' {
         $Params = New-DashParams
         $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Exchange Online' 100 95))
+        $Params.ShowLicenseFull = $true
+        $Params.ShowLicenseNearFull = $true
         $Dash = Get-TestDash $Params
         $Dash.Tile.Message | Should -Be "3 licensed users $([char]0x00B7) $(@($Dash.Attention).Count) items need attention"
         @($Dash.Attention).Count | Should -BeGreaterThan 1
@@ -224,71 +226,109 @@ Describe 'Get-HuduMagicDashAttentionItems' {
     It 'flags a fully assigned license and not one with seats left' {
         $Params = New-DashParams
         $Params.Licenses = @(New-License 'Business Premium' 5 5)
-        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) | Should -Be '**1 license is** fully assigned: Business Premium'
+        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) -ShowLicenseFull | Should -Be '**1 license is** fully assigned: Business Premium'
         $Params.Licenses = @(New-License 'Business Premium' 5 4)
-        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) | Should -BeNullOrEmpty
+        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) -ShowLicenseFull | Should -BeNullOrEmpty
     }
 
     It 'flags a license 90% assigned and not below' {
         $Params = New-DashParams
         $Params.Licenses = @(New-License 'Business Premium' 10 9)
-        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) | Should -Be '**1 license is** nearly fully assigned: Business Premium (90%)'
+        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) -ShowLicenseNearFull | Should -Be '**1 license is** nearly fully assigned: Business Premium (90%)'
         $Params.Licenses = @(New-License 'Business Premium' 100 89)
-        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) | Should -BeNullOrEmpty
+        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) -ShowLicenseNearFull | Should -BeNullOrEmpty
     }
 
     It 'counts service principals among Global Administrators and says how many' {
         $Params = New-DashParams
         $Params.Roles[0].Members = @((New-Member 'Admin 1' 'u1' 'user'), (New-Member 'Admin 2' 'u2' 'user'), (New-Member 'Admin 3' 'u3' 'user'), (New-Member 'CIPP-SAM' 'sp1' 'servicePrincipal'), (New-Member 'CIPP-SAM' 'sp2' 'servicePrincipal'))
-        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) | Should -Be '**5 accounts** (2 service principals) hold Global Administrator (Microsoft recommends fewer than 5)'
+        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) -ShowGlobalAdminCount | Should -Be '**5 accounts** (2 service principals) hold Global Administrator (Microsoft recommends fewer than 5)'
     }
 
     It 'flags five Global Administrators and not four' {
         $Params = New-DashParams
         $Params.Roles[0].Members = @(1..5 | ForEach-Object { New-Member "Admin $_" })
-        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) | Should -Be '**5 accounts** hold Global Administrator (Microsoft recommends fewer than 5)'
+        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) -ShowGlobalAdminCount | Should -Be '**5 accounts** hold Global Administrator (Microsoft recommends fewer than 5)'
         $Params.Roles[0].Members = @(1..4 | ForEach-Object { New-Member "Admin $_" })
-        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) | Should -BeNullOrEmpty
+        Get-HuduMagicDashAttentionItems -Model (Get-TestDash $Params) -ShowGlobalAdminCount | Should -BeNullOrEmpty
     }
 
-    It 'hides only the fully assigned license warning with HideLicenseFull' {
+    It 'raises nothing for full, nearly full and five Global Administrator tenants by default' {
         $Params = New-DashParams
         $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Exchange Online' 100 95))
-        $Params.HideLicenseFull = $true
-        $Items = @((Get-TestDash $Params).Attention)
-        $Items.Count | Should -Be 1
-        $Items[0] | Should -Be '**1 license is** nearly fully assigned: Exchange Online (95%)'
-    }
-
-    It 'hides only the nearly full license warning with HideLicenseNearFull' {
-        $Params = New-DashParams
-        $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Exchange Online' 100 95))
-        $Params.HideLicenseNearFull = $true
-        $Items = @((Get-TestDash $Params).Attention)
-        $Items.Count | Should -Be 1
-        $Items[0] | Should -Be '**1 license is** fully assigned: Business Premium'
-    }
-
-    It 'leaves a success tile when both license warnings are hidden' {
-        $Params = New-DashParams
-        $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Exchange Online' 100 95))
-        $Params.HideLicenseFull = $true
-        $Params.HideLicenseNearFull = $true
+        $Params.Roles[0].Members = @(1..5 | ForEach-Object { New-Member "Admin $_" })
         $Dash = Get-TestDash $Params
         @($Dash.Attention).Count | Should -Be 0
         $Dash.Tile.Shade | Should -Be 'success'
     }
 
-    It 'still warns about five Global Administrators when both license warnings are hidden' {
+    It 'adds only the fully assigned warning with ShowLicenseFull' {
+        $Params = New-DashParams
+        $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Exchange Online' 100 95))
+        $Params.ShowLicenseFull = $true
+        $Items = @((Get-TestDash $Params).Attention)
+        $Items.Count | Should -Be 1
+        $Items[0] | Should -Be '**1 license is** fully assigned: Business Premium'
+    }
+
+    It 'adds only the nearly full warning with ShowLicenseNearFull' {
+        $Params = New-DashParams
+        $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Exchange Online' 100 95))
+        $Params.ShowLicenseNearFull = $true
+        $Items = @((Get-TestDash $Params).Attention)
+        $Items.Count | Should -Be 1
+        $Items[0] | Should -Be '**1 license is** nearly fully assigned: Exchange Online (95%)'
+    }
+
+    It 'adds only the Global Administrator count warning with ShowGlobalAdminCount' {
         $Params = New-DashParams
         $Params.Licenses = @((New-License 'Business Premium' 10 10), (New-License 'Exchange Online' 100 95))
         $Params.Roles[0].Members = @(1..5 | ForEach-Object { New-Member "Admin $_" })
-        $Params.HideLicenseFull = $true
-        $Params.HideLicenseNearFull = $true
+        $Params.ShowGlobalAdminCount = $true
         $Dash = Get-TestDash $Params
         @($Dash.Attention).Count | Should -Be 1
         $Dash.Attention[0] | Should -Be '**5 accounts** hold Global Administrator (Microsoft recommends fewer than 5)'
         $Dash.Tile.Shade | Should -Be 'danger'
+    }
+
+    It 'flags an over-assigned license by default and does not list it as fully assigned' {
+        $Params = New-DashParams
+        $Params.Licenses = @(New-License 'Business Premium' 10 12)
+        $Params.ShowLicenseFull = $true
+        $Params.ShowLicenseNearFull = $true
+        $Items = @((Get-TestDash $Params).Attention)
+        $Items.Count | Should -Be 1
+        $Items[0] | Should -Be '**1 license is** over-assigned (more seats assigned than purchased): Business Premium (12 of 10)'
+        (Get-TestDash $Params).Licenses.Items[0].Tone | Should -Be 'warn'
+    }
+
+    It 'does not flag an exactly full license as over-assigned' {
+        $Params = New-DashParams
+        $Params.Licenses = @(New-License 'Business Premium' 10 10)
+        $Dash = Get-TestDash $Params
+        $Dash.Licenses.Items[0].IsOverAssigned | Should -BeFalse
+        @($Dash.Attention).Count | Should -Be 0
+    }
+
+    It 'flags a tenant whose roles have no Global Administrator members' {
+        $Params = New-DashParams
+        $Params.Roles[0].Members = @()
+        $Params.Roles[0].EligibleMembers = ''
+        @((Get-TestDash $Params).Attention) | Should -Be @('**No account holds Global Administrator**')
+    }
+
+    It 'does not flag a missing Global Administrator when one is PIM-eligible' {
+        $Params = New-DashParams
+        $Params.Roles[0].Members = @()
+        @((Get-TestDash $Params).Attention).Count | Should -Be 0
+    }
+
+    It 'does not flag a missing Global Administrator when no role data came back' {
+        $Params = New-DashParams
+        $Params.Roles = @()
+        @((Get-TestDash $Params).Attention).Count | Should -Be 0
+        $Params.Roles = $null
+        @((Get-TestDash $Params).Attention).Count | Should -Be 0
     }
 }
 

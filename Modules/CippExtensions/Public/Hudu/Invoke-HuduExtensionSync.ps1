@@ -1257,15 +1257,16 @@ function Invoke-HuduExtensionSync {
 
 
         $DashParams = @{
-            Tenant   = $Tenant
-            Links    = $Links
-            Domains  = $Domains
-            Licenses = $Licenses
-            Roles    = $Roles
-            Users    = $OutputUsers
-            Culture  = $Culture
-            HideLicenseFull     = [bool]$Configuration.HideLicenseFullWarning
-            HideLicenseNearFull = [bool]$Configuration.HideLicenseNearFullWarning
+            Tenant               = $Tenant
+            Links                = $Links
+            Domains              = $Domains
+            Licenses             = $Licenses
+            Roles                = $Roles
+            Users                = $OutputUsers
+            Culture              = $Culture
+            ShowLicenseFull      = [bool]$Configuration.ShowLicenseFullWarning
+            ShowLicenseNearFull  = [bool]$Configuration.ShowLicenseNearFullWarning
+            ShowGlobalAdminCount = [bool]$Configuration.ShowGlobalAdminCountWarning
         }
         $DashTitle = "Microsoft 365 - $($Tenant.displayName)"
         $DashSet = $false
