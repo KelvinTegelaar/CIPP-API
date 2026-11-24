@@ -39,11 +39,14 @@ function Invoke-ExecOffboardTenant {
             if ($Request.Body.RemoveCSPGuestUsers -eq $true) {
                 # Delete guest users who's domains match the CSP tenants
                 try {
+                    $GuestQueryFailed = $false
                     try {
                         $domains = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/domains?`$select=id" -tenantid $PartnerTenantId -NoAuthCheck:$true).id
-                        $DomainFilter = ($Domains | ForEach-Object { "endswith(mail, '$_')" }) -join ' or '
+                        # Anchor on @ so msp.com does not also match bigmsp.com or sub.msp.com
+                        $DomainFilter = ($Domains | ForEach-Object { "endswith(mail, '@$_')" }) -join ' or '
                         $CSPGuestUsers = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/users?`$select=id,mail&`$filter=userType eq 'Guest' and ($DomainFilter)&`$count=true" -tenantid $TenantFilter -ComplexFilter)
                     } catch {
+                        $GuestQueryFailed = $true
                         $Errors.Add("Failed to retrieve guest users: $($_.Exception.message)")
                     }
 
@@ -56,11 +59,22 @@ function Invoke-ExecOffboardTenant {
                                 }
                             })
 
-                        $null = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
+                        $DeleteResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
+                        $Removed = 0
+                        foreach ($DeleteResult in $DeleteResults) {
+                            if ([int]$DeleteResult.status -ge 400) {
+                                $Guest = $CSPGuestUsers | Where-Object { $_.id -eq $DeleteResult.id }
+                                $Errors.Add("Failed to remove guest user $($Guest.mail ?? $DeleteResult.id): $($DeleteResult.body.error.message)")
+                            } else {
+                                $Removed++
+                            }
+                        }
 
-                        $results.Add('Successfully removed guest users')
-                        Write-LogMessage -headers $Headers -API $APIName -message 'CSP Guest users were removed' -Sev 'Info' -tenant $TenantFilter
-                    } else {
+                        if ($Removed -gt 0) {
+                            $results.Add("Successfully removed $Removed guest user(s)")
+                            Write-LogMessage -headers $Headers -API $APIName -message "$Removed CSP Guest users were removed" -Sev 'Info' -tenant $TenantFilter
+                        }
+                    } elseif (!$GuestQueryFailed) {
                         $results.Add('No guest users found to remove')
                     }
                 } catch {
@@ -82,31 +96,33 @@ function Invoke-ExecOffboardTenant {
                         $orgContacts = New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/organization?`$select=id,marketingNotificationEmails,securityComplianceNotificationMails,technicalNotificationMails" -tenantid $TenantFilter
 
                     } catch {
-                        throw "Failed to retrieve CSP domains: $($_.Exception.message)"
+                        throw "Failed to retrieve organization contacts: $($_.Exception.message)"
                     }
                 } catch {
                     $errors.Add("$($_.Exception.message)")
                 }
 
-                # foreach through the properties we want to check/update
-                @('marketingNotificationEmails', 'securityComplianceNotificationMails', 'technicalNotificationMails') | ForEach-Object {
-                    $property = $_
-                    $propertyContacts = $orgContacts.($($property))
+                # foreach through the properties we want to check/update, unless the reads above failed
+                if ($orgContacts) {
+                    @('marketingNotificationEmails', 'securityComplianceNotificationMails', 'technicalNotificationMails') | ForEach-Object {
+                        $property = $_
+                        $propertyContacts = $orgContacts.($($property))
 
-                    if ($propertyContacts -and ($propertyContacts | Where-Object { $domains -contains $_.Split('@')[1] })) {
-                        $newPropertyContent = [System.Collections.Generic.List[object]]($propertyContacts | Where-Object { $domains -notcontains $_.Split('@')[1] })
+                        if ($propertyContacts -and ($propertyContacts | Where-Object { $domains -contains $_.Split('@')[1] })) {
+                            $newPropertyContent = [System.Collections.Generic.List[object]]($propertyContacts | Where-Object { $domains -notcontains $_.Split('@')[1] })
 
-                        $patchContactBody = if (!($newPropertyContent)) { "{ `"$($property)`" : [] }" } else { [pscustomobject]@{ $property = $newPropertyContent } | ConvertTo-Json }
+                            $patchContactBody = if (!($newPropertyContent)) { "{ `"$($property)`" : [] }" } else { [pscustomobject]@{ $property = $newPropertyContent } | ConvertTo-Json }
 
-                        try {
-                            $null = New-GraphPostRequest -type PATCH -body $patchContactBody -Uri "https://graph.microsoft.com/v1.0/organization/$($orgContacts.id)" -tenantid $TenantFilter
-                            $Results.Add("Successfully removed notification contacts from $($property): $(($propertyContacts | Where-Object { $domains -contains $_.Split('@')[1] }))")
-                            Write-LogMessage -headers $Headers -API $APIName -message "Contacts were removed from $($property)" -Sev 'Info' -tenant $TenantFilter
-                        } catch {
-                            $Errors.Add("Failed to update property $($property): $($_.Exception.message)")
+                            try {
+                                $null = New-GraphPostRequest -type PATCH -body $patchContactBody -Uri "https://graph.microsoft.com/v1.0/organization/$($orgContacts.id)" -tenantid $TenantFilter
+                                $Results.Add("Successfully removed notification contacts from $($property): $(($propertyContacts | Where-Object { $domains -contains $_.Split('@')[1] }))")
+                                Write-LogMessage -headers $Headers -API $APIName -message "Contacts were removed from $($property)" -Sev 'Info' -tenant $TenantFilter
+                            } catch {
+                                $Errors.Add("Failed to update property $($property): $($_.Exception.message)")
+                            }
+                        } else {
+                            $results.Add("No notification contacts found in $($property)")
                         }
-                    } else {
-                        $results.Add("No notification contacts found in $($property)")
                     }
                 }
                 # TODO Add logic for privacyProfile later - rvdwegen
