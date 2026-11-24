@@ -45,6 +45,12 @@ function Invoke-ExecCloneTemplate {
             if ($Template.SHA) {
                 $Template.SHA = $null
             }
+            if ($Template.SourcePath) {
+                $Template.SourcePath = $null
+            }
+            if ($Template.ManualImport) {
+                $Template.ManualImport = $null
+            }
             try {
                 Add-CIPPAzDataTableEntity @Table -Entity $Template
                 $Result = "Template cloned successfully (Type=$Type, NewGuid=$NewGuid)"

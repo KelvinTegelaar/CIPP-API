@@ -196,6 +196,14 @@ Describe 'Invoke-ExecCloneTemplate' {
         (Invoke-Endpoint 'Invoke-ExecCloneTemplate' @{ GUID = $script:TemplateId; Type = $Type }).StatusCode | Should -Be 200
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1
     }
+
+    It 'detaches the clone of a catalog import from the repository' {
+        $script:Rows = @([pscustomobject]@{ PartitionKey = 'IntuneTemplate'; RowKey = $script:TemplateId; JSON = '{}'; SHA = 'abc'; Source = 'owner/repo'; SourcePath = 'IntuneTemplate/Policy.json'; ManualImport = $true })
+        (Invoke-Endpoint 'Invoke-ExecCloneTemplate' @{ GUID = $script:TemplateId; Type = 'IntuneTemplate' }).StatusCode | Should -Be 200
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -ParameterFilter {
+            -not $Entity.SHA -and -not $Entity.Source -and -not $Entity.SourcePath -and -not $Entity.ManualImport
+        }
+    }
 }
 
 Describe 'Invoke-ExecSetPackageTag' {
