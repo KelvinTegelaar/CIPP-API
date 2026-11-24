@@ -18,6 +18,7 @@ function New-CIPPIntuneWinPackage {
 
     $Folder = "app-packages/$PackageId"
     $BlockSize = 8MB
+    $PackageStorage = (Get-CIPPAppPackageStorage -PackageId "$PackageId").ConnectionString
     try {
         $Aes = [System.Security.Cryptography.Aes]::Create(); $Aes.KeySize = 256; $Aes.GenerateKey(); $Aes.GenerateIV()
         $MacKey = [byte[]]::new(32); [System.Security.Cryptography.RandomNumberGenerator]::Fill($MacKey)
@@ -41,7 +42,7 @@ function New-CIPPIntuneWinPackage {
         $Finished = $false
         while (-not $Finished) {
             if ($Size -lt 0 -or $Offset -lt $Size) {
-                $Read = New-CIPPAzStorageRequest -Service blob -Resource "$Folder/installer" -Headers @{ Range = "bytes=$Offset-$($Offset + 4MB - 1)" } -ErrorAction Stop
+                $Read = New-CIPPAzStorageRequest -Service blob -ConnectionString $PackageStorage -Resource "$Folder/installer" -Headers @{ Range = "bytes=$Offset-$($Offset + 4MB - 1)" } -ErrorAction Stop
                 # Content-Range: bytes <start>-<end>/<total>
                 if ($Size -lt 0) { $Size = [int64](([string]$Read.Headers['Content-Range']) -split '/')[-1] }
                 if ($Read.Length -eq 0) { throw "The installer ended at $Offset of $Size bytes" }
@@ -60,7 +61,7 @@ function New-CIPPIntuneWinPackage {
                 $Body = $Block
                 if ($Count -lt $BlockSize) { $Body = [byte[]]::new($Count) }
                 [Buffer]::BlockCopy($Buffer, 0, $Body, 0, $Count)
-                $null = New-CIPPAzStorageRequest -Service blob -Resource "$Folder/IntunePackage.intunewin" -Method PUT -QueryParams @{ comp = 'block'; blockid = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($Index.ToString('000'))) } -Body $Body -ContentType 'application/octet-stream' -ErrorAction Stop
+                $null = New-CIPPAzStorageRequest -Service blob -ConnectionString $PackageStorage -Resource "$Folder/IntunePackage.intunewin" -Method PUT -QueryParams @{ comp = 'block'; blockid = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($Index.ToString('000'))) } -Body $Body -ContentType 'application/octet-stream' -ErrorAction Stop
                 $Written += $Count
                 # the last two cipher blocks give the plaintext length below
                 if ($Count -ge 32) { [Buffer]::BlockCopy($Body, $Count - 32, $Last, 0, 32) } else { [Buffer]::BlockCopy($Last, $Count, $Last, 0, 32 - $Count); [Buffer]::BlockCopy($Body, 0, $Last, 32 - $Count, $Count) }
@@ -69,7 +70,7 @@ function New-CIPPIntuneWinPackage {
             }
         }
         $Mac = $Hmac.Hash
-        $null = New-CIPPAzStorageRequest -Service blob -Resource "$Folder/IntunePackage.intunewin" -Method PUT -QueryParams @{ comp = 'block'; blockid = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('000')) } -Body $Mac -ContentType 'application/octet-stream' -ErrorAction Stop
+        $null = New-CIPPAzStorageRequest -Service blob -ConnectionString $PackageStorage -Resource "$Folder/IntunePackage.intunewin" -Method PUT -QueryParams @{ comp = 'block'; blockid = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('000')) } -Body $Mac -ContentType 'application/octet-stream' -ErrorAction Stop
 
         # CBC: the last cipher block decrypted and XOR-ed with the one before ends in the PKCS7 pad length.
         $Final = [byte[]]::new(16); [Buffer]::BlockCopy($Last, 16, $Final, 0, 16)
@@ -98,6 +99,6 @@ function New-CIPPIntuneWinPackage {
     } finally {
         if ($Sink) { $Sink.Dispose() }
     }
-    $null = New-CIPPAzStorageRequest -Service blob -Resource "$Folder/installer" -Method DELETE -ErrorAction SilentlyContinue
-    $null = New-CIPPAzStorageRequest -Service blob -Resource "$Folder/packaged.json" -Method PUT -ContentType 'application/json' -Body ([string](ConvertTo-Json -Depth 5 -Compress -InputObject $Result)) -ErrorAction Stop
+    $null = New-CIPPAzStorageRequest -Service blob -ConnectionString $PackageStorage -Resource "$Folder/installer" -Method DELETE -ErrorAction SilentlyContinue
+    $null = New-CIPPAzStorageRequest -Service blob -ConnectionString $PackageStorage -Resource "$Folder/packaged.json" -Method PUT -ContentType 'application/json' -Body ([string](ConvertTo-Json -Depth 5 -Compress -InputObject $Result)) -ErrorAction Stop
 }

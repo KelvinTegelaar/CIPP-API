@@ -29,7 +29,8 @@ BeforeAll {
         [pscustomobject]@{ NormalizedError = "$Exception" }
     }
 
-    function New-CIPPAzStorageRequest { param($Service, $Resource, $Method, $QueryParams, $ContentType, $Body) $script:StorageCalls.Add([pscustomobject]@{ Resource = $Resource; QueryParams = $QueryParams; Body = $Body }) }
+    function Get-CIPPAppPackageStorage { [pscustomobject]@{ ConnectionString = 'UseDevelopmentStorage=true'; Custom = $false; LimitBytes = 0 } }
+    function New-CIPPAzStorageRequest { param($Service, $ConnectionString, $Resource, $Method, $QueryParams, $ContentType, $Body) $script:StorageCalls.Add([pscustomobject]@{ Resource = $Resource; QueryParams = $QueryParams; Body = $Body }) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
 
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Endpoint/Applications/Invoke-AddAppTemplate.ps1'

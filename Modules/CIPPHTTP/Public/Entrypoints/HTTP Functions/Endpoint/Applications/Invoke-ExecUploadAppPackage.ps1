@@ -31,8 +31,14 @@ function Invoke-ExecUploadAppPackage {
         return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'packageId must be a GUID' } })
     }
 
+    try {
+        $Storage = Get-CIPPAppPackageStorage -PackageId "$PackageId"
+    } catch {
+        return ([HttpResponseContext]@{ StatusCode = Get-CippErrorStatusCode -ErrorRecord $_; Body = @{ Results = "Failed to open app package storage: $($_.Exception.Message)" } })
+    }
+
     if ($Request.Body.status) {
-        $Packaged = New-CIPPAzStorageRequest -Service blob -Resource "app-packages/$PackageId/packaged.json" -ErrorAction SilentlyContinue
+        $Packaged = New-CIPPAzStorageRequest -Service blob -ConnectionString $Storage.ConnectionString -Resource "app-packages/$PackageId/packaged.json" -ErrorAction SilentlyContinue
         $Result = if ($Packaged.Bytes) { [Text.Encoding]::UTF8.GetString($Packaged.Bytes) | ConvertFrom-Json } else { @{ packaging = $true } }
         return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::OK; Body = @{ Results = $Result } })
     }
@@ -46,7 +52,7 @@ function Invoke-ExecUploadAppPackage {
         }
         try {
             $BlockIds = foreach ($i in 0..($BlockCount - 1)) { '<Latest>{0}</Latest>' -f [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($i.ToString('000'))) }
-            $null = New-CIPPAzStorageRequest -Service blob -Resource "app-packages/$PackageId/installer" -Method PUT -QueryParams @{ comp = 'blocklist' } -ContentType 'application/xml' -Body ('<?xml version="1.0" encoding="utf-8"?><BlockList>' + ($BlockIds -join '') + '</BlockList>') -ErrorAction Stop
+            $null = New-CIPPAzStorageRequest -Service blob -ConnectionString $Storage.ConnectionString -Resource "app-packages/$PackageId/installer" -Method PUT -QueryParams @{ comp = 'blocklist' } -ContentType 'application/xml' -Body ('<?xml version="1.0" encoding="utf-8"?><BlockList>' + ($BlockIds -join '') + '</BlockList>') -ErrorAction Stop
             if (-not (Add-CippQueueMessage -Cmdlet 'New-CIPPIntuneWinPackage' -Parameters @{ PackageId = "$PackageId"; SetupFile = $SetupFile })) { throw 'Could not queue the packaging job' }
             $Result = "Packaging $SetupFile"
             $StatusCode = [HttpStatusCode]::OK
@@ -66,13 +72,28 @@ function Invoke-ExecUploadAppPackage {
     }
 
     try {
-        if ($Index -eq 0 -and -not (New-CIPPAzStorageRequest -Service blob -Component list -ErrorAction Stop | Where-Object Name -EQ 'app-packages')) {
-            $null = New-CIPPAzStorageRequest -Service blob -Resource 'app-packages' -Method PUT -QueryParams @{ restype = 'container' } -ErrorAction Stop
+        # The first block decides where a new package is stored; later requests find it by package id
+        if ($Index -eq 0) {
+            $Storage = Get-CIPPAppPackageStorage
+            # ponytail: checked when an upload starts, so the upload that fills storage can go over the limit by one package
+            if ($Storage.LimitBytes) {
+                $Used = (@(Get-CIPPAppPackageFile -ErrorAction SilentlyContinue).Size | Measure-Object -Sum).Sum
+                if ($Used -ge $Storage.LimitBytes) {
+                    throw [System.ArgumentException]::new(('App package storage is full: {0:N1} GB of the {1:N0} GB included with this instance is in use. Delete application templates you no longer need, or connect your own storage account under Settings > App Package Storage.' -f ($Used / 1GB), ($Storage.LimitBytes / 1GB)))
+                }
+            }
+            if ($Storage.Custom) {
+                $PackagesTable = Get-CIPPTable -TableName 'AppPackages'
+                Add-CIPPAzDataTableEntity @PackagesTable -Entity @{ PartitionKey = 'AppPackage'; RowKey = "$PackageId"; AccountName = $Storage.AccountName } -Force
+            }
+        }
+        if ($Index -eq 0 -and -not (New-CIPPAzStorageRequest -Service blob -ConnectionString $Storage.ConnectionString -Component list -ErrorAction Stop | Where-Object Name -EQ 'app-packages')) {
+            $null = New-CIPPAzStorageRequest -Service blob -ConnectionString $Storage.ConnectionString -Resource 'app-packages' -Method PUT -QueryParams @{ restype = 'container' } -ErrorAction Stop
         }
         $BlockId = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($Index.ToString('000')))
         # True when the block belongs to an .exe or .msi installer that CIPP packages
         $Blob = if ([bool]($Request.Query.installer ?? $Request.Body.installer)) { 'installer' } else { 'IntunePackage.intunewin' }
-        $null = New-CIPPAzStorageRequest -Service blob -Resource "app-packages/$PackageId/$Blob" -Method PUT -QueryParams @{ comp = 'block'; blockid = $BlockId } -Body $Bytes -ContentType 'application/octet-stream' -ErrorAction Stop
+        $null = New-CIPPAzStorageRequest -Service blob -ConnectionString $Storage.ConnectionString -Resource "app-packages/$PackageId/$Blob" -Method PUT -QueryParams @{ comp = 'block'; blockid = $BlockId } -Body $Bytes -ContentType 'application/octet-stream' -ErrorAction Stop
         $Result = @{ index = $Index; size = $Bytes.Length }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

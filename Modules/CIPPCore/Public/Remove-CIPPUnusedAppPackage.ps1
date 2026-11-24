@@ -1,7 +1,7 @@
 function Remove-CIPPUnusedAppPackage {
     <#
     .SYNOPSIS
-        Deletes uploaded .intunewin packages from CIPP storage once no application template references them.
+        Deletes uploaded app packages from the storage they were uploaded to once no application template references them.
     .FUNCTIONALITY
         Internal
     #>
@@ -16,8 +16,18 @@ function Remove-CIPPUnusedAppPackage {
     $TemplateJson = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppTemplate'").JSON -join "`n"
     foreach ($PackageId in $Candidates) {
         if ($TemplateJson.Contains($PackageId) -or -not $PSCmdlet.ShouldProcess($PackageId, 'Remove app package')) { continue }
+        try {
+            $Storage = Get-CIPPAppPackageStorage -PackageId $PackageId
+        } catch {
+            Write-Information "Skipped app package $($PackageId): $($_.Exception.Message)"
+            continue
+        }
         foreach ($Blob in 'IntunePackage.intunewin', 'metadata.json', 'installer', 'packaged.json') {
-            $null = New-CIPPAzStorageRequest -Service blob -Resource "app-packages/$PackageId/$Blob" -Method DELETE -ErrorAction SilentlyContinue
+            $null = New-CIPPAzStorageRequest -Service blob -ConnectionString $Storage.ConnectionString -Resource "app-packages/$PackageId/$Blob" -Method DELETE -ErrorAction SilentlyContinue
+        }
+        if ($Storage.Custom) {
+            $PackagesTable = Get-CIPPTable -TableName 'AppPackages'
+            Remove-CIPPAzDataTableEntity @PackagesTable -Entity @{ PartitionKey = 'AppPackage'; RowKey = $PackageId } -Force
         }
     }
 }

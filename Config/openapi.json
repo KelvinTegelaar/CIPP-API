@@ -15321,6 +15321,61 @@
         "x-cipp-role": "Tenant.Application.ReadWrite"
       }
     },
+    "/api/ExecAppPackageStorageConfig": {
+      "post": {
+        "summary": "Changes the storage account that holds uploaded app packages.",
+        "operationId": "ExecAppPackageStorageConfig",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "ConnectionString connects your own Azure storage account, which has no limit; Remove goes back to CIPP's own\nstorage. New uploads go to the selected storage, and packages already uploaded keep working from where they\nare. A connected account cannot be disconnected or replaced while application templates use packages stored\nin it. ListAppPackageStorage shows the storage in use.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ConnectionString": {
+                    "type": "string",
+                    "description": "Azure storage connection string with AccountName and AccountKey"
+                  },
+                  "Remove": {
+                    "type": "boolean",
+                    "description": "True to disconnect the storage account and go back to CIPP's own storage"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.AppSettings.ReadWrite",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ExecAppPermissionTemplate": {
       "post": {
         "summary": "ExecAppPermissionTemplate",
@@ -48609,6 +48664,62 @@
         "x-cipp-role": "Endpoint.Application.Read"
       }
     },
+    "/api/ListAppPackageStorage": {
+      "get": {
+        "summary": "Shows how much storage uploaded app packages use.",
+        "operationId": "ListAppPackageStorage",
+        "tags": [
+          "Endpoint > Applications"
+        ],
+        "description": "Returns one row: UsedBytes, the space packages use in CIPP's own storage; LimitBytes, the limit on new\nuploads there (0 when there is none, including while a storage account is connected); AccountName, the\nstorage account connected in Settings (empty when none); and AccountBytes, the space packages use in it.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "AccountBytes": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "AccountName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "LimitBytes": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "UsedBytes": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.Application.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListAppPermissionExposure": {
       "get": {
         "summary": "ListAppPermissionExposure",
@@ -49228,6 +49339,9 @@
                       },
                       "Package": {
                         "x-cipp-field-source": "storage"
+                      },
+                      "packageSizeInBytes": {
+                        "x-cipp-field-source": "backend,frontend"
                       },
                       "PartitionKey": {
                         "x-cipp-field-source": "storage"

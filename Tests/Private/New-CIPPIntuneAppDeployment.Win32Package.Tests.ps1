@@ -7,8 +7,9 @@ BeforeAll {
 
     function New-GraphGetRequest { [CmdletBinding()] param($uri, $tenantid, $AsApp, $ComplexFilter) }
     function New-GraphPostRequest { [CmdletBinding()] param($uri, $tenantid, $type, $body, $AddedHeaders) }
-    function New-CIPPAzStorageRequest { [CmdletBinding()] param($Service, $Resource, $Method, $QueryParams, $ContentType, $Body, $Headers) }
-    function Add-CIPPWin32LobAppContent { [CmdletBinding()] param($AppId, $BlobPath, $EncryptedSize, $FileName, $UnencryptedSize, $EncryptionInfo, $TenantFilter, $APIName, $AppProperties, $AppType) }
+    function Get-CIPPAppPackageStorage { [pscustomobject]@{ ConnectionString = 'UseDevelopmentStorage=true'; Custom = $false; LimitBytes = 0 } }
+    function New-CIPPAzStorageRequest { [CmdletBinding()] param($Service, $ConnectionString, $Resource, $Method, $QueryParams, $ContentType, $Body, $Headers) }
+    function Add-CIPPWin32LobAppContent { [CmdletBinding()] param($AppId, $BlobPath, $ConnectionString, $EncryptedSize, $FileName, $UnencryptedSize, $EncryptionInfo, $TenantFilter, $APIName, $AppProperties, $AppType) }
     function Write-LogMessage { [CmdletBinding()] param($message, $tenant, $API, $tenantId, $headers, $user, $sev, $Sev2, $LogData) }
     function Set-CIPPAssignedApplication { [CmdletBinding()] param($GroupName, $ExcludeGroup, $ExcludeGroupIds, $ExcludeGroupNames, $Intent, $AppType, $ApplicationId, $TenantFilter, $GroupIds, $AssignmentMode, $AssignmentDirection, $APIName, $Headers, $AssignmentFilterName, $AssignmentFilterType) }
 
@@ -63,7 +64,7 @@ Describe 'New-CIPPIntuneAppDeployment uploaded Win32 packages' {
         $Body.rules[0].productCode | Should -Be '{11111111-2222-3333-4444-555555555555}'
         $Body.msiInformation.packageType | Should -Be 'perMachine'
         @($Body.returnCodes).returnCode | Should -Be @(0, 3010)
-        Should -Invoke Add-CIPPWin32LobAppContent -Times 1 -ParameterFilter { $AppId -eq 'new-app' -and $BlobPath -eq "app-packages/$($script:PackageId)/IntunePackage.intunewin" -and $EncryptedSize -eq 1072 }
+        Should -Invoke Add-CIPPWin32LobAppContent -Times 1 -ParameterFilter { $AppId -eq 'new-app' -and $ConnectionString -eq 'UseDevelopmentStorage=true' -and $BlobPath -eq "app-packages/$($script:PackageId)/IntunePackage.intunewin" -and $EncryptedSize -eq 1072 }
         Should -Invoke Set-CIPPAssignedApplication -Times 1 -ParameterFilter { $ApplicationId -eq 'new-app' }
     }
 

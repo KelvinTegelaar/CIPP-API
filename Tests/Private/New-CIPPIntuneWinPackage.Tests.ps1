@@ -3,7 +3,8 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    function New-CIPPAzStorageRequest { param($Service, $Resource, $Method, $QueryParams, $Headers, $ContentType, $Body) }
+    function Get-CIPPAppPackageStorage { [pscustomobject]@{ ConnectionString = 'UseDevelopmentStorage=true'; Custom = $false; LimitBytes = 0 } }
+    function New-CIPPAzStorageRequest { param($Service, $ConnectionString, $Resource, $Method, $QueryParams, $Headers, $ContentType, $Body) }
     function Write-LogMessage { param($API, $message, $Sev, $LogData) }
     function Get-CippException { param($Exception) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/New-CIPPIntuneWinPackage.ps1')

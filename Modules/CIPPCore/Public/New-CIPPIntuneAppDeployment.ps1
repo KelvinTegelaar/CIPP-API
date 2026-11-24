@@ -226,7 +226,8 @@ function New-CIPPIntuneAppDeployment {
         { $_ -in @('Win32PackageApp', 'MacOSPackageApp') } {
             $PackageId = [guid]::Empty
             if (-not [guid]::TryParse([string]$AppConfig.packageId, [ref]$PackageId)) { throw "'$($AppConfig.Applicationname)' has no uploaded package." }
-            $PackageMetadata = New-CIPPAzStorageRequest -Service blob -Resource "app-packages/$PackageId/metadata.json" -ErrorAction SilentlyContinue
+            $PackageStorage = (Get-CIPPAppPackageStorage -PackageId "$PackageId").ConnectionString
+            $PackageMetadata = New-CIPPAzStorageRequest -Service blob -ConnectionString $PackageStorage -Resource "app-packages/$PackageId/metadata.json" -ErrorAction SilentlyContinue
             if (-not $PackageMetadata.Bytes) { throw "The package for '$($AppConfig.Applicationname)' is no longer in CIPP storage. Upload it again in the application template." }
             $Package = [System.Text.Encoding]::UTF8.GetString($PackageMetadata.Bytes) | ConvertFrom-Json
             $Marker = "Package: $PackageId"
@@ -337,7 +338,7 @@ function New-CIPPIntuneAppDeployment {
             $EncryptionInfo = @{}
             foreach ($Property in $Package.EncryptionInfo.PSObject.Properties) { $EncryptionInfo[$Property.Name] = $Property.Value }
             $ContentParams = @{
-                BlobPath = "app-packages/$PackageId/IntunePackage.intunewin"; EncryptedSize = [int64]$Package.EncryptedSize; FileName = $Package.FileName
+                BlobPath = "app-packages/$PackageId/IntunePackage.intunewin"; ConnectionString = $PackageStorage; EncryptedSize = [int64]$Package.EncryptedSize; FileName = $Package.FileName
                 UnencryptedSize = [int64]$Package.UnencryptedContentSize; EncryptionInfo = $EncryptionInfo; TenantFilter = $TenantFilter; APIName = $APIName; AppType = $LobType
             }
 

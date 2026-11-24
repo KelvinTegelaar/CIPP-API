@@ -51,9 +51,10 @@ function Invoke-AddAppTemplate {
                     if ($BlockCount -lt 1 -or $BlockCount -gt 512 -or -not $Upload.metadata.EncryptionInfo.EncryptionKey) {
                         throw [System.ArgumentException]::new("The uploaded package for '$($App.appName)' is incomplete. Upload it again.")
                     }
+                    $PackageStorage = (Get-CIPPAppPackageStorage -PackageId "$PackageId").ConnectionString
                     $BlockIds = foreach ($i in 0..($BlockCount - 1)) { '<Latest>{0}</Latest>' -f [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($i.ToString('000'))) }
-                    $null = New-CIPPAzStorageRequest -Service blob -Resource "app-packages/$PackageId/IntunePackage.intunewin" -Method PUT -QueryParams @{ comp = 'blocklist' } -ContentType 'application/xml' -Body ('<?xml version="1.0" encoding="utf-8"?><BlockList>' + ($BlockIds -join '') + '</BlockList>') -ErrorAction Stop
-                    $null = New-CIPPAzStorageRequest -Service blob -Resource "app-packages/$PackageId/metadata.json" -Method PUT -ContentType 'application/json' -Body ([string](ConvertTo-Json -Depth 5 -Compress -InputObject $Upload.metadata)) -ErrorAction Stop
+                    $null = New-CIPPAzStorageRequest -Service blob -ConnectionString $PackageStorage -Resource "app-packages/$PackageId/IntunePackage.intunewin" -Method PUT -QueryParams @{ comp = 'blocklist' } -ContentType 'application/xml' -Body ('<?xml version="1.0" encoding="utf-8"?><BlockList>' + ($BlockIds -join '') + '</BlockList>') -ErrorAction Stop
+                    $null = New-CIPPAzStorageRequest -Service blob -ConnectionString $PackageStorage -Resource "app-packages/$PackageId/metadata.json" -Method PUT -ContentType 'application/json' -Body ([string](ConvertTo-Json -Depth 5 -Compress -InputObject $Upload.metadata)) -ErrorAction Stop
                     $ParsedConfig.PSObject.Properties.Remove('packageUpload')
                     $ConfigValue = $ParsedConfig | ConvertTo-Json -Depth 15 -Compress
                 }

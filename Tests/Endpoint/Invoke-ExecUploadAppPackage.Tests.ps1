@@ -11,7 +11,11 @@ BeforeAll {
     }
 
     function Write-LogMessage { param($headers, $API, $message, $Sev, $LogData) }
-    function New-CIPPAzStorageRequest { param($Service, $Resource, $Component, $Method, $QueryParams, $ContentType, $Body) }
+    function Get-CIPPAppPackageStorage { param($PackageId) [pscustomobject]@{ ConnectionString = 'UseDevelopmentStorage=true'; Custom = $false; AccountName = $null; LimitBytes = 0 } }
+    function Get-CIPPAppPackageFile { [CmdletBinding()] param() }
+    function Get-CIPPTable { param($TableName) @{} }
+    function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
+    function New-CIPPAzStorageRequest { param($Service, $ConnectionString, $Resource, $Component, $Method, $QueryParams, $ContentType, $Body) }
     function Add-CippQueueMessage { param($Cmdlet, $Parameters) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
 
@@ -43,6 +47,48 @@ Describe 'Invoke-ExecUploadAppPackage' {
         $Put.Resource | Should -Be "app-packages/$($script:PackageId)/IntunePackage.intunewin"
         [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String($Put.QueryParams.blockid)) | Should -Be '007'
         $Put.Body.Length | Should -Be 16
+    }
+
+    It 'refuses a new upload once the storage limit is used, and allows it below the limit' -ForEach @(
+        @{ Used = 10GB; Status = [System.Net.HttpStatusCode]::BadRequest }
+        @{ Used = 10GB - 1; Status = [System.Net.HttpStatusCode]::OK }
+    ) {
+        Mock Get-CIPPAppPackageStorage { [pscustomobject]@{ ConnectionString = 'x'; Custom = $false; LimitBytes = 10GB } } -ParameterFilter { -not $PackageId }
+        Mock Get-CIPPAppPackageFile { [pscustomobject]@{ Size = $Used - 1 }; [pscustomobject]@{ Size = 1 } }
+
+        $Response = Invoke-ExecUploadAppPackage -Request (New-BlockRequest -Index 0) -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be $Status
+        $script:Calls.Where({ $_.QueryParams.comp -eq 'block' }).Count | Should -Be ([int]($Status -eq [HttpStatusCode]::OK))
+    }
+
+    It 'does not check the limit after the first block' {
+        Mock Get-CIPPAppPackageStorage { [pscustomobject]@{ ConnectionString = 'x'; Custom = $false; LimitBytes = 10GB } }
+        Mock Get-CIPPAppPackageFile { }
+
+        $Response = Invoke-ExecUploadAppPackage -Request (New-BlockRequest -Index 3) -TriggerMetadata $null
+
+        $Response.StatusCode | Should -Be ([HttpStatusCode]::OK)
+        Should -Invoke Get-CIPPAppPackageFile -Times 0 -Exactly
+    }
+
+    It 'stores a new package in the connected account and records it there, then finds later blocks by package' {
+        Mock Get-CIPPAppPackageStorage { [pscustomobject]@{ ConnectionString = 'theirs'; Custom = $true; AccountName = 'mine'; LimitBytes = 0 } } -ParameterFilter { -not $PackageId }
+        Mock Get-CIPPAppPackageStorage { [pscustomobject]@{ ConnectionString = 'theirs'; Custom = $true; AccountName = 'mine'; LimitBytes = 0 } } -ParameterFilter { $PackageId -eq $script:PackageId }
+        Mock Add-CIPPAzDataTableEntity { }
+        Mock New-CIPPAzStorageRequest { $script:Calls.Add([pscustomobject]@{ QueryParams = $QueryParams; ConnectionString = $ConnectionString }); if ($Component -eq 'list') { @([pscustomobject]@{ Name = 'app-packages' }) } }
+
+        (Invoke-ExecUploadAppPackage -Request (New-BlockRequest -Index 0) -TriggerMetadata $null).StatusCode | Should -Be ([HttpStatusCode]::OK)
+        (Invoke-ExecUploadAppPackage -Request (New-BlockRequest -Index 1) -TriggerMetadata $null).StatusCode | Should -Be ([HttpStatusCode]::OK)
+
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Entity.RowKey -eq $script:PackageId -and $Entity.AccountName -eq 'mine' }
+        $script:Calls.Where({ $_.QueryParams.comp -eq 'block' }).ConnectionString | Should -Be @('theirs', 'theirs')
+    }
+
+    It 'refuses a package stored in an account that is no longer connected' {
+        Mock Get-CIPPAppPackageStorage { throw [System.Management.Automation.ItemNotFoundException]::new('no longer connected') } -ParameterFilter { $PackageId }
+
+        (Invoke-ExecUploadAppPackage -Request (New-JsonRequest @{ packageId = $script:PackageId; status = $true }) -TriggerMetadata $null).StatusCode | Should -Be ([HttpStatusCode]::NotFound)
     }
 
     It 'creates the container on the first block only' {
