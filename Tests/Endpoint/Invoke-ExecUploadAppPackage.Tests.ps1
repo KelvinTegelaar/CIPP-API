@@ -37,6 +37,7 @@ Describe 'Invoke-ExecUploadAppPackage' {
     BeforeEach {
         $script:Calls = [System.Collections.Generic.List[object]]::new()
         Mock New-CIPPAzStorageRequest { $script:Calls.Add([pscustomobject]@{ Resource = $Resource; Component = $Component; QueryParams = $QueryParams; Body = $Body }); if ($Component -eq 'list') { @([pscustomobject]@{ Name = 'app-packages' }) } }
+        Mock Get-CIPPAppPackageStorage { [pscustomobject]@{ ConnectionString = 'UseDevelopmentStorage=true'; Custom = $false; AccountName = $null; LimitBytes = 0 } }
     }
 
     It 'writes a block under the package blob with a fixed-width block id' {

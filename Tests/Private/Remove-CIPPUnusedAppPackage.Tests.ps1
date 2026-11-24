@@ -13,6 +13,7 @@ BeforeAll {
 Describe 'Remove-CIPPUnusedAppPackage' {
     BeforeEach {
         Mock New-CIPPAzStorageRequest { }
+        Mock Get-CIPPAppPackageStorage { [pscustomobject]@{ ConnectionString = 'UseDevelopmentStorage=true'; Custom = $false; LimitBytes = 0 } }
         # Template configs are stored as JSON strings inside the template JSON, so the id appears escaped.
         Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ JSON = '{"Apps":[{"config":"{\"packageId\":\"still-used\"}"}]}' } }
     }
