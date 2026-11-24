@@ -12,6 +12,13 @@ function Get-CIPPAlertNewMFADevice {
     )
 
     try {
+        # Single-input alerts pass a scalar; accept an object with .InputValue too
+        $RawPatterns = if ($InputValue -is [string] -or $null -eq $InputValue) { $InputValue } else { $InputValue.InputValue }
+        $UpnPatterns = if ("$RawPatterns".Trim()) {
+            $ExpandedPatterns = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text ([string]$RawPatterns)
+            @($ExpandedPatterns -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+        } else { @() }
+
         $OneHourAgo = (Get-Date).AddHours(-1).ToString('yyyy-MM-ddTHH:mm:ssZ')
 
         $AuditLogs = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/auditLogs/directoryAudits?`$filter=activityDateTime ge $OneHourAgo and (activityDisplayName eq 'User registered security info' or activityDisplayName eq 'User deleted security info')" -tenantid $TenantFilter
@@ -19,6 +26,16 @@ function Get-CIPPAlertNewMFADevice {
             if ($Log.activityDisplayName -eq 'User registered security info') {
                 $User = $Log.targetResources[0].userPrincipalName
                 if (-not $User) { $User = $Log.initiatedBy.user.userPrincipalName }
+
+                if ($UpnPatterns.Count -gt 0) {
+                    $Matched = $false
+                    if ($User) {
+                        foreach ($Pattern in $UpnPatterns) {
+                            if ($User -like $Pattern) { $Matched = $true; break }
+                        }
+                    }
+                    if (-not $Matched) { continue }
+                }
 
                 $IPAddress = $Log.initiatedBy.user.ipAddress
                 $LocationData = $null
