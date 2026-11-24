@@ -16339,7 +16339,8 @@
                     "type": "string"
                   },
                   "GroupNames": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Group display names to assign to (array or comma-separated); resolved to group ids when no GroupIds are given"
                   },
                   "ID": {
                     "type": "string"
@@ -16378,9 +16379,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
