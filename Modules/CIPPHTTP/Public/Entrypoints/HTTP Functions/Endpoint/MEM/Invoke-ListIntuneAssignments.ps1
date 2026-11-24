@@ -51,12 +51,14 @@ function Invoke-ListIntuneAssignments {
         $DevicePlatform = $null
         $PlatformOf = {
             param($Text)
+            # Windows first: unanchored 'ios' matches windowsKioskConfiguration. officeSuite is anchored
+            # because macOSOfficeSuiteApp is a Mac app; android before ios for the same substring reason.
             switch -Regex ($Text) {
+                'windows|^win32|^winGet|^microsoftStore|^officeSuite' { 'Windows'; break }
                 'mac' { 'macOS'; break }
-                'ios|ipad' { 'iOS'; break }
                 'android|aosp' { 'Android'; break }
+                'ios|ipad' { 'iOS'; break }
                 'linux' { 'Linux'; break }
-                'windows|win32|winGet|microsoftStore|officeSuite' { 'Windows'; break }
             }
         }
 

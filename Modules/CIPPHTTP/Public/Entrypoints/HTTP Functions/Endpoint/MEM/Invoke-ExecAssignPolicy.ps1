@@ -21,6 +21,7 @@ function Invoke-ExecAssignPolicy {
     $ExcludeGroupIdsRaw = $Request.Body.ExcludeGroupIds
     $ExcludeGroupNamesRaw = $Request.Body.ExcludeGroupNames
     $GroupIdsRaw = $Request.Body.GroupIds
+    # Group display names to assign to (array or comma-separated); resolved to group ids when no GroupIds are given
     $GroupNamesRaw = $Request.Body.GroupNames
     $AssignmentMode = $Request.Body.assignmentMode
     $AssignmentDirection = $Request.Body.assignmentDirection
@@ -78,7 +79,20 @@ function Invoke-ExecAssignPolicy {
     }
 
     $Results = try {
-        if ($AssignTo -or @($GroupIds).Count -gt 0 -or @($ExcludeGroupIds).Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($ExcludeGroup) -or $IsClearExclusions) {
+        # Resolve names to ids here: passed as GroupName, a group called 'AllDevices' or 'On' would hit
+        # Set-CIPPAssignedPolicy's broad-target switch and assign tenant-wide.
+        if (-not $AssignTo -and @($GroupIds).Count -eq 0 -and @($GroupNames).Count -gt 0) {
+            $TenantGroups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter
+            $GroupIds = foreach ($Name in $GroupNames) {
+                $Match = @($TenantGroups.Where({ $_.displayName -eq $Name }))
+                if ($Match.Count -ne 1) {
+                    throw [System.ArgumentException]::new("Group name '$Name' matches $($Match.Count) groups; send GroupIds instead. Policy not assigned.")
+                }
+                $Match[0].id
+            }
+        }
+
+        if ($AssignTo -or @($GroupIds).Count -gt 0 -or @($GroupNames).Count -gt 0 -or @($ExcludeGroupIds).Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($ExcludeGroup) -or $IsClearExclusions) {
             $params = @{
                 PolicyId       = $ID
                 TenantFilter   = $TenantFilter
@@ -132,7 +146,7 @@ function Invoke-ExecAssignPolicy {
         }
     } catch {
         "$($_.Exception.Message)"
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
 

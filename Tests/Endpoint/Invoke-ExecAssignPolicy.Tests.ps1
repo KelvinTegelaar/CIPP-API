@@ -13,7 +13,9 @@ BeforeAll {
         [object]$Body
     }
 
-    function Set-CIPPAssignedPolicy { param($PolicyId, $TenantFilter, $GroupName, $Type, $Headers, $AssignmentMode) }
+    function Set-CIPPAssignedPolicy { param($PolicyId, $TenantFilter, $GroupName, $GroupNames, $GroupIds, $Type, $Headers, $AssignmentMode) }
+    function New-GraphGetRequest { param($uri, $tenantid) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
 
     . $FunctionPath
 }
@@ -60,5 +62,50 @@ Describe 'Invoke-ExecAssignPolicy assignment mode' {
         $null = Invoke-ExecAssignPolicy -Request $request -TriggerMetadata $null
 
         $script:assignmentMode | Should -Be 'replace'
+    }
+}
+
+Describe 'Invoke-ExecAssignPolicy group names' {
+    BeforeAll {
+        function New-NamesRequest($Names) {
+            [pscustomobject]@{
+                Params  = @{ CIPPEndpoint = 'ExecAssignPolicy' }
+                Headers = @{}
+                Body    = [pscustomobject]@{ tenantFilter = 'contoso.onmicrosoft.com'; ID = 'policy-1'; Type = 'configurationPolicies'; GroupNames = $Names }
+            }
+        }
+    }
+    BeforeEach {
+        Mock -CommandName Set-CIPPAssignedPolicy -MockWith { 'Assigned' }
+        Mock -CommandName New-GraphGetRequest -MockWith {
+            @(
+                [pscustomobject]@{ id = 'g-sales'; displayName = 'Sales' }
+                [pscustomobject]@{ id = 'g-finance'; displayName = 'Finance' }
+                [pscustomobject]@{ id = 'g-alldevices'; displayName = 'AllDevices' }
+                [pscustomobject]@{ id = 'g-dup1'; displayName = 'Twice' }
+                [pscustomobject]@{ id = 'g-dup2'; displayName = 'Twice' }
+            )
+        }
+    }
+
+    It 'resolves GroupNames alone to group ids' {
+        $response = Invoke-ExecAssignPolicy -Request (New-NamesRequest @('Sales', 'Finance')) -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        Should -Invoke Set-CIPPAssignedPolicy -Times 1 -Exactly -ParameterFilter { (@($GroupIds) -join ',') -eq 'g-sales,g-finance' -and -not $GroupName }
+    }
+
+    It 'assigns a group named <Name> to that group, not tenant-wide' -ForEach @(@{ Name = 'AllDevices' }) {
+        $null = Invoke-ExecAssignPolicy -Request (New-NamesRequest @($Name)) -TriggerMetadata $null
+
+        Should -Invoke Set-CIPPAssignedPolicy -Times 1 -Exactly -ParameterFilter { (@($GroupIds) -join ',') -eq 'g-alldevices' -and -not $GroupName }
+    }
+
+    It 'refuses a name that matches no group or several groups' -ForEach @(@{ Name = 'Missing' }, @{ Name = 'Twice' }) {
+        $response = Invoke-ExecAssignPolicy -Request (New-NamesRequest @($Name)) -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+        $response.Body.Results | Should -BeLike "*Group name '$Name'*Policy not assigned*"
+        Should -Invoke Set-CIPPAssignedPolicy -Times 0 -Exactly
     }
 }

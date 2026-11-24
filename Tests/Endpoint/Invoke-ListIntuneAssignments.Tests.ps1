@@ -137,4 +137,30 @@ Describe 'Invoke-ListIntuneAssignments' {
         $Rows.Count | Should -Be 1
         $Rows[0].category | Should -Be 'Intune Platform Script'
     }
+
+    It 'classes each @odata.type under the right platform, so a Windows device keeps its Windows policies' -ForEach @(
+        @{ Type = 'windowsKioskConfiguration'; Platform = 'Windows' }
+        @{ Type = 'windows10GeneralConfiguration'; Platform = 'Windows' }
+        @{ Type = 'azureADWindowsAutopilotDeploymentProfile'; Platform = 'Windows' }
+        @{ Type = 'win32LobApp'; Platform = 'Windows' }
+        @{ Type = 'winGetApp'; Platform = 'Windows' }
+        @{ Type = 'microsoftStoreForBusinessApp'; Platform = 'Windows' }
+        @{ Type = 'officeSuiteApp'; Platform = 'Windows' }
+        @{ Type = 'macOSOfficeSuiteApp'; Platform = 'macOS' }
+        @{ Type = 'macOSCustomConfiguration'; Platform = 'macOS' }
+        @{ Type = 'iosGeneralDeviceConfiguration'; Platform = 'iOS' }
+        @{ Type = 'managedIOSStoreApp'; Platform = 'iOS' }
+        @{ Type = 'androidWorkProfileGeneralDeviceConfiguration'; Platform = 'Android' }
+        @{ Type = 'managedAndroidStoreApp'; Platform = 'Android' }
+        @{ Type = 'aospDeviceOwnerDeviceConfiguration'; Platform = 'Android' }
+    ) {
+        $script:Cache['IntuneDeviceConfigurations'] = @(& $script:Policy 'p1' 'Profile' $Type @($script:AllUsers))
+
+        $Rows = @((Invoke-Lookup 'user' 'u1').Body)
+
+        $Rows[0].platform | Should -Be $Platform
+        if ($Platform -eq 'Windows') {
+            @((Invoke-Lookup 'device' 'd1').Body).displayName | Should -Contain 'Profile'
+        }
+    }
 }
