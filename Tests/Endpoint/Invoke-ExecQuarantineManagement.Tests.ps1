@@ -16,12 +16,6 @@ BeforeAll {
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = "$Exception" } }
-    function Get-CippBulkStatusCode {
-        param([int]$Total, [int]$Failed)
-        if ($Failed -le 0) { return [System.Net.HttpStatusCode]::OK }
-        if ($Failed -ge $Total) { return [System.Net.HttpStatusCode]::InternalServerError }
-        [System.Net.HttpStatusCode]::MultiStatus
-    }
 
     . $FunctionPath
 }

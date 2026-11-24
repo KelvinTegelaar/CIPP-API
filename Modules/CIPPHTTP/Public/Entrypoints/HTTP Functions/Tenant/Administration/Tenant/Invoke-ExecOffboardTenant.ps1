@@ -60,11 +60,12 @@ function Invoke-ExecOffboardTenant {
                             })
 
                         $DeleteResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
+                        $MailById = @{}
+                        foreach ($Guest in $CSPGuestUsers) { $MailById[$Guest.id] = $Guest.mail }
                         $Removed = 0
                         foreach ($DeleteResult in $DeleteResults) {
                             if ([int]$DeleteResult.status -ge 400) {
-                                $Guest = $CSPGuestUsers | Where-Object { $_.id -eq $DeleteResult.id }
-                                $Errors.Add("Failed to remove guest user $($Guest.mail ?? $DeleteResult.id): $($DeleteResult.body.error.message)")
+                                $Errors.Add("Failed to remove guest user $($MailById[$DeleteResult.id] ?? $DeleteResult.id): $($DeleteResult.body.error.message)")
                             } else {
                                 $Removed++
                             }

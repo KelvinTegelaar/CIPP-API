@@ -18,12 +18,7 @@ BeforeAll {
     function New-GraphBulkRequest { param($Requests, $tenantid) }
     function New-GraphPostRequest { param($type, $body, $uri, $tenantid) }
     function Write-LogMessage { param($headers, $API, $message, $Sev, $tenant) }
-    function Get-CippBulkStatusCode {
-        param([int]$Total, [int]$Failed)
-        if ($Failed -le 0) { return [System.Net.HttpStatusCode]::OK }
-        if ($Failed -ge $Total) { return [System.Net.HttpStatusCode]::InternalServerError }
-        [System.Net.HttpStatusCode]::MultiStatus
-    }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippBulkStatusCode.ps1')
 
     . $FunctionPath
 }

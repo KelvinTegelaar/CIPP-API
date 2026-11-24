@@ -176,6 +176,12 @@ exit 0
             Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Deployed $AppName." -Sev 'Info'
             $Changed = $true
             $Refresh.Add('IntuneMobileApps')
+        } elseif ($AssignTo -ne 'On' -and @(New-GraphGetRequest -uri "$Baseuri/$($Existing[0].id)/assignments" -tenantid $TenantFilter).Count -eq 0) {
+            # A failed assignment (an unresolved group) leaves the app deployed but unassigned: retry it.
+            $null = Set-CIPPAssignedApplication -ApplicationId $Existing[0].id -TenantFilter $TenantFilter -GroupName $AssignTo -ExcludeGroup $ExcludeGroup -Intent 'Required' -AppType 'Win32Lob' -APIName 'Baselines'
+            Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Assigned the existing $AppName app, which had no assignments." -Sev 'Info'
+            $Changed = $true
+            $Refresh.Add('IntuneMobileApps')
         }
     }
 

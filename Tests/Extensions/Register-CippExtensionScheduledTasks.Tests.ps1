@@ -36,6 +36,12 @@ BeforeAll {
                     default { @() }
                 }
             }
+            'CustomDataMappings' {
+                @(
+                    [pscustomobject]@{ JSON = (@{ sourceType = @{ value = 'reportingDb' }; tenantFilter = @(@{ value = 'a.test'; type = 'Tenant' }) } | ConvertTo-Json -Depth 5) }
+                    [pscustomobject]@{ JSON = (@{ sourceType = @{ value = 'extensionSync' }; tenantFilter = @(@{ value = 'group-1'; type = 'Group' }) } | ConvertTo-Json -Depth 5) }
+                )
+            }
             default { @() }
         }
     }
@@ -62,12 +68,6 @@ Describe 'Register-CIPPExtensionScheduledTasks CustomData mappings' {
             foreach ($Item in $TenantFilter) {
                 if ($Item.type -eq 'Group') { [pscustomobject]@{ value = 'b.test'; type = 'Tenant' } } else { $Item }
             }
-        }
-        Mock Get-CIPPAzDataTableEntity -ParameterFilter { $TableName -eq 'CustomDataMappings' } -MockWith {
-            @(
-                [pscustomobject]@{ JSON = (@{ sourceType = @{ value = 'reportingDb' }; tenantFilter = @(@{ value = 'a.test'; type = 'Tenant' }) } | ConvertTo-Json -Depth 5) }
-                [pscustomobject]@{ JSON = (@{ sourceType = @{ value = 'extensionSync' }; tenantFilter = @(@{ value = 'group-1'; type = 'Group' }) } | ConvertTo-Json -Depth 5) }
-            )
         }
     }
     BeforeEach {

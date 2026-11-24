@@ -761,6 +761,19 @@ Describe 'Get-CIPPBaselineDeployCheckChromeExtensionState' {
         Should -Invoke New-GraphPostRequest -Times 0 -Exactly -ParameterFilter { $type -eq 'DELETE' }
         # The engine records this run as Compliant only if the executor says nothing changed.
         $Skipped.Changed | Should -Be $false
+
+        # Third run: same fingerprint but the app has no assignments (an earlier assignment
+        # failed) - assign it again instead of skipping it as compliant. Nothing is deleted.
+        Mock New-GraphGetRequest {
+            if ($uri -like '*/assignments') { @() }
+            elseif ($uri -like '*mobileApps*') { @([PSCustomObject]@{ id = 'app-1'; displayName = 'Check by CyberDrain - Browser Extension'; description = $script:DeployedDescription; '@odata.type' = '#microsoft.graph.win32LobApp' }) }
+            else { @() }
+        }
+        $Assigned = Invoke-CIPPBaselineDeployCheckChromeExtension -Remediate $Remediate -TenantFilter $script:Tenant -Current $null
+        Should -Invoke Set-CIPPAssignedApplication -Times 1 -Exactly -ParameterFilter { $ApplicationId -eq 'app-1' -and $GroupName -eq 'AllDevices' }
+        Should -Invoke Add-CIPPW32ScriptApplication -Times 1 -Exactly
+        Should -Invoke New-GraphPostRequest -Times 0 -Exactly -ParameterFilter { $type -eq 'DELETE' }
+        $Assigned.Changed | Should -Not -Be $false
     }
 }
 

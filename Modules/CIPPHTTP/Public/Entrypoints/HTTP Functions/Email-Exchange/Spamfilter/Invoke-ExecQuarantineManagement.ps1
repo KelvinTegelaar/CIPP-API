@@ -88,7 +88,7 @@ function Invoke-ExecQuarantineManagement {
                     @{ resultText = $AllowSenderError; state = 'error' }
                 )
             }
-            $StatusCode = Get-CippBulkStatusCode -Total 2 -Failed 1
+            $StatusCode = [HttpStatusCode]::MultiStatus
         } else {
             $Results = [pscustomobject]@{'Results' = "Successfully processed $($Request.Body.Identity)" }
             $StatusCode = [HttpStatusCode]::OK

@@ -327,6 +327,12 @@ exit 0
         $ExistingHash = $null
         if ("$($ExistingApps[0].description)" -match '\[cfg:([0-9A-Fa-f]{16})\]') { $ExistingHash = $Matches[1] }
         if ($ExistingHash -eq $SettingsHash) {
+            # A failed assignment (an unresolved group) leaves the app deployed but unassigned: retry it.
+            if ($AssignTo -ne 'On' -and @(New-GraphGetRequest -uri "$Baseuri/$($ExistingApps[0].id)/assignments" -tenantid $TenantFilter).Count -eq 0) {
+                Set-CIPPAssignedApplication -ApplicationId $ExistingApps[0].id -TenantFilter $TenantFilter -GroupName $AssignTo -ExcludeGroup $ExcludeGroup -Intent 'Required' -AppType 'Win32Lob' -APIName 'Baselines'
+                Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Assigned the existing $AppDisplayName app, which had no assignments." -Sev 'Info'
+                return
+            }
             Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "$AppDisplayName settings unchanged - skipped the redeploy." -Sev 'Info'
             # Tells the engine nothing was written, so the run records Compliant, not Remediated.
             return [PSCustomObject]@{ Changed = $false }

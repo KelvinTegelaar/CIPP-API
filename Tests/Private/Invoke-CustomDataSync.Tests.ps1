@@ -54,4 +54,23 @@ Describe 'Invoke-CustomDataSync' {
 
         Should -Invoke Get-CippExtensionReportingData -Times 0
     }
+
+    It 'syncs a tenant mapping without reading the tenant list' {
+        Mock Get-Tenants { }
+        Mock Get-CIPPAzDataTableEntity {
+            [pscustomobject]@{ JSON = (@{
+                        sourceType           = @{ value = 'reportingDb' }
+                        directoryObjectType  = @{ value = 'user' }
+                        extensionSyncDataset = @{ value = 'Users' }
+                        tenantFilter         = @(@{ value = 'a.test'; label = 'A'; type = 'Tenant' })
+                    } | ConvertTo-Json -Depth 5) }
+        }
+        Mock Get-CippExtensionReportingData { @{} }
+        Mock New-GraphBulkRequest { @() }
+
+        Invoke-CustomDataSync -TenantFilter 'a.test' -InformationAction SilentlyContinue 3>$null
+
+        Should -Invoke Get-CippExtensionReportingData -Times 1 -ParameterFilter { $TenantFilter -eq 'a.test' }
+        Should -Invoke Get-Tenants -Times 0
+    }
 }

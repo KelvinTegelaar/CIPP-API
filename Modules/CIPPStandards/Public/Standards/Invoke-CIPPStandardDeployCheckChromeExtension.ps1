@@ -428,7 +428,13 @@ exit 0
                 }
 
                 if ($ExistingHash -eq $SettingsHash) {
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "$AppDisplayName settings unchanged — skipping redeploy" -sev Info
+                    # A failed assignment (an unresolved group) leaves the app deployed but unassigned: retry it.
+                    if ($AssignTo -ne 'On' -and @(New-GraphGetRequest -Uri "$Baseuri/$($ExistingApp.id)/assignments" -tenantid $Tenant).Count -eq 0) {
+                        Set-CIPPAssignedApplication -ApplicationId $ExistingApp.id -TenantFilter $Tenant -GroupName $AssignTo -ExcludeGroup $ExcludeGroup -Intent 'Required' -AppType 'Win32Lob' -APIName 'Standards'
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Assigned the existing $AppDisplayName app, which had no assignments" -sev Info
+                    } else {
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "$AppDisplayName settings unchanged — skipping redeploy" -sev Info
+                    }
                 } else {
                     foreach ($App in @($ExistingApps)) {
                         $null = New-GraphPostRequest -Uri "$Baseuri/$($App.id)" -Type DELETE -tenantid $Tenant
