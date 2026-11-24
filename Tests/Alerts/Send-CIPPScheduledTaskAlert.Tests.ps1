@@ -328,6 +328,16 @@ Describe 'Send-CIPPScheduledTaskAlert - display title' {
         $script:SentAlerts[0].Title | Should -Be 'SharePoint quota high - contoso.com'
     }
 
+    It 'replaces variables in CustomSubject for both the body and the title' {
+        Mock -CommandName Get-CIPPTextReplacement -MockWith { param($Text, $TenantFilter) $Text -replace '%tenantname%', 'Contoso' }
+        $script:TaskInfo.CustomSubject = '%tenantname% has %resultcount% quota alert(s)'
+
+        Send-CIPPScheduledTaskAlert -Results $script:Results -TaskInfo $script:TaskInfo -TenantFilter 'contoso.com' -TaskType 'Alert'
+
+        $script:SentAlerts[0].HTMLContent | Should -Match 'Contoso has 1 quota alert\(s\)'
+        $script:SentAlerts[0].Title | Should -Be 'Contoso has 1 quota alert(s) - contoso.com'
+    }
+
     It 'keeps the full task Name for non-Alert scheduled tasks' {
         $script:TaskInfo.Name = 'Weekly report for Contoso (contoso.com)'
         $script:TaskInfo.CustomSubject = ''

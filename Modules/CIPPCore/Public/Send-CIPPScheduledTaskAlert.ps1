@@ -156,8 +156,13 @@ function Send-CIPPScheduledTaskAlert {
         # Scripted alerts store Name as "{tenant labels}: {subject}". That list must not appear in
         # per-tenant PSA/email bodies - Tenant is already on the next line. Prefer CustomSubject,
         # else strip the leading scope for Alert deliveries, else keep the full Name.
-        $DisplayTitle = if (![string]::IsNullOrWhiteSpace($TaskInfo.CustomSubject)) {
-            [string]$TaskInfo.CustomSubject
+        $CustomSubject = [string]$TaskInfo.CustomSubject
+        if ($CustomSubject -match '%') {
+            $SubjectResultCount = if ($Results -is [array]) { $Results.Count } else { 1 }
+            $CustomSubject = Get-CIPPTextReplacement -Text ($CustomSubject -replace '%resultcount%', "$SubjectResultCount") -TenantFilter $TenantFilter
+        }
+        $DisplayTitle = if (![string]::IsNullOrWhiteSpace($CustomSubject)) {
+            $CustomSubject
         } elseif ($TaskType -eq 'Alert' -and "$($TaskInfo.Name)" -match '^[^:]+:\s*(.+)$') {
             $Matches[1].Trim()
         } else {
@@ -242,8 +247,8 @@ function Send-CIPPScheduledTaskAlert {
 
         # Build title — honor CustomSubject if set on the task row, otherwise use DisplayTitle
         # so multi-tenant alert Names do not leak other client labels into the ticket subject.
-        $title = if (![string]::IsNullOrWhiteSpace($TaskInfo.CustomSubject)) {
-            "$($TaskInfo.CustomSubject) - $TenantFilter"
+        $title = if (![string]::IsNullOrWhiteSpace($CustomSubject)) {
+            "$CustomSubject - $TenantFilter"
         } else {
             "$TaskType - $TenantFilter - $DisplayTitle"
         }
