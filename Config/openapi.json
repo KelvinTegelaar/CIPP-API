@@ -121,6 +121,9 @@
       "name": "Tenant > Administration > Application Approval"
     },
     {
+      "name": "Tenant > Administration > CrossTenant"
+    },
+    {
       "name": "Tenant > Administration > Domains"
     },
     {
@@ -9687,6 +9690,96 @@
         ],
         "x-cipp-role": "Exchange.Contact.ReadWrite",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/EditCrossTenantAccess": {
+      "post": {
+        "summary": "EditCrossTenantAccess",
+        "operationId": "EditCrossTenantAccess",
+        "tags": [
+          "Tenant > Administration > CrossTenant"
+        ],
+        "description": "Updates a tenant's default cross-tenant access settings, or adds or updates a partner organisation. Leave partnerTenantId empty to edit the default settings. Settings left out, or set to 'unchanged', are not touched.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "b2bCollaborationInbound": {
+                    "type": "string",
+                    "description": "allowed or blocked for all users and applications, inherit (partners only) to use the default settings, or unchanged"
+                  },
+                  "b2bCollaborationOutbound": {
+                    "type": "string"
+                  },
+                  "b2bDirectConnectInbound": {
+                    "type": "string"
+                  },
+                  "b2bDirectConnectOutbound": {
+                    "type": "string"
+                  },
+                  "inboundAllowed": {
+                    "type": "string",
+                    "description": "Automatically redeem invitations (partners only)"
+                  },
+                  "inboundTrust": {
+                    "type": "string",
+                    "description": "inherit (partners only) clears the partner's own trust settings"
+                  },
+                  "isCompliantDeviceAccepted": {
+                    "type": "string"
+                  },
+                  "isHybridAzureADJoinedDeviceAccepted": {
+                    "type": "string"
+                  },
+                  "isMfaAccepted": {
+                    "type": "string",
+                    "description": "Accept MFA, compliant devices and hybrid-joined devices from the other tenant"
+                  },
+                  "outboundAllowed": {
+                    "type": "string"
+                  },
+                  "partnerTenantId": {
+                    "type": "string",
+                    "description": "Partner organisation tenant ID or one of its domains. Empty edits the default settings."
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Administration.ReadWrite"
       }
     },
     "/api/EditDlpCompliancePolicy": {
@@ -23569,9 +23662,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -53384,6 +53474,154 @@
         "x-cipp-role": "Tenant.AI.Read"
       }
     },
+    "/api/ListCrossTenantAccess": {
+      "get": {
+        "summary": "ListCrossTenantAccess",
+        "operationId": "ListCrossTenantAccess",
+        "tags": [
+          "Tenant > Administration > CrossTenant"
+        ],
+        "description": "Lists a tenant's cross-tenant access settings: the default settings (isDefault) and each partner organisation with its own settings. Supports UseReportDB=true to read the reporting database cache, which AllTenants always uses.",
+        "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "UseReportDB",
+            "in": "query",
+            "description": "Serve from the reporting database cache instead of live Graph. AllTenants always reads the cache.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the Microsoft Graph entity it queries, and the columns the CIPP UI renders. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
+                    "properties": {
+                      "appServiceConnectInbound": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "automaticUserConsentSettings": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "b2bCollaborationInbound": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "b2bCollaborationOutbound": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "b2bDirectConnectInbound": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "b2bDirectConnectOutbound": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "id": {
+                        "type": "string",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "inboundTrust": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "invitationRedemptionIdentityProviderConfiguration": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "isServiceDefault": {
+                        "type": "boolean",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "m365CollaborationInbound": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "m365CollaborationOutbound": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      },
+                      "organisation": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "partnerDomain": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Tenant": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "tenantId": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "tenantRestrictions": {
+                        "type": "object",
+                        "x-cipp-field-source": "graph-entity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Administration.Read"
+      }
+    },
     "/api/ListCSPLicenses": {
       "get": {
         "summary": "ListCSPLicenses",
@@ -79116,6 +79354,65 @@
         ],
         "x-cipp-role": "Exchange.Contact.ReadWrite",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/RemoveCrossTenantPartner": {
+      "post": {
+        "summary": "RemoveCrossTenantPartner",
+        "operationId": "RemoveCrossTenantPartner",
+        "tags": [
+          "Tenant > Administration > CrossTenant"
+        ],
+        "description": "Removes a partner organisation from a tenant's cross-tenant access settings, so the default settings apply to it again.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "partnerTenantId": {
+                    "type": "string",
+                    "description": "Tenant ID of the partner organisation to remove"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Administration.ReadWrite"
       }
     },
     "/api/RemoveCustomScript": {

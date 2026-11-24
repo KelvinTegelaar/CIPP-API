@@ -1,0 +1,142 @@
+{
+  "name": "CrossTenantPartner",
+  "label": "Cross-Tenant Access Partner Organisation",
+  "cat": "Entra (AAD) Standards",
+  "tag": [],
+  "impact": "Medium Impact",
+  "helpText": "Adds a partner organisation to cross-tenant access and sets its B2B collaboration, B2B direct connect, inbound trust and automatic redemption settings. Add one instance per partner. Use %partnertenantid% for your own tenant, for example to trust MFA your technicians complete at home. Settings left blank are not checked.",
+  "executiveText": "Defines how the organisation collaborates with specific partner organisations: who can be invited in either direction, whether Teams shared channels work across the two tenants, and whether the partner's MFA and device compliance are trusted instead of being asked for again.",
+  "docsDescription": "One instance per partner tenant ID. Grades that the partner organisation exists in cross-tenant access, then each configured setting. B2B collaboration and B2B direct connect accept Allow all, Block all or Use the default settings; a partner whose setting targets specific users, groups or applications reads as custom and drifts. Trust settings grade the partner's own trust, so a partner that inherits the default trust drifts until it has its own. Remediation adds the partner if it is missing, then updates only the configured settings, keeping the trust flags it was not asked to change.",
+  "impactColour": "warning",
+  "addedDate": "2026-11-24",
+  "powershellEquivalent": "Graph: POST/PATCH policies/crossTenantAccessPolicy/partners",
+  "recommendedBy": [],
+  "requiredCapabilities": [],
+  "disabledFeatures": {
+    "report": false,
+    "warn": false,
+    "remediate": false
+  },
+  "secureScoreImpact": 0,
+  "compare": "subset",
+  "multiple": true,
+  "instanceIdentity": "partnerTenantId",
+  "variables": {
+    "partnerTenantId": {
+      "type": "textField",
+      "label": "Partner tenant ID (or %partnertenantid% for your own tenant)",
+      "required": true
+    },
+    "b2bCollaborationInbound": {
+      "type": "autoComplete",
+      "label": "B2B collaboration: their users invited here",
+      "creatable": false,
+      "omitWhenBlank": true,
+      "options": [
+        { "label": "Allow all", "value": "allowed" },
+        { "label": "Block all", "value": "blocked" },
+        { "label": "Use the default settings", "value": "inherit" }
+      ]
+    },
+    "b2bCollaborationOutbound": {
+      "type": "autoComplete",
+      "label": "B2B collaboration: our users invited there",
+      "creatable": false,
+      "omitWhenBlank": true,
+      "options": [
+        { "label": "Allow all", "value": "allowed" },
+        { "label": "Block all", "value": "blocked" },
+        { "label": "Use the default settings", "value": "inherit" }
+      ]
+    },
+    "b2bDirectConnectInbound": {
+      "type": "autoComplete",
+      "label": "B2B direct connect (Teams shared channels): inbound",
+      "creatable": false,
+      "omitWhenBlank": true,
+      "options": [
+        { "label": "Allow all", "value": "allowed" },
+        { "label": "Block all", "value": "blocked" },
+        { "label": "Use the default settings", "value": "inherit" }
+      ]
+    },
+    "b2bDirectConnectOutbound": {
+      "type": "autoComplete",
+      "label": "B2B direct connect (Teams shared channels): outbound",
+      "creatable": false,
+      "omitWhenBlank": true,
+      "options": [
+        { "label": "Allow all", "value": "allowed" },
+        { "label": "Block all", "value": "blocked" },
+        { "label": "Use the default settings", "value": "inherit" }
+      ]
+    },
+    "isMfaAccepted": {
+      "type": "autoComplete",
+      "label": "Trust MFA from this partner",
+      "creatable": false,
+      "omitWhenBlank": true,
+      "options": [
+        { "label": "Trust", "value": "true" },
+        { "label": "Don't trust", "value": "false" }
+      ]
+    },
+    "isCompliantDeviceAccepted": {
+      "type": "autoComplete",
+      "label": "Trust compliant devices from this partner",
+      "creatable": false,
+      "omitWhenBlank": true,
+      "options": [
+        { "label": "Trust", "value": "true" },
+        { "label": "Don't trust", "value": "false" }
+      ]
+    },
+    "isHybridAzureADJoinedDeviceAccepted": {
+      "type": "autoComplete",
+      "label": "Trust hybrid-joined devices from this partner",
+      "creatable": false,
+      "omitWhenBlank": true,
+      "options": [
+        { "label": "Trust", "value": "true" },
+        { "label": "Don't trust", "value": "false" }
+      ]
+    },
+    "inboundAllowed": {
+      "type": "autoComplete",
+      "label": "Automatically redeem invitations: inbound",
+      "creatable": false,
+      "omitWhenBlank": true,
+      "options": [
+        { "label": "On", "value": "true" },
+        { "label": "Off", "value": "false" }
+      ]
+    },
+    "outboundAllowed": {
+      "type": "autoComplete",
+      "label": "Automatically redeem invitations: outbound",
+      "creatable": false,
+      "omitWhenBlank": true,
+      "options": [
+        { "label": "On", "value": "true" },
+        { "label": "Off", "value": "false" }
+      ]
+    }
+  },
+  "read": {
+    "cacheType": "CrossTenantPartners"
+  },
+  "prepare": "Get-CIPPBaselineCrossTenantPartnerState",
+  "remediate": {
+    "executor": "CrossTenantPartner",
+    "partnerTenantId": "%partnerTenantId%",
+    "b2bCollaborationInbound": "%b2bCollaborationInbound%",
+    "b2bCollaborationOutbound": "%b2bCollaborationOutbound%",
+    "b2bDirectConnectInbound": "%b2bDirectConnectInbound%",
+    "b2bDirectConnectOutbound": "%b2bDirectConnectOutbound%",
+    "isMfaAccepted": "%isMfaAccepted%",
+    "isCompliantDeviceAccepted": "%isCompliantDeviceAccepted%",
+    "isHybridAzureADJoinedDeviceAccepted": "%isHybridAzureADJoinedDeviceAccepted%",
+    "inboundAllowed": "%inboundAllowed%",
+    "outboundAllowed": "%outboundAllowed%"
+  }
+}

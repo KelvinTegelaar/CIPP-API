@@ -85,6 +85,11 @@
     "description": "Cross-tenant access policy configuration"
   },
   {
+    "type": "CrossTenantPartners",
+    "friendlyName": "Cross-Tenant Partner Organisations",
+    "description": "Cross-tenant access settings for each partner organisation"
+  },
+  {
     "type": "DefaultAppManagementPolicy",
     "friendlyName": "Default App Management Policy",
     "description": "Default application management policy"

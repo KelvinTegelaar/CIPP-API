@@ -40,6 +40,7 @@ function Get-CIPPDBCacheSchedule {
                 'DirectoryRecommendations'
                 'DirectoryRecommendationConfiguration'
                 'CrossTenantAccessPolicy'
+                'CrossTenantPartners'
                 'DefaultAppManagementPolicy'
                 'ActivityBasedTimeoutPolicy'
                 'Settings'
