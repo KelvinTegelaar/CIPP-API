@@ -48,6 +48,7 @@ function Invoke-ExecQuarantineManagement {
             }
         }
         New-ExoRequest -tenantid $TenantFilter -cmdlet $Cmdlet -cmdParams $params
+        $AllowSenderError = $null
 
         # AllowSender via HostedContentFilterPolicy since -AllowSender switch fails in REST API
         if ($AllowSender) {
@@ -63,7 +64,8 @@ function Invoke-ExecQuarantineManagement {
                 }
                 if (-not [string]::IsNullOrEmpty($SenderAddress) -and -not [string]::IsNullOrEmpty($PolicyName)) {
                     $CurrentPolicy = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-HostedContentFilterPolicy' -cmdParams @{ Identity = $PolicyName }
-                    $CurrentSenders = @($CurrentPolicy.AllowedSenders.Sender.Address | Where-Object { $_ })
+                    # AllowedSenders can come back as plain strings or as {Sender:{Address}} objects
+                    $CurrentSenders = @($CurrentPolicy.AllowedSenders | ForEach-Object { if ($_.Sender.Address) { $_.Sender.Address } else { "$_" } } | Where-Object { $_ })
                     if ($SenderAddress -notin $CurrentSenders) {
                         $UpdatedSenders = @($CurrentSenders + $SenderAddress)
                         New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-HostedContentFilterPolicy' -cmdParams @{
@@ -75,12 +77,22 @@ function Invoke-ExecQuarantineManagement {
                 }
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to add sender to allow list: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                $AllowSenderError = "Failed to add sender to allow list: $($ErrorMessage.NormalizedError)"
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $AllowSenderError -Sev 'Error' -LogData $ErrorMessage
             }
         }
 
-        $Results = [pscustomobject]@{'Results' = "Successfully processed $($Request.Body.Identity)" }
-        $StatusCode = [HttpStatusCode]::OK
+        if ($AllowSenderError) {
+            $Results = [pscustomobject]@{'Results' = @(
+                    @{ resultText = "Successfully processed $($Request.Body.Identity)"; state = 'success' }
+                    @{ resultText = $AllowSenderError; state = 'error' }
+                )
+            }
+            $StatusCode = Get-CippBulkStatusCode -Total 2 -Failed 1
+        } else {
+            $Results = [pscustomobject]@{'Results' = "Successfully processed $($Request.Body.Identity)" }
+            $StatusCode = [HttpStatusCode]::OK
+        }
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully processed Quarantine ID $($Request.Body.Identity)" -Sev 'Info'
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

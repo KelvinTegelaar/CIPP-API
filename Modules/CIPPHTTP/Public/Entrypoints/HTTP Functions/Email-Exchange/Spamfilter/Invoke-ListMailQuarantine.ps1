@@ -100,11 +100,10 @@ function Invoke-ListMailQuarantine {
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::InternalServerError
-        $GraphRequest = $ErrorMessage
+        $body = [PSCustomObject]@{ Results = $ErrorMessage }
     }
 
     if (!$body) {
-        $StatusCode = [HttpStatusCode]::OK
         $body = [PSCustomObject]@{
             Results  = @($GraphRequest | Where-Object -Property Identity -NE $null | Sort-Object -Property ReceivedTime -Descending )
             Metadata = $Metadata
