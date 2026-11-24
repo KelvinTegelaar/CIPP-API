@@ -106,6 +106,13 @@
       "omitWhenBlank": true,
       "default": true
     },
+    "protectedDomains": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Domain squatting protected domains (empty = URL allowlist domains)",
+      "omitWhenBlank": true
+    },
     "companyName": {
       "type": "textField",
       "label": "Company Name",
@@ -204,6 +211,7 @@
     "webhookEvents": "%webhookEvents%",
     "urlAllowlist": "%urlAllowlist%",
     "domainSquattingEnabled": "%domainSquattingEnabled%",
+    "protectedDomains": "%protectedDomains%",
     "companyName": "%companyName%",
     "productName": "%productName%",
     "supportEmail": "%supportEmail%",

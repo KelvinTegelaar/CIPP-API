@@ -28,7 +28,7 @@ BeforeAll {
             customRulesUrl = $Value; webhookUrl = $Value; companyName = $Value; productName = $Value; supportEmail = $Value
             supportUrl = $Value; privacyPolicyUrl = $Value; aboutUrl = $Value; primaryColor = $Value; logoUrl = $Value
             enableGenericWebhook = $true
-            webhookEvents = @(@{ value = $Value }); urlAllowlist = @(@{ value = $Value })
+            webhookEvents = @(@{ value = $Value }); urlAllowlist = @(@{ value = $Value }); protectedDomains = @(@{ value = $Value })
         }
     }
 

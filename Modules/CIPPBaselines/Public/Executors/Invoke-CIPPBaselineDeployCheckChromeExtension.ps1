@@ -42,6 +42,7 @@ function Invoke-CIPPBaselineDeployCheckChromeExtension {
     $WebhookEvents = @($Remediate.webhookEvents | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
     $UrlAllowlist = @($Remediate.urlAllowlist | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
     $DomainSquattingEnabled = [int][bool]($Remediate.domainSquattingEnabled ?? $true)
+    $ProtectedDomains = @($Remediate.protectedDomains | ForEach-Object { "$($_.value ?? $_)" } | Where-Object { $_ })
     $CompanyName = "$($Remediate.companyName ?? '')"
     $ProductName = "$($Remediate.productName ?? '')"
     $SupportEmail = "$($Remediate.supportEmail ?? '')"
@@ -95,7 +96,16 @@ foreach (`$b in `$browsers) {
     `$domainSquattingKey = "`$(`$b.ManagedStorageKey)\domainSquatting"
     if (!(Test-Path `$domainSquattingKey)) { New-Item -Path `$domainSquattingKey -Force | Out-Null }
     New-ItemProperty -Path `$domainSquattingKey -Name 'enabled' -PropertyType DWord -Value $DomainSquattingEnabled -Force | Out-Null
-
+    `$protectedDomainsKey = "`$domainSquattingKey\protectedDomains"
+    if (Test-Path `$protectedDomainsKey) { Remove-Item -Path `$protectedDomainsKey -Recurse -Force | Out-Null }
+$(if ($ProtectedDomains.Count -gt 0) {
+    "    New-Item -Path `$protectedDomainsKey -Force | Out-Null`n"
+    $i = 1
+    foreach ($Domain in $ProtectedDomains) {
+        "    New-ItemProperty -Path `$protectedDomainsKey -Name '$i' -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $Domain)' -Force | Out-Null`n"
+        $i++
+    }
+})
     # Managed storage - customBranding subkey
     `$brandingKey = "`$(`$b.ManagedStorageKey)\customBranding"
     if (!(Test-Path `$brandingKey)) { New-Item -Path `$brandingKey -Force | Out-Null }
@@ -205,7 +215,18 @@ foreach (`$key in @(`$chromeKey, `$edgeKey)) {
     `$domainSquattingKey = "`$key\domainSquatting"
     if (!(Test-Path `$domainSquattingKey)) { exit 1 }
     if (!(Test-RegValue `$domainSquattingKey 'enabled' $DomainSquattingEnabled)) { exit 1 }
-
+    `$protectedDomainsKey = "`$domainSquattingKey\protectedDomains"
+$(if ($ProtectedDomains.Count -gt 0) {
+    "    if (!(Test-Path `$protectedDomainsKey)) { exit 1 }`n"
+    $i = 1
+    foreach ($Domain in $ProtectedDomains) {
+        "    if (!(Test-RegValue `$protectedDomainsKey '$i' '$(ConvertTo-CIPPScriptBlockValue -Value $Domain)')) { exit 1 }`n"
+        $i++
+    }
+    "    if ((Get-Item `$protectedDomainsKey).Property.Count -ne $($ProtectedDomains.Count)) { exit 1 }`n"
+} else {
+    "    if ((Test-Path `$protectedDomainsKey) -and (Get-Item `$protectedDomainsKey).Property.Count -gt 0) { exit 1 }`n"
+})
     # customBranding subkey
     `$brandingKey = "`$key\customBranding"
     if (!(Test-Path `$brandingKey)) { exit 1 }

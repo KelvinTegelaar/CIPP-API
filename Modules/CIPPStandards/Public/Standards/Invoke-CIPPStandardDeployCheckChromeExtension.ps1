@@ -29,6 +29,7 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.DeployCheckChromeExtension.webhookEvents","label":"Webhook Events","placeholder":"e.g. pageBlocked, pageAllowed"}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"freeSolo":true,"name":"standards.DeployCheckChromeExtension.urlAllowlist","label":"URL Allowlist","placeholder":"e.g. https://example.com/*","helperText":"Enter URLs to allowlist in the extension. Press enter to add each URL. Wildcards are allowed. This should be used for sites that are being blocked by the extension but are known to be safe."}
             {"type":"switch","name":"standards.DeployCheckChromeExtension.domainSquattingEnabled","label":"Enable domain squatting detection","defaultValue":true}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"freeSolo":true,"name":"standards.DeployCheckChromeExtension.protectedDomains","label":"Domain squatting protected domains","placeholder":"e.g. contoso.com","helperText":"Domains to protect from lookalike sites, such as your own and your clients' domains. When empty, the domains in the URL allowlist are protected instead, so allowlisting a third-party site also protects it."}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.companyName","label":"Company Name","placeholder":"YOUR-COMPANY","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.productName","label":"Product Name","placeholder":"YOUR-PRODUCT-NAME","required":false}
             {"type":"textField","name":"standards.DeployCheckChromeExtension.supportEmail","label":"Support Email","placeholder":"support@yourcompany.com","required":false}
@@ -101,6 +102,7 @@ function Invoke-CIPPStandardDeployCheckChromeExtension {
     $WebhookEvents = @($Settings.webhookEvents | ForEach-Object { $_.value ?? $_ } | Where-Object { $_ })
     $UrlAllowlist = @($Settings.urlAllowlist | ForEach-Object { $_.value ?? $_ } | Where-Object { $_ })
     $DomainSquattingEnabled = [int][bool]($Settings.domainSquattingEnabled ?? $true)
+    $ProtectedDomains = @($Settings.protectedDomains | ForEach-Object { $_.value ?? $_ } | Where-Object { $_ })
     $CompanyName = $Settings.companyName ?? ''
     $ProductName = $Settings.productName ?? ''
     $SupportEmail = $Settings.supportEmail ?? ''
@@ -157,7 +159,16 @@ foreach (`$b in `$browsers) {
     `$domainSquattingKey = "`$(`$b.ManagedStorageKey)\domainSquatting"
     if (!(Test-Path `$domainSquattingKey)) { New-Item -Path `$domainSquattingKey -Force | Out-Null }
     New-ItemProperty -Path `$domainSquattingKey -Name 'enabled' -PropertyType DWord -Value $DomainSquattingEnabled -Force | Out-Null
-
+    `$protectedDomainsKey = "`$domainSquattingKey\protectedDomains"
+    if (Test-Path `$protectedDomainsKey) { Remove-Item -Path `$protectedDomainsKey -Recurse -Force | Out-Null }
+$(if ($ProtectedDomains.Count -gt 0) {
+    "    New-Item -Path `$protectedDomainsKey -Force | Out-Null`n"
+    $i = 1
+    foreach ($Domain in $ProtectedDomains) {
+        "    New-ItemProperty -Path `$protectedDomainsKey -Name '$i' -PropertyType String -Value '$(ConvertTo-CIPPScriptBlockValue -Value $Domain)' -Force | Out-Null`n"
+        $i++
+    }
+})
     # Managed storage - customBranding subkey
     `$brandingKey = "`$(`$b.ManagedStorageKey)\customBranding"
     if (!(Test-Path `$brandingKey)) { New-Item -Path `$brandingKey -Force | Out-Null }
@@ -276,7 +287,18 @@ foreach (`$key in @(`$chromeKey, `$edgeKey)) {
     `$domainSquattingKey = "`$key\domainSquatting"
     if (!(Test-Path `$domainSquattingKey)) { exit 1 }
     if (!(Test-RegValue `$domainSquattingKey 'enabled' $DomainSquattingEnabled)) { exit 1 }
-
+    `$protectedDomainsKey = "`$domainSquattingKey\protectedDomains"
+$(if ($ProtectedDomains.Count -gt 0) {
+    "    if (!(Test-Path `$protectedDomainsKey)) { exit 1 }`n"
+    $i = 1
+    foreach ($Domain in $ProtectedDomains) {
+        "    if (!(Test-RegValue `$protectedDomainsKey '$i' '$(ConvertTo-CIPPScriptBlockValue -Value $Domain)')) { exit 1 }`n"
+        $i++
+    }
+    "    if ((Get-Item `$protectedDomainsKey).Property.Count -ne $($ProtectedDomains.Count)) { exit 1 }`n"
+} else {
+    "    if ((Test-Path `$protectedDomainsKey) -and (Get-Item `$protectedDomainsKey).Property.Count -gt 0) { exit 1 }`n"
+})
     # customBranding subkey
     `$brandingKey = "`$key\customBranding"
     if (!(Test-Path `$brandingKey)) { exit 1 }

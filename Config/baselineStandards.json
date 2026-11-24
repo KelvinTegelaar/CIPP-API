@@ -5790,6 +5790,14 @@
         "default": true
       },
       {
+        "name": "standards.DeployCheckChromeExtension.protectedDomains",
+        "type": "autoComplete",
+        "multiple": true,
+        "creatable": true,
+        "label": "Domain squatting protected domains (empty = URL allowlist domains)",
+        "omitWhenBlank": true
+      },
+      {
         "name": "standards.DeployCheckChromeExtension.companyName",
         "type": "textField",
         "label": "Company Name",

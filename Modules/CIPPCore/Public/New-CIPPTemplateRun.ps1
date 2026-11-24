@@ -157,6 +157,12 @@ function New-CIPPTemplateRun {
 
                             if ($ExistingPolicy -and $ExistingPolicy.PartitionKey -eq 'CATemplate') {
                                 "CA Policy $($policy.displayName) found, updating template"
+                                # Keep the %variables% added to the stored template where the policy still has those settings.
+                                if ((ConvertTo-Json -InputObject $ExistingPolicy -Depth 100 -Compress) -match '%[A-Za-z0-9_.()-]+%') {
+                                    $Dropped = [System.Collections.Generic.HashSet[string]]::new()
+                                    $Template = ConvertTo-Json -InputObject (Merge-CIPPTemplateVariable -Existing $ExistingPolicy -Captured ($Template | ConvertFrom-Json -Depth 100) -Dropped $Dropped) -Depth 100 -Compress
+                                    if ($Dropped.Count -gt 0) { "CA Policy $($policy.displayName): these variables were on settings the policy no longer has, so they were not kept: $(@($Dropped) -join ', ')" }
+                                }
                                 # Full replace: carry Package across like the Intune branches do.
                                 Add-CIPPAzDataTableEntity @Table -Entity @{
                                     JSON         = "$Template"
@@ -232,10 +238,17 @@ function New-CIPPTemplateRun {
                                     $Template = New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName $URLName -ID $Policy.id
                                     if ($ExistingPolicy -and $ExistingPolicy.PartitionKey -eq 'IntuneTemplate') {
                                         "Policy $($Template.DisplayName) found, updating template"
+                                        $RawJson = $Template.TemplateJson
+                                        # Keep the %variables% added to the stored template where the policy still has those settings.
+                                        if ($ExistingPolicy.RAWJson -match '%[A-Za-z0-9_.()-]+%') {
+                                            $Dropped = [System.Collections.Generic.HashSet[string]]::new()
+                                            $RawJson = ConvertTo-Json -InputObject (Merge-CIPPTemplateVariable -Existing ($ExistingPolicy.RAWJson | ConvertFrom-Json -Depth 100) -Captured ($RawJson | ConvertFrom-Json -Depth 100) -Dropped $Dropped) -Depth 100 -Compress
+                                            if ($Dropped.Count -gt 0) { "Policy $($Template.DisplayName): these variables were on settings the policy no longer has, so they were not kept: $(@($Dropped) -join ', ')" }
+                                        }
                                         $object = [PSCustomObject]@{
                                             Displayname = $Template.DisplayName
                                             Description = $Template.Description
-                                            RAWJson     = $Template.TemplateJson
+                                            RAWJson     = $RawJson
                                             Type        = $Template.Type
                                             GUID        = $ExistingPolicy.GUID
                                         } | ConvertTo-Json
@@ -294,10 +307,17 @@ function New-CIPPTemplateRun {
                             $Template = New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'deviceCompliancePolicies' -ID $Policy.id
                             if ($ExistingPolicy -and $ExistingPolicy.PartitionKey -eq 'IntuneTemplate') {
                                 "Intune Compliance Policy $($Template.DisplayName) found, updating template"
+                                $RawJson = $Template.TemplateJson
+                                # Keep the %variables% added to the stored template where the policy still has those settings.
+                                if ($ExistingPolicy.RAWJson -match '%[A-Za-z0-9_.()-]+%') {
+                                    $Dropped = [System.Collections.Generic.HashSet[string]]::new()
+                                    $RawJson = ConvertTo-Json -InputObject (Merge-CIPPTemplateVariable -Existing ($ExistingPolicy.RAWJson | ConvertFrom-Json -Depth 100) -Captured ($RawJson | ConvertFrom-Json -Depth 100) -Dropped $Dropped) -Depth 100 -Compress
+                                    if ($Dropped.Count -gt 0) { "Intune Compliance Policy $($Template.DisplayName): these variables were on settings the policy no longer has, so they were not kept: $(@($Dropped) -join ', ')" }
+                                }
                                 $object = [PSCustomObject]@{
                                     Displayname = $Template.DisplayName
                                     Description = $Template.Description
-                                    RAWJson     = $Template.TemplateJson
+                                    RAWJson     = $RawJson
                                     Type        = $Template.Type
                                     GUID        = $ExistingPolicy.GUID
                                 } | ConvertTo-Json -Compress
@@ -353,10 +373,17 @@ function New-CIPPTemplateRun {
                             $Template = New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'managedAppPolicies' -ID $Policy.id -ODataType $Policy.'@odata.type'
                             if ($ExistingPolicy -and $ExistingPolicy.PartitionKey -eq 'IntuneTemplate') {
                                 "Intune Protection Policy $($Template.DisplayName) found, updating template"
+                                $RawJson = $Template.TemplateJson
+                                # Keep the %variables% added to the stored template where the policy still has those settings.
+                                if ($ExistingPolicy.RAWJson -match '%[A-Za-z0-9_.()-]+%') {
+                                    $Dropped = [System.Collections.Generic.HashSet[string]]::new()
+                                    $RawJson = ConvertTo-Json -InputObject (Merge-CIPPTemplateVariable -Existing ($ExistingPolicy.RAWJson | ConvertFrom-Json -Depth 100) -Captured ($RawJson | ConvertFrom-Json -Depth 100) -Dropped $Dropped) -Depth 100 -Compress
+                                    if ($Dropped.Count -gt 0) { "Intune Protection Policy $($Template.DisplayName): these variables were on settings the policy no longer has, so they were not kept: $(@($Dropped) -join ', ')" }
+                                }
                                 $object = [PSCustomObject]@{
                                     Displayname = $Template.DisplayName
                                     Description = $Template.Description
-                                    RAWJson     = $Template.TemplateJson
+                                    RAWJson     = $RawJson
                                     Type        = $Template.Type
                                     GUID        = $ExistingPolicy.GUID
                                 } | ConvertTo-Json -Compress
