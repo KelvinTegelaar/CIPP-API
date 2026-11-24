@@ -237,13 +237,13 @@ function Invoke-ExecCommunityRepo {
                     foreach ($Linked in @($LinkedManifest).Where({ $_.path })) {
                         try {
                             $LinkedFile = Get-GitHubFileContents -FullName $FullName -Path $Linked.path -Branch $Branch
-                            $null = Import-CommunityTemplate -Template ($LinkedFile.content | ConvertFrom-Json) -SHA $LinkedFile.sha -Source $FullName -Path $Linked.path -Force:$Force
+                            $null = Import-CommunityTemplate -Template ($LinkedFile.content | ConvertFrom-Json) -SHA $LinkedFile.sha -Source $FullName -Path $Linked.path -Force:$Force -ManualImport
                             $LinkedImported++
                         } catch {
                             $LinkedFailures.Add("$($Linked.path): $($_.Exception.Message)")
                         }
                     }
-                    $ImportResult = Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $FullName -Path $Path -Force:$Force
+                    $ImportResult = Import-CommunityTemplate -Template $Content -SHA $Template.sha -MigrationTable $MigrationTable -LocationData $LocationData -Source $FullName -Path $Path -Force:$Force -ManualImport
 
                     $Results = @{
                         resultText = "$($ImportResult ?? 'Template imported')$(if ($LinkedImported) { " Imported $LinkedImported linked template(s)." })$(if ($LinkedFailures.Count) { " Linked templates that could not be imported: $($LinkedFailures -join '; ')" })"

@@ -72,6 +72,7 @@ function Invoke-ListCommunityRepoTemplates {
             [PSCustomObject]@{
                 Source        = $Row.Source
                 SHA           = $Row.SHA
+                SourcePath    = $Row.SourcePath
                 SanitizedName = if ($Name) { ($Name -replace '\s', '_' -replace '[^\w\d_]', '') } else { $null }
             }
         })
@@ -129,10 +130,13 @@ function Invoke-ListCommunityRepoTemplates {
             $RepoTypes = @(($Repo.TemplateTypes | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? @())
             $BySha = @{}
             $ByName = @{}
+            # The repo path survives a rename in CIPP, the name does not
+            $ByPath = @{}
             foreach ($Imported in $ImportedTemplates) {
                 if ($Imported.Source -ne $Repo.FullName) { continue }
                 if ($Imported.SHA) { $BySha[$Imported.SHA] = $true }
                 if ($Imported.SanitizedName) { $ByName[$Imported.SanitizedName] = $true }
+                if ($Imported.SourcePath) { $ByPath[$Imported.SourcePath] = $true }
             }
 
             foreach ($File in $Tree.tree) {
@@ -169,7 +173,7 @@ function Invoke-ListCommunityRepoTemplates {
                 $UpdateAvailable = $false
                 if ($BySha.ContainsKey($File.sha)) {
                     $Imported = $true
-                } elseif ($ByName.ContainsKey($SanitizedFileName)) {
+                } elseif ($ByPath.ContainsKey($File.path) -or $ByName.ContainsKey($SanitizedFileName)) {
                     $Imported = $true
                     $UpdateAvailable = $true
                 }

@@ -62,7 +62,7 @@ function Export-CIPPBaselineTemplate {
         $TemplateJson = $(try { $Row.JSON | ConvertFrom-Json -Depth 100 } catch { $null })
         $DisplayName = "$($TemplateJson.Displayname ?? $TemplateJson.displayName ?? $TemplateJson.name ?? $Row.RowKey)"
         $Basename = $DisplayName -replace '\s', '_' -replace '[^\w\d_]', ''
-        $TemplateEntities.Add(($Row | Select-Object -ExcludeProperty ETag, Timestamp))
+        $TemplateEntities.Add(($Row | Select-Object -ExcludeProperty ETag, Timestamp, ManualImport))
         $Manifest.Add([PSCustomObject]@{
                 partition   = "$Partition"
                 guid        = "$(if ("$($Row.GUID)") { $Row.GUID } else { $Row.RowKey })"

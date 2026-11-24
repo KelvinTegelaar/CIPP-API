@@ -118,3 +118,35 @@ Describe 'Push-CIPPTemplateToRepo with linked templates' {
         ($script:Pushed[0].Content | ConvertFrom-Json).PSObject.Properties.Name | Should -Not -Contain 'LinkedTemplates'
     }
 }
+
+Describe 'Push-CIPPTemplateToRepo repo file contents' {
+    It 'leaves the local ManualImport marker out of the pushed file' {
+        $script:Pushed = $null
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            [pscustomobject]@{ RowKey = 'guid-1'; PartitionKey = 'StandardsTemplateV2'; ManualImport = $true; JSON = '{"templateName":"My Template"}' }
+        }
+        Mock -CommandName Push-GitHubContent -MockWith { $script:Pushed = $Content; @{ content = @{ sha = 'newsha123' } } }
+        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { }
+
+        $null = Push-CIPPTemplateToRepo -GUID 'guid-1' -FullName 'Org/repo' -Message 'push it' -Branch 'main'
+
+        $File = $script:Pushed | ConvertFrom-Json
+        $File.RowKey | Should -Be 'guid-1'
+        $File.PSObject.Properties.Name | Should -Not -Contain 'ManualImport'
+    }
+
+    # Once pushed the row tracks that repo, so the scheduled sync has to be able to update it again
+    It 'clears the ManualImport marker on the pushed row' {
+        $script:Stamped = $null
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            [pscustomobject]@{ RowKey = 'guid-1'; PartitionKey = 'IntuneTemplate'; ManualImport = $true; JSON = '{"Displayname":"My Template"}' }
+        }
+        Mock -CommandName Push-GitHubContent -MockWith { @{ content = @{ sha = 'newsha123' } } }
+        Mock -CommandName Add-CIPPAzDataTableEntity -MockWith { $script:Stamped = $Entity }
+
+        $null = Push-CIPPTemplateToRepo -GUID 'guid-1' -FullName 'Org/repo' -Message 'push it' -Branch 'main'
+
+        $script:Stamped.ManualImport | Should -BeFalse
+        $script:Stamped.ContainsKey('ManualImport') | Should -BeTrue
+    }
+}

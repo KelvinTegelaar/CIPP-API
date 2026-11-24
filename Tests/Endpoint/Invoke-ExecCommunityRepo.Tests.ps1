@@ -112,7 +112,7 @@ Describe 'Invoke-ExecCommunityRepo ImportTemplate' {
     BeforeAll {
         function Get-GitHubFileContents { param($FullName, $Path, $Branch) }
         function Get-GitHubFileTree { param($FullName, $Branch) }
-        function Import-CommunityTemplate { param($Template, $SHA, $MigrationTable, $LocationData, $Source, $Path, [switch]$Force) }
+        function Import-CommunityTemplate { param($Template, $SHA, $MigrationTable, $LocationData, $Source, $Path, [switch]$Force, [switch]$ManualImport) }
         function Invoke-Import([string]$Path) {
             Invoke-ExecCommunityRepo -Request ([pscustomobject]@{
                     Params  = @{ CIPPEndpoint = 'ExecCommunityRepo' }
@@ -135,13 +135,18 @@ Describe 'Invoke-ExecCommunityRepo ImportTemplate' {
         $Response.StatusCode | Should -Be 200
         Should -Invoke Import-CommunityTemplate -Times 1 -Exactly -ParameterFilter { $Template.RowKey -eq 'ca-1' -and $Path -eq 'CATemplate/Staff_web_filtering.json' }
     }
+
+    It 'marks it as a manual import, so it is not listed as synced' {
+        $null = Invoke-Import 'CATemplate/Staff_web_filtering.json'
+        Should -Invoke Import-CommunityTemplate -Times 1 -Exactly -ParameterFilter { $ManualImport }
+    }
 }
 
 Describe 'Invoke-ExecCommunityRepo ImportTemplate with linked templates' {
     BeforeAll {
         function Get-GitHubFileContents { param($FullName, $Path, $Branch) }
         function Get-GitHubFileTree { param($FullName, $Branch) }
-        function Import-CommunityTemplate { param($Template, $SHA, $MigrationTable, $LocationData, $Source, $Path, [switch]$Force) }
+        function Import-CommunityTemplate { param($Template, $SHA, $MigrationTable, $LocationData, $Source, $Path, [switch]$Force, [switch]$ManualImport) }
         function New-File([string]$Sha, [hashtable]$Entity) { [pscustomobject]@{ sha = $Sha; content = ($Entity | ConvertTo-Json -Depth 5) } }
         function Invoke-Import([string]$Path) {
             Invoke-ExecCommunityRepo -Request ([pscustomobject]@{
@@ -168,6 +173,11 @@ Describe 'Invoke-ExecCommunityRepo ImportTemplate with linked templates' {
         Should -Invoke Import-CommunityTemplate -Times 1 -ParameterFilter { $Template.RowKey -eq 'prof-1' -and $SHA -eq 'sha-prof' -and $Path -eq 'GSASecurityProfileTemplate/Staff.json' -and $Source -eq 'Org/repo' }
         $Response.Body.Results.state | Should -Be 'success'
         $Response.Body.Results.resultText | Should -BeLike '*Imported 2 linked template(s).'
+    }
+
+    It 'marks the linked templates as manual imports too' {
+        $null = Invoke-Import 'CATemplate/Staff_web_filtering.json'
+        Should -Invoke Import-CommunityTemplate -Times 3 -Exactly -ParameterFilter { $ManualImport }
     }
 
     It 'still imports the template, with a warning, when a linked file is missing' {

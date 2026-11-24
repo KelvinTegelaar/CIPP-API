@@ -11,7 +11,8 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev) }
     function Get-CippErrorStatusCode { param($ErrorRecord) 500 }
     function Get-CippRequestAllowedPermissions { $script:CallerPermissions }
-    function Get-CIPPAzDataTableEntity { param($TableName, $Filter, $Property) if ($Filter -match "'template-1'") { [pscustomobject]@{ RowKey = 'template-1' } } }
+    function Get-CIPPAzDataTableEntity { param($TableName, $Filter, $Property) if ($Filter -match "'template-1'") { $script:Row ?? [pscustomobject]@{ RowKey = 'template-1' } } }
+    function Set-CIPPIntuneTemplate { param($RawJSON, $GUID, $DisplayName, $Description, $templateType, $Package, $Headers, [switch]$PayloadChanged, $ReusableSettings, [hashtable]$Metadata) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/ConvertTo-CIPPODataFilterValue.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Test-CippTemplateWriteAccess.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/CIPP/Core/Invoke-ExecEditTemplate.ps1')
@@ -74,5 +75,51 @@ Describe 'Invoke-ExecEditTemplate caller access' {
         $script:CallerPermissions = @('CIPP.Core.ReadWrite', 'Tenant.ConditionalAccess.ReadWrite')
         (Invoke-Edit 'CATemplate').StatusCode | Should -Be 200
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1
+    }
+}
+
+# A synced template is detached from its library when edited: an Intune one is forked under a new
+# GUID, a CA one has its SHA cleared. A template imported once from the catalog is not synced, so it
+# is edited in place and keeps the repo link the catalog uses for its badges.
+Describe 'Invoke-ExecEditTemplate manual catalog imports' {
+    BeforeEach {
+        Mock Add-CIPPAzDataTableEntity { }
+        Mock Set-CIPPIntuneTemplate { }
+        $script:IntuneJson = '{"Displayname":"x","Type":"Catalog","RAWJson":"{\"name\":\"x\"}"}'
+    }
+    AfterEach { $script:Row = $null }
+
+    It 'edits a manual Intune import in place and keeps its repo link' {
+        $script:Row = [pscustomobject]@{ RowKey = 'template-1'; JSON = $script:IntuneJson; SHA = 'sha-1'; Source = 'Org/repo'; SourcePath = 'IntuneTemplate/x.json'; ManualImport = $true }
+        (Invoke-Edit 'IntuneTemplate').StatusCode | Should -Be 200
+        Should -Invoke Set-CIPPIntuneTemplate -Times 1 -Exactly -ParameterFilter {
+            $GUID -eq 'template-1' -and $Metadata.ManualImport -eq $true -and $Metadata.SHA -eq 'sha-1' -and
+            $Metadata.Source -eq 'Org/repo' -and $Metadata.SourcePath -eq 'IntuneTemplate/x.json'
+        }
+    }
+
+    It 'still forks a synced Intune template under a new GUID' {
+        $script:Row = [pscustomobject]@{ RowKey = 'template-1'; JSON = $script:IntuneJson; SHA = 'sha-1'; Source = 'Org/repo' }
+        (Invoke-Edit 'IntuneTemplate').StatusCode | Should -Be 200
+        Should -Invoke Set-CIPPIntuneTemplate -Times 1 -Exactly -ParameterFilter { $GUID -ne 'template-1' -and $null -eq $Metadata }
+    }
+
+    # Deployment reads these references to create the reusable settings the policy points at
+    It 'keeps the reusable-setting references of an edited Intune template' {
+        $script:Row = [pscustomobject]@{ RowKey = 'template-1'; JSON = '{"Displayname":"x","Type":"Catalog","RAWJson":"{\"name\":\"x\"}","ReusableSettings":[{"GUID":"rs-1","displayName":"Firewall group"}]}' }
+        (Invoke-Edit 'IntuneTemplate').StatusCode | Should -Be 200
+        Should -Invoke Set-CIPPIntuneTemplate -Times 1 -Exactly -ParameterFilter { @($ReusableSettings).Count -eq 1 -and @($ReusableSettings)[0].GUID -eq 'rs-1' }
+    }
+
+    It 'keeps the SHA of a manual CA import' {
+        $script:Row = [pscustomobject]@{ RowKey = 'template-1'; SHA = 'sha-1'; ManualImport = $true }
+        (Invoke-Edit 'CATemplate').StatusCode | Should -Be 200
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { -not $Entity.ContainsKey('SHA') }
+    }
+
+    It 'still clears the SHA of a synced CA template' {
+        $script:Row = [pscustomobject]@{ RowKey = 'template-1'; SHA = 'sha-1' }
+        (Invoke-Edit 'CATemplate').StatusCode | Should -Be 200
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Entity.ContainsKey('SHA') -and $Entity.SHA -eq '' }
     }
 }

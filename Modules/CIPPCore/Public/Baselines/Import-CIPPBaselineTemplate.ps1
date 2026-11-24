@@ -87,7 +87,8 @@ function Import-CIPPBaselineTemplate {
                 continue
             }
             $Content = $File.content | ConvertFrom-Json -Depth 100
-            $null = Import-CommunityTemplate -Template $Content -SHA $File.sha -Source $FullName -Path $FilePath -Force:$Force
+            # A baseline import is started by a user, so it may update templates they imported by hand
+            $null = Import-CommunityTemplate -Template $Content -SHA $File.sha -Source $FullName -Path $FilePath -Force:$Force -ManualImport
             $ImportedCount++
         } catch {
             $Failures.Add("$($Reference.displayName): $($_.Exception.Message)")

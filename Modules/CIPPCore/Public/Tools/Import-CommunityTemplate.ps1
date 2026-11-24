@@ -11,7 +11,10 @@ function Import-CommunityTemplate {
         $LocationData,
         $Source,
         $Path,
-        [switch]$Force
+        [switch]$Force,
+        # A one-off import from the catalog. The row keeps SHA/Source for the catalog badges but is
+        # not shown as synced, and callers without this switch (the scheduled sync) leave it alone.
+        [switch]$ManualImport
     )
 
     $Table = Get-CippTable -TableName 'templates'
@@ -21,7 +24,8 @@ function Import-CommunityTemplate {
         if ($Template.RowKey) {
             Write-Information "This is going to be a direct write to table, it's a CIPP template. We're writing $($Template.RowKey)"
             # LinkedTemplates is the repo file's manifest of the templates it links, not a table column
-            $Template = $Template | Select-Object * -ExcludeProperty Timestamp, LinkedTemplates
+            # ManualImport is local state, never taken from the repo file
+            $Template = $Template | Select-Object * -ExcludeProperty Timestamp, LinkedTemplates, ManualImport
 
             # Support both objects and json string in repo (support pretty printed json in repo)
             if (Test-Json $Template.JSON -ErrorAction SilentlyContinue) {
@@ -34,6 +38,12 @@ function Import-CommunityTemplate {
             $Existing = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Template.RowKey)' and PartitionKey eq '$(ConvertTo-CIPPODataFilterValue -Value $Template.PartitionKey)'" -ErrorAction SilentlyContinue
 
             if ($Existing) {
+                if ($Existing.ManualImport -eq $true -and -not $ManualImport -and -not $Force) {
+                    $StatusMessage = "Template '$($Template.RowKey)' was imported manually and is not updated by the sync. Skipping import."
+                    Write-Information $StatusMessage
+                    return $StatusMessage
+                }
+
                 # This write is a full replace keyed on RowKey, so an unchanged repo file would
                 # silently revert edits made in CIPP. Only write when the SHA moved, or when -Force
                 # makes the overwrite explicit.
@@ -105,6 +115,10 @@ function Import-CommunityTemplate {
             $Template | Add-Member -MemberType NoteProperty -Name Source -Value $Source -Force
             if ($Path) {
                 $Template | Add-Member -MemberType NoteProperty -Name SourcePath -Value $Path -Force
+            }
+            # Updating a row the sync owns from the catalog must not take it out of the sync
+            if ($ManualImport -and $Template.PartitionKey -in 'IntuneTemplate', 'CATemplate' -and (-not $Existing -or $Existing.ManualImport -eq $true)) {
+                $Template | Add-Member -MemberType NoteProperty -Name ManualImport -Value $true -Force
             }
             if ($Template.PartitionKey -eq 'StandardsTemplateV2') {
                 $Template | Add-Member -MemberType NoteProperty -Name ContentHash -Value (Get-CIPPTemplateContentHash -JSON $NewJSON) -Force
@@ -218,18 +232,29 @@ function Import-CommunityTemplate {
                     # Check for duplicate template
                     $DuplicateFilter = "PartitionKey eq 'CATemplate'"
                     $ExistingTemplates = Get-CIPPAzDataTableEntity @Table -Filter $DuplicateFilter -ErrorAction SilentlyContinue
-                    $Duplicate = $ExistingTemplates | Where-Object {
-                        try {
-                            $ExistingJSON = if (Test-Json $_.JSON -ErrorAction SilentlyContinue) {
-                                $_.JSON | ConvertFrom-Json
-                            } else {
-                                $_.JSON
+                    # The repo path survives a rename in CIPP, so it is matched before the name.
+                    # A row without a SHA was detached by an edit and is left alone.
+                    $Duplicate = if ($Path) { $ExistingTemplates | Where-Object { $_.SourcePath -eq $Path -and $_.Source -eq $Source -and $_.SHA } | Select-Object -First 1 }
+                    if (-not $Duplicate) {
+                        $Duplicate = $ExistingTemplates | Where-Object {
+                            try {
+                                $ExistingJSON = if (Test-Json $_.JSON -ErrorAction SilentlyContinue) {
+                                    $_.JSON | ConvertFrom-Json
+                                } else {
+                                    $_.JSON
+                                }
+                                $ExistingJSON.displayName -eq $Template.displayName -and $_.Source -eq $Source
+                            } catch {
+                                $false
                             }
-                            $ExistingJSON.displayName -eq $Template.displayName -and $_.Source -eq $Source
-                        } catch {
-                            $false
-                        }
-                    } | Select-Object -First 1
+                        } | Select-Object -First 1
+                    }
+
+                    if ($Duplicate.ManualImport -eq $true -and -not $ManualImport -and -not $Force) {
+                        $StatusMessage = "Conditional Access template '$($Template.displayName)' was imported manually and is not updated by the sync. Skipping import."
+                        Write-Information $StatusMessage
+                        break
+                    }
 
                     if ($Duplicate -and $Duplicate.SHA -eq $SHA -and -not $Force) {
                         $StatusMessage = "Conditional Access template '$($Template.displayName)' from source '$Source' is already up to date. Skipping import."
@@ -253,6 +278,8 @@ function Import-CommunityTemplate {
                         Source       = $Source
                     }
                     if ($Path) { $entity.SourcePath = $Path }
+                    # Updating a row the sync owns from the catalog must not take it out of the sync
+                    if ($ManualImport -and (-not $Duplicate -or $Duplicate.ManualImport -eq $true)) { $entity.ManualImport = $true }
                     # Full replace: keep the CIPP-assigned Package.
                     if ($Duplicate -and $Duplicate.Package) { $entity.Package = $Duplicate.Package }
                     Write-Information "Final entity: $($entity | ConvertTo-Json -Depth 10)"
@@ -302,18 +329,23 @@ function Import-CommunityTemplate {
                     # Check for duplicate template
                     $DuplicateFilter = "PartitionKey eq 'IntuneTemplate'"
                     $ExistingTemplates = Get-CIPPAzDataTableEntity @Table -Filter $DuplicateFilter -ErrorAction SilentlyContinue
-                    $Duplicate = $ExistingTemplates | Where-Object {
-                        try {
-                            $ExistingJSON = if (Test-Json $_.JSON -ErrorAction SilentlyContinue) {
-                                $_.JSON | ConvertFrom-Json
-                            } else {
-                                $_.JSON
+                    # The repo path survives a rename in CIPP, so it is matched before the name.
+                    # A row without a SHA was detached by an edit and is left alone.
+                    $Duplicate = if ($Path) { $ExistingTemplates | Where-Object { $_.SourcePath -eq $Path -and $_.Source -eq $Source -and $_.SHA } | Select-Object -First 1 }
+                    if (-not $Duplicate) {
+                        $Duplicate = $ExistingTemplates | Where-Object {
+                            try {
+                                $ExistingJSON = if (Test-Json $_.JSON -ErrorAction SilentlyContinue) {
+                                    $_.JSON | ConvertFrom-Json
+                                } else {
+                                    $_.JSON
+                                }
+                                $ExistingJSON.Displayname -eq $DisplayName -and $_.Source -eq $Source
+                            } catch {
+                                $false
                             }
-                            $ExistingJSON.Displayname -eq $DisplayName -and $_.Source -eq $Source
-                        } catch {
-                            $false
-                        }
-                    } | Select-Object -First 1
+                        } | Select-Object -First 1
+                    }
 
                     # On update, reuse the existing template's GUID so the GUID embedded
                     # in the JSON blob stays in sync with the table RowKey. Minting a fresh
@@ -329,6 +361,12 @@ function Import-CommunityTemplate {
                         Type        = $URLName
                         GUID        = $TemplateGuid
                     } | ConvertTo-Json -Depth 100 -Compress
+
+                    if ($Duplicate.ManualImport -eq $true -and -not $ManualImport -and -not $Force) {
+                        $StatusMessage = "Intune template '$DisplayName' was imported manually and is not updated by the sync. Skipping import."
+                        Write-Information $StatusMessage
+                        return $StatusMessage
+                    }
 
                     if ($Duplicate -and $Duplicate.SHA -eq $SHA -and -not $Force) {
                         $StatusMessage = "Intune template '$DisplayName' from source '$Source' is already up to date. Skipping import."
@@ -352,6 +390,8 @@ function Import-CommunityTemplate {
                         Source       = $Source
                     }
                     if ($Path) { $entity.SourcePath = $Path }
+                    # Updating a row the sync owns from the catalog must not take it out of the sync
+                    if ($ManualImport -and (-not $Duplicate -or $Duplicate.ManualImport -eq $true)) { $entity.ManualImport = $true }
 
                     if ($Duplicate -and $Duplicate.Package) {
                         $entity.Package = $Duplicate.Package

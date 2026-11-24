@@ -52,7 +52,7 @@ function Invoke-ListCAtemplates {
                                     GUID     = $_.GUID
                                     package  = $_.Package
                                     source   = $_.Source
-                                    isSynced = (![string]::IsNullOrEmpty($_.SHA))
+                                    isSynced = (![string]::IsNullOrEmpty($_.SHA) -and $_.ManualImport -ne $true)
                                 }) -Force
                             $data
                         } catch {
@@ -78,7 +78,7 @@ function Invoke-ListCAtemplates {
                 $data | Add-Member -NotePropertyMembers ([ordered]@{
                         GUID     = $row.GUID
                         source   = $row.Source
-                        isSynced = (![string]::IsNullOrEmpty($row.SHA))
+                        isSynced = (![string]::IsNullOrEmpty($row.SHA) -and $row.ManualImport -ne $true)
                         package  = $row.Package
                     }) -Force
                 $data

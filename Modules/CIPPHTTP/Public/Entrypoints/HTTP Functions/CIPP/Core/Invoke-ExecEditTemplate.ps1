@@ -37,7 +37,10 @@ function Invoke-ExecEditTemplate {
             $TemplateData = $Template.JSON | ConvertFrom-Json
             $TemplateType = $TemplateData.Type
 
-            if ($Template.SHA) {
+            # A synced template is forked so the sync keeps its own copy. A manual catalog import
+            # is edited in place and keeps its repo link, so the catalog still recognises it.
+            $IsManualImport = $Template.ManualImport -eq $true
+            if ($Template.SHA -and -not $IsManualImport) {
                 $NewGuid = [guid]::NewGuid().ToString()
             } else {
                 $NewGuid = $GUID
@@ -85,6 +88,11 @@ function Invoke-ExecEditTemplate {
                 Headers        = $Request.Headers
                 PayloadChanged = $PayloadChanged
             }
+            # The row is rebuilt from scratch, so carry the reusable-setting references across
+            if ($TemplateData.ReusableSettings) { $IntuneTemplate.ReusableSettings = $TemplateData.ReusableSettings }
+            if ($IsManualImport) {
+                $IntuneTemplate.Metadata = @{ SHA = $Template.SHA; Source = $Template.Source; SourcePath = $Template.SourcePath; ManualImport = $true }
+            }
             Set-CIPPIntuneTemplate @IntuneTemplate
         } else {
             $Entity = @{
@@ -92,8 +100,11 @@ function Invoke-ExecEditTemplate {
                 RowKey       = "$GUID"
                 PartitionKey = "$Type"
                 GUID         = "$GUID"
-                SHA          = ''
             }
+            # Editing detaches a synced template from its library. A manual catalog import keeps its SHA.
+            $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type String
+            $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'CATemplate' and RowKey eq '$SafeGUID'"
+            if ($Existing.ManualImport -ne $true) { $Entity.SHA = '' }
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -OperationType 'UpsertMerge'
             Write-LogMessage -headers $Request.Headers -API $APINAME -tenant 'Global' -message "Edited template $($Request.Body.name) with GUID $GUID" -Sev 'Info'
         }

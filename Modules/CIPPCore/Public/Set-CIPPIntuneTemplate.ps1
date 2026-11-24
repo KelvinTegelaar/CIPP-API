@@ -16,7 +16,11 @@ function Set-CIPPIntuneTemplate {
         $templateType,
         $Package,
         $Headers,
-        [switch]$PayloadChanged
+        [switch]$PayloadChanged,
+        # Reusable-setting references of the stored template, kept so the policy still deploys them
+        $ReusableSettings,
+        # Extra table columns to keep on the row (the write below is a full replace)
+        [hashtable]$Metadata
     )
     $APIName = 'Set-CIPPIntuneTemplate'
     if (!$DisplayName) { throw 'You must enter a displayname' }
@@ -33,22 +37,30 @@ function Set-CIPPIntuneTemplate {
         Write-LogMessage -Headers $Headers -API $APIName -message "Template '$DisplayName' ($GUID): $Warning" -Sev 'Warning'
     }
 
-    $object = [PSCustomObject]@{
+    $object = [ordered]@{
         Displayname = $DisplayName
         Description = $Description
         RAWJson     = $RawJSON
         Type        = $templateType
         GUID        = $GUID
-    } | ConvertTo-Json -Depth 10 -Compress
+    }
+    if ($ReusableSettings) { $object.ReusableSettings = @($ReusableSettings) }
+    $object = $object | ConvertTo-Json -Depth 10 -Compress
     $Table = Get-CippTable -tablename 'templates'
     $Table.Force = $true
-    Add-CIPPAzDataTableEntity @Table -Entity @{
+    $Entity = @{
         JSON         = "$object"
         RowKey       = "$GUID"
         GUID         = "$GUID"
         Package      = "$Package"
         PartitionKey = 'IntuneTemplate'
     }
+    if ($Metadata) {
+        foreach ($Key in @($Metadata.Keys)) {
+            if ($null -ne $Metadata[$Key] -and -not $Entity.ContainsKey($Key)) { $Entity[$Key] = $Metadata[$Key] }
+        }
+    }
+    Add-CIPPAzDataTableEntity @Table -Entity $Entity
     Write-LogMessage -Headers $Headers -API $APIName -message "Created intune policy template named $DisplayName with GUID $GUID" -Sev 'Debug'
 
     return 'Successfully added template'

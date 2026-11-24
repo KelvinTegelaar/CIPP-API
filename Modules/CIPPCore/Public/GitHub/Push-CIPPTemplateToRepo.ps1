@@ -49,19 +49,23 @@ function Push-CIPPTemplateToRepo {
         $ContentHash = Get-CIPPTemplateContentHash -JSON $Entity.JSON
         $Basename = $EntityName -replace '\s', '_' -replace '[^\w\d_]', ''
         $Path = '{0}/{1}.json' -f $Entity.PartitionKey, $Basename
-        $File = if ($LinkedTemplates) { $Entity | Select-Object *, @{ n = 'LinkedTemplates'; e = { ConvertTo-Json -Compress -Depth 5 -InputObject @($LinkedTemplates) } } } else { $Entity }
+        # ManualImport is local state and stays out of the repo file
+        $File = if ($LinkedTemplates) { $Entity | Select-Object *, @{ n = 'LinkedTemplates'; e = { ConvertTo-Json -Compress -Depth 5 -InputObject @($LinkedTemplates) } } -ExcludeProperty ManualImport } else { $Entity | Select-Object * -ExcludeProperty ManualImport }
         # Pretty-printed, not compressed: repo files are hand-edited on GitHub.
         $PushResult = Push-GitHubContent -FullName $FullName -Path $Path -Content ($File | ConvertTo-Json -Depth 100) -Message $Message -Branch $Branch
         # A push that returns no blob sha did not land (integration disabled, or no write access).
         if ($PushResult.content.sha) {
-            Add-CIPPAzDataTableEntity @TemplateTable -Entity @{
+            $Stamp = @{
                 PartitionKey = $Entity.PartitionKey
                 RowKey       = $Entity.RowKey
                 SHA          = [string]$PushResult.content.sha
                 Source       = $FullName
                 SourcePath   = $Path
                 ContentHash  = $ContentHash
-            } -OperationType UpsertMerge
+            }
+            # The row now tracks this repo, so it is no longer a one-off catalog import
+            if ($Entity.ManualImport) { $Stamp.ManualImport = $false }
+            Add-CIPPAzDataTableEntity @TemplateTable -Entity $Stamp -OperationType UpsertMerge
         }
         [pscustomobject]@{ Name = $EntityName; Path = $Path; Pushed = [bool]$PushResult.content.sha }
     }

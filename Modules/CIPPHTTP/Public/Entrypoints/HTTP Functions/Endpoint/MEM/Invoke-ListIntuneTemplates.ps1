@@ -44,7 +44,7 @@ function Invoke-ListIntuneTemplates {
                         Type             = $JSONData.Type
                         GUID             = $Row.RowKey
                         package          = $Row.Package
-                        isSynced         = (![string]::IsNullOrEmpty($Row.SHA))
+                        isSynced         = (![string]::IsNullOrEmpty($Row.SHA) -and $Row.ManualImport -ne $true)
                         source           = $Row.Source
                         reusableSettings = $JSONData.ReusableSettings
                     }) -Force
@@ -59,7 +59,7 @@ function Invoke-ListIntuneTemplates {
                     Type        = $JSONData.Type
                     GUID        = $Row.RowKey
                     package     = $Row.Package
-                    isSynced    = (![string]::IsNullOrEmpty($Row.SHA))
+                    isSynced    = (![string]::IsNullOrEmpty($Row.SHA) -and $Row.ManualImport -ne $true)
                     source      = $Row.Source
                     corrupt     = $true
                 }
@@ -221,7 +221,7 @@ function Invoke-ListIntuneTemplates {
                                             GUID             = $_.RowKey
                                             package          = $_.Package
                                             source           = $_.Source
-                                            isSynced         = (![string]::IsNullOrEmpty($_.SHA))
+                                            isSynced         = (![string]::IsNullOrEmpty($_.SHA) -and $_.ManualImport -ne $true)
                                             reusableSettings = $JSONData.ReusableSettings
                                         }) -Force
                                     $data

@@ -52,6 +52,8 @@ function Invoke-ExecSetPackageTag {
                 Package      = $PackageValue
                 SHA          = $Template.SHA ?? $null
                 Source       = $Template.Source ?? $null
+                SourcePath   = $Template.SourcePath ?? $null
+                ManualImport = $Template.ManualImport ?? $null
             }
 
             Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force

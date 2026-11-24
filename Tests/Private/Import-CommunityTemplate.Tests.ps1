@@ -313,3 +313,201 @@ Describe 'Import-CommunityTemplate with a linked templates manifest' {
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -ParameterFilter { $Entity.PSObject.Properties.Name -notcontains 'LinkedTemplates' -and $Entity.RowKey -eq '7f3a91c2-4d1e-4b8a-9c3f-2e5d6a8b1f04' }
     }
 }
+
+# A one-off import from the catalog (-ManualImport) keeps SHA and Source for the catalog's badges
+# but is the user's to edit: it is marked so it is not listed as synced, and callers without the
+# switch (the scheduled sync) must not overwrite it.
+Describe 'Import-CommunityTemplate manual import marker' {
+    BeforeAll {
+        function Test-CIPPIntuneTemplate { [pscustomobject]@{ IsValid = $true } }
+        function Remove-ODataProperties { param($Object) }
+        function Get-RawIntuneTemplate {
+            [pscustomobject]@{ '@odata.id' = 'deviceManagement/configurationPolicies/1'; name = 'OIB policy'; description = 'd'; technologies = 'mdm' }
+        }
+        function Get-RawCATemplate {
+            [pscustomobject]@{ '@odata.type' = '#microsoft.graph.conditionalAccessPolicy'; displayName = 'CA policy'; state = 'enabled' }
+        }
+        $script:NoMigration = [pscustomobject]@{ objects = @() }
+    }
+    BeforeEach {
+        $script:Written = $null
+        Mock Add-CIPPAzDataTableEntity { $script:Written = $Entity }
+        Mock Get-CIPPAzDataTableEntity { $null }
+    }
+
+    Context 'writing the marker' {
+        It 'marks a CIPP-format Intune template' {
+            $null = Import-CommunityTemplate -Template (Get-RepoTemplate) -SHA 'abc123' -Source 'owner/repo' -ManualImport
+            $script:Written.ManualImport | Should -BeTrue
+            $script:Written.SHA | Should -Be 'abc123'
+        }
+
+        It 'does not mark it without the switch' {
+            $null = Import-CommunityTemplate -Template (Get-RepoTemplate) -SHA 'abc123' -Source 'owner/repo'
+            $script:Written.PSObject.Properties.Name | Should -Not -Contain 'ManualImport'
+        }
+
+        It 'ignores a marker carried in the repo file' {
+            $Template = Get-RepoTemplate
+            $Template | Add-Member -NotePropertyName ManualImport -NotePropertyValue $true
+            $null = Import-CommunityTemplate -Template $Template -SHA 'abc123' -Source 'owner/repo'
+            $script:Written.PSObject.Properties.Name | Should -Not -Contain 'ManualImport'
+        }
+
+        It 'never marks a standards template' {
+            $null = Import-CommunityTemplate -Template (Get-RepoStandardsTemplate) -SHA 'abc123' -Source 'owner/repo' -ManualImport
+            $script:Written.PSObject.Properties.Name | Should -Not -Contain 'ManualImport'
+        }
+
+        It 'marks a raw Intune policy file' {
+            $null = Import-CommunityTemplate -Template (Get-RawIntuneTemplate) -SHA 'abc123' -Source 'owner/repo' -ManualImport
+            $script:Written.PartitionKey | Should -Be 'IntuneTemplate'
+            $script:Written.ManualImport | Should -BeTrue
+        }
+
+        It 'does not mark a raw Intune policy file without the switch' {
+            $null = Import-CommunityTemplate -Template (Get-RawIntuneTemplate) -SHA 'abc123' -Source 'owner/repo'
+            $script:Written.PartitionKey | Should -Be 'IntuneTemplate'
+            $script:Written.ContainsKey('ManualImport') | Should -BeFalse
+        }
+
+        It 'marks a raw Conditional Access policy file' {
+            $null = Import-CommunityTemplate -Template (Get-RawCATemplate) -SHA 'abc123' -Source 'owner/repo' -MigrationTable $script:NoMigration -ManualImport
+            $script:Written.PartitionKey | Should -Be 'CATemplate'
+            $script:Written.ManualImport | Should -BeTrue
+        }
+
+        It 'does not mark a raw Conditional Access policy file without the switch' {
+            $null = Import-CommunityTemplate -Template (Get-RawCATemplate) -SHA 'abc123' -Source 'owner/repo' -MigrationTable $script:NoMigration
+            $script:Written.PartitionKey | Should -Be 'CATemplate'
+            $script:Written.ContainsKey('ManualImport') | Should -BeFalse
+        }
+    }
+
+    Context 'a manual import already exists and the repo file has changed' {
+        # The CIPP-format path finds the row by RowKey, so this also covers a template renamed in CIPP
+        It 'is not overwritten by a caller without the switch (CIPP format)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = '7f3a91c2-4d1e-4b8a-9c3f-2e5d6a8b1f04'; PartitionKey = 'IntuneTemplate'; SHA = 'abc123'; ManualImport = $true; JSON = '{"Displayname":"Renamed in CIPP"}' }
+            }
+            Import-CommunityTemplate -Template (Get-RepoTemplate) -SHA 'def456' -Source 'owner/repo' | Should -BeLike '*imported manually*'
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
+
+        It 'is updated when the user imports it again from the catalog (CIPP format)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = '7f3a91c2-4d1e-4b8a-9c3f-2e5d6a8b1f04'; PartitionKey = 'IntuneTemplate'; SHA = 'abc123'; ManualImport = $true; JSON = '{"Displayname":"Baseline"}' }
+            }
+            $null = Import-CommunityTemplate -Template (Get-RepoTemplate) -SHA 'def456' -Source 'owner/repo' -ManualImport
+            $script:Written.SHA | Should -Be 'def456'
+            $script:Written.ManualImport | Should -BeTrue
+        }
+
+        It 'is overwritten when -Force is passed (CIPP format)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = '7f3a91c2-4d1e-4b8a-9c3f-2e5d6a8b1f04'; PartitionKey = 'IntuneTemplate'; SHA = 'abc123'; ManualImport = $true; JSON = '{"Displayname":"Baseline"}' }
+            }
+            $null = Import-CommunityTemplate -Template (Get-RepoTemplate) -SHA 'def456' -Source 'owner/repo' -Force
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -Exactly
+        }
+
+        It 'is not overwritten by a caller without the switch (raw Intune file)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = 'row-1'; GUID = 'row-1'; PartitionKey = 'IntuneTemplate'; SHA = 'abc123'; Source = 'owner/repo'; ManualImport = $true; JSON = '{"Displayname":"OIB policy"}' }
+            }
+            Import-CommunityTemplate -Template (Get-RawIntuneTemplate) -SHA 'def456' -Source 'owner/repo' | Should -BeLike '*imported manually*'
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
+
+        It 'is updated in place when the user imports it again (raw Intune file)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = 'row-1'; GUID = 'row-1'; PartitionKey = 'IntuneTemplate'; SHA = 'abc123'; Source = 'owner/repo'; ManualImport = $true; JSON = '{"Displayname":"OIB policy"}' }
+            }
+            $null = Import-CommunityTemplate -Template (Get-RawIntuneTemplate) -SHA 'def456' -Source 'owner/repo' -ManualImport
+            $script:Written.RowKey | Should -Be 'row-1'
+            $script:Written.ManualImport | Should -BeTrue
+        }
+
+        It 'is not overwritten by a caller without the switch (raw Conditional Access file)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = 'row-2'; GUID = 'row-2'; PartitionKey = 'CATemplate'; SHA = 'abc123'; Source = 'owner/repo'; ManualImport = $true; JSON = '{"displayName":"CA policy"}' }
+            }
+            Import-CommunityTemplate -Template (Get-RawCATemplate) -SHA 'def456' -Source 'owner/repo' -MigrationTable $script:NoMigration | Should -BeLike '*imported manually*'
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
+    }
+
+    # Updating from the catalog is not a reason to stop syncing a template the Template Library owns
+    Context 'the catalog updates a template the sync owns' {
+        It 'stays unmarked (CIPP format)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = '7f3a91c2-4d1e-4b8a-9c3f-2e5d6a8b1f04'; PartitionKey = 'IntuneTemplate'; SHA = 'abc123'; JSON = '{"Displayname":"Baseline"}' }
+            }
+            $null = Import-CommunityTemplate -Template (Get-RepoTemplate) -SHA 'def456' -Source 'owner/repo' -ManualImport
+            $script:Written.SHA | Should -Be 'def456'
+            $script:Written.PSObject.Properties.Name | Should -Not -Contain 'ManualImport'
+        }
+
+        It 'stays unmarked (raw Intune file)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = 'row-1'; GUID = 'row-1'; PartitionKey = 'IntuneTemplate'; SHA = 'abc123'; Source = 'owner/repo'; JSON = '{"Displayname":"OIB policy"}' }
+            }
+            $null = Import-CommunityTemplate -Template (Get-RawIntuneTemplate) -SHA 'def456' -Source 'owner/repo' -ManualImport
+            $script:Written.RowKey | Should -Be 'row-1'
+            $script:Written.ContainsKey('ManualImport') | Should -BeFalse
+        }
+
+        It 'stays unmarked (raw Conditional Access file)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = 'row-2'; GUID = 'row-2'; PartitionKey = 'CATemplate'; SHA = 'abc123'; Source = 'owner/repo'; JSON = '{"displayName":"CA policy"}' }
+            }
+            $null = Import-CommunityTemplate -Template (Get-RawCATemplate) -SHA 'def456' -Source 'owner/repo' -MigrationTable $script:NoMigration -ManualImport
+            $script:Written.RowKey | Should -Be 'row-2'
+            $script:Written.ContainsKey('ManualImport') | Should -BeFalse
+        }
+    }
+
+    # A raw file has no RowKey, so a template renamed in CIPP is only found by the repo path it came from
+    Context 'a manual import was renamed in CIPP and the repo file has changed' {
+        It 'is not duplicated by a caller without the switch (raw Intune file)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = 'row-1'; GUID = 'row-1'; PartitionKey = 'IntuneTemplate'; SHA = 'abc123'; Source = 'owner/repo'; SourcePath = 'a/oib.json'; ManualImport = $true; JSON = '{"Displayname":"Renamed in CIPP"}' }
+            }
+            Import-CommunityTemplate -Template (Get-RawIntuneTemplate) -SHA 'def456' -Source 'owner/repo' -Path 'a/oib.json' | Should -BeLike '*imported manually*'
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
+
+        It 'is updated in place when the user imports it again (raw Intune file)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = 'row-1'; GUID = 'row-1'; PartitionKey = 'IntuneTemplate'; SHA = 'abc123'; Source = 'owner/repo'; SourcePath = 'a/oib.json'; ManualImport = $true; JSON = '{"Displayname":"Renamed in CIPP"}' }
+            }
+            $null = Import-CommunityTemplate -Template (Get-RawIntuneTemplate) -SHA 'def456' -Source 'owner/repo' -Path 'a/oib.json' -ManualImport
+            $script:Written.RowKey | Should -Be 'row-1'
+        }
+
+        It 'does not match the same path in another repo (raw Intune file)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = 'row-1'; GUID = 'row-1'; PartitionKey = 'IntuneTemplate'; SHA = 'abc123'; Source = 'other/repo'; SourcePath = 'a/oib.json'; ManualImport = $true; JSON = '{"Displayname":"Renamed in CIPP"}' }
+            }
+            $null = Import-CommunityTemplate -Template (Get-RawIntuneTemplate) -SHA 'def456' -Source 'owner/repo' -Path 'a/oib.json'
+            $script:Written.RowKey | Should -Not -Be 'row-1'
+        }
+
+        # Editing a synced CA template clears its SHA but keeps its path; the sync must not find it again
+        It 'does not match a renamed template that an edit detached (raw Conditional Access file)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = 'row-2'; GUID = 'row-2'; PartitionKey = 'CATemplate'; SHA = ''; Source = 'owner/repo'; SourcePath = 'a/ca.json'; JSON = '{"displayName":"Renamed in CIPP"}' }
+            }
+            $null = Import-CommunityTemplate -Template (Get-RawCATemplate) -SHA 'def456' -Source 'owner/repo' -Path 'a/ca.json' -MigrationTable $script:NoMigration
+            $script:Written.RowKey | Should -Not -Be 'row-2'
+        }
+
+        It 'is not duplicated by a caller without the switch (raw Conditional Access file)' {
+            Mock Get-CIPPAzDataTableEntity {
+                [pscustomobject]@{ RowKey = 'row-2'; GUID = 'row-2'; PartitionKey = 'CATemplate'; SHA = 'abc123'; Source = 'owner/repo'; SourcePath = 'a/ca.json'; ManualImport = $true; JSON = '{"displayName":"Renamed in CIPP"}' }
+            }
+            Import-CommunityTemplate -Template (Get-RawCATemplate) -SHA 'def456' -Source 'owner/repo' -Path 'a/ca.json' -MigrationTable $script:NoMigration | Should -BeLike '*imported manually*'
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
+    }
+}

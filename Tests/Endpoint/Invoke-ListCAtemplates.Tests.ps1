@@ -116,3 +116,29 @@ Describe 'Invoke-ListCAtemplates id filter' {
         $Result.Templates[0].displayName | Should -Be 'Imported stock template'
     }
 }
+
+# A template imported once from the catalog keeps its repo SHA but nothing keeps it in sync, so it
+# is not listed as synced (the flag hides the Edit action).
+Describe 'Invoke-ListCAtemplates isSynced' {
+    BeforeEach {
+        $script:Rows = [System.Collections.Generic.List[object]]::new()
+        $script:Rows.Add([pscustomobject]@{ PartitionKey = 'settings'; RowKey = 'CATemplate'; CATemplate = $true })
+        $script:Rows.Add([pscustomobject]@{ PartitionKey = 'CATemplate'; RowKey = 'a'; GUID = 'a'; Package = 'Pack'; SHA = 'sha-1'; JSON = '{"displayName":"Synced"}' })
+        $script:Rows.Add([pscustomobject]@{ PartitionKey = 'CATemplate'; RowKey = 'b'; GUID = 'b'; Package = 'Pack'; SHA = 'sha-2'; ManualImport = $true; JSON = '{"displayName":"Manual"}' })
+        $script:Rows.Add([pscustomobject]@{ PartitionKey = 'CATemplate'; RowKey = 'c'; GUID = 'c'; Package = 'Pack'; JSON = '{"displayName":"Local"}' })
+    }
+
+    It 'lists <Name> with isSynced <Expected>' -ForEach @(
+        @{ Name = 'Synced'; Expected = $true }
+        @{ Name = 'Manual'; Expected = $false }
+        @{ Name = 'Local'; Expected = $false }
+    ) {
+        ((Invoke-List @{}).Templates | Where-Object displayName -EQ $Name).isSynced | Should -Be $Expected
+    }
+
+    It 'applies the same rule to the templates listed under a package tag' {
+        $Templates = (Invoke-List @{ mode = 'Tag' }).Templates[0].templates
+        ($Templates | Where-Object displayName -EQ 'Synced').isSynced | Should -BeTrue
+        ($Templates | Where-Object displayName -EQ 'Manual').isSynced | Should -BeFalse
+    }
+}
