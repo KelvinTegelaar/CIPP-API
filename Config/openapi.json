@@ -35805,6 +35805,9 @@
               }
             }
           },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
