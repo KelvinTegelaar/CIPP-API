@@ -24,15 +24,16 @@ function Get-CIPPAlertAppleTerms {
         return
     }
 
-    if ($AppleTerms.lastSyncErrorCode -eq 3) {
-        $AlertData = [PSCustomObject]@{
+    $AlertData = foreach ($Token in $AppleTerms) {
+        if ($Token.lastSyncErrorCode -ne 3) { continue }
+        [PSCustomObject]@{
             Message                    = 'New Apple Business Manager terms are ready to accept.'
-            AppleIdentifier            = $AppleTerms.appleIdentifier
-            TokenName                  = $AppleTerms.tokenName
-            TokenExpirationDateTime    = $AppleTerms.tokenExpirationDateTime
-            LastSyncErrorCode          = $AppleTerms.lastSyncErrorCode
-            LastSuccessfulSyncDateTime = $AppleTerms.lastSuccessfulSyncDateTime
-            LastSyncTriggeredDateTime  = $AppleTerms.lastSyncTriggeredDateTime
+            AppleIdentifier            = $Token.appleIdentifier
+            TokenName                  = $Token.tokenName
+            TokenExpirationDateTime    = $Token.tokenExpirationDateTime
+            LastSyncErrorCode          = $Token.lastSyncErrorCode
+            LastSuccessfulSyncDateTime = $Token.lastSuccessfulSyncDateTime
+            LastSyncTriggeredDateTime  = $Token.lastSyncTriggeredDateTime
             Tenant                     = $TenantFilter
         }
     }
