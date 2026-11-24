@@ -10260,6 +10260,10 @@
                     "type": "string",
                     "description": "Proxy addresses (aliases) to remove from the group"
                   },
+                  "RemoveDevice": {
+                    "type": "string",
+                    "description": "Devices to remove from the group, as options carrying the device's directory object ID"
+                  },
                   "RemoveLicenses": {
                     "type": "array",
                     "items": {
@@ -10274,6 +10278,9 @@
                         "addedFields": {
                           "type": "object",
                           "properties": {
+                            "displayName": {
+                              "type": "string"
+                            },
                             "userPrincipalName": {
                               "type": "string"
                             }
@@ -10370,6 +10377,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"

@@ -270,6 +270,23 @@ Describe 'Invoke-EditGroup - membership' {
             }
         }
 
+        It 'reports a member without a sign-in name by display name and ID' {
+            $Request = New-GroupRequest -GroupType 'Security' -Body @{
+                RemoveMember = @([pscustomobject]@{
+                        label       = 'Nested (Security Group)'
+                        value       = 'nested-guid'
+                        addedFields = [pscustomobject]@{ userPrincipalName = $null; displayName = 'Nested'; id = 'nested-guid' }
+                    })
+            }
+            Mock -CommandName New-GraphBulkRequest -MockWith {
+                @([pscustomobject]@{ id = 'removeMember-nested-guid'; status = 204 })
+            }
+
+            $Response = Invoke-EditGroup -Request $Request
+
+            $Response.Body.Results | Should -Contain 'Success - Removed member Nested (nested-guid) from All Office group'
+        }
+
         It 'uses Remove-DistributionGroupMember for a distribution list' {
             $Request = New-GroupRequest -GroupType 'Distribution List' -Body @{
                 RemoveMember = @(New-Member -Upn 'sseck@contoso.com' -Value 'user-guid')
@@ -374,6 +391,41 @@ Describe 'Invoke-EditGroup - membership' {
             Should -Invoke New-GraphBulkRequest -Times 1 -Exactly -ParameterFilter {
                 $Requests[0].body.'members@odata.bind' -contains 'https://graph.microsoft.com/v1.0/directoryObjects/device-guid'
             }
+        }
+
+        It 'removes a device from a security group and reports it by name and ID' {
+            $Request = New-GroupRequest -GroupType 'Security' -Body @{
+                RemoveDevice = @([pscustomobject]@{
+                        label       = 'LAPTOP-01 (Windows)'
+                        value       = 'device-guid'
+                        addedFields = [pscustomobject]@{ displayName = 'LAPTOP-01' }
+                    })
+            }
+            Mock -CommandName New-GraphBulkRequest -MockWith {
+                @([pscustomobject]@{ id = 'removeDevice-device-guid'; status = 204 })
+            }
+
+            $Response = Invoke-EditGroup -Request $Request
+
+            Should -Invoke New-GraphBulkRequest -Times 1 -Exactly -ParameterFilter {
+                $Requests[0].method -eq 'DELETE' -and
+                $Requests[0].url -eq 'groups/group-guid/members/device-guid/$ref'
+            }
+            $Response.Body.Results | Should -Contain 'Success - Removed device LAPTOP-01 (device-guid) from All Office group'
+        }
+
+        It 'rejects the whole request with 400 when a device removal targets a distribution list' {
+            $Request = New-GroupRequest -GroupType 'Distribution List' -Body @{
+                RemoveDevice = @([pscustomobject]@{ label = 'LAPTOP-01'; value = 'device-guid' })
+                AddMember    = @(New-Member -Upn 'sseck@contoso.com' -Value 'user-guid')
+            }
+
+            $Response = Invoke-EditGroup -Request $Request
+
+            $Response.StatusCode | Should -Be ([HttpStatusCode]::BadRequest)
+            $Response.Body.Results | Should -Be 'Devices cannot be removed from a Distribution List group. No changes were made.'
+            Should -Invoke New-GraphBulkRequest -Times 0 -Exactly
+            Should -Invoke New-ExoBulkRequest -Times 0 -Exactly
         }
     }
 

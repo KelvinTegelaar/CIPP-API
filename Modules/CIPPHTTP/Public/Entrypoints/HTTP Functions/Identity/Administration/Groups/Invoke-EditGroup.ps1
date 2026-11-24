@@ -33,6 +33,15 @@ function Invoke-EditGroup {
         else { 'Security' }
     }
 
+    # Devices to remove from the group, as options carrying the device's directory object ID
+    $RemoveDevices = $UserObj.RemoveDevice
+    if ($RemoveDevices -and $GroupType -in @('Distribution List', 'Mail-Enabled Security')) {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = "Devices cannot be removed from a $GroupType group. No changes were made." }
+            })
+    }
+
     $AddMembers = $UserObj.AddMember
 
     $TenantId = $UserObj.tenantId ?? $UserObj.tenantFilter
@@ -252,6 +261,7 @@ function Invoke-EditGroup {
             $RemoveMembers | ForEach-Object {
                 $Member = $_.addedFields.userPrincipalName ?? $_.value
                 $MemberID = $_.value
+                $MemberLabel = if (-not $_.addedFields.userPrincipalName -and $_.addedFields.displayName) { "$($_.addedFields.displayName) ($MemberID)" } else { $Member }
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
                     $RemoveMemberGuid = [Guid]::NewGuid().ToString()
                     $Params = @{ Identity = $GroupId; Member = $Member ; BypassSecurityGroupManagerCheck = $true }
@@ -263,7 +273,7 @@ function Invoke-EditGroup {
                             OperationGuid = $RemoveMemberGuid
                         })
                     $ExoLogs.Add(@{
-                            message       = "Removed member $Member from $($GroupName) group"
+                            message       = "Removed member $MemberLabel from $($GroupName) group"
                             target        = $Member
                             OperationGuid = $RemoveMemberGuid
                         })
@@ -274,7 +284,7 @@ function Invoke-EditGroup {
                             url    = "groups/$($GroupId)/members/$MemberID/`$ref"
                         })
                     $GraphLogs.Add(@{
-                            message = "Removed member $Member from $($GroupName) group"
+                            message = "Removed member $MemberLabel from $($GroupName) group"
                             id      = "removeMember-$Member"
                         })
                 }
@@ -282,6 +292,21 @@ function Invoke-EditGroup {
         }
     } catch {
         Write-Warning "Error in RemoveMembers: $($_.Exception.Message)"
+    }
+
+    foreach ($Device in @($RemoveDevices | Where-Object { $_ })) {
+        $DeviceID = $Device.value ?? $Device
+        $DeviceLabel = $Device.addedFields.displayName ?? $Device.label
+        $DeviceLabel = if ($DeviceLabel) { "$DeviceLabel ($DeviceID)" } else { $DeviceID }
+        $BulkRequests.Add(@{
+                id     = "removeDevice-$DeviceID"
+                method = 'DELETE'
+                url    = "groups/$($GroupId)/members/$DeviceID/`$ref"
+            })
+        $GraphLogs.Add(@{
+                message = "Removed device $DeviceLabel from $($GroupName) group"
+                id      = "removeDevice-$DeviceID"
+            })
     }
 
     $AddOwners = $UserObj.AddOwner

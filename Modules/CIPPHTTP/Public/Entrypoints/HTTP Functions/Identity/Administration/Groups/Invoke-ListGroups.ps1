@@ -89,7 +89,7 @@ function Invoke-ListGroups {
             })
     }
     if ($Members) {
-        $SelectString = 'id,userPrincipalName,displayName,hideFromOutlookClients,hideFromAddressLists,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule'
+        $SelectString = 'id,userPrincipalName,displayName,hideFromOutlookClients,hideFromAddressLists,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,operatingSystem'
         $BulkRequestArrayList.add(@{
                 id     = 2
                 method = 'GET'
