@@ -9626,6 +9626,9 @@
                     "JSON": {
                       "x-cipp-field-source": "storage"
                     },
+                    "ManualImport": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Package": {
                       "x-cipp-field-source": "storage"
                     },
@@ -11968,6 +11971,9 @@
                     "JSON": {
                       "x-cipp-field-source": "storage"
                     },
+                    "ManualImport": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Package": {
                       "x-cipp-field-source": "storage"
                     },
@@ -12467,6 +12473,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "JSON": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ManualImport": {
                       "x-cipp-field-source": "storage"
                     },
                     "Package": {
@@ -14988,6 +14997,9 @@
                     "JSON": {
                       "x-cipp-field-source": "storage"
                     },
+                    "ManualImport": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Metadata": {
                       "x-cipp-field-source": "backend"
                     },
@@ -15353,6 +15365,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "JSON": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ManualImport": {
                       "x-cipp-field-source": "storage"
                     },
                     "Package": {
@@ -19746,6 +19761,9 @@
                     "JSON": {
                       "x-cipp-field-source": "storage"
                     },
+                    "ManualImport": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Package": {
                       "x-cipp-field-source": "storage"
                     },
@@ -20202,6 +20220,9 @@
                     "JSON": {
                       "x-cipp-field-source": "storage"
                     },
+                    "ManualImport": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "modifiedDateTime": {
                       "type": "string",
                       "x-cipp-field-source": "graph-entity"
@@ -20393,6 +20414,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "JSON": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ManualImport": {
                       "x-cipp-field-source": "storage"
                     },
                     "Package": {
@@ -23868,6 +23892,9 @@
                     "JSON": {
                       "x-cipp-field-source": "storage"
                     },
+                    "ManualImport": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Package": {
                       "x-cipp-field-source": "storage"
                     },
@@ -26562,6 +26589,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "JSON": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ManualImport": {
                       "x-cipp-field-source": "storage"
                     },
                     "Package": {
@@ -37570,6 +37600,9 @@
                     "JSON": {
                       "x-cipp-field-source": "storage"
                     },
+                    "ManualImport": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Package": {
                       "x-cipp-field-source": "storage"
                     },
@@ -38502,6 +38535,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "JSON": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ManualImport": {
                       "x-cipp-field-source": "storage"
                     },
                     "Package": {
@@ -42080,6 +42116,9 @@
                     "JSON": {
                       "x-cipp-field-source": "storage"
                     },
+                    "ManualImport": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Package": {
                       "x-cipp-field-source": "storage"
                     },
@@ -43143,6 +43182,9 @@
                     "JSON": {
                       "x-cipp-field-source": "storage"
                     },
+                    "ManualImport": {
+                      "x-cipp-field-source": "storage"
+                    },
                     "Metadata": {
                       "x-cipp-field-source": "backend"
                     },
@@ -43930,6 +43972,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "JSON": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ManualImport": {
                       "x-cipp-field-source": "storage"
                     },
                     "Package": {
@@ -49152,6 +49197,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Package": {
                         "x-cipp-field-source": "storage"
                       },
@@ -49398,6 +49446,9 @@
                         "x-cipp-field-source": "storage,backend,frontend"
                       },
                       "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ManualImport": {
                         "x-cipp-field-source": "storage"
                       },
                       "Package": {
@@ -51630,6 +51681,9 @@
                       "label": {
                         "x-cipp-field-source": "backend"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Package": {
                         "x-cipp-field-source": "storage,frontend"
                       },
@@ -52796,6 +52850,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "name": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -53075,6 +53132,9 @@
                         "x-cipp-field-source": "frontend"
                       },
                       "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ManualImport": {
                         "x-cipp-field-source": "storage"
                       },
                       "Package": {
@@ -56141,6 +56201,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Mode": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -56626,6 +56689,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Package": {
                         "x-cipp-field-source": "storage"
                       },
@@ -57096,6 +57162,9 @@
                         "x-cipp-field-source": "storage,frontend"
                       },
                       "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ManualImport": {
                         "x-cipp-field-source": "storage"
                       },
                       "name": {
@@ -59773,6 +59842,9 @@
                       "licenses": {
                         "x-cipp-field-source": "backend"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "membershipRules": {
                         "x-cipp-field-source": "backend"
                       },
@@ -60059,6 +60131,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "name": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -60307,6 +60382,9 @@
                         "x-cipp-field-source": "storage"
                       },
                       "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ManualImport": {
                         "x-cipp-field-source": "storage"
                       },
                       "name": {
@@ -61811,6 +61889,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Package": {
                         "x-cipp-field-source": "storage,frontend"
                       },
@@ -62673,6 +62754,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Package": {
                         "x-cipp-field-source": "storage"
                       },
@@ -62820,6 +62904,9 @@
                         "x-cipp-field-source": "storage"
                       },
                       "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ManualImport": {
                         "x-cipp-field-source": "storage"
                       },
                       "Package": {
@@ -63605,6 +63692,9 @@
                       },
                       "LogData": {
                         "x-cipp-field-source": "backend"
+                      },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
                       },
                       "Message": {
                         "x-cipp-field-source": "backend"
@@ -65732,6 +65822,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Package": {
                         "x-cipp-field-source": "storage"
                       },
@@ -67227,6 +67320,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "meetsSecureFloor": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -67543,6 +67639,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Name": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -67844,6 +67943,9 @@
                         "x-cipp-field-source": "storage,frontend"
                       },
                       "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ManualImport": {
                         "x-cipp-field-source": "storage"
                       },
                       "name": {
@@ -68738,6 +68840,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Package": {
                         "x-cipp-field-source": "storage"
                       },
@@ -69369,6 +69474,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "name": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -69560,6 +69668,9 @@
                         "x-cipp-field-source": "storage,frontend"
                       },
                       "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ManualImport": {
                         "x-cipp-field-source": "storage"
                       },
                       "Name": {
@@ -70638,6 +70749,9 @@
                       },
                       "LibraryCount": {
                         "x-cipp-field-source": "frontend"
+                      },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
                       },
                       "Package": {
                         "x-cipp-field-source": "storage"
@@ -72347,6 +72461,9 @@
                       "JSON": {
                         "x-cipp-field-source": "storage"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "name": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -73849,6 +73966,9 @@
                       "LicenseMissingPercentage": {
                         "x-cipp-field-source": "backend"
                       },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Package": {
                         "x-cipp-field-source": "storage"
                       },
@@ -74101,6 +74221,9 @@
                       },
                       "listType": {
                         "x-cipp-field-source": "frontend"
+                      },
+                      "ManualImport": {
+                        "x-cipp-field-source": "storage"
                       },
                       "NoExpiration": {
                         "x-cipp-field-source": "frontend"
@@ -75176,6 +75299,9 @@
                         "x-cipp-field-source": "storage,backend,frontend"
                       },
                       "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ManualImport": {
                         "x-cipp-field-source": "storage"
                       },
                       "name": {
