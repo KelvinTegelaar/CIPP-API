@@ -1,11 +1,9 @@
 # Pester tests for the docs search tools (SearchDocs / GetDoc).
 #
 # The load-bearing claim these tools make is that every result links somewhere real. A search
-# result is only useful if its docs.cipp.app URL resolves, and the URL is derived from the file's
-# path rather than looked up - so the derivation is what gets pinned hardest here, against the
-# live list of published slugs in Config/DocsPublishedPages.txt. That check caught a rule that is
-# not guessable from a path: a folder with no README.md is a grouping folder and GitBook drops it
-# from the URL entirely, which silently moved seven pages up a level.
+# result is only useful if its docs.cipp.app URL resolves, and the URL is derived from SUMMARY.md
+# rather than looked up - so the derivation is what gets pinned hardest here, against the live
+# list of published slugs in Config/DocsPublishedPages.txt.
 
 BeforeAll {
     $BackendRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
@@ -23,17 +21,11 @@ BeforeAll {
 
     $env:CIPPRootPath = $BackendRoot
 
-    # Folders owning a README contribute a URL segment; the rest are elided.
-    $script:SectionFolder = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($Readme in [System.IO.Directory]::EnumerateFiles($script:DocsRoot, 'README.md', [System.IO.SearchOption]::AllDirectories)) {
-        $Dir = [System.IO.Path]::GetDirectoryName($Readme)
-        if ($Dir.Length -le $script:DocsRoot.Length) { continue }
-        $script:SectionFolder.Add(($Dir.Substring($script:DocsRoot.Length).TrimStart('\', '/') -replace '\\', '/')) | Out-Null
-    }
+    $script:SlugMap = Get-CippDocSlugMap -DocsRoot $script:DocsRoot
 
     function Resolve-TestLink {
         param([string]$Path, [string]$Heading)
-        return Get-CippDocLink -RelativePath $Path -Heading $Heading -SectionFolder $script:SectionFolder
+        return Get-CippDocLink -RelativePath $Path -Heading $Heading -SlugMap $script:SlugMap
     }
 }
 
@@ -76,17 +68,23 @@ Describe 'Get-CippDocLink' {
         (Resolve-TestLink -Path 'README.md').docsUrl | Should -Be 'https://docs.cipp.app/readme'
     }
 
-    It 'elides a folder that owns no README' {
-        # docs/user-documentation/email/resources has no README, so GitBook drops the segment.
+    It 'builds the URL from the parent page in SUMMARY.md, not the folder' {
+        # Resource Management is nested under the Email page, so 'resources' is not in its URL.
         (Resolve-TestLink -Path 'user-documentation/email/resources/management/equipment/edit.md').docsUrl |
             Should -Be 'https://docs.cipp.app/user-documentation/email/management/equipment/edit'
+        # team.md sits beside group.md but is nested under it.
+        (Resolve-TestLink -Path 'user-documentation/identity/administration/groups/team.md').docsUrl |
+            Should -Be 'https://docs.cipp.app/user-documentation/identity/administration/groups/group/team'
     }
 
-    It 'keeps a top-level folder even though it owns no README' {
-        # 'setup' is a SUMMARY.md '## Group', which always contributes its slug.
-        $script:SectionFolder.Contains('setup') | Should -BeFalse
+    It 'starts a top-level page from its first folder' {
         (Resolve-TestLink -Path 'setup/installation/owntenant.md').docsUrl |
             Should -Be 'https://docs.cipp.app/setup/installation/owntenant'
+    }
+
+    It 'falls back to the file path for a page missing from SUMMARY.md' {
+        (Get-CippDocLink -RelativePath 'user-documentation/not-in-summary/README.md' -SlugMap $script:SlugMap).slug |
+            Should -Be 'user-documentation/not-in-summary'
     }
 
     It 'keeps the real repo path in the GitHub link even when the docs URL elides a folder' {

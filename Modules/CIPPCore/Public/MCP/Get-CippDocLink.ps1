@@ -3,35 +3,28 @@ function Get-CippDocLink {
     .SYNOPSIS
         Derives the published docs.cipp.app URL, GitHub source URL and in-app route for a docs file.
     .DESCRIPTION
-        The docs tree is a GitBook git-sync source, so a page's published URL is its file path with
-        the '.md' dropped - there is no slug table to consult. Three link forms come out of that:
+        The docs tree is a GitBook git-sync source. GitBook builds a page's URL from its place in
+        docs/SUMMARY.md, not from its file path; -SlugMap (from Get-CippDocSlugMap) holds those URLs.
+        A page missing from SUMMARY.md is not published, and falls back to its path with '.md' dropped.
+        Three link forms come out of that:
 
           docs/setup/setting-up-cipp/install.md
             -> https://docs.cipp.app/setup/setting-up-cipp/install
             -> https://github.com/CyberDrain/CIPP/blob/dev/docs/setup/setting-up-cipp/install.md
 
-          docs/setup/setting-up-cipp/README.md   (a section index)
-            -> https://docs.cipp.app/setup/setting-up-cipp
+          docs/user-documentation/identity/administration/groups/team.md   (nested under groups/group.md in SUMMARY.md)
+            -> https://docs.cipp.app/user-documentation/identity/administration/groups/group/team
 
-        Pages under 'user-documentation/' mirror the frontend's own routing one-for-one, which is
-        the same assumption _app.js:259 already makes when it builds its "docs for this page" link.
-        That makes the mapping reversible: a doc knows which CIPP screen it documents, and a screen
-        can be traced back to its doc. Only paths under user-documentation get an AppPath; nothing
-        else in the tree corresponds to a route.
+        Pages under 'user-documentation/' mirror the frontend's own routing, which is the same
+        assumption _app.js already makes when it builds its "docs for this page" link. Only those
+        pages get an AppPath; nothing else in the tree corresponds to a route.
 
         Anchors are GitBook's heading slugs (lowercased, non-alphanumerics collapsed to hyphens),
         which is what makes a chunk-level result deep-link to the exact section it matched rather
         than to the top of a 25 KB page.
 
-        One rule is not guessable from the path alone: a folder with no README.md is a grouping
-        folder, not a page, and GitBook drops it from the URL entirely. 'email/resources' has no
-        README and publishes nothing, so its children move up a level -
-        email/resources/management/equipment/edit.md is served at email/management/equipment/edit.
-        Without this, seven pages get confidently wrong links. -SectionFolder supplies the set of
-        folders that do own a README; the index builder computes it once for the whole tree.
-
-        Only the docs URL is rewritten. The GitHub URL always keeps the real repo path, because
-        that is where the file actually lives. Not an HTTP entrypoint.
+        Only the docs URL follows SUMMARY.md. The GitHub URL always keeps the real repo path,
+        because that is where the file actually lives. Not an HTTP entrypoint.
     .FUNCTIONALITY
         Internal
     #>
@@ -44,36 +37,21 @@ function Get-CippDocLink {
         # Optional heading text to deep-link to within the page.
         [string]$Heading,
 
-        # Folder paths (relative to the docs root, '/'-separated) that contain a README.md.
-        # Any ancestor folder absent from this set is elided from the published URL.
-        [System.Collections.Generic.HashSet[string]]$SectionFolder
+        # Published slug per docs-relative path, from Get-CippDocSlugMap.
+        [System.Collections.Generic.Dictionary[string, string]]$SlugMap
     )
 
     $Clean = $RelativePath -replace '\\', '/' -replace '^\./', '' -replace '^/', ''
-    $Slug = $Clean -replace '(?i)\.md$', ''
+    $Slug = $null
+    if ($SlugMap) { $null = $SlugMap.TryGetValue($Clean, [ref]$Slug) }
 
-    # A README is the index of the folder it sits in, so it publishes at the folder's own URL.
-    # The docs root README is the site root, which GitBook publishes as /readme rather than /.
-    if ($Slug -match '(?i)^README$') {
-        $Slug = 'readme'
-    } elseif ($Slug -match '(?i)/README$') {
-        $Slug = $Slug -replace '(?i)/README$', ''
-    }
-
-    # Drop grouping folders. The final segment is the page itself and always survives. A
-    # top-level folder is a SUMMARY.md '## Group' and always contributes its slug even though
-    # it owns no README ('setup' has none, yet every setup page is served under /setup).
-    # Below that, a folder only earns a URL slot by owning a README.
-    if ($SectionFolder -and $Slug -ne 'readme') {
-        $Segments = @($Slug -split '/')
-        if ($Segments.Count -gt 1) {
-            $Kept = [System.Collections.Generic.List[string]]::new()
-            for ($i = 0; $i -lt $Segments.Count - 1; $i++) {
-                $Folder = ($Segments[0..$i] -join '/')
-                if ($i -eq 0 -or $SectionFolder.Contains($Folder)) { $Kept.Add($Segments[$i]) }
-            }
-            $Kept.Add($Segments[-1])
-            $Slug = $Kept -join '/'
+    if (-not $Slug) {
+        # A README is the index of its folder; the docs root README publishes as /readme.
+        $Slug = $Clean -replace '(?i)\.md$', ''
+        if ($Slug -match '(?i)^README$') {
+            $Slug = 'readme'
+        } elseif ($Slug -match '(?i)/README$') {
+            $Slug = $Slug -replace '(?i)/README$', ''
         }
     }
 
@@ -122,4 +100,48 @@ function Get-CippDocAnchor {
     $Text = $Text -replace '[\s\-]+', '-'
 
     return $Text.Trim('-')
+}
+
+function Get-CippDocSlugMap {
+    <#
+    .SYNOPSIS
+        Maps every page in docs/SUMMARY.md to the URL slug GitBook publishes it at.
+    .DESCRIPTION
+        GitBook serves a page at its parent page's URL plus its own name: the folder name for a
+        README, the file name otherwise. A top-level page under a '## Group' heading starts from
+        the first folder of its path. So groups/team.md nested under groups/group.md is served at
+        groups/group/team, and email/resources/management/README.md nested under email/README.md
+        is served at email/management. Not an HTTP entrypoint.
+    .FUNCTIONALITY
+        Internal
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$DocsRoot)
+
+    $Map = [System.Collections.Generic.Dictionary[string, string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $Summary = Join-Path $DocsRoot 'SUMMARY.md'
+    if (-not [System.IO.File]::Exists($Summary)) { return , $Map }
+
+    $Parents = [System.Collections.Generic.List[object]]::new()
+    foreach ($Line in [System.IO.File]::ReadAllLines($Summary)) {
+        if ($Line.StartsWith('## ')) { $Parents.Clear(); continue }
+        if ($Line -notmatch '^(\s*)\*\s+\[[^\]]*\]\(([^)\s]+\.md)(?:\s+"[^"]*")?\)') { continue }
+        $Indent = $Matches[1].Length
+        $Path = $Matches[2]
+        while ($Parents.Count -and $Parents[$Parents.Count - 1].Indent -ge $Indent) { $Parents.RemoveAt($Parents.Count - 1) }
+
+        $Segments = $Path -split '/'
+        $Name = if ($Segments[-1] -ne 'README.md') { $Segments[-1] -replace '(?i)\.md$', '' } elseif ($Segments.Count -gt 1) { $Segments[-2] } else { 'readme' }
+        $Slug = if ($Parents.Count) {
+            "$($Parents[$Parents.Count - 1].Slug)/$Name"
+        } elseif ($Segments.Count -gt 2 -or ($Segments.Count -eq 2 -and $Segments[1] -ne 'README.md')) {
+            "$($Segments[0])/$Name"
+        } else {
+            $Name
+        }
+
+        $null = $Map.TryAdd($Path, $Slug)
+        $Parents.Add([pscustomobject]@{ Indent = $Indent; Slug = $Slug })
+    }
+    return , $Map
 }

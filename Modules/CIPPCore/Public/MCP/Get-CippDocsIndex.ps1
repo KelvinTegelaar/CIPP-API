@@ -55,13 +55,7 @@ function Get-CippDocsIndex {
 
     $RootLength = $DocsRoot.Length
 
-    # Folders owning a README are real pages and contribute a URL segment; the rest are elided.
-    $SectionFolder = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($Readme in [System.IO.Directory]::EnumerateFiles($DocsRoot, 'README.md', [System.IO.SearchOption]::AllDirectories)) {
-        $Dir = [System.IO.Path]::GetDirectoryName($Readme)
-        if ($Dir.Length -le $RootLength) { continue }
-        $SectionFolder.Add(($Dir.Substring($RootLength).TrimStart('\', '/') -replace '\\', '/')) | Out-Null
-    }
+    $SlugMap = Get-CippDocSlugMap -DocsRoot $DocsRoot
 
     # What GitBook actually publishes, so the index never invents a link.
     $Published = Get-CippDocsPublishedSet
@@ -76,7 +70,7 @@ function Get-CippDocsIndex {
         if ($Rel -like 'legacy-setup-hidden-from-nav/*') { continue }
 
         $Parsed = ConvertFrom-CippDocMarkdown -Markdown ([System.IO.File]::ReadAllText($FullPath)) -RelativePath $Rel
-        $Link = Get-CippDocLink -RelativePath $Rel -SectionFolder $SectionFolder
+        $Link = Get-CippDocLink -RelativePath $Rel -SlugMap $SlugMap
 
         $IsPublished = if ($null -eq $Published) { $true } else { $Published.Contains($Link.slug) }
 
