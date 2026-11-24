@@ -212,6 +212,10 @@ function Invoke-ExecCippReplacemap {
                         })
                 }
                 $VariableValue = $Request.Body.Value
+                # An API caller can post a list or json value as a real array or object; keep it as JSON text, not [string]-joined.
+                if ($VariableValue -is [array] -or $VariableValue -is [pscustomobject] -or $VariableValue -is [System.Collections.IDictionary]) {
+                    $VariableValue = ConvertTo-Json -InputObject $VariableValue -Depth 100 -Compress
+                }
                 $VariableDescription = $Request.Body.Description
 
                 # The type decides how the variable is written into a template. String is substituted as

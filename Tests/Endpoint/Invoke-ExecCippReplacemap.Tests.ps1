@@ -174,6 +174,27 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
             $script:SavedEntity.Value | Should -Be '["Site A","Site, B","Site \"C\""]'
         }
 
+        It 'stores a list posted as a real JSON array, not space-joined' {
+            $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'sites' -Value @('Site A', 'Site, B') -VariableType 'list')
+
+            $Response.StatusCode | Should -Be 200
+            $script:SavedEntity.Value | Should -Be '["Site A","Site, B"]'
+        }
+
+        It 'stores a one-item list posted as a real JSON array' {
+            $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'sites' -Value @(, 'Site A') -VariableType 'list')
+
+            $Response.StatusCode | Should -Be 200
+            $script:SavedEntity.Value | Should -Be '["Site A"]'
+        }
+
+        It 'stores a json variable posted as a real object' {
+            $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'cfg' -Value ([pscustomobject]@{ a = 1; b = @(2, 3) }) -VariableType 'json')
+
+            $Response.StatusCode | Should -Be 200
+            $script:SavedEntity.Value | Should -Be '{"a":1,"b":[2,3]}'
+        }
+
         It 'stores a collection typed one value per line as a JSON array' {
             $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'tenants' -Value "tenant-a`ntenant-b" -VariableType 'collection')
 
