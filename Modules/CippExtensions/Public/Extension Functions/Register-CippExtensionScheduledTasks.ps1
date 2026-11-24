@@ -81,9 +81,8 @@ function Register-CIPPExtensionScheduledTasks {
                         $TenantMappings = if ($Mapping.tenantFilter.value -contains 'AllTenants') {
                             $Tenants
                         } else {
-                            foreach ($TenantMapping in $TenantMappings) {
-                                $TenantMapping | Where-Object { $_.customerId -eq $Mapping.tenantFilter.value -or $_.defaultDomainName -eq $Mapping.tenantFilter.value }
-                            }
+                            $TenantValues = @((Expand-CIPPTenantGroups -TenantFilter $Mapping.tenantFilter).value)
+                            $Tenants | Where-Object { $_.customerId -in $TenantValues -or $_.defaultDomainName -in $TenantValues }
                         }
                         foreach ($TenantMapping in $TenantMappings) {
                             [pscustomobject]@{

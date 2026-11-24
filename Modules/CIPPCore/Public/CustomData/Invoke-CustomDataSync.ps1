@@ -12,7 +12,11 @@ function Invoke-CustomDataSync {
     }
 
     Write-Information "Found $($Mappings.Count) Custom Data mappings"
-    $Mappings = $Mappings | Where-Object { ($_.sourceType.value -eq 'reportingDb' -or $_.sourceType.value -eq 'extensionSync') -and ($_.tenantFilter.value -contains $TenantFilter -or $_.tenantFilter.value -contains 'AllTenants') }
+    $Mappings = @($Mappings | Where-Object { ($_.sourceType.value -eq 'reportingDb' -or $_.sourceType.value -eq 'extensionSync') } | Where-Object {
+            # Expand tenant groups so group-scoped mappings match their member tenants
+            $TenantValues = @((Expand-CIPPTenantGroups -TenantFilter $_.tenantFilter).value)
+            $TenantFilter -in $TenantValues -or 'AllTenants' -in $TenantValues
+        })
 
     if ($Mappings.Count -eq 0) {
         Write-Warning "No Custom Data mappings found for tenant $TenantFilter"
