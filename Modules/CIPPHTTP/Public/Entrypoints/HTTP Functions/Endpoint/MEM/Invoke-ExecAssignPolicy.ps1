@@ -92,7 +92,7 @@ function Invoke-ExecAssignPolicy {
             }
         }
 
-        if ($AssignTo -or @($GroupIds).Count -gt 0 -or @($GroupNames).Count -gt 0 -or @($ExcludeGroupIds).Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($ExcludeGroup) -or $IsClearExclusions) {
+        if ($AssignTo -or @($GroupIds).Count -gt 0 -or @($ExcludeGroupIds).Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($ExcludeGroup) -or $IsClearExclusions) {
             $params = @{
                 PolicyId       = $ID
                 TenantFilter   = $TenantFilter
