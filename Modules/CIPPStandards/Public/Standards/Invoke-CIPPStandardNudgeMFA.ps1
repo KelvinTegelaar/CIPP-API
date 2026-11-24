@@ -91,6 +91,11 @@ function Invoke-CIPPStandardNudgeMFA {
 
     $SnoozeDuration = [int]($Settings.snoozeDurationInDays ?? 1)
     $EnforceAfterSnoozes = if ($null -eq $Settings.enforceRegistrationAfterAllowedSnoozes) { $true } else { [bool]$Settings.enforceRegistrationAfterAllowedSnoozes }
+    # Microsoft managed: Graph forces its own snooze settings, so grade against what the tenant holds
+    if ($State -eq 'default') {
+        $SnoozeDuration = [int]$CurrentCampaign.snoozeDurationInDays
+        $EnforceAfterSnoozes = [bool]$CurrentCampaign.enforceRegistrationAfterAllowedSnoozes
+    }
     # Fall back to the method already targeted in the tenant so existing templates keep their current campaign type
     $TargetedMethod = $Settings.targetedAuthenticationMethod.value ?? $Settings.targetedAuthenticationMethod ?? (@($CurrentCampaign.includeTargets).targetedAuthenticationMethod | Select-Object -First 1) ?? 'microsoftAuthenticator'
 
@@ -99,8 +104,9 @@ function Invoke-CIPPStandardNudgeMFA {
     # deliberate: NudgeMFA predates these fields and existing deployments would otherwise have their
     # portal-configured targeting overwritten to all_users on the next run. Use the literal 'AllUsers'
     # entry to target everyone explicitly.
-    $IncludeEntries = @(([string]($Settings.includeTargets ?? '')) -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-    $ExcludeEntries = @(([string]($Settings.excludeTargets ?? '')) -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    # A list variable expands to an array, so split each element rather than casting the array to one string
+    $IncludeEntries = @(@($Settings.includeTargets) -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $ExcludeEntries = @(@($Settings.excludeTargets) -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
     # $Remediation*Targets are passed to Set-CIPPRegistrationCampaign ($null = keep current targets);
     # $Desired*Targets are the fully resolved lists used for the compliance comparison below.

@@ -31,13 +31,19 @@ function Get-CIPPBaselineNudgeMFAState {
     if ($State -notin @('enabled', 'disabled', 'default')) { return @{ Current = $null; ConfigError = $true } }
     $Snooze = [int]"$($V.snoozeDurationInDays ?? 1)"
     $EnforceAfter = if ($null -eq $V.enforceRegistrationAfterAllowedSnoozes) { $true } else { [bool]($V.enforceRegistrationAfterAllowedSnoozes -eq $true) }
+    # Microsoft managed: Graph forces its own snooze settings, so grade against what the tenant holds
+    if ($State -eq 'default') {
+        $Snooze = [int]"$($Campaign.snoozeDurationInDays)"
+        $EnforceAfter = [bool]$Campaign.enforceRegistrationAfterAllowedSnoozes
+    }
     $Method = "$($V.targetedAuthenticationMethod.value ?? $V.targetedAuthenticationMethod)"
     if ([string]::IsNullOrWhiteSpace($Method)) {
         $Method = "$((@($Campaign.includeTargets).targetedAuthenticationMethod | Select-Object -First 1) ?? 'microsoftAuthenticator')"
     }
 
-    $IncludeEntries = @(("$($V.includeTargets)") -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-    $ExcludeEntries = @(("$($V.excludeTargets)") -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    # A list variable expands to an array, so split each element rather than joining the array into one string
+    $IncludeEntries = @(@($V.includeTargets) -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $ExcludeEntries = @(@($V.excludeTargets) -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
     $Groups = @()
     if ($IncludeEntries.Count -gt 0 -or $ExcludeEntries.Count -gt 0) {

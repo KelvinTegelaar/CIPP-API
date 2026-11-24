@@ -82,6 +82,27 @@ Describe 'Get-CIPPBaselineNudgeMFAState' {
         $Item.Variables.includeTargets = 'All'
         (Get-CIPPBaselineNudgeMFAState -Item $Item -TenantFilter $script:Tenant).Expected.includeTargetIds | Should -Be @('g1', 'g2')
     }
+
+    It 'resolves each entry of a list variable expanded to an array' {
+        Mock New-CIPPDbRequest {
+            if ($Type -eq 'AuthenticationMethodsPolicy') { @($script:Campaign | ConvertTo-Cached) } else { @(@{ id = 'g1'; displayName = 'Sales Execs' }, @{ id = 'g2'; displayName = 'Break Glass' } | ConvertTo-Cached) }
+        }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ state = 'enabled'; excludeTargets = @('Sales Execs', 'Break Glass') } }
+        $Prepared = Get-CIPPBaselineNudgeMFAState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.excludeTargetIds | Should -Be @('g1', 'g2')
+    }
+
+    It 'does not grade snooze settings Microsoft forces while the campaign is Microsoft managed' {
+        $Managed = @{ registrationEnforcement = @{ authenticationMethodsRegistrationCampaign = @{
+                    state = 'default'; snoozeDurationInDays = 1; enforceRegistrationAfterAllowedSnoozes = $false
+                    includeTargets = @(@{ id = 'all_users'; targetType = 'group'; targetedAuthenticationMethod = 'microsoftAuthenticator' })
+                    excludeTargets = @()
+                } } }
+        Mock New-CIPPDbRequest { @($Managed | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ state = 'default'; snoozeDurationInDays = 7; enforceRegistrationAfterAllowedSnoozes = $true } }
+        $Prepared = Get-CIPPBaselineNudgeMFAState -Item $Item -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
 }
 
 Describe 'Get-CIPPBaselineAuthenticationMethodsState' {

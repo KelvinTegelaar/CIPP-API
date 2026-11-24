@@ -79,7 +79,7 @@ function Set-CIPPRegistrationCampaign {
     } | ConvertTo-Json -Depth 10 -Compress
 
     try {
-        $Result = "Set the registration campaign state to $DesiredState targeting $DesiredMethod with a snooze duration of $DesiredSnooze day(s), $($DesiredIncludeTargets.Count) include target(s) and $($DesiredExcludeTargets.Count) exclude target(s)"
+        $Result = "Set the registration campaign state to $DesiredState targeting $DesiredMethod with a snooze duration of $DesiredSnooze day(s), $(@($DesiredIncludeTargets).Count) include target(s) and $(@($DesiredExcludeTargets).Count) exclude target(s)"
         if ($PSCmdlet.ShouldProcess('Registration campaign', "Set state to $DesiredState")) {
             $null = New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -Type PATCH -Body $Body -ContentType 'application/json' -AsApp $false
             Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
