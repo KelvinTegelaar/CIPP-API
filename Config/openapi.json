@@ -8107,7 +8107,11 @@
                     "type": "string"
                   },
                   "AddToGroups": {
-                    "type": "string",
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
                     "description": "Add to groups. Exchange-backed groups are always scheduled: a brand-new user is not an Exchange recipient yet, so an inline Add-DistributionGroupMember would fail. Graph groups are added inline, and scheduled too if the new user cannot be found yet."
                   },
                   "businessPhones": {
@@ -34641,6 +34645,138 @@
         ],
         "x-cipp-role": "Tenant.Administration.ReadWrite",
         "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ExecOnboardUser": {
+      "post": {
+        "summary": "ExecOnboardUser",
+        "operationId": "ExecOnboardUser",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Runs the user onboarding wizard for a returning user: one scheduled onboarding job that applies\nthe selected fixes, immediately or at the scheduled time, reporting live progress under one job\nid. Action=Rerun queues an existing onboarding task again; Action=RerunStep queues one step of\nit, reported to the same progress row.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
+                  "Fixes": {
+                    "type": "string",
+                    "description": "The fixes to run, each { Key, Params }"
+                  },
+                  "PostExecution": {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "boolean"
+                      },
+                      "psa": {
+                        "type": "boolean"
+                      },
+                      "push": {
+                        "type": "boolean"
+                      },
+                      "webhook": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "PsaTicketId": {
+                    "type": "string"
+                  },
+                  "reference": {
+                    "type": "string"
+                  },
+                  "Scheduled": {
+                    "type": "object",
+                    "properties": {
+                      "date": {
+                        "type": "string"
+                      },
+                      "enabled": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "StepIndex": {
+                    "type": "integer",
+                    "description": "Zero-based index of the step, as listed in the progress row, to run again"
+                  },
+                  "StepTitle": {
+                    "type": "string",
+                    "description": "Title of that step, used to name the re-run task"
+                  },
+                  "TaskId": {
+                    "type": "string",
+                    "description": "RowKey of the onboarding task to run again"
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "user": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "The returning user: a user principal name or object id, as a string or an object with a 'value'"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.ReadWrite"
       }
     },
     "/api/ExecOneDriveCopyToUser": {
@@ -66780,6 +66916,59 @@
         "x-cipp-role": "Tenant.Administration.ReadWrite"
       }
     },
+    "/api/ListOnboardingProgress": {
+      "get": {
+        "summary": "Get the live progress of a user onboarding job",
+        "operationId": "ListOnboardingProgress",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Returns the progress rows of an onboarding job started from the wizard: one row per user with\nits overall status and the status and message of every step. Same rows and tenant scoping as\nListOffboardingProgress.",
+        "parameters": [
+          {
+            "name": "DeploymentId",
+            "in": "query",
+            "description": "The DeploymentId handed back by ExecOnboardUser (also stored on the onboarding task)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListOneDriveCopyToUser": {
       "get": {
         "summary": "OneDrive copies and their status",
@@ -76083,6 +76272,61 @@
           }
         ],
         "x-cipp-role": "Exchange.Mailbox.Read"
+      }
+    },
+    "/api/ListUserOnboardingScan": {
+      "get": {
+        "summary": "Scan an existing user for settings an offboarding left behind",
+        "operationId": "ListUserOnboardingScan",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Checks the account, mailbox, delegated access and entitlements of a returning user and returns one finding per\nsetting an offboarding left behind, each with the fix the onboarding job can run, plus the licences, groups,\nroles and manager saved when the user was offboarded. A check that fails is listed under Errors and the others\nstill return. A deleted user returns a single finding asking for the account to be restored first.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "UserId",
+            "in": "query",
+            "description": "Object id or userPrincipalName of the user to scan",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read"
       }
     },
     "/api/ListUserOneDriveShortcuts": {
