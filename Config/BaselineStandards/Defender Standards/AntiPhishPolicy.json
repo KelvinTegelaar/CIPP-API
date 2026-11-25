@@ -21,9 +21,9 @@
     "NIST SP 800-171 (3.14.6)"
   ],
   "impact": "Low Impact",
-  "helpText": "This creates an Anti-Phishing policy. On tenants without Defender for Office 365 only the settings that exist there are graded; impersonation and mailbox-intelligence protection are skipped.",
+  "helpText": "This creates an Anti-Phishing policy. On tenants without Defender for Office 365 only the settings that exist there are graded; impersonation and mailbox-intelligence protection are skipped. With Defender for Office 365, the protected user list is left as it is unless you choose All licensed users, which matches it to licensed user mailboxes and keeps existing external entries, or Only the users listed, which replaces it.",
   "executiveText": "Detects attempts to impersonate staff and partner domains, and warns employees about unusual or first-contact senders. This is the main defence against business email compromise.",
-  "docsDescription": "Creates or updates the Anti-Phishing policy and the rule that scopes it to every accepted domain. The graded property set depends on tenant licensing.",
+  "docsDescription": "Creates or updates the Anti-Phishing policy and the rule that scopes it to every accepted domain. The graded property set depends on tenant licensing. With Defender for Office 365 it can also manage the users and custom domains protected from impersonation: every enabled, licensed member with a user mailbox plus any listed users and the external entries already in the policy, or only the listed users. By default the protected user list is left as it is. Exchange allows 350 users and 50 custom domains per policy.",
   "impactColour": "info",
   "addedDate": "2024-03-25",
   "powershellEquivalent": "Set-AntiPhishPolicy or New-AntiPhishPolicy",
@@ -274,6 +274,47 @@
         }
       ],
       "default": "DefaultFullAccessPolicy"
+    },
+    "ImpersonationUserScope": {
+      "type": "autoComplete",
+      "multiple": false,
+      "creatable": false,
+      "label": "Users to protect from impersonation",
+      "helperText": "Keep the tenant's current list, the default, leaves the policy's list as it is. All licensed users protects every enabled, licensed member with a user mailbox, plus the users listed below and any external entries already in the policy. Only the users listed replaces the policy's list with the list below. Exchange allows 350 users per policy. With mailbox intelligence on, user impersonation protection applies before the sender and recipient have emailed each other.",
+      "required": true,
+      "options": [
+        {
+          "label": "Keep the tenant's current list",
+          "value": "Unmanaged"
+        },
+        {
+          "label": "All licensed users",
+          "value": "AllLicensed"
+        },
+        {
+          "label": "Only the users listed",
+          "value": "Listed"
+        }
+      ],
+      "default": "Unmanaged"
+    },
+    "TargetedUsersToProtect": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Users to protect",
+      "helperText": "Used with All licensed users or Only the users listed. Enter Display Name;address or just the address, for example CEO;ceo@contoso.com. Tenant variables such as %keypeople% are expanded for each tenant. A bare address uses its mailbox's display name when available. Enter a name to override it. Different names can share an address.",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "TargetedDomainsToProtect": {
+      "type": "autoComplete",
+      "multiple": true,
+      "creatable": true,
+      "label": "Custom domains to protect",
+      "helperText": "Partner or supplier domains, for example fabrikam.com. Leave blank to leave the policy's list as it is; the tenant's own domains are always protected. Exchange allows 50 domains per policy.",
+      "omitWhenBlank": true,
+      "default": ""
     }
   },
   "read": {
