@@ -558,6 +558,11 @@
     "description": "All Defender CVEs for Devices"
   },
   {
+    "type": "DefenderMachines",
+    "friendlyName": "Defender Devices",
+    "description": "Devices in Microsoft Defender for Endpoint with their health and antivirus status"
+  },
+  {
     "type": "AdminReportSettings",
     "friendlyName": "Admin Report Settings",
     "description": "Microsoft 365 admin report settings including display of concealed names in reports"

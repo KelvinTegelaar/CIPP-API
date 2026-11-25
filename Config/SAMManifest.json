@@ -775,6 +775,10 @@
           "type": "Role"
         },
         {
+          "id": "ea8291d3-4b9a-44b5-bc3a-6cea3026dc79",
+          "type": "Role"
+        },
+        {
           "id": "63a677ce-818c-4409-9d12-5c6d2e2a6bfe",
           "type": "Scope"
         }

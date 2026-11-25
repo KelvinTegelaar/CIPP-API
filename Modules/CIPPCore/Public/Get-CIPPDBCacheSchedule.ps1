@@ -201,6 +201,7 @@ function Get-CIPPDBCacheSchedule {
             License = 'DefenderVulnerabilityManagement'
             Types   = @(
                 'DefenderCVEs'
+                'DefenderMachines'
             )
         }
         DefenderForOffice365             = @{
