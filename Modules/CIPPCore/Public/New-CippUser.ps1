@@ -70,7 +70,6 @@ function New-CIPPUser {
             }
         }
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
-        Write-Information "Shipping: $bodyToShip"
         $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/users' -tenantId $UserObj.tenantFilter -type POST -body $BodyToship -verbose
         Write-LogMessage -headers $Headers -API $APIName -tenant $($UserObj.tenantFilter) -message "Created user $($UserObj.displayName) with id $($GraphRequest.id)" -Sev 'Info'
 
