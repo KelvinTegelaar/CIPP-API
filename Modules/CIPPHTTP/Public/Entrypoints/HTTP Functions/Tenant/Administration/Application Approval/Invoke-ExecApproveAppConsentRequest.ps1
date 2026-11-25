@@ -38,7 +38,12 @@ function Invoke-ExecApproveAppConsentRequest {
             resourceAppId  = $GraphAppId
             resourceAccess = @($GrantScopes | ForEach-Object { [pscustomobject]@{ id = $_; type = 'Scope' } })
         }
-        $Results = Add-CIPPDelegatedPermission -RequiredResourceAccess $RequiredResourceAccess -ApplicationId $AppId -TenantFilter $TenantFilter
+        $Results = [System.Collections.Generic.List[object]]::new()
+        foreach ($Result in Add-CIPPDelegatedPermission -RequiredResourceAccess $RequiredResourceAccess -ApplicationId $AppId -TenantFilter $TenantFilter) { $Results.Add($Result) }
+        $Results.Add([pscustomobject]@{
+                resultText = 'This item will remain in progress in the Microsoft portal, due to a lack of APIs. Deny the request in the portal to make this item no longer be in progress, or wait for it to expire'
+                state      = 'warning'
+            })
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Approved consent request for $($ConsentRequest.appDisplayName): $($Scopes -join ', ')" -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {

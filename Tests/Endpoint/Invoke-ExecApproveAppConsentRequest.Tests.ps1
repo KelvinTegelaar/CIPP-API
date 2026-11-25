@@ -45,7 +45,9 @@ Describe 'Invoke-ExecApproveAppConsentRequest' {
         Set-GraphMocks
         $Response = Invoke-ExecApproveAppConsentRequest -Request $script:Request
         $Response.StatusCode | Should -Be 200
-        $Response.Body.Results | Should -Be 'Successfully added permissions for Microsoft Graph'
+        $Response.Body.Results[0] | Should -Be 'Successfully added permissions for Microsoft Graph'
+        $Response.Body.Results[1].state | Should -Be 'warning'
+        $Response.Body.Results[1].resultText | Should -BeLike 'This item will remain in progress in the Microsoft portal*'
         Should -Invoke New-GraphPOSTRequest -Times 0 -Exactly
         Should -Invoke Add-CIPPDelegatedPermission -Times 1 -Exactly -ParameterFilter {
             $ApplicationId -eq $script:App -and $RequiredResourceAccess.resourceAppId -eq '00000003-0000-0000-c000-000000000000' -and
