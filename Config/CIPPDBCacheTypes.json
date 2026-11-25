@@ -563,6 +563,11 @@
     "description": "Devices in Microsoft Defender for Endpoint with their health and antivirus status"
   },
   {
+    "type": "DefenderIndicators",
+    "friendlyName": "Defender Indicators",
+    "description": "Custom file, certificate, IP, URL and domain indicators in Microsoft Defender for Endpoint"
+  },
+  {
     "type": "AdminReportSettings",
     "friendlyName": "Admin Report Settings",
     "description": "Microsoft 365 admin report settings including display of concealed names in reports"

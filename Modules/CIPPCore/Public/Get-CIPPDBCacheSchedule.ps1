@@ -202,6 +202,7 @@ function Get-CIPPDBCacheSchedule {
             Types   = @(
                 'DefenderCVEs'
                 'DefenderMachines'
+                'DefenderIndicators'
             )
         }
         DefenderForOffice365             = @{
