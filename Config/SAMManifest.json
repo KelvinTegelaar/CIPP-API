@@ -779,6 +779,14 @@
           "type": "Role"
         },
         {
+          "id": "7e4e1300-e1b9-4102-88ba-f0cb6e6d5974",
+          "type": "Role"
+        },
+        {
+          "id": "a86d9824-b2b6-45f8-b042-16bc4922ed4e",
+          "type": "Role"
+        },
+        {
           "id": "63a677ce-818c-4409-9d12-5c6d2e2a6bfe",
           "type": "Scope"
         }
