@@ -41643,6 +41643,103 @@
         "x-cipp-role": "Exchange.Mailbox.ReadWrite"
       }
     },
+    "/api/ExecSetMailboxComposeSettings": {
+      "post": {
+        "summary": "ExecSetMailboxComposeSettings",
+        "operationId": "ExecSetMailboxComposeSettings",
+        "tags": [
+          "Email-Exchange > Administration"
+        ],
+        "description": "Sets the Outlook on the web compose settings of one mailbox: undo send delay, always show From and Bcc, forgotten attachment reminder, default reply action, message format, read receipt handling, link previews and default font. Settings left out are not changed.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "AlwaysShowBcc": {
+                    "type": "string"
+                  },
+                  "AlwaysShowFrom": {
+                    "type": "string"
+                  },
+                  "CheckForForgottenAttachments": {
+                    "type": "string"
+                  },
+                  "DefaultFontColor": {
+                    "type": "string",
+                    "description": "Default font colour as #xxxxxx."
+                  },
+                  "DefaultFontName": {
+                    "type": "string",
+                    "description": "Default compose font name, for example Aptos."
+                  },
+                  "DefaultFontSize": {
+                    "type": "string",
+                    "description": "Default font size: 1-7 is the legacy scale (3 is 12pt), 8-72 is a point size."
+                  },
+                  "DefaultFormat": {
+                    "type": "string"
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "Mailbox UPN or address."
+                  },
+                  "IsReplyAllTheDefaultResponse": {
+                    "type": "string"
+                  },
+                  "LinkPreviewEnabled": {
+                    "type": "string"
+                  },
+                  "MailSendUndoInterval": {
+                    "type": "string",
+                    "description": "Undo send delay in seconds, 0 to 10. 0 turns undo send off."
+                  },
+                  "ReadReceiptResponse": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ID",
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Exchange.Mailbox.ReadWrite"
+      }
+    },
     "/api/ExecSetMailboxCustomAttributes": {
       "post": {
         "summary": "ExecSetMailboxCustomAttributes",
@@ -76093,7 +76190,16 @@
                       "AdditionalEmailAddresses": {
                         "x-cipp-field-source": "backend"
                       },
+                      "AlwaysShowBcc": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "AlwaysShowFrom": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "ArchiveGuid": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "CheckForForgottenAttachments": {
                         "x-cipp-field-source": "backend"
                       },
                       "ComplianceTagHoldApplied": {
@@ -76102,6 +76208,18 @@
                       "Data": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
+                      },
+                      "DefaultFontColor": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "DefaultFontName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "DefaultFontSize": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "DefaultFormat": {
+                        "x-cipp-field-source": "backend"
                       },
                       "DeliverToMailboxAndForward": {
                         "x-cipp-field-source": "backend"
@@ -76139,7 +76257,13 @@
                       "IsExchangeCloudManaged": {
                         "x-cipp-field-source": "backend"
                       },
+                      "IsReplyAllTheDefaultResponse": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "LicensedForLitigationHold": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "LinkPreviewEnabled": {
                         "x-cipp-field-source": "backend"
                       },
                       "LitigationHoldDate": {
@@ -76149,6 +76273,9 @@
                         "x-cipp-field-source": "backend"
                       },
                       "LitigationHoldEnabled": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "MailSendUndoInterval": {
                         "x-cipp-field-source": "backend"
                       },
                       "MessageCopyForSendOnBehalfEnabled": {
@@ -76161,6 +76288,9 @@
                         "x-cipp-field-source": "storage"
                       },
                       "primarySmtpAddress": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ReadReceiptResponse": {
                         "x-cipp-field-source": "backend"
                       },
                       "recipientType": {
@@ -79193,6 +79323,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
