@@ -1,0 +1,134 @@
+{
+  "nhiData": {
+    "CaseId": "NHI-20260805090000-d4e5f6",
+    "ServicePrincipalId": "00000000-0000-0000-0000-00000000a001",
+    "AppId": "00000000-0000-0000-0000-00000000b001",
+    "DisplayName": "Sample Invoice Sync",
+    "Subject": {
+      "Id": "00000000-0000-0000-0000-00000000a001",
+      "AppId": "00000000-0000-0000-0000-00000000b001",
+      "DisplayName": "Sample Invoice Sync",
+      "ServicePrincipalType": "Application",
+      "AccountEnabled": true,
+      "CreatedDateTime": "2025-11-14T10:00:00Z",
+      "PublisherName": "Sample Software Ltd",
+      "VerifiedPublisher": "",
+      "SignInAudience": "AzureADMultipleOrgs",
+      "IsManagedIdentity": false,
+      "IsOwnApp": true,
+      "AppSignInAudience": "AzureADMultipleOrgs",
+      "PropertyLock": false,
+      "Ownership": "Registered in this tenant",
+      "IsMicrosoftApp": false,
+      "IsCippApp": false
+    },
+    "Exposure": {
+      "Risk": "High",
+      "HighestImpact": "High",
+      "PermissionCount": 3,
+      "RiskReasons": [
+        "Can read and send mail as every user (Mail.ReadWrite, Mail.Send)",
+        "A credential was added in the last 30 days"
+      ],
+      "PermissionDetails": [
+        { "Api": "Microsoft Graph", "Name": "Mail.ReadWrite", "Type": "Application", "Impact": "High", "Reason": "Reads, changes and deletes every mailbox in the tenant" },
+        { "Api": "Microsoft Graph", "Name": "Mail.Send", "Type": "Application", "Impact": "High", "Reason": "Sends mail as any user" },
+        { "Api": "Microsoft Graph", "Name": "User.Read.All", "Type": "Application", "Impact": "Low", "Reason": "Reads every user's profile" }
+      ],
+      "CredentialDetails": [
+        { "Location": "App registration", "Type": "Password", "Purpose": "Sign-in", "Expired": false, "DisplayName": "sync-2026", "KeyId": "00000000-0000-0000-0000-00000000c001", "AddedDateTime": "2026-08-01T22:14:00Z", "AddedBy": "helper.admin@example.com", "StartDateTime": "2026-07-01T00:00:00Z", "EndDateTime": "2028-08-01T22:14:00Z", "LastSignInDateTime": "2026-08-04T03:12:00Z", "Flags": ["AddedRecently", "Backdated"] },
+        { "Location": "App registration", "Type": "Certificate", "Purpose": "Sign-in", "Expired": false, "DisplayName": "prod-cert", "KeyId": "00000000-0000-0000-0000-00000000c002", "AddedDateTime": "2025-11-14T10:05:00Z", "AddedBy": "it.admin@example.com", "StartDateTime": "2025-11-14T10:05:00Z", "EndDateTime": "2026-11-14T10:05:00Z", "LastSignInDateTime": "2026-08-05T06:00:00Z", "Flags": [] }
+      ]
+    },
+    "Owners": [
+      { "DisplayName": "IT Admin", "UserPrincipalName": "it.admin@example.com", "UserType": "Member", "IsApp": false, "OwnerOf": "App registration" },
+      { "DisplayName": "Helper Admin", "UserPrincipalName": "helper.admin@example.com", "UserType": "Member", "IsApp": false, "OwnerOf": "App registration" }
+    ],
+    "AppRoleAssignments": [
+      { "ResourceDisplayName": "Microsoft Graph", "Permission": "Mail.ReadWrite", "CreatedDateTime": "2025-11-14T10:10:00Z", "InWindow": false },
+      { "ResourceDisplayName": "Microsoft Graph", "Permission": "Mail.Send", "CreatedDateTime": "2026-08-02T08:30:00Z", "InWindow": true }
+    ],
+    "DelegatedGrants": [],
+    "DirectoryRoles": [],
+    "RogueMatch": null,
+    "RiskState": { "riskState": "atRisk", "riskLevel": "medium" },
+    "RiskDetections": [
+      { "riskEventType": "suspiciousSignins", "riskLevel": "medium", "activityDateTime": "2026-08-03T02:40:00Z", "ipAddress": "203.0.113.45" }
+    ],
+    "FlaggedKeyIds": ["00000000-0000-0000-0000-00000000c001"],
+    "Changes": [
+      { "ActivityDateTime": "2026-08-01T22:14:00Z", "Activity": "Update application - Certificates and secrets management", "Kind": "Credential", "Result": "success", "InitiatedBy": "helper.admin@example.com", "InitiatedByType": "User", "ClientIP": "203.0.113.45", "BySelf": false, "ByCipp": false, "ByApp": false, "InWindow": true, "Flagged": true, "Detail": "KeyDescription" },
+      { "ActivityDateTime": "2026-08-02T08:30:00Z", "Activity": "Add app role assignment to service principal", "Kind": "Grant", "Result": "success", "InitiatedBy": "helper.admin@example.com", "InitiatedByType": "User", "ClientIP": "203.0.113.45", "BySelf": false, "ByCipp": false, "ByApp": false, "InWindow": true, "Flagged": true, "Detail": "AppRole.Value" }
+    ],
+    "Consents": [],
+    "SignInSummary": { "Total": 412, "Success": 398, "Failed": 14, "Capped": false },
+    "SignInsByIP": [],
+    "SignInsByCredential": [
+      { "KeyId": "00000000-0000-0000-0000-00000000c002", "CredentialType": "clientAssertion", "Count": 380, "Success": 380, "Failed": 0, "First": "2026-07-29T06:00:00Z", "Last": "2026-08-05T06:00:00Z", "IPs": ["198.51.100.10"] },
+      { "KeyId": "00000000-0000-0000-0000-00000000c001", "CredentialType": "clientSecret", "Count": 32, "Success": 18, "Failed": 14, "First": "2026-08-02T01:05:00Z", "Last": "2026-08-04T03:12:00Z", "IPs": ["203.0.113.45"] }
+    ],
+    "RecentSignIns": [],
+    "Baseline": { "Total": 1520, "Capped": false },
+    "Dormant": false,
+    "DelegatedSignIns": [],
+    "DirectoryActions": [
+      { "ActivityDateTime": "2026-08-03T02:55:00Z", "Activity": "Add app role assignment to service principal", "Kind": "Elevation", "Severity": "Critical", "InWindow": true, "ElevationType": "Application permission", "Permission": "Microsoft Graph RoleManagement.ReadWrite.Directory", "Impact": "Critical", "Recipient": "App", "RecipientName": "Sample Helper Tool", "RecipientId": "00000000-0000-0000-0000-00000000a002", "Targets": [] },
+      { "ActivityDateTime": "2026-08-03T03:02:00Z", "Activity": "Update application - Certificates and secrets management", "Kind": "AppPersistence", "Severity": "Critical", "InWindow": true, "Lateral": true, "CreatedApp": false, "TargetDisplayName": "Sample Helper Tool", "TargetServicePrincipalId": "00000000-0000-0000-0000-00000000a002", "TargetProtected": false, "Targets": [] }
+    ],
+    "WorkloadActivity": {
+      "ByOperation": [{ "Operation": "MailItemsAccessed", "Count": 2140 }, { "Operation": "Send", "Count": 36 }],
+      "Mailboxes": [
+        { "Mailbox": "finance.lead@example.com", "Count": 1210, "Operations": ["MailItemsAccessed", "Send"], "IPs": ["203.0.113.45"], "First": "2026-08-03T03:10:00Z", "Last": "2026-08-04T03:12:00Z" },
+        { "Mailbox": "ceo@example.com", "Count": 930, "Operations": ["MailItemsAccessed"], "IPs": ["203.0.113.45"], "First": "2026-08-03T03:15:00Z", "Last": "2026-08-04T02:58:00Z" }
+      ],
+      "Sites": [],
+      "InboxRules": [
+        { "CreationTime": "2026-08-03T03:20:00Z", "Operation": "New-InboxRule", "Mailbox": "finance.lead@example.com", "ClientIP": "203.0.113.45" }
+      ],
+      "ByIP": [{ "IP": "203.0.113.45", "Count": 2176, "Kinds": ["Mail", "Rule"], "IPVerdict": "LikelyAttacker" }]
+    },
+    "WorkloadSummary": { "MailboxCount": 2, "MailItemCount": 2140, "SendCount": 36, "FileCount": 0, "SiteCount": 0, "RuleCount": 1, "AnonymousLinkCount": 0 },
+    "WorkloadBaseline": { "Mailboxes": [], "Sites": [], "Operations": 0, "SendCount": 0, "AnonymousLinkCount": 0, "Complete": true },
+    "IPVerdicts": [
+      { "IP": "203.0.113.45", "Verdict": "LikelyAttacker", "Score": 9, "Reasons": [{ "Code": "FlaggedCredential", "Text": "Signed in with a flagged credential", "Weight": 5 }, { "Code": "NewNetwork", "Text": "A network the app never used before", "Weight": 3 }, { "Code": "Hosting", "Text": "Hosting provider network", "Weight": 1 }], "SignIns": 32, "SuccessfulSignIns": 18, "FailedSignIns": 14, "Activities": 2176, "FirstSeen": "2026-08-02T01:05:00Z", "LastSeen": "2026-08-04T03:12:00Z", "Country": "NL", "City": "Amsterdam", "ASName": "Sample Hosting BV" },
+      { "IP": "198.51.100.10", "Verdict": "Expected", "Score": -4, "Reasons": [{ "Code": "BaselineAddress", "Text": "Used before the window", "Weight": -4 }], "SignIns": 380, "SuccessfulSignIns": 380, "FailedSignIns": 0, "Activities": 0, "FirstSeen": "2026-07-29T06:00:00Z", "LastSeen": "2026-08-05T06:00:00Z", "Country": "GB", "City": "London", "ASName": "Sample Cloud" }
+    ],
+    "Completeness": {
+      "DelegatedUse": { "Complete": true, "Skipped": true, "Requirement": "not applicable to an app only this tenant can use" },
+      "RiskDetections": { "Complete": true, "Skipped": false }
+    },
+    "AnalysisWindowDays": 7,
+    "BaselineDays": 30,
+    "StartDate": "2026-07-29T09:00:00Z",
+    "EndDate": "2026-08-05T09:00:00Z",
+    "BaselineStart": "2026-06-29T09:00:00Z",
+    "ExtractedAt": "2026-08-05T09:00:00Z",
+    "Score": {
+      "Value": 23,
+      "EvidenceLevel": "High",
+      "Impact": "High",
+      "ImpactKnown": true,
+      "Level": "Critical",
+      "Thresholds": { "High": 7, "Medium": 4 },
+      "Breakdown": [
+        { "Signal": "CredentialAdded", "Description": "A sign-in credential was added to the app in the window, other than a rotation", "Weight": 3, "Count": 1, "Applied": true },
+        { "Signal": "CredentialBackdated", "Description": "A credential's start date was set before it was added", "Weight": 4, "Count": 1, "Applied": true },
+        { "Signal": "FlaggedCredentialUsed", "Description": "A flagged credential (added recently, by another app, backdated or trusting an unknown issuer) signed in", "Weight": 5, "Count": 1, "Applied": true },
+        { "Signal": "AttackerIPs", "Description": "Sign-ins or activity from addresses judged to be an attacker", "Weight": 4, "Count": 1, "Applied": true },
+        { "Signal": "AppElevation", "Description": "Elevation: the app gave another app a high-impact permission or directory role", "Weight": 4, "Count": 1, "Applied": true },
+        { "Signal": "NewMailSending", "Description": "The app sent mail, which it did not do in the 30 days before the window", "Weight": 3, "Count": 36, "Applied": true }
+      ]
+    }
+  },
+  "containment": [
+    {
+      "At": "2026-08-05T09:30:00Z",
+      "By": "tech@example.com",
+      "Kind": "Containment",
+      "Results": [
+        { "Action": "DisableServicePrincipal", "Target": "Sample Invoice Sync", "state": "success", "resultText": "Disabled the app in this tenant" },
+        { "Action": "RemoveCredentials", "Target": "sync-2026", "state": "success", "resultText": "Removed the credential sync-2026" }
+      ]
+    }
+  ]
+}

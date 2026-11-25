@@ -204,6 +204,72 @@ Describe 'Report tree builders' {
         $Enabled = Build-CippBecReportTree -TenantName 'Contoso' -UserData @{ userPrincipalName = 'alice@contoso.com' } -BecData @{ ExtractedAt = '2026-09-01T00:00:00Z'; NewRules = @($Rule) }
         (& $Rows $Enabled | Where-Object { $_.text -like 'Disable the 1 suspicious inbox rule*' }).text | Should -Match 'Old forwarder'
     }
+
+    It 'NHI: renders the stored level, the actions from what was found and the containment run, and names the app on the cover' {
+        $Sample = Get-Content (Join-Path $RepoRoot 'Config/ReportSamples/nhi.json') -Raw | ConvertFrom-Json
+        $r = Build-CippNhiReportTree -TenantName 'Contoso' -NhiData $Sample.nhiData -Containment $Sample.containment
+        ($r.Blocks | Where-Object { $_.type -eq 'alertbox' -and $_.title -like 'Case Level:*' }).title | Should -Be 'Case Level: Critical'
+        $r.Variables.covertenant | Should -Be 'Sample Invoice Sync'
+        $r.Variables.footerlabel | Should -Be 'Contoso - App Compromise Report for Sample Invoice Sync'
+        $Actions = @(($r.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[0].header -eq 'Priority' }).rows)
+        $Actions[0].text | Should -BeLike 'Disable Sample Invoice Sync in this tenant*'
+        ($Actions | Where-Object { $_.text -like 'Remove the 1 flagged credential(s) (sync-2026)*' }).tag | Should -Be 'Critical'
+        ($Actions | Where-Object { $_.text -like 'Revoke the 1 high-impact*' }).text | Should -Match 'RoleManagement.ReadWrite.Directory to Sample Helper Tool'
+        ($Actions | Where-Object { $_.text -like 'Block the 1 attacker address(es) (203.0.113.45)*' }) | Should -Not -BeNullOrEmpty
+        $Timeline = @(($r.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[1].header -eq 'Event' }).rows)
+        $Timeline[0].event | Should -Be 'Update application - Certificates and secrets management' -Because 'events run oldest first'
+        $Remediation = @(($r.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[-1].header -eq 'State' }).rows)
+        $Remediation[0].action | Should -Be 'Disable Service Principal'
+        $Skipped = $r.Blocks | Where-Object { $_.type -eq 'alertbox' -and $_.title -like '*could not run' }
+        $Skipped.content | Should -Be 'DelegatedUse: not applicable to an app only this tenant can use'
+        Test-Report $r 'Security Incident Report'
+    }
+
+    It 'NHI: never names the other tenants the app is in' {
+        $Sample = Get-Content (Join-Path $RepoRoot 'Config/ReportSamples/nhi.json') -Raw | ConvertFrom-Json
+        $Sample.nhiData | Add-Member -NotePropertyName 'OtherTenants' -NotePropertyValue @([pscustomobject]@{ Tenant = 'secret-customer.onmicrosoft.com' })
+        $Sample.nhiData.Completeness | Add-Member -NotePropertyName 'OtherTenants' -NotePropertyValue ([pscustomobject]@{ Complete = $false; Error = 'secret-customer.onmicrosoft.com unreachable' })
+        $r = Build-CippNhiReportTree -TenantName 'Contoso' -NhiData $Sample.nhiData
+        ($r.Blocks | ConvertTo-Json -Depth 10) | Should -Not -Match 'secret-customer'
+    }
+
+    It 'NHI: marks actions containment completed, unless a release undid them or they failed' {
+        $Sample = Get-Content (Join-Path $RepoRoot 'Config/ReportSamples/nhi.json') -Raw | ConvertFrom-Json
+        $Rows = { param($r) @(($r.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[0].header -eq 'Priority' }).rows) }
+        $Containment = @(
+            @{ At = '2026-08-05T09:30:00Z'; Results = @(@{ Action = 'DisableServicePrincipal'; state = 'success' }, @{ Action = 'RemoveCredentials'; state = 'success' }, @{ Action = 'RevokeElevation'; state = 'error' }) }
+            @{ At = '2026-08-05T10:00:00Z'; Kind = 'Release'; Results = @(@{ Action = 'DisableServicePrincipal'; state = 'success' }, @{ Action = 'RemoveCredentials'; state = 'info' }) }
+        )
+        $r = Build-CippNhiReportTree -TenantName 'Contoso' -NhiData $Sample.nhiData -Containment $Containment
+        $Actions = & $Rows $r
+        ($Actions | Where-Object { $_.text -like 'Disable Sample Invoice Sync*' }).text | Should -Not -Match 'Completed' -Because 'the release re-enabled the app'
+        ($Actions | Where-Object { $_.text -like 'Remove the 1 flagged credential(s)*' }).text | Should -Match "`nCompleted " -Because 'a release does not restore removed credentials'
+        ($Actions | Where-Object { $_.text -like 'Revoke the 1 high-impact*' }).text | Should -Not -Match 'Completed' -Because 'it failed'
+        $Remediation = @(($r.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[-1].header -eq 'State' }).rows)
+        $Remediation[0].action | Should -Be 'Release: Disable Service Principal' -Because 'newest first, and a release is named as one'
+    }
+
+    It 'NHI: counts a federated credential that signed in once, and attacker activity in its own row' {
+        $Sample = Get-Content (Join-Path $RepoRoot 'Config/ReportSamples/nhi.json') -Raw | ConvertFrom-Json
+        $Data = $Sample.nhiData
+        $Data.Exposure.CredentialDetails = @([pscustomobject]@{ Location = 'App registration'; Type = 'Federated'; Purpose = 'Sign-in'; DisplayName = 'gh'; KeyId = 'f1'; Issuer = 'https://evil.example'; Flags = @('UntrustedIssuer') })
+        $Data.FlaggedKeyIds = @('f1')
+        $Data.SignInsByCredential = @([pscustomobject]@{ KeyId = 'f1'; Count = 3; Success = 3; Failed = 0 })
+        $Data.Score.Breakdown = @([pscustomobject]@{ Signal = 'AttackerWorkload'; Weight = 4; Count = 2176; Applied = $true })
+        $r = Build-CippNhiReportTree -TenantName 'Contoso' -NhiData $Data
+        $Glance = @(($r.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[0].header -eq 'Check' }).rows)
+        ($Glance | Where-Object area -EQ 'Flagged credentials').result | Should -Be '1 flagged - 1 high-risk'
+        ($Glance | Where-Object area -EQ 'Mailboxes and files beyond its usual reach').result | Should -Be 'Clear'
+        ($Glance | Where-Object area -EQ 'Mail and file activity from attacker addresses').result | Should -Be '2176 flagged - 2176 high-risk'
+    }
+
+    It 'NHI: a quiet case with almost no data is Low, asks only for monitoring and renders' {
+        $r = Build-CippNhiReportTree -TenantName 'Contoso' -NhiData @{ DisplayName = 'Quiet App'; AppId = 'a1'; ExtractedAt = '2026-09-01T00:00:00Z'; Score = @{ Level = 'Low'; Value = 0 } }
+        ($r.Blocks | Where-Object { $_.type -eq 'alertbox' -and $_.title -like 'Case Level:*' }).title | Should -Be 'Case Level: Low'
+        $Actions = @(($r.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[0].header -eq 'Priority' }).rows)
+        @($Actions.tag) | Should -Be @('Monitor')
+        Test-Report $r 'Security Incident Report'
+    }
 }
 
 Describe 'License report tree' {
