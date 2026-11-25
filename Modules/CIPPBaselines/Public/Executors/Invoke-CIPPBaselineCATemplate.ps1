@@ -8,7 +8,8 @@ function Invoke-CIPPBaselineCATemplate {
         legacy configs) and deploys it through the existing New-CIPPCAPolicy machinery:
         displayName replacement (users/groups/locations resolved per tenant), the
         configured state ('donotchange' keeps the existing policy's state), optional
-        Security Defaults disable and optional group creation. The spec arrives fully
+        Security Defaults disable, optional group creation and optional create-only named
+        locations (missing ones are created, existing ones only linked). The spec arrives fully
         rendered.
     .FUNCTIONALITY
         Internal
@@ -33,5 +34,5 @@ function Invoke-CIPPBaselineCATemplate {
     if (-not $Template) { throw "Conditional Access template '$TemplateRef' was not found in the template store." }
 
     $State = if ("$($Remediate.state)" -in @('', 'donotchange')) { 'donotchange' } else { "$($Remediate.state)" }
-    $null = New-CIPPCAPolicy -RawJSON $Template.JSON -TenantFilter $TenantFilter -State $State -Overwrite $true -ReplacePattern 'displayName' -DisableSD ([bool]($Remediate.disableSD -eq $true)) -CreateGroups ([bool]($Remediate.createGroups -eq $true)) -APIName 'Baselines'
+    $null = New-CIPPCAPolicy -RawJSON $Template.JSON -TenantFilter $TenantFilter -State $State -Overwrite $true -ReplacePattern 'displayName' -DisableSD ([bool]($Remediate.disableSD -eq $true)) -CreateGroups ([bool]($Remediate.createGroups -eq $true)) -NamedLocationsCreateOnly ([bool]($Remediate.namedLocationsCreateOnly -eq $true)) -APIName 'Baselines'
 }

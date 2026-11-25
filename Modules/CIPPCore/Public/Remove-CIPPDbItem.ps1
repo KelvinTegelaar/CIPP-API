@@ -90,12 +90,10 @@ function Remove-CIPPDbItem {
 
                 if ($CountEntity -and $CountEntity.DataCount -gt 0) {
                     $CountEntity.DataCount = [int]$CountEntity.DataCount - 1
-                    Add-CIPPAzDataTableEntity @Table -Entity @{
-                        PartitionKey = $CountEntity.PartitionKey
-                        RowKey       = $CountEntity.RowKey
-                        DataCount    = $CountEntity.DataCount
-                        ETag         = $CountEntity.ETag
-                    } -Force | Out-Null
+                    Add-CIPPAzDataTableEntity @Table -Entity @(
+                        @{ PartitionKey = $CountEntity.PartitionKey; RowKey = $CountEntity.RowKey; DataCount = $CountEntity.DataCount; ETag = $CountEntity.ETag }
+                        @{ PartitionKey = 'CippCounts'; RowKey = "$Type|$TenantFilter"; Tenant = $TenantFilter; DataCount = $CountEntity.DataCount; Type = $Type }
+                    ) -Force | Out-Null
                     Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -message "Decremented $Type count to $($CountEntity.DataCount)" -sev Debug
                 }
             } catch {

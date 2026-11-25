@@ -13,6 +13,8 @@ BeforeAll {
 
     function Get-CIPPDbItem { param($TenantFilter, $Type, [switch]$ByTenant, $Partition) }
     function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) }
+    function Get-CIPPTable { param($tablename) @{ Context = 'ctx' } }
+    function Get-CIPPAzDataTableEntity { param($Context, $Filter, $Property) }
     function New-GraphGetRequest { param($uri, $tenantid) }
     function Get-CippException { param($Exception) @{ NormalizedError = "$Exception" } }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
@@ -45,6 +47,7 @@ Describe 'Service announcement list endpoints' {
         $script:Cache = [ordered]@{}
         Mock Get-Tenants { foreach ($Domain in $script:Cache.Keys) { [pscustomobject]@{ defaultDomainName = $Domain } } }
         Mock Get-CIPPDbItem { }
+        Mock Get-CIPPAzDataTableEntity { }
         Mock Get-CIPPDbItem -ParameterFilter { $Type -eq 'ServiceHealthIssues' } {
             $Key = if ($Partition) { $Partition } else { $TenantFilter }
             if ($script:Cache.Contains($Key)) { $script:Cache[$Key] }
@@ -195,5 +198,67 @@ Describe 'Service announcement list endpoints' {
         $Response.Body.id | Should -Be 'MC1'
         Should -Invoke New-GraphGetRequest -Times 1 -ParameterFilter { $uri -like '*/serviceAnnouncement/messages' -and $tenantid -eq 'a.com' }
         Should -Invoke Get-CIPPDbItem -Times 0
+    }
+}
+
+Describe 'ListServiceHealthIssues AllTenants from CippServiceHealth' {
+    BeforeEach {
+        $script:Cache = [ordered]@{ 'a.com' = @(); 'b.com' = @(); 'c.com' = @((New-Row 'c.com' '{"id":"EX1","isResolved":false,"details":[{"name":"c"}]}')) }
+        $script:Filters = [System.Collections.Generic.List[string]]::new()
+        Mock Get-Tenants { foreach ($Domain in $script:Cache.Keys) { [pscustomobject]@{ defaultDomainName = $Domain } } }
+        Mock Get-CIPPDbItem -ParameterFilter { $Type -eq 'ServiceHealthIssues' } {
+            $Key = if ($Partition) { $Partition } else { $TenantFilter }
+            if ($script:Cache.Contains($Key)) { $script:Cache[$Key] }
+        }
+        Mock Get-CIPPAzDataTableEntity {
+            $script:Filters.Add($Filter)
+            switch -Wildcard ($Filter) {
+                "PartitionKey eq 'Collected'*" { 'a.com', 'b.com', 'gone.com' | ForEach-Object { [pscustomobject]@{ PartitionKey = 'Collected'; RowKey = $_ } } }
+                "PartitionKey eq 'Issue'*" {
+                    [pscustomobject]@{ PartitionKey = 'Issue'; RowKey = 'EX1'; Data = '{"id":"EX1","isResolved":false,"title":"Mail delays"}' }
+                    if ($Filter -notlike '*isResolved eq false*') { [pscustomobject]@{ PartitionKey = 'Issue'; RowKey = 'SP9'; Data = '{"id":"SP9","isResolved":true}' } }
+                }
+                "PartitionKey eq 'Tenant'*" {
+                    [pscustomobject]@{ Tenant = 'a.com'; IssueId = 'EX1'; Details = '[{"name":"a"}]'; Timestamp = $script:T1 }
+                    [pscustomobject]@{ Tenant = 'b.com'; IssueId = 'EX1'; Details = '[{"name":"b"}]'; Timestamp = $script:T2 }
+                    [pscustomobject]@{ Tenant = 'gone.com'; IssueId = 'EX1'; Details = '[]'; Timestamp = $script:T2 }
+                    if ($Filter -notlike '*isResolved eq false*') { [pscustomobject]@{ Tenant = 'a.com'; IssueId = 'SP9'; Details = '[]'; Timestamp = $script:T1 } }
+                }
+            }
+        }
+    }
+
+    It 'merges collected tenants from the table and reads only uncollected tenants from their partitions' {
+        $Response = Invoke-ListServiceHealthIssues -Request (New-Request 'AllTenants')
+
+        $Response.StatusCode | Should -Be 200
+        $Ex = $Response.Body | Where-Object id -EQ 'EX1'
+        $Ex.Tenants | Should -Be @('a.com', 'b.com', 'c.com')
+        $Ex.TenantCount | Should -Be 3
+        @($Ex.TenantDetails | ForEach-Object { $_.details[0].name }) | Should -Be @('a', 'b', 'c')
+        $Ex.CacheTimestamp | Should -Be $script:T2
+        $Ex.title | Should -Be 'Mail delays'
+        ($Response.Body | Where-Object id -EQ 'SP9').Tenant | Should -Be 'a.com'
+        Should -Invoke Get-CIPPDbItem -Times 1 -Exactly -ParameterFilter { $Type -eq 'ServiceHealthIssues' }
+        Should -Invoke Get-CIPPDbItem -Times 1 -Exactly -ParameterFilter { $Partition -eq 'c.com' }
+    }
+
+    It 'filters resolved issues in the table query when Open is set' {
+        $Response = Invoke-ListServiceHealthIssues -Request (New-Request 'AllTenants' -Open)
+
+        @($Response.Body.id) | Should -Be @('EX1')
+        @($script:Filters | Where-Object { $_ -like "PartitionKey eq 'Issue'*" -or $_ -like "PartitionKey eq 'Tenant'*" }) | ForEach-Object { $_ | Should -BeLike '* and isResolved eq false' }
+    }
+
+    It 'returns an empty list, not an error, when every tenant is collected and none has issues' {
+        $script:Cache = [ordered]@{ 'a.com' = @(); 'b.com' = @() }
+        Mock Get-CIPPAzDataTableEntity {
+            if ($Filter -like "PartitionKey eq 'Collected'*") { 'a.com', 'b.com' | ForEach-Object { [pscustomobject]@{ PartitionKey = 'Collected'; RowKey = $_ } } }
+        }
+        $Response = Invoke-ListServiceHealthIssues -Request (New-Request 'AllTenants')
+
+        $Response.StatusCode | Should -Be 200
+        @($Response.Body).Count | Should -Be 0
+        Should -Invoke Get-CIPPDbItem -Times 0 -Exactly -ParameterFilter { $Type -eq 'ServiceHealthIssues' }
     }
 }

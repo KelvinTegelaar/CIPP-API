@@ -79,6 +79,19 @@ Describe 'Engine: a prepare hook that cannot grade' {
         Should -Invoke Invoke-CIPPBaselineOneDriveLicensedQuota -Times 0 -Exactly
     }
 
+    It 'reports a configuration problem without a reason as a settings error, not an empty cache (<Mode>)' -ForEach @(
+        @{ Mode = 'run' }
+        @{ Mode = 'compare' }
+    ) {
+        Mock Get-CIPPBaselineOneDriveLicensedQuotaState { @{ Current = $null; ConfigError = $true } }
+
+        $Result = Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode $Mode -Force
+
+        $Result.Status | Should -Be 'Error'
+        Should -Invoke Invoke-CIPPBaselineOneDriveLicensedQuota -Times 0 -Exactly
+        Should -Invoke Set-CIPPBaselineResult -Times 1 -Exactly -ParameterFilter { $Detail -like "Error: this standard's settings*" }
+    }
+
     It 'keeps a null Current without a reason as create-if-missing: the executor still runs' {
         Mock Get-CIPPBaselineOneDriveLicensedQuotaState { @{ Current = $null } }
 

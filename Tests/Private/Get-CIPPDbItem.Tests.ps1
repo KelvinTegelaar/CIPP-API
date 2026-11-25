@@ -68,15 +68,33 @@ Describe 'Get-CIPPDbItem allTenants' {
         Mock Get-Tenants { @($script:TenantA, $script:TenantB) }
         $script:CippAllowedTenantsStorage.Value = @('a', 'b')
         $null = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'MailboxRules' -CountsOnly
-        $script:Filters | Should -Be @("PartitionKey eq 'a.com' and RowKey eq 'MailboxRules-Count'", "PartitionKey eq 'b.com' and RowKey eq 'MailboxRules-Count'")
-        Should -Invoke Get-CIPPAzDataTableEntity -Times 2 -Exactly -ParameterFilter { $Property -contains 'DataCount' }
+        $script:Filters | Should -Be @("PartitionKey eq 'CippCounts' and RowKey ge 'MailboxRules|' and RowKey lt 'MailboxRules}'", "PartitionKey eq 'a.com' and RowKey eq 'MailboxRules-Count'", "PartitionKey eq 'b.com' and RowKey eq 'MailboxRules-Count'")
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 3 -Exactly -ParameterFilter { $Property -contains 'DataCount' }
     }
 
-    It 'looks up one type''s count row per managed tenant for an unrestricted caller, never by table scan' {
+    It 'falls back to one count row per managed tenant only for tenants without a CippCounts copy, never by table scan' {
         $script:CippAllowedTenantsStorage.Value = $null
         Mock Get-Tenants { @($script:TenantA, $script:TenantB) }
         $null = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'MailboxRules' -CountsOnly
-        $script:Filters | Should -Be @("PartitionKey eq 'a.com' and RowKey eq 'MailboxRules-Count'", "PartitionKey eq 'b.com' and RowKey eq 'MailboxRules-Count'")
+        $script:Filters | Should -Be @("PartitionKey eq 'CippCounts' and RowKey ge 'MailboxRules|' and RowKey lt 'MailboxRules}'", "PartitionKey eq 'a.com' and RowKey eq 'MailboxRules-Count'", "PartitionKey eq 'b.com' and RowKey eq 'MailboxRules-Count'")
+    }
+
+    It 'serves copied tenants from CippCounts in the count row shape, inside the caller''s scope' {
+        Mock Get-Tenants { @($script:TenantA) }
+        $script:CippAllowedTenantsStorage.Value = @('a')
+        Mock Get-CIPPAzDataTableEntity {
+            $script:Filters.Add($Filter)
+            if ($Filter -like "PartitionKey eq 'CippCounts'*") {
+                [pscustomobject]@{ PartitionKey = 'CippCounts'; RowKey = 'MailboxRules|a.com'; Tenant = 'a.com'; Type = 'MailboxRules'; DataCount = 4; Timestamp = $T1 }
+                [pscustomobject]@{ PartitionKey = 'CippCounts'; RowKey = 'MailboxRules|b.com'; Tenant = 'b.com'; Type = 'MailboxRules'; DataCount = 9; Timestamp = $T1 }
+            }
+        }
+        $Result = @(Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'MailboxRules' -CountsOnly)
+        $script:Filters.Count | Should -Be 1
+        $Result.Count | Should -Be 1
+        $Result[0].PartitionKey | Should -Be 'a.com'
+        $Result[0].RowKey | Should -Be 'MailboxRules-Count'
+        $Result[0].DataCount | Should -Be 4
     }
 
     It '-ByTenant reads each managed tenant''s partition in ordinal order, without count rows' {

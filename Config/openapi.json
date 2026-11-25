@@ -24335,6 +24335,100 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecEmailDomainMigration": {
+      "post": {
+        "summary": "Move users' and groups' sign-in names and primary email addresses from one domain to another",
+        "operationId": "ExecEmailDomainMigration",
+        "tags": [
+          "Tenant > Tools"
+        ],
+        "description": "Plans or applies a move of users (and optionally shared mailboxes and groups) from SourceDomain to TargetDomain in\none tenant. With Preview, returns the planned change per user or group without writing anything, flagging users\nwhose sign-in name and primary email address differ (mismatch). Otherwise changes the selected Users: the sign-in\nname through Graph and the primary email address through Exchange, always together, keeping the old address as an\nalias. Groups only have their primary email address moved. Users whose sign-in name and primary email address\nwould differ after the move, objects Entra still syncs from on-premises, and objects whose new address is already in use\n(unless SkipCollisions is false), are skipped with the reason. Users with a privileged admin role are skipped for\ncallers without Identity.PrivilegedUser.ReadWrite. Action UseSignInNameAsEmail instead makes each selected\nmismatched user's sign-in name its primary email address, and UseEmailAsSignInName makes its primary email address\nits sign-in name; neither removes an address. Action AddAlias instead adds the TargetDomain address as an extra\nemail address to each mailbox and group whose primary email address is on SourceDomain, changing neither its\nsign-in name nor its primary email address.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "description": "Move (the default) moves to TargetDomain; AddAlias only adds the TargetDomain address as an alias; the other two make a mismatched sign-in name and primary email address match"
+                  },
+                  "IncludeGroups": {
+                    "type": "boolean",
+                    "description": "Also move Microsoft 365 groups, distribution lists, mail-enabled security groups and dynamic distribution lists"
+                  },
+                  "IncludeSharedMailboxes": {
+                    "type": "boolean"
+                  },
+                  "Preview": {
+                    "type": "boolean",
+                    "description": "Return the plan without changing anything"
+                  },
+                  "SkipCollisions": {
+                    "type": "boolean"
+                  },
+                  "SourceDomain": {
+                    "type": "string",
+                    "description": "The domain the sign-in names and addresses move from"
+                  },
+                  "TargetDomain": {
+                    "type": "string",
+                    "description": "A verified domain the sign-in names and addresses move to"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "Users": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Ids of the users and groups to change, as the preview returns them; required unless Preview is set"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.DomainMigration.ReadWrite"
+      }
+    },
     "/api/ExecEmailForward": {
       "post": {
         "summary": "ExecEmailForward",
@@ -39035,11 +39129,13 @@
                     "PartitionKey": {
                       "type": "string"
                     },
+                    "SelectedItems": {
+                      "type": "string",
+                      "description": "Single rows ('table|PartitionKey|RowKey') from categories that are only partly selected"
+                    },
                     "SelectedTypes": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
+                      "type": "string",
+                      "description": "Categories restored whole (table, or templates:<PartitionKey>)"
                     },
                     "table": {
                       "type": "string"

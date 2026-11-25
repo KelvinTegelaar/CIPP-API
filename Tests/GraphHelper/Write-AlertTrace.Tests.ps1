@@ -319,6 +319,27 @@ Describe 'Write-AlertTrace' {
         ($Empty.Reported, $Empty.New) | Should -Be @($true, 0)
     }
 
+    It 'counts the items still open after the run, so a fully cleared alert reads zero' {
+        $Run = @{}
+        try {
+            Set-CippScheduledTaskContext -TaskId 'task1' -AlertRun $Run
+            $script:Existing = @((New-StoredRow -Message 'kept'), (New-StoredRow -Message 'gone'))
+            $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @([pscustomobject]@{ Message = 'kept' })
+            $Run.Open | Should -Be 1
+
+            $Run.Clear()
+            $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @()
+            ($Run.Open, $Run.Resolved) | Should -Be @(0, 2)
+
+            $Run.Clear()
+            $script:Existing = @(New-StoredRow -Message 'recent' -LastSeen ([datetime]::UtcNow.ToString('o')))
+            $null = Write-AlertTrace -cmdletName 'Get-CIPPAlertSomething' -tenantFilter 'contoso.onmicrosoft.com' -data @() -Append
+            ($Run.Open, $Run.Resolved) | Should -Be @(1, 0)
+        } finally {
+            Set-CippScheduledTaskContext -TaskId $null
+        }
+    }
+
     It 'drops rows hashed from the whole item once every item in the run has a key field' {
         $OldResolved = New-StoredRow -Item @{ CVE = 'CVE-2020-1'; HoursOld = 5 } -Status 'Resolved' -ResolvedAt ([datetime]::UtcNow.AddDays(-5).ToString('o'))
         $OldOpen = New-StoredRow -Item @{ CVE = 'CVE-2020-1'; HoursOld = 6 }

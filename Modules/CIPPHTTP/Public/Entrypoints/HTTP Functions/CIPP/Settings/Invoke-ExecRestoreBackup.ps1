@@ -57,16 +57,15 @@ function Invoke-ExecRestoreBackup {
                     throw "Failed to parse backup JSON: $($_.Exception.Message)"
                 }
 
-                $SelectedTypes = $Request.Body.SelectedTypes
-                if ($SelectedTypes -and $SelectedTypes.Count -gt 0) {
-                    $BackupData = $BackupData | Where-Object {
-                        $item = $_
-                        if ($item.table -eq 'templates') {
-                            $typeKey = "templates:$($item.PartitionKey)"
-                        } else {
-                            $typeKey = $item.table
-                        }
-                        $SelectedTypes -contains $typeKey
+                # Categories restored whole (table, or templates:<PartitionKey>)
+                $SelectedTypes = @($Request.Body.SelectedTypes)
+                # Single rows ('table|PartitionKey|RowKey') from categories that are only partly selected
+                $SelectedItems = $Request.Body.SelectedItems
+                if ($Request.Body.SelectedTypes -or $null -ne $SelectedItems) {
+                    $ItemSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($SelectedItems), [System.StringComparer]::Ordinal)
+                    $BackupData = foreach ($item in $BackupData) {
+                        $typeKey = if ($item.table -eq 'templates') { "templates:$($item.PartitionKey)" } else { $item.table }
+                        if ($SelectedTypes -contains $typeKey -or $ItemSet.Contains("$($item.table)|$($item.PartitionKey)|$($item.RowKey)")) { $item }
                     }
                 }
                 $RestoredCount = 0

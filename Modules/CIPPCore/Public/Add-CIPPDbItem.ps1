@@ -193,13 +193,11 @@ function Add-CIPPDbItem {
                 fields    = @(foreach ($Name in $ShapeFields.PSBase.Keys) { @{ name = $Name; type = $ShapeFields[$Name] } })
                 sampledAt = (Get-Date).ToUniversalTime().ToString('o')
             } -Depth 5 -Compress
-            $null = Add-CIPPAzDataTableEntity @Table -Entity @{
-                PartitionKey = $TenantFilter
-                RowKey       = "$Type-Count"
-                DataCount    = [int]$NewCount
-                Type         = $Type
-                Shape        = [string]$ShapeJson
-            } -Force
+            # The CippCounts copy lets count reads skip the data rows; '<Type>|<tenant>' keeps a type's counts together
+            $null = Add-CIPPAzDataTableEntity @Table -Entity @(
+                @{ PartitionKey = $TenantFilter; RowKey = "$Type-Count"; DataCount = [int]$NewCount; Type = $Type; Shape = [string]$ShapeJson }
+                @{ PartitionKey = 'CippCounts'; RowKey = "$Type|$TenantFilter"; Tenant = $TenantFilter; DataCount = [int]$NewCount; Type = $Type; Shape = [string]$ShapeJson }
+            ) -Force
         }
 
         Write-LogMessage -API 'CIPPDbItem' -tenant $TenantFilter -message "Added $TotalProcessed items of type $Type" -sev Debug

@@ -22,6 +22,7 @@ BeforeAll {
     function Get-CIPPSchedulerBlockedCommands { @() }
     function Write-LogMessage { param($headers, $API, $message, $sev, $tenant, $tenantid, $LogData) }
     function Send-CIPPScheduledTaskAlert { param($Results, $TaskInfo, $TenantFilter, $TaskType, $Attachments) }
+    function Close-CippExtAlertTicket { param($TenantFilter, $ConsolidationKey, $AlertName, $ResolvedCount) }
     function Get-CippException { param($Exception) @{ NormalizedError = "$Exception" } }
     # The executor only runs functions from the CIPP modules, so the command lives in a module of that name.
     $null = New-Module -Name CIPPAlerts -ScriptBlock {
@@ -34,10 +35,10 @@ BeforeAll {
     # Today's 02:00 UTC slot, the one this run is due for, however late a worker picks it up.
     $script:Slot = [datetime]::UtcNow.Date.AddHours(2)
 
-    function New-AlertItem ([string]$Command, [string]$Recurrence) {
+    function New-AlertItem ([string]$Command, [string]$Recurrence, [string]$PostExecution) {
         $TaskInfo = [pscustomobject]@{
             PartitionKey = 'ScheduledTask'; RowKey = 'task-1'; Name = 'Breach alert'; Command = $Command
-            Tenant = 'contoso.onmicrosoft.com'; Recurrence = $Recurrence; TaskState = 'Pending'
+            Tenant = 'contoso.onmicrosoft.com'; Recurrence = $Recurrence; TaskState = 'Pending'; PostExecution = $PostExecution
             ScheduledTime = [string][datetimeoffset]::new($script:Slot).ToUnixTimeSeconds()
         }
         [pscustomobject]@{ Command = $Command; Parameters = @{ TenantFilter = 'contoso.onmicrosoft.com' }; TaskInfo = $TaskInfo }
@@ -69,6 +70,7 @@ Describe 'Push-ExecScheduledCommand minimum alert interval' {
         Mock Write-LogMessage {}
         Mock Send-CIPPScheduledTaskAlert {}
         Mock Add-CIPPAlertRunHistory {}
+        Mock Close-CippExtAlertTicket {}
         Mock Get-AzDataTableEntity { [pscustomobject]@{ PartitionKey = 'ScheduledTask'; RowKey = 'task-1'; TaskState = 'Pending' } }
         Mock Get-CIPPAzDataTableEntity { if ($script:LastCompleted) { [pscustomobject]@{ ScheduledTime = [string][datetimeoffset]::new($script:LastCompleted).ToUnixTimeSeconds() } } }
         Mock Get-CIPPAlertBreachAlert { $script:Holder.New = 2; $script:Holder.Continuing = 5; $script:Holder.Reported = $true }
@@ -127,5 +129,22 @@ Describe 'Push-ExecScheduledCommand minimum alert interval' {
         Push-ExecScheduledCommand -Item (New-AlertItem 'Get-CIPPAlertNoMinimum' '1h') 6>$null | Out-Null
 
         Should -Invoke Add-CIPPAlertRunHistory -Times 1 -Exactly -ParameterFilter { $Outcome -eq 'Failed' -and $Summary -like '*Graph said no*' }
+    }
+    Context 'closing the PSA ticket when the alert clears' {
+        It 'hands a cleared run of a PSA alert to the PSA close with the task''s consolidation key' {
+            Mock Get-CIPPAlertNoMinimum { $script:Holder.Resolved = 2; $script:Holder.Open = 0; $script:Holder.Reported = $true }
+            Push-ExecScheduledCommand -Item (New-AlertItem 'Get-CIPPAlertNoMinimum' '1h' 'PSA,Email') 6>$null | Out-Null
+            Should -Invoke Close-CippExtAlertTicket -Times 1 -Exactly -ParameterFilter { $ConsolidationKey -eq 'contoso.onmicrosoft.com|task-1' -and $ResolvedCount -eq 2 -and $AlertName -eq 'Breach alert' }
+        }
+
+        It 'leaves the ticket alone while items are still open, the run did not report, or the alert has no PSA' {
+            Mock Get-CIPPAlertNoMinimum { $script:Holder.Resolved = 1; $script:Holder.Open = 1; $script:Holder.Reported = $true }
+            Push-ExecScheduledCommand -Item (New-AlertItem 'Get-CIPPAlertNoMinimum' '1h' 'PSA') 6>$null | Out-Null
+            Mock Get-CIPPAlertNoMinimum {}
+            Push-ExecScheduledCommand -Item (New-AlertItem 'Get-CIPPAlertNoMinimum' '1h' 'PSA') 6>$null | Out-Null
+            Mock Get-CIPPAlertNoMinimum { $script:Holder.Open = 0; $script:Holder.Reported = $true }
+            Push-ExecScheduledCommand -Item (New-AlertItem 'Get-CIPPAlertNoMinimum' '1h' 'Email') 6>$null | Out-Null
+            Should -Invoke Close-CippExtAlertTicket -Times 0
+        }
     }
 }

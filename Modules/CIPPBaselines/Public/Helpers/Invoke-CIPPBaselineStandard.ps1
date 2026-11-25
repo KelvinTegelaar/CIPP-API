@@ -561,7 +561,7 @@ function Invoke-CIPPBaselineStandard {
                     Write-Information "Baselines: cache collection for $($Definition.read.cacheType) on $TenantFilter failed: $($_.Exception.Message)"
                 }
             }
-            $PrepareNoDataReason = "$($Prepared.NoDataReason)"
+            $PrepareNoDataReason = if ($Prepared.NoDataReason) { "$($Prepared.NoDataReason)" } elseif ($Prepared.ConfigError) { "this standard's settings in the baseline are incomplete or invalid - edit the baseline and fill in its settings" }
             if ($null -ne $Prepared.Expected) {
                 $ExpectedTemplate = $Prepared.Expected
                 $Expected = $Prepared.Expected

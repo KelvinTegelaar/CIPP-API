@@ -42,6 +42,16 @@ Describe 'Add-CIPPDbItem shape' {
         $script:Written['Devices-Count'].DataCount | Should -Be 2
     }
 
+    It 'writes a copy of the count row to the CippCounts partition' {
+        @([PSCustomObject]@{ id = 'a'; deviceName = 'PC1' }) | Add-CIPPDbItem -TenantFilter 'contoso.onmicrosoft.com' -Type 'Devices' -AddCount
+
+        $Copy = $script:Written['Devices|contoso.onmicrosoft.com']
+        $Copy.PartitionKey | Should -Be 'CippCounts'
+        $Copy.Tenant | Should -Be 'contoso.onmicrosoft.com'
+        $Copy.DataCount | Should -Be 1
+        $Copy.Shape | Should -Be $script:Written['Devices-Count'].Shape
+    }
+
     It 'samples only the first 10 rows' {
         @(foreach ($i in 1..20) {
                 if ($i -le 10) { [PSCustomObject]@{ id = "d$i"; early = 'x' } } else { [PSCustomObject]@{ id = "d$i"; late = 'y' } }

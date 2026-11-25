@@ -12,7 +12,7 @@ function Set-CippScheduledTaskContext {
         The alert task's re-notify setting, read by Write-AlertTrace. Reset on every call.
     .PARAMETER AlertRun
         A hashtable Write-AlertTrace adds the run's item counts to (New, Reopened, Continuing, Resolved,
-        Snoozed) and sets Reported on, so the scheduler can record what the run found. Reset on every call.
+        Snoozed, and Open: items still unresolved) and sets Reported on, so the scheduler can record what the run found. Reset on every call.
     .PARAMETER PrivilegedUserRestricted
         The task was queued by a caller without Identity.PrivilegedUser.ReadWrite, so Assert-CippPrivilegedUserAccess
         checks its users. Reset on every call.

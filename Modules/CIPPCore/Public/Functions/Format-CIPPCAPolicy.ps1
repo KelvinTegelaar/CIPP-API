@@ -106,8 +106,10 @@ function Format-CIPPCAPolicy {
         Add-CIPPCAClearedKey -Parent $Conditions.applications `
             -Collections @('includeApplications', 'excludeApplications', 'includeUserActions', 'includeAuthenticationContextClassReferences') `
             -NullBlocks @('applicationFilter')
+        Add-CIPPCAClearedKey -Parent $Conditions.locations -Collections @('includeLocations', 'excludeLocations')
+        Add-CIPPCAClearedKey -Parent $Conditions.platforms -Collections @('includePlatforms', 'excludePlatforms')
         Add-CIPPCAClearedKey -Parent $Conditions.devices -Collections @() -NullBlocks @('deviceFilter')
-        Add-CIPPCAClearedKey -Parent $Conditions.clientApplications -Collections @() -NullBlocks @('servicePrincipalFilter')
+        Add-CIPPCAClearedKey -Parent $Conditions.clientApplications -Collections @('includeServicePrincipals', 'excludeServicePrincipals') -NullBlocks @('servicePrincipalFilter')
     }
     # A policy must carry grantControls or sessionControls - say the missing one's absence out
     # loud (as null) only while the other still has a value, and never null both.

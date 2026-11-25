@@ -89,12 +89,12 @@ BeforeAll {
 }
 '@
 
-    function Invoke-Deploy ($Locations) {
+    function Invoke-Deploy ($Locations, [bool]$CreateOnly = $false) {
         $script:GraphWrites = [System.Collections.Generic.List[object]]::new()
         $null = New-CIPPCAPolicy -RawJSON $script:TemplateJSON -TenantFilter 'customer.example.ch' `
             -State 'disabled' -Overwrite $true -ReplacePattern 'none' `
             -PreloadedCAPolicies @([pscustomobject]@{ id = 'other-id'; displayName = 'Unrelated policy' }) `
-            -PreloadedLocations $Locations
+            -PreloadedLocations $Locations -NamedLocationsCreateOnly $CreateOnly
         $PolicyWrite = $script:GraphWrites | Where-Object { $_.Uri -eq 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' } | Select-Object -Last 1
         return @{ Writes = $script:GraphWrites; PolicyBody = ($PolicyWrite.Body | ConvertFrom-Json) }
     }
@@ -131,6 +131,31 @@ Describe 'New-CIPPCAPolicy with custom variables in the named-location path' {
             $Raw = ($script:Result.Writes | Where-Object { $_.Uri -match '/policies$' } | Select-Object -Last 1).Body
             $Raw | Should -Not -Match '%CA000'
             $Raw | Should -Not -Match 'LocationInfo'
+        }
+    }
+
+    Context 'create-only and the location already exists in the tenant' {
+        BeforeAll {
+            $script:Result = Invoke-Deploy @([pscustomobject]@{ id = '11111111-1111-1111-1111-111111111111'; displayName = 'SLY_Lupfig-03' }) -CreateOnly $true
+        }
+
+        It 'neither changes nor recreates the existing location' {
+            @($script:Result.Writes | Where-Object { $_.Uri -match 'namedLocations' }).Count | Should -Be 0
+        }
+
+        It 'links the policy to the existing location' {
+            @($script:Result.PolicyBody.conditions.locations.excludeLocations) | Should -Be @('11111111-1111-1111-1111-111111111111')
+        }
+    }
+
+    Context 'create-only and the location does not exist yet' {
+        BeforeAll {
+            $script:Result = Invoke-Deploy @([pscustomobject]@{ id = '99999999-9999-9999-9999-999999999999'; displayName = 'SomeOtherLocation' }) -CreateOnly $true
+        }
+
+        It 'creates the location and links the policy to it' {
+            @($script:Result.Writes | Where-Object { $_.Uri -eq 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -and $_.Type -eq 'POST' }).Count | Should -Be 1
+            @($script:Result.PolicyBody.conditions.locations.excludeLocations) | Should -Be @('22222222-2222-2222-2222-222222222222')
         }
     }
 

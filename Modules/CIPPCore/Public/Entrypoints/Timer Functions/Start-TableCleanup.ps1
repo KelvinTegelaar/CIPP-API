@@ -60,6 +60,28 @@ function Start-TableCleanup {
             }
         }
         @{
+            # Tenant links and markers are rewritten on every collection, so old ones belong to removed tenants
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
+            TableName      = 'CippServiceHealth'
+            DataTableProps = @{
+                Filter   = "PartitionKey ne 'Issue' and Timestamp lt datetime'$((Get-Date).AddDays(-30).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
+            # Issue bodies are only rewritten when Microsoft changes them; a deleted one still reported is rewritten on the next run
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
+            TableName      = 'CippServiceHealth'
+            DataTableProps = @{
+                Filter   = "PartitionKey eq 'Issue' and LastModified lt '$((Get-Date).AddDays(-90).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
             FunctionName   = 'TableCleanupTask'
             Type           = 'CleanupRule'
             TableName      = 'AuditLogSearches'

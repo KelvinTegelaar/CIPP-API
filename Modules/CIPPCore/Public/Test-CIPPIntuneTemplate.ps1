@@ -122,6 +122,12 @@ function Test-CIPPIntuneTemplate {
         }
     }
 
+    if ($ResolvedType) {
+        foreach ($Finding in (Test-CIPPIntuneSchemaPayload -Policy $Policy -TemplateType $ResolvedType)) {
+            $Findings.Add($Finding)
+        }
+    }
+
     if ($TenantFilter) {
         try {
             $Replaced = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $JsonText -EscapeForJson

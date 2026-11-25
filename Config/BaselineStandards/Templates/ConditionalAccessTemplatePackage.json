@@ -81,6 +81,11 @@
       "type": "switch",
       "label": "Create groups if they do not exist",
       "default": false
+    },
+    "namedLocationsCreateOnly": {
+      "type": "switch",
+      "label": "Only create missing named locations (never change existing ones)",
+      "default": false
     }
   }
 }

@@ -3791,6 +3791,12 @@
         "type": "switch",
         "label": "Create groups if they do not exist",
         "default": false
+      },
+      {
+        "name": "standards.ConditionalAccessTemplate.namedLocationsCreateOnly",
+        "type": "switch",
+        "label": "Only create missing named locations (never change existing ones)",
+        "default": false
       }
     ]
   },
@@ -3878,6 +3884,12 @@
         "name": "standards.ConditionalAccessTemplatePackage.createGroups",
         "type": "switch",
         "label": "Create groups if they do not exist",
+        "default": false
+      },
+      {
+        "name": "standards.ConditionalAccessTemplatePackage.namedLocationsCreateOnly",
+        "type": "switch",
+        "label": "Only create missing named locations (never change existing ones)",
         "default": false
       }
     ]

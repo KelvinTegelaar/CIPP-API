@@ -47,6 +47,43 @@ BeforeAll {
     }
 }
 
+Describe 'Invoke-ExecRestoreBackup selection' {
+    BeforeEach {
+        $script:Written = [System.Collections.Generic.List[string]]::new()
+        Mock Get-CippTable { @{ TableName = $tablename } }
+        Mock Add-AzDataTableEntity { $script:Written.Add("$($TableName)|$($Entity.PartitionKey)|$($Entity.RowKey)") }
+        Mock Get-CippRequestAllowedPermissions { , @('CIPP.AppSettings.ReadWrite') }
+        Mock Test-CIPPAccess { @('AllTenants') }
+        Mock Write-LogMessage {}
+        $script:Rows = @(
+            [pscustomobject]@{ table = 'Domains'; PartitionKey = 'd'; RowKey = 'one' }
+            [pscustomobject]@{ table = 'Domains'; PartitionKey = 'd'; RowKey = 'two' }
+            [pscustomobject]@{ table = 'templates'; PartitionKey = 'CATemplate'; RowKey = 'ca1' }
+            [pscustomobject]@{ table = 'templates'; PartitionKey = 'CATemplate'; RowKey = 'ca2' }
+            [pscustomobject]@{ table = 'TenantGroups'; PartitionKey = 'g'; RowKey = 'grp' }
+        )
+        Mock Get-CIPPBackup { [pscustomobject]@{ Backup = ($script:Rows | ConvertTo-Json -Compress) } }
+    }
+
+    It 'restores whole categories by type and single rows by key' {
+        $Body = [pscustomobject]@{ BackupName = 'CippBackup_2026-11-25-0100'; SelectedTypes = @('Domains'); SelectedItems = @('templates|CATemplate|ca2') }
+        $null = Invoke-ExecRestoreBackup -Request (New-TestRequest -Body $Body -HeaderRoles 'admin') -TriggerMetadata $null
+        @($script:Written) | Should -Be @('Domains|d|one', 'Domains|d|two', 'templates|CATemplate|ca2')
+    }
+
+    It 'restores nothing when both lists are empty' {
+        $Body = [pscustomobject]@{ BackupName = 'CippBackup_2026-11-25-0100'; SelectedTypes = @(); SelectedItems = @() }
+        $null = Invoke-ExecRestoreBackup -Request (New-TestRequest -Body $Body -HeaderRoles 'admin') -TriggerMetadata $null
+        $script:Written.Count | Should -Be 0
+    }
+
+    It 'restores everything when no selection is sent' {
+        $Body = [pscustomobject]@{ BackupName = 'CippBackup_2026-11-25-0100' }
+        $null = Invoke-ExecRestoreBackup -Request (New-TestRequest -Body $Body -HeaderRoles 'admin') -TriggerMetadata $null
+        $script:Written.Count | Should -Be 5
+    }
+}
+
 Describe 'Invoke-ExecRestoreBackup table access' {
     BeforeEach {
         $script:Written = [System.Collections.Generic.List[string]]::new()

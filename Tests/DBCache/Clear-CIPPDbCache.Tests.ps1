@@ -28,11 +28,16 @@ BeforeAll {
         }
         if ($Filter -match "RowKey ge '([^']*)'") {
             $Ge = $Matches[1]
-            $Result = @($Result | Where-Object { $_.RowKey -ge $Ge })
+            # Table storage compares keys ordinally; -ge is culture-aware and sorts '|' below '0'
+            $Result = @($Result | Where-Object { [string]::CompareOrdinal($_.RowKey, $Ge) -ge 0 })
         }
         if ($Filter -match "RowKey lt '([^']*)'") {
             $Lt = $Matches[1]
-            $Result = @($Result | Where-Object { $_.RowKey -lt $Lt })
+            $Result = @($Result | Where-Object { [string]::CompareOrdinal($_.RowKey, $Lt) -lt 0 })
+        }
+        if ($Filter -match "PartitionKey ne '([^']*)'") {
+            $NotPk = $Matches[1]
+            $Result = @($Result | Where-Object { $_.PartitionKey -ne $NotPk })
         }
         if ($Filter -match 'DataCount ge 0') {
             $Result = @($Result | Where-Object { $null -ne $_.DataCount })
@@ -113,6 +118,12 @@ BeforeAll {
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = "$Exception" } }
     function Get-Tenants {
         param($TenantFilter, [switch]$IncludeErrors)
+        if (-not $TenantFilter) {
+            return @(
+                [pscustomobject]@{ customerId = 'tenant-guid-1'; defaultDomainName = 'contoso.com' }
+                [pscustomobject]@{ customerId = 'tenant-guid-2'; defaultDomainName = 'fabrikam.com' }
+            )
+        }
         switch -Regex ($TenantFilter) {
             '^(contoso\.com|contoso\.onmicrosoft\.com)$' {
                 return [pscustomobject]@{ customerId = 'tenant-guid-1'; defaultDomainName = 'contoso.com' }
@@ -144,6 +155,9 @@ Describe 'Remove-CIPPDbItem' {
         $Remaining = @($script:FakeTables['CippReportingDB'])
         ($Remaining | Where-Object { $_.RowKey -eq 'Users-user-1' }).Count | Should -Be 0
         ($Remaining | Where-Object { $_.RowKey -eq 'Users-Count' }).DataCount | Should -Be 1
+        $Copy = $Remaining | Where-Object { $_.PartitionKey -eq 'CippCounts' -and $_.RowKey -eq 'Users|contoso.com' }
+        $Copy.DataCount | Should -Be 1
+        $Copy.Tenant | Should -Be 'contoso.com'
     }
 
     It 'removes by ItemId and decrements DataCount' {
@@ -198,6 +212,14 @@ Describe 'Clear-CIPPDbCache' {
         ($Remaining | Where-Object { $_.RowKey -like 'Users-user*' }).Count | Should -Be 0
         ($Remaining | Where-Object { $_.RowKey -eq 'Users-Count' -and $_.DataCount -eq 0 }).Count | Should -Be 2
         ($Remaining | Where-Object { $_.RowKey -eq 'Groups-g1' }).Count | Should -Be 1
+        @($Remaining | Where-Object { $_.PartitionKey -eq 'CippCounts' -and $_.DataCount -eq 0 }).RowKey | Sort-Object | Should -Be @('Users|contoso.com', 'Users|fabrikam.com')
+    }
+
+    It 'keeps CippCounts out of an AllTenants countsOnly scan' {
+        Clear-CIPPDbCache -TenantFilter 'AllTenants' -Type 'Users' | Out-Null
+        $Rows = @(Get-CIPPDbItem -TenantFilter 'allTenants' -CountsOnly)
+        $Rows.Count | Should -BeGreaterThan 0
+        $Rows.PartitionKey | Should -Not -Contain 'CippCounts'
     }
 
     It 'returns RemovedCount 0 when nothing matches' {
@@ -205,5 +227,39 @@ Describe 'Clear-CIPPDbCache' {
         $Result.RemovedCount | Should -Be 0
         $Remaining = @($script:FakeTables['CippReportingDB'])
         ($Remaining | Where-Object { $_.RowKey -eq 'Devices-Count' }).DataCount | Should -Be 0
+    }
+}
+
+Describe 'Get-CIPPDbItem -CountsOnly for AllTenants' {
+    BeforeEach {
+        $script:FakeTables = @{}
+        Add-CIPPAzDataTableEntity -TableName 'CippReportingDB' -Entity @(
+            @{ PartitionKey = 'contoso.com'; RowKey = 'Users-u1'; Data = '{}' }
+            @{ PartitionKey = 'contoso.com'; RowKey = 'Users-Count'; DataCount = 5; Type = 'Users' }
+            @{ PartitionKey = 'contoso.com'; RowKey = 'Groups-Count'; DataCount = 2; Type = 'Groups' }
+            @{ PartitionKey = 'fabrikam.com'; RowKey = 'Users-Count'; DataCount = 9; Type = 'Users' }
+            @{ PartitionKey = 'CippCounts'; RowKey = 'Users|contoso.com'; Tenant = 'contoso.com'; Type = 'Users'; DataCount = 5 }
+            @{ PartitionKey = 'CippCounts'; RowKey = 'Groups|contoso.com'; Tenant = 'contoso.com'; Type = 'Groups'; DataCount = 2 }
+        ) -Force
+    }
+
+    It 'reads the CippCounts copies in the count rows own shape and falls back for tenants without copies' {
+        $Rows = @(Get-CIPPDbItem -TenantFilter 'allTenants' -CountsOnly)
+
+        @($Rows | ForEach-Object { '{0}/{1}={2}' -f $_.PartitionKey, $_.RowKey, $_.DataCount } | Sort-Object) |
+            Should -Be @('contoso.com/Groups-Count=2', 'contoso.com/Users-Count=5', 'fabrikam.com/Users-Count=9')
+    }
+
+    It 'reads one type as a key range and falls back per tenant' {
+        $Rows = @(Get-CIPPDbItem -TenantFilter 'AllTenants' -CountsOnly -Type 'Users')
+
+        @($Rows | ForEach-Object { '{0}={1}' -f $_.PartitionKey, $_.DataCount } | Sort-Object) | Should -Be @('contoso.com=5', 'fabrikam.com=9')
+    }
+
+    It 'leaves a single-tenant read on the tenant partition' {
+        $Rows = @(Get-CIPPDbItem -TenantFilter 'contoso.com' -CountsOnly)
+
+        @($Rows.PartitionKey | Sort-Object -Unique) | Should -Be @('contoso.com')
+        $Rows.Count | Should -Be 2
     }
 }

@@ -12,6 +12,8 @@ BeforeAll {
     . (Join-Path $Public 'Get-CIPPIntunePolicyName.ps1')
     . (Join-Path $Public 'Get-CIPPAppProtectionPolicyUrl.ps1')
     . (Join-Path $Public 'Test-CIPPIntuneCatalogPayload.ps1')
+    . (Join-Path $Public 'Test-CIPPIntuneSchemaPayload.ps1')
+    $env:CIPPRootPath = $RepoRoot
     . (Join-Path $Public 'Test-CIPPIntuneTemplate.ps1')
 
     # The catalog lookups are off unless asked for, so this only has to exist, not return anything.

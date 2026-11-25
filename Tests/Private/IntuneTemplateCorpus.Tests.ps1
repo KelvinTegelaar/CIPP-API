@@ -21,6 +21,7 @@ BeforeAll {
     . (Join-Path $Public 'Get-CIPPIntunePolicyName.ps1')
     . (Join-Path $Public 'Get-CIPPAppProtectionPolicyUrl.ps1')
     . (Join-Path $Public 'Test-CIPPIntuneCatalogPayload.ps1')
+    . (Join-Path $Public 'Test-CIPPIntuneSchemaPayload.ps1')
     . (Join-Path $Public 'Test-CIPPIntuneTemplate.ps1')
     . (Get-ChildItem (Join-Path $BackendRoot 'Modules/CIPPCore') -Recurse -Filter 'Get-CIPPIntuneDefinitionIndex.ps1').FullName
 

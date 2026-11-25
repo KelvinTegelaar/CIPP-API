@@ -81,12 +81,10 @@ function Clear-CIPPDbCache {
         }
 
         foreach ($Partition in $TouchedPartitions) {
-            $null = Add-CIPPAzDataTableEntity @Table -Entity @{
-                PartitionKey = $Partition
-                RowKey       = $CountRowKey
-                DataCount    = 0
-                Type         = $TypeName
-            } -Force
+            $null = Add-CIPPAzDataTableEntity @Table -Entity @(
+                @{ PartitionKey = $Partition; RowKey = $CountRowKey; DataCount = 0; Type = $TypeName }
+                @{ PartitionKey = 'CippCounts'; RowKey = "$TypeName|$Partition"; Tenant = $Partition; DataCount = 0; Type = $TypeName }
+            ) -Force
         }
 
         $StillThere = @(Get-AzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey -ErrorAction Stop |

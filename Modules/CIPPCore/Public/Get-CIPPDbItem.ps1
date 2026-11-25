@@ -81,7 +81,8 @@ function Get-CIPPDbItem {
         $SafeType = ConvertTo-CIPPODataFilterValue -Value $Type -Type String
         if ($CountsOnly) {
             # Exact match for the count row when a type is given, otherwise every count row
-            $RowFilter = if ($Type) { "RowKey eq '{0}-Count'" -f $SafeType } else { 'DataCount ge 0' }
+            # CippCounts holds a copy of every count row, so a whole-table scan must skip it
+            $RowFilter = if ($Type) { "RowKey eq '{0}-Count'" -f $SafeType } else { "PartitionKey ne 'CippCounts' and DataCount ge 0" }
             $Query.Property = @('PartitionKey', 'RowKey', 'DataCount', 'Timestamp'; if ($IncludeShape) { 'Shape' })
         } else {
             if (-not $Type) {
@@ -90,7 +91,26 @@ function Get-CIPPDbItem {
             $RowFilter = "RowKey ge '{0}-' and RowKey lt '{0}.'" -f $SafeType
         }
 
-        $Results = if ($null -eq $Partitions) {
+        $Results = if ($CountsOnly -and $TenantFilter -eq 'allTenants') {
+            # One read of the CippCounts copies, returned in the count rows' own shape
+            $CountsFilter = if ($Type) { "PartitionKey eq 'CippCounts' and RowKey ge '{0}|' and RowKey lt '{0}}}'" -f $SafeType } else { "PartitionKey eq 'CippCounts'" }
+            $Scope = if ($null -ne $Partitions) { [System.Collections.Generic.HashSet[string]]::new([string[]]$Partitions, [System.StringComparer]::OrdinalIgnoreCase) }
+            $Copied = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($Copy in Get-CIPPAzDataTableEntity @Table -Filter $CountsFilter -Property @('PartitionKey', 'RowKey', 'Tenant', 'Type', 'DataCount', 'Timestamp'; if ($IncludeShape) { 'Shape' })) {
+                if ($null -ne $Scope -and -not $Scope.Contains([string]$Copy.Tenant)) { continue }
+                [void]$Copied.Add([string]$Copy.Tenant)
+                $Row = [PSCustomObject]@{ PartitionKey = $Copy.Tenant; RowKey = "$($Copy.Type)-Count"; DataCount = $Copy.DataCount; Timestamp = $Copy.Timestamp }
+                if ($IncludeShape) { $Row.PSObject.Properties.Add([psnoteproperty]::new('Shape', $Copy.Shape)) }
+                $Row
+            }
+            # Fallback for tenants whose counts predate CippCounts; remove once every install has run a nightly collection
+            $Expected = if ($null -ne $Partitions) { $Partitions } else { (Get-Tenants -IncludeErrors).defaultDomainName }
+            foreach ($Missing in $Expected) {
+                if ($Missing -and -not $Copied.Contains($Missing)) {
+                    Get-CIPPAzDataTableEntity @Table @Query -Filter ("PartitionKey eq '{0}' and {1}" -f (ConvertTo-CIPPODataFilterValue -Value $Missing -Type String), $RowFilter)
+                }
+            }
+        } elseif ($null -eq $Partitions) {
             Get-CIPPAzDataTableEntity @Table @Query -Filter $RowFilter
         } else {
             foreach ($Partition in $Partitions) {

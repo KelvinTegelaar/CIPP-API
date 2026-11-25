@@ -240,6 +240,8 @@ function Write-AlertTrace {
         $Writes.Add($Entity)
     }
 
+    # Open counts every item still unresolved after this run, so the scheduler can tell when an alert has fully cleared.
+    $Counts.Open = $Writes.Count
     $Resolves = [System.Collections.Generic.List[object]]::new()
     $SnoozesToDrop = [System.Collections.Generic.List[object]]::new()
     foreach ($Row in $Existing) {
@@ -252,7 +254,7 @@ function Write-AlertTrace {
             [datetime]$LastSeen = [datetime]::MinValue
             $ResolveIt = [datetime]::TryParse([string]$Row.LastSeen, [cultureinfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind, [ref]$LastSeen) -and $LastSeen -lt $StaleCutoff
         }
-        if (-not $ResolveIt) { continue }
+        if (-not $ResolveIt) { $Counts.Open++; continue }
 
         $Resolved = @{
             PartitionKey = [string]$Row.PartitionKey

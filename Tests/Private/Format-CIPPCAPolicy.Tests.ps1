@@ -241,6 +241,37 @@ Describe 'Format-CIPPCAPolicy' {
         }
     }
 
+    Context 'present condition blocks get their omitted exclusions cleared' {
+        BeforeAll {
+            $script:Partial = Convert-Policy '{
+                "displayName": "CA201",
+                "conditions": {
+                    "platforms": { "includePlatforms": ["android"] },
+                    "locations": { "includeLocations": ["All"] },
+                    "clientApplications": { "includeServicePrincipals": ["ServicePrincipalsInMyTenant"] },
+                    "users": { "includeUsers": ["None"] }
+                },
+                "grantControls": { "operator": "OR", "builtInControls": ["mfa"] }
+            }'
+        }
+
+        It 'restores absent <Property> on <Block> as an empty array' -ForEach @(
+            @{ Block = 'locations'; Property = 'excludeLocations' }
+            @{ Block = 'platforms'; Property = 'excludePlatforms' }
+            @{ Block = 'clientApplications'; Property = 'excludeServicePrincipals' }
+        ) {
+            $Parent = $script:Partial.conditions.$Block
+            $Parent.PSObject.Properties.Name | Should -Contain $Property
+            ($null -eq $Parent.$Property) | Should -BeFalse
+            @($Parent.$Property).Count | Should -Be 0
+        }
+
+        It 'serialises the cleared exclusion into the PATCH body' {
+            $Json = ConvertTo-Json -InputObject $script:Partial -Depth 20 -Compress
+            $Json | Should -Match '"excludeLocations":\[\]'
+        }
+    }
+
     Context 'populated containers are left intact' {
         BeforeAll {
             $script:Kept = Convert-Policy '{

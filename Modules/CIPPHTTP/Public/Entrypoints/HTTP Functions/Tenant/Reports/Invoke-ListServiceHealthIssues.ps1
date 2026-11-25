@@ -31,6 +31,39 @@ function Invoke-ListServiceHealthIssues {
             $HasRows = $false
             # The same Microsoft issue is posted to every tenant, so AllTenants returns each once with the tenants it reached
             $ById = [ordered]@{}
+            if ($TenantFilter -eq 'AllTenants') {
+                # CippServiceHealth holds each issue body once plus a link per tenant; the per-tenant loop below only serves tenants not yet collected into it
+                $HealthTable = Get-CIPPTable -tablename 'CippServiceHealth'
+                $OpenFilter = if ($Open) { ' and isResolved eq false' } else { '' }
+                $InScope = [System.Collections.Generic.HashSet[string]]::new([string[]]$Tenants, [System.StringComparer]::OrdinalIgnoreCase)
+                $Collected = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                foreach ($Marker in Get-CIPPAzDataTableEntity @HealthTable -Filter "PartitionKey eq 'Collected'" -Property PartitionKey, RowKey) {
+                    if ($InScope.Contains($Marker.RowKey)) { [void]$Collected.Add($Marker.RowKey) }
+                }
+                if ($Collected.Count) {
+                    # Collected tenants count as data even when they have no issues
+                    $HasRows = $true
+                    $Bodies = @{}
+                    foreach ($Body in Get-CIPPAzDataTableEntity @HealthTable -Filter "PartitionKey eq 'Issue'$OpenFilter") { $Bodies[$Body.RowKey] = $Body.Data }
+                    foreach ($Link in Get-CIPPAzDataTableEntity @HealthTable -Filter "PartitionKey eq 'Tenant'$OpenFilter" -Property PartitionKey, RowKey, Tenant, IssueId, Details, Timestamp) {
+                        if (-not $Collected.Contains($Link.Tenant)) { continue }
+                        $Details = [CIPP.CippJson]::ConvertFromJson($Link.Details, $null)
+                        $Entry = $ById[$Link.IssueId]
+                        if (-not $Entry) {
+                            if (-not $Bodies.ContainsKey($Link.IssueId)) { continue }
+                            $Record = try { [CIPP.CippJson]::ConvertFromJson($Bodies[$Link.IssueId], $null) } catch { continue }
+                            # details is tenant-specific; the issue carries the first tenant's, as the per-tenant read does
+                            if ($Record.PSObject.Properties['details']) { $Record.details = $Details }
+                            $Entry = @{ Record = $Record; Tenants = [System.Collections.Generic.List[string]]::new(); Details = [System.Collections.Generic.List[object]]::new(); CacheTimestamp = $Link.Timestamp }
+                            $ById[$Link.IssueId] = $Entry
+                        }
+                        if ($Link.Timestamp -gt $Entry.CacheTimestamp) { $Entry.CacheTimestamp = $Link.Timestamp }
+                        $Entry.Tenants.Add($Link.Tenant)
+                        $Entry.Details.Add([pscustomobject]@{ Tenant = $Link.Tenant; details = $Details })
+                    }
+                    $Tenants = foreach ($Tenant in $Tenants) { if (-not $Collected.Contains($Tenant)) { $Tenant } }
+                }
+            }
             foreach ($Tenant in $Tenants) {
                 $Rows = if ($TenantFilter -eq 'AllTenants') { Get-CIPPDbItem -Partition $Tenant -Type 'ServiceHealthIssues' } else { Get-CIPPDbItem -TenantFilter $Tenant -Type 'ServiceHealthIssues' }
                 foreach ($Row in $Rows) {

@@ -8,6 +8,7 @@ function New-CIPPCAPolicy {
         $ReplacePattern = 'none',
         $DisableSD = $false,
         $CreateGroups = $false,
+        $NamedLocationsCreateOnly = $false,
         $APIName = 'Create CA Policy',
         $Headers,
         $PreloadedCAPolicies = $null,
@@ -190,26 +191,38 @@ function New-CIPPCAPolicy {
         # passed through untouched - filtering them out empties the array and Graph rejects the policy with a 1011.
         if ($JSONobj.conditions.applications.excludeApplications -and $JSONobj.conditions.applications.excludeApplications -notcontains 'All') {
             $ValidExclusions = [system.collections.generic.list[string]]::new()
+            $DroppedExclusions = [system.collections.generic.list[string]]::new()
             foreach ($appId in $JSONobj.conditions.applications.excludeApplications) {
                 if ([string]::IsNullOrWhiteSpace($appId)) { continue }
                 if (-not (Test-IsGuid -String $appId) -or $AllServicePrincipals.appId -contains $appId) {
                     $ValidExclusions.Add($appId)
+                } else {
+                    $DroppedExclusions.Add($appId)
                 }
+            }
+            if ($DroppedExclusions.Count -gt 0) {
+                Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Conditional Access policy '$displayName' excludes apps that are not in this tenant ($($DroppedExclusions -join ', ')). They were left out of the exclusions, so the policy will apply to them if they are added to the tenant later." -Sev 'Warning'
             }
             $JSONobj.conditions.applications.excludeApplications = $ValidExclusions
         }
         if ($JSONobj.conditions.applications.includeApplications -and $JSONobj.conditions.applications.includeApplications -notcontains 'All') {
             $OriginalInclusions = @($JSONobj.conditions.applications.includeApplications)
             $ValidInclusions = [system.collections.generic.list[string]]::new()
+            $DroppedInclusions = [system.collections.generic.list[string]]::new()
             foreach ($appId in $OriginalInclusions) {
                 if ([string]::IsNullOrWhiteSpace($appId)) { continue }
                 if (-not (Test-IsGuid -String $appId) -or $AllServicePrincipals.appId -contains $appId) {
                     $ValidInclusions.Add($appId)
+                } else {
+                    $DroppedInclusions.Add($appId)
                 }
             }
             # An empty includeApplications is always rejected by Graph, so never let the filter clear it out entirely.
             if ($ValidInclusions.Count -eq 0) {
                 throw "None of the applications included by '$displayName' ($($OriginalInclusions -join ', ')) have a service principal in tenant $TenantFilter. Consent the applications in the tenant or remove them from the policy."
+            }
+            if ($DroppedInclusions.Count -gt 0) {
+                Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Conditional Access policy '$displayName' targets apps that are not in this tenant ($($DroppedInclusions -join ', ')). They were left out of the policy." -Sev 'Warning'
             }
             $JSONobj.conditions.applications.includeApplications = $ValidInclusions
         }
@@ -327,7 +340,7 @@ function New-CIPPCAPolicy {
                     Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Multiple named locations found with display name '$($Location.displayName)'. Using first match: $($ExistingLocation[0].id)" -Sev 'Warning'
                 }
                 $ExistingLocation = $ExistingLocation[0]
-                if ($Overwrite) {
+                if ($Overwrite -and -not $NamedLocationsCreateOnly) {
                     $LocationUpdate = $location | Select-Object * -ExcludeProperty id
                     Remove-ODataProperties -Object $LocationUpdate
                     $Body = ConvertTo-Json -InputObject $LocationUpdate -Depth 10
