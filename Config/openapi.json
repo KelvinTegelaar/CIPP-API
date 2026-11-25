@@ -2193,6 +2193,116 @@
         ]
       }
     },
+    "/api/AddDefenderIndicator": {
+      "post": {
+        "summary": "Add Defender custom indicators to one or more tenants",
+        "operationId": "AddDefenderIndicator",
+        "tags": [
+          "Security > Defender"
+        ],
+        "description": "Adds up to 500 Microsoft Defender for Endpoint custom indicators (100,000 characters in total) of one type, with one action, to each selected tenant. Before writing, CIPP reads the tenant's indicators: a value that already exists there with a different action, or that is limited to device groups, is skipped in that tenant and left unchanged; a value that exists with the same action is updated. A single named tenant is written during the request: the reply holds one result per value, with 207 when only some succeed. AllTenants, or two or more tenants, is queued with one task per tenant: the reply is 202 with Metadata.QueueId, the queue tracks progress, and each tenant's results are written to the logbook. Defender shows the CIPP application as the creator; the indicator description starts with the technician who sent it.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "acknowledgeAllow": {
+                    "type": "string",
+                    "description": "Must be true when Action is Allowed: the technician confirms that Defender will trust these values in every selected tenant."
+                  },
+                  "Action": {
+                    "type": "string",
+                    "description": "Allowed, Audit, Warn, Block or BlockAndRemediate. Certificates take Allowed or BlockAndRemediate; IP addresses, URLs and domains take Allowed, Audit, Warn or Block."
+                  },
+                  "Description": {
+                    "type": "string",
+                    "description": "Optional note, added to the description in Defender after the technician's name."
+                  },
+                  "ExpirationTime": {
+                    "type": "object",
+                    "properties": {
+                      "Kind": {
+                        "type": "string"
+                      }
+                    },
+                    "description": "Optional expiry, an ISO 8601 date and time in the future."
+                  },
+                  "IndicatorType": {
+                    "type": "string",
+                    "enum": [
+                      "CertificateThumbprint",
+                      "DomainName",
+                      "FileMd5",
+                      "FileSha1",
+                      "FileSha256",
+                      "IpAddress",
+                      "Url"
+                    ],
+                    "description": "FileSha1, FileSha256, FileMd5, CertificateThumbprint, IpAddress, Url or DomainName."
+                  },
+                  "Severity": {
+                    "type": "string",
+                    "description": "Optional alert severity: Informational, Low, Medium or High."
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "One tenant, a list of tenants, or AllTenants. A tenant is its default domain or tenant id."
+                  },
+                  "Title": {
+                    "type": "string",
+                    "description": "Shown as the indicator's title in Defender."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ],
+                "additionalProperties": true,
+                "x-cipp-passthrough": true,
+                "description": "This endpoint forwards the request body onward rather than reading a fixed set of fields. The properties listed here are the ones it is known to read; others may be accepted."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted - work was queued and runs asynchronously"
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Security.Defender.ReadWrite"
+      }
+    },
     "/api/AddDefenderTemplate": {
       "post": {
         "summary": "AddDefenderTemplate",
@@ -15546,6 +15656,64 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecApproveAppConsentRequest": {
+      "post": {
+        "summary": "ExecApproveAppConsentRequest",
+        "operationId": "ExecApproveAppConsentRequest",
+        "tags": [
+          "Tenant > Administration > Application Approval"
+        ],
+        "description": "Approves a pending app consent request by granting the delegated permissions it asks for to the application\nfor all users in the tenant. The permissions are read from the request itself, not from the caller.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "appId": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Application.ReadWrite"
+      }
+    },
     "/api/ExecAppServiceDomains": {
       "post": {
         "summary": "Manage custom domains (hostname bindings) and managed certificates on the CIPP App Service.",
@@ -22048,6 +22216,90 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecDefenderMachineAction": {
+      "post": {
+        "summary": "Isolate, release or antivirus scan a Defender device",
+        "operationId": "ExecDefenderMachineAction",
+        "tags": [
+          "Security > Defender"
+        ],
+        "description": "Sends one Microsoft Defender for Endpoint response action to one device: Isolate (Full or Selective), Release from isolation, or an antivirus Scan (Quick or Full). The action runs with the CIPP application's permissions, so Defender shows the CIPP application as the requestor; the action comment starts with the technician who sent it. Returns 202 with Defender's action id and status. While another action of the same kind is still in progress on the device, Defender refuses the new one or returns the action already in progress; check ListDefenderMachineActions before sending it again.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "enum": [
+                      "Isolate",
+                      "Release",
+                      "Scan"
+                    ],
+                    "description": "Isolate, Release or Scan."
+                  },
+                  "Comment": {
+                    "type": "string",
+                    "description": "Optional note, added to the action in Defender after the technician's name."
+                  },
+                  "IsolationType": {
+                    "type": "string",
+                    "description": "Isolate only. Full (default) cuts the device off the network except for Defender; Selective allows the limited connections Defender permits during selective isolation."
+                  },
+                  "machineId": {
+                    "type": "string",
+                    "description": "The device's Defender id (40 hexadecimal characters), as listed by ListDefenderMachines."
+                  },
+                  "ScanType": {
+                    "type": "string",
+                    "description": "Scan only. Quick (default) or Full."
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "One tenant: its default domain or tenant id."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted - work was queued and runs asynchronously"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Security.Defender.ReadWrite"
+      }
+    },
     "/api/ExecDeletedApplication": {
       "post": {
         "summary": "ExecDeletedApplication",
@@ -27408,6 +27660,96 @@
           }
         ],
         "x-cipp-role": "Exchange.Mailbox.Read"
+      }
+    },
+    "/api/ExecGetNhiReportPdf": {
+      "post": {
+        "summary": "Renders a non-human identity (NHI) compromise case as a PDF report.",
+        "operationId": "ExecGetNhiReportPdf",
+        "tags": [
+          "Tenant > Administration > Non-Human Identity"
+        ],
+        "description": "Server-renders a completed NHI run as application/pdf bytes: the case level, what was found, priority actions, order of events, containment already run, and the addresses, credentials, changes, mail and file reach, access and owners behind it. Reads the stored run; it does not start an investigation. The app in other tenants is never included. Metadata only.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brandingPresetId": {
+                    "type": "string",
+                    "description": "The branding preset to render with; omitted -> the default branding"
+                  },
+                  "caseId": {
+                    "type": "string",
+                    "description": "The completed run to render"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "brandingPresetId",
+            "in": "query",
+            "description": "The branding preset to render with; omitted -> the default branding",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "caseId",
+            "in": "query",
+            "description": "The completed run to render",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Application.Read"
       }
     },
     "/api/ExecGetPermissionsReportPdf": {
@@ -35803,7 +36145,7 @@
                   },
                   "reportType": {
                     "type": "string",
-                    "description": "Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, sharing, permissions, mailFlow, storage, licensing, baseline or domain."
+                    "description": "Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, nhi, sharing, permissions, mailFlow, storage, licensing, baseline or domain."
                   },
                   "tenantFilter": {
                     "type": "string",
@@ -54869,6 +55211,344 @@
         ],
         "x-cipp-role": "CIPP.Core.Read",
         "x-cipp-any-tenant": true,
+        "x-cipp-tenant-group": true
+      }
+    },
+    "/api/ListDefenderIndicators": {
+      "get": {
+        "summary": "ListDefenderIndicators",
+        "operationId": "ListDefenderIndicators",
+        "tags": [
+          "Security > Defender"
+        ],
+        "description": "Lists the Microsoft Defender for Endpoint custom indicators (file hashes, certificates, IP addresses, URLs and domains) of a tenant with their action: Allowed, Audit, Warn, Block or BlockAndRemediate. A single tenant is read live from Defender unless UseReportDB is set. AllTenants and tenant groups read the reporting database cache for the caller's permitted tenants.",
+        "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "Target tenant: the tenant's default domain, its tenant ID, or 'AllTenants'. Required unless tenantGroup is sent instead; never send both.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantGroup"
+          },
+          {
+            "name": "UseReportDB",
+            "in": "query",
+            "description": "Serve a single tenant from the reporting database cache instead of live Defender.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "action": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "createdByDisplayName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "creationTimeDateTimeUtc": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "description": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "expirationTime": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "indicatorType": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "indicatorValue": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "rbacGroupNames": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Tenant": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "title": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Security.Defender.Read",
+        "x-cipp-tenant-group": true
+      }
+    },
+    "/api/ListDefenderMachineActions": {
+      "get": {
+        "summary": "Defender isolation and antivirus scan history for one device",
+        "operationId": "ListDefenderMachineActions",
+        "tags": [
+          "Security > Defender"
+        ],
+        "description": "Reads up to 50 isolate, release and antivirus scan actions for one Microsoft Defender for Endpoint device live from Defender, newest first: type, status, scope, requestor, requestor comment, when the action was created and last updated, and Defender's error code. Returns an empty array when the device has none.",
+        "parameters": [
+          {
+            "name": "machineId",
+            "in": "query",
+            "description": "The device's Defender id (40 hexadecimal characters), as listed by ListDefenderMachines.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "creationDateTimeUtc": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "errorHResult": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "id": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "lastUpdateDateTimeUtc": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "requestor": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "requestorComment": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "scope": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "status": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "type": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Security.Defender.Read"
+      }
+    },
+    "/api/ListDefenderMachines": {
+      "get": {
+        "summary": "ListDefenderMachines",
+        "operationId": "ListDefenderMachines",
+        "tags": [
+          "Security > Defender"
+        ],
+        "description": "Lists the cached Microsoft Defender for Endpoint device inventory for a tenant, including devices onboarded without Intune: sensor health, onboarding status, risk and exposure, last report time and antivirus health where Defender supplies it. Always reads the reporting database cache. AllTenants returns the devices of the caller's permitted tenants.",
+        "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "description": "Target tenant: the tenant's default domain, its tenant ID, or 'AllTenants'. Required unless tenantGroup is sent instead; never send both.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantGroup"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "avIsSignatureUpToDate": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "avMode": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "avSignatureUpdateTime": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "computerDnsName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "exposureLevel": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "healthStatus": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "lastSeen": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "machineTags": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "onboardingStatus": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "osPlatform": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "riskScore": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Tenant": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "version": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "207": {
+            "description": "Partial success - some items failed; per-item results are in the body"
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Security.Defender.Read",
         "x-cipp-tenant-group": true
       }
     },
@@ -80242,6 +80922,66 @@
           }
         ],
         "x-cipp-role": "CIPP.Tests.ReadWrite"
+      }
+    },
+    "/api/RemoveDefenderIndicator": {
+      "post": {
+        "summary": "Remove Defender custom indicators from one tenant",
+        "operationId": "RemoveDefenderIndicator",
+        "tags": [
+          "Security > Defender"
+        ],
+        "description": "Removes up to 500 Microsoft Defender for Endpoint custom indicators from one tenant by their Defender ids, as listed by ListDefenderIndicators. Ids that no longer exist are treated as removed, so a retry is safe. Defender can take a minute to show the change in its list.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "IndicatorIds": {
+                    "type": "string",
+                    "description": "The Defender ids of the indicators to remove, up to 500."
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "One tenant: its default domain or tenant id."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Security.Defender.ReadWrite"
       }
     },
     "/api/RemoveDeletedObject": {
