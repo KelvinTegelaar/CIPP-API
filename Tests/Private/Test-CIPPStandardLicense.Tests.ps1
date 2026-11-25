@@ -58,6 +58,9 @@ Describe 'Test-CIPPStandardLicense' {
         @{ Preset = 'EntraP2'; Plan = 'AAD_PREMIUM_P2' }
         @{ Preset = 'Compliance'; Plan = 'MIP_S_CLP2' }
         @{ Preset = 'DefenderForOffice365'; Plan = 'THREAT_INTELLIGENCE' }
+        @{ Preset = 'DefenderForEndpoint'; Plan = 'WINDEFATP' }
+        @{ Preset = 'DefenderForEndpoint'; Plan = 'MDE_LITE' }
+        @{ Preset = 'DefenderForEndpoint'; Plan = 'MDE_SMB' }
     ) {
         param($Preset, $Plan)
         Set-TenantPlans @{ $Plan = 'Success' }

@@ -59,6 +59,19 @@ Describe 'Get-CIPPStatsTenantSecurity' {
         $r.TenantCapabilities.Teams | Should -Be 0
     }
 
+    It 'counts Defender for Endpoint P2, P1 and Business plans' {
+        Mock Get-CIPPAzDataTableEntity {
+            @(
+                (New-CapabilityRow 'p1-with-ca.com' @('WINDEFATP'))
+                (New-CapabilityRow 'p2-no-ca.com' @('MDE_LITE'))
+                (New-CapabilityRow 'sd-on.com' @('MDE_SMB'))
+                (New-CapabilityRow 'sd-off.com' @('EXCHANGE_S_STANDARD'))
+            )
+        }
+        $r = Get-CIPPStatsTenantSecurity -Tenants $script:Tenants -CACounts $script:CACounts
+        $r.TenantCapabilities.DefenderForEndpoint | Should -Be 3
+    }
+
     It 'buckets every tenant once by CA licensing, CA policies and Security Defaults' {
         $r = Get-CIPPStatsTenantSecurity -Tenants $script:Tenants -CACounts $script:CACounts
         $r.SecuritySettings.CALicensedWithPolicies | Should -Be 1

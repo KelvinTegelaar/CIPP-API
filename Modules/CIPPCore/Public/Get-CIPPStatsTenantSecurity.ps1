@@ -43,7 +43,7 @@ function Get-CIPPStatsTenantSecurity {
         PIM                  = @('AAD_PREMIUM_P2', 'Entra_Identity_Governance')
         Teams                = @('MCOSTANDARD', 'MCOEV', 'MCOIMP', 'TEAMS1', 'Teams_Room_Standard')
         Compliance           = @('RMS_S_PREMIUM', 'RMS_S_PREMIUM2', 'MIP_S_CLP1', 'MIP_S_CLP2')
-        DefenderForEndpoint  = @('MDE_SMB', 'WIN_DEF_ATP', 'DEFENDER_ENDPOINT_P1')
+        DefenderForEndpoint  = @('MDE_SMB', 'WINDEFATP', 'MDE_LITE')
         DefenderForOffice365 = @('ATP_ENTERPRISE', 'ATP_ENTERPRISE_GOV', 'THREAT_INTELLIGENCE', 'THREAT_INTELLIGENCE_GOV')
     }
 
