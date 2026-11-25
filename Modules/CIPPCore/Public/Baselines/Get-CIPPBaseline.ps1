@@ -385,6 +385,11 @@ function Get-CIPPBaseline {
                 isSynced           = ($IsRepoSource -and ![string]::IsNullOrEmpty($RolloutRow.SHA))
                 sourceUrl          = $(if ($IsRepoSource) { Get-CIPPTemplateSourceUrl -Source $RolloutRow.Source -SourcePath $RolloutRow.SourcePath -Repos $Repos } else { $null })
                 hasLocalChanges    = $(if ($IsRepoSource) { [bool]$RolloutRow.LocalChanges } else { $null })
+                isManaged          = ![string]::IsNullOrEmpty($RolloutRow.ManagedId)
+                managedId          = $RolloutRow.ManagedId
+                managedVersion     = $RolloutRow.ManagedVersion
+                managedKind        = $RolloutRow.ManagedKind
+                managedRequestId   = $RolloutRow.ManagedRequestId
                 standardsCount     = $UniqueStandards.Count
                 stageNames         = @($Stages.name)
                 stages             = $Stages

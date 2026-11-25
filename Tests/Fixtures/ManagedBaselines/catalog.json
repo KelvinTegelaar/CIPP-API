@@ -1,0 +1,80 @@
+[
+  {
+    "id": "sample-identity-essentials",
+    "name": "Sample - Identity Essentials",
+    "description": "Sample data. Sign-in and app consent settings every tenant should have. Everything is report only.",
+    "tags": [
+      "Identity",
+      "All sizes"
+    ],
+    "standardsCount": 6,
+    "stages": [
+      {
+        "name": "Baseline",
+        "standards": [
+          "SmartLockout",
+          "PasswordExpireDisabled",
+          "DisableAppCreation",
+          "OauthConsent",
+          "DisableTenantCreation",
+          "EnableFIDO2"
+        ]
+      }
+    ],
+    "version": 2,
+    "updatedAt": "2026-10-20T09:00:00Z"
+  },
+  {
+    "id": "sample-email-protection",
+    "name": "Sample - Email Protection",
+    "description": "Sample data. Exchange Online settings that stop the common mail-borne attacks, in two stages. Everything is report only.",
+    "tags": [
+      "Email",
+      "Exchange Online"
+    ],
+    "standardsCount": 5,
+    "stages": [
+      {
+        "name": "Baseline",
+        "standards": [
+          "EXODisableAutoForwarding",
+          "EnableMailboxAuditing",
+          "SpoofWarn"
+        ]
+      },
+      {
+        "name": "Hardening",
+        "standards": [
+          "DisableBasicAuthSMTP",
+          "SafeSendersDisable"
+        ]
+      }
+    ],
+    "version": 1,
+    "updatedAt": "2026-09-12T09:00:00Z"
+  },
+  {
+    "id": "sample-collaboration-guardrails",
+    "name": "Sample - Collaboration Guardrails",
+    "description": "Sample data. Sharing and guest settings for SharePoint, OneDrive and Teams. Everything is report only.",
+    "tags": [
+      "SharePoint",
+      "Teams"
+    ],
+    "standardsCount": 5,
+    "stages": [
+      {
+        "name": "Baseline",
+        "standards": [
+          "DisableReshare",
+          "SPDisallowInfectedFiles",
+          "DisableSharePointLegacyAuth",
+          "SPExternalUserExpiration",
+          "TeamsEmailIntegration"
+        ]
+      }
+    ],
+    "version": 3,
+    "updatedAt": "2026-11-02T09:00:00Z"
+  }
+]

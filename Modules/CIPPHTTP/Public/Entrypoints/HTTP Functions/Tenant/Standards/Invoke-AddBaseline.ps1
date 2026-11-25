@@ -10,7 +10,8 @@ function Invoke-AddBaseline {
         configuration, and the BaselineRollouts row (§12.2) holds the baseline-level data -
         name, description, exclusions, alert destinations, and the ordered stage definitions.
         Baselines are reconstructed from those rows on read. The actual write lives in
-        New-CIPPBaseline, shared with the community-repo import.
+        New-CIPPBaseline, shared with the community-repo import. With managedRequestId the
+        save creates the baseline CyberDrain delivered for that custom request.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -30,6 +31,13 @@ function Invoke-AddBaseline {
         $GitHubPush = $Request.Body.GitHub
         if ($Request.Body.PSObject.Properties.Name -contains 'GitHub') {
             $Request.Body.PSObject.Properties.Remove('GitHub')
+        }
+        # Optional. Saving the baseline CyberDrain delivered for a custom managed baseline request:
+        # the request it came from and the version the editor loaded. Not stored on the baseline.
+        $ManagedRequestId = "$($Request.Body.managedRequestId)"
+        $ManagedVersion = "$($Request.Body.managedVersion)"
+        foreach ($Name in @('managedRequestId', 'managedVersion')) {
+            if ($Request.Body.PSObject.Properties.Name -contains $Name) { $Request.Body.PSObject.Properties.Remove($Name) }
         }
 
         $User = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
@@ -52,7 +60,9 @@ function Invoke-AddBaseline {
             $ExistingHasSource = Test-CIPPRepoSource -Source $ExistingRollout.Source
         }
 
-        if (-not $GitHubPush.FullName -and $ExistingHasSource) {
+        if ($ManagedRequestId -and -not $Request.Body.GUID) {
+            $Saved = Complete-CIPPManagedBaselineRequest -RequestId $ManagedRequestId -Baseline $Request.Body -Version $ManagedVersion -User $User
+        } elseif (-not $GitHubPush.FullName -and $ExistingHasSource) {
             $Saved = New-CIPPBaseline -Baseline $Request.Body -User $User -LocalChanges:$true
         } else {
             $Saved = New-CIPPBaseline -Baseline $Request.Body -User $User

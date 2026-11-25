@@ -152,3 +152,42 @@ Describe 'Engine: capabilities the prepared item needs' {
         (Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare').Status | Should -Be 'Skipped - No License'
     }
 }
+Describe 'Engine: compare-only mode persists nothing' {
+    BeforeEach {
+        Mock Get-CIPPBaselineDefinition { $script:Definition }
+        Mock Get-CIPPAzDataTableEntity { @() }
+        Mock Set-CIPPBaselineResult {}
+        Mock Add-CIPPBaselineHistoryEvent {}
+        Mock Send-CIPPBaselineAlert {}
+        Mock Write-LogMessage {}
+        Mock Invoke-CIPPBaselineOneDriveLicensedQuota {}
+        Mock Get-CIPPBaselineOneDriveLicensedQuotaState { @{ Current = [PSCustomObject]@{ offenders = @(); targets = @() } } }
+    }
+
+    It 'reports a tenant without the licence without writing a row' {
+        Mock Get-CIPPTenantCapabilities { [PSCustomObject]@{ EXCHANGE_S_STANDARD = $true } }
+
+        $Result = Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare' -GradeOnly
+
+        $Result.Status | Should -Be 'Skipped - No License'
+        Should -Invoke Set-CIPPBaselineResult -Times 0 -Exactly
+    }
+
+    It 'reports a licence the prepare hook found missing without writing a row' {
+        Mock Get-CIPPTenantCapabilities { [PSCustomObject]@{ SHAREPOINTENTERPRISE = $true } }
+        Mock Get-CIPPBaselineOneDriveLicensedQuotaState { @{ Current = [PSCustomObject]@{ offenders = @(); targets = @() }; RequiredCapabilities = @('AAD_PREMIUM_P2') } }
+
+        $Result = Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare' -GradeOnly
+
+        $Result.Status | Should -Be 'Skipped - No License'
+        Should -Invoke Set-CIPPBaselineResult -Times 0 -Exactly
+    }
+
+    It 'still writes the row on a normal compare' {
+        Mock Get-CIPPTenantCapabilities { [PSCustomObject]@{ EXCHANGE_S_STANDARD = $true } }
+
+        Invoke-CIPPBaselineStandard -Item (New-EngineItem) -Mode 'compare' | Out-Null
+
+        Should -Invoke Set-CIPPBaselineResult -Times 1 -Exactly -ParameterFilter { $Result.Status -eq 'Skipped - No License' }
+    }
+}

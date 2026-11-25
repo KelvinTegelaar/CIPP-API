@@ -330,5 +330,14 @@
     "Priority": 0,
     "RunOnProcessor": true,
     "IsSystem": true
+  },
+  {
+    "Id": "6d4f0a57-2c1b-4e9d-b3a8-7f5e2c9d1a36",
+    "Command": "Start-CIPPManagedBaselineSyncTimer",
+    "Description": "Managed baselines: ask CyberDrain about custom baseline requests that are waiting",
+    "Cron": "0 0 * * * *",
+    "JitterMinutes": 15,
+    "Priority": 6,
+    "RunOnProcessor": true
   }
 ]

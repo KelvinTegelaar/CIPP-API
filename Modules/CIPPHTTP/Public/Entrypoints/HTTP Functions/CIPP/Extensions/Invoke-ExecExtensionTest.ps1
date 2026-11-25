@@ -5,7 +5,7 @@ Function Invoke-ExecExtensionTest {
     .ROLE
         CIPP.Extension.Read
     .DESCRIPTION
-        Tests the stored credentials for a configured third-party integration and reports whether CIPP can connect. extensionName selects which one: HaloPSA, Syncro, Gradient, NinjaOne, PWPush, Hudu, Sherweb, ExternalCSP, HIBP or GitHub.
+        Tests the stored credentials for a configured third-party integration and reports whether CIPP can connect. extensionName selects which one: HaloPSA, Syncro, Gradient, NinjaOne, PWPush, Hudu, Sherweb, ExternalCSP, HIBP, GitHub or CyberDrainManagedBaselines.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -146,6 +146,16 @@ Function Invoke-ExecExtensionTest {
                     $StatusCode = [HttpStatusCode]::InternalServerError
                     $Results = [pscustomobject]@{ 'Results' = 'Failed to connect to GitHub. Check your API credentials and try again.' }
                 }
+            }
+            'CyberDrainManagedBaselines' {
+                try {
+                    $Account = Invoke-ManagedBaselinesRequest -Path 'account'
+                } catch {
+                    $StatusCode = [HttpStatusCode]::InternalServerError
+                    $Results = [pscustomobject]@{ 'Results' = "Failed to connect to CyberDrain Managed Baselines: $($_.Exception.Message)" }
+                    break
+                }
+                $Results = [pscustomobject]@{ 'Results' = "Successfully connected to CyberDrain Managed Baselines as $($Account.partnerName)." }
             }
         }
     } catch {

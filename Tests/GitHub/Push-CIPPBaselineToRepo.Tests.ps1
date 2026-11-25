@@ -8,6 +8,7 @@ BeforeAll {
 
     function Get-CIPPTable { param($TableName) @{ Context = "stub-$TableName" } }
     function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
+    function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" }
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [string]$OperationType) }
     function Push-GitHubContent { param($FullName, $Path, $Content, $Message, $Branch) }
     function Export-CIPPBaselineTemplate { param($GUID) }
@@ -62,6 +63,19 @@ Describe 'Push-CIPPBaselineToRepo' {
         $Rollout.SHA | Should -Not -BeNullOrEmpty
         $Rollout.SourcePath | Should -Be 'BaselineTemplate/My_Baseline.json'
         $Rollout.LocalChanges | Should -Be $false
+    }
+
+    It 'refuses a baseline CyberDrain manages without pushing anything' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            if ($Context -eq 'stub-BaselineRollouts') { [pscustomobject]@{ RowKey = 'baseline-1'; ManagedId = 'managed-1' } }
+        }
+
+        $Result = Push-CIPPBaselineToRepo -GUID 'baseline-1' -FullName 'Org/repo' -Message 'push it' -Branch 'main'
+
+        $Result.state | Should -Be 'error'
+        $Result.resultText | Should -BeLike '*managed by CyberDrain*'
+        Should -Invoke Push-GitHubContent -Times 0 -Exactly
+        $script:WrittenEntities.Count | Should -Be 0
     }
 
     It 'throws ItemNotFoundException when the baseline does not exist' {

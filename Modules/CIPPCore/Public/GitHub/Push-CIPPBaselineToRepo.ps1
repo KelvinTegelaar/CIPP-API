@@ -9,6 +9,7 @@ function Push-CIPPBaselineToRepo {
         file plus one standard template file per referenced CA/Intune template. Every pushed
         file is stamped with its returned blob SHA and the repo FullName: related templates
         on their templates row, the baseline itself on its rollout row.
+        A baseline CyberDrain manages is refused.
     .OUTPUTS
         @{ resultText = <string>; state = 'success' | 'error' }. Throws ItemNotFoundException when the baseline does not exist.
     .FUNCTIONALITY
@@ -31,6 +32,16 @@ function Push-CIPPBaselineToRepo {
     $Export = Export-CIPPBaselineTemplate -GUID $GUID
     if (-not $Export) {
         throw [System.Management.Automation.ItemNotFoundException]::new("Baseline '$($GUID)' not found")
+    }
+
+    $RolloutTable = Get-CIPPTable -TableName BaselineRollouts
+    $SafeGuid = ConvertTo-CIPPODataFilterValue -Value $GUID
+    $Rollout = Get-CIPPAzDataTableEntity @RolloutTable -Filter "PartitionKey eq 'rollout' and RowKey eq '$SafeGuid'" | Select-Object -First 1
+    if ($Rollout.ManagedId) {
+        return @{
+            resultText = "'$($Export.Baseline.templateName)' is managed by CyberDrain and cannot be saved to GitHub. A clone of it is an ordinary baseline and can be."
+            state      = 'error'
+        }
     }
 
     $TemplateTable = Get-CIPPTable -TableName templates

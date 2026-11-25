@@ -1,0 +1,116 @@
+{
+  "id": "sample-email-protection",
+  "version": 1,
+  "Guide": {
+    "overview": "Sample data.\n\nThis baseline stops the common mail-borne attacks in two stages. The first stage is safe for every tenant. The second stage can break older devices that send mail, so it needs preparation.\n\n**Before you start**\n\n- List the printers, scanners and applications that send mail through Exchange Online.\n- Ask the client which mailboxes forward mail to an outside address on purpose.",
+    "stages": [
+      {
+        "name": "Baseline",
+        "guide": "Sample data.\n\nAutomatic forwarding to outside addresses is blocked, mailbox auditing is turned on and outside senders that use an internal display name get a warning.\n\nAgree on the forwarding exceptions before remediation is turned on.",
+        "communications": [
+          {
+            "title": "Announcement of the forwarding block",
+            "audience": "Client contact",
+            "body": "Hi,\n\nWe are going to block automatic forwarding of mail to addresses outside your organisation. This is a common way for attackers to read mail unnoticed.\n\nIf a mailbox has to keep forwarding, reply with the mailbox and the address it forwards to and we will make an exception."
+          }
+        ]
+      },
+      {
+        "name": "Hardening",
+        "guide": "Sample data.\n\nBasic authentication for SMTP is turned off and personal safe sender lists are no longer honoured.\n\nMove every device from your list to a supported way of sending mail first. Plan this stage at least two weeks after the first one.",
+        "communications": [
+          {
+            "title": "Notice about devices that send mail",
+            "audience": "Client contact",
+            "body": "Hi,\n\nOn the agreed date we turn off the old sign-in method that some printers and scanners use to send mail. We have updated the devices we know about.\n\nIf scan to email stops working on a device after that date, let us know which one and we will fix it."
+          },
+          {
+            "title": "Notice to staff about safe senders",
+            "audience": "End users",
+            "body": "Your personal safe senders list in Outlook no longer bypasses the spam filter. If mail from a sender you trust ends up in quarantine, release it from the quarantine message or ask us to allow the sender."
+          }
+        ]
+      }
+    ]
+  },
+  "Baseline": {
+    "TemplateType": "BaselineTemplate",
+    "templateName": "Sample - Email Protection",
+    "description": "Sample data. Exchange Online settings that stop the common mail-borne attacks, in two stages. Everything is report only.",
+    "assignedTenants": [
+      {
+        "label": "Exported Template",
+        "value": "Exported Template",
+        "type": "Tenant"
+      }
+    ],
+    "excludedTenants": [],
+    "alertEmails": "",
+    "alertWebhookUrl": "",
+    "disableAlerts": false,
+    "stages": [
+      {
+        "name": "Baseline",
+        "logic": "and",
+        "conditions": [],
+        "conditionGroups": [],
+        "standards": [
+          {
+            "standard": "EXODisableAutoForwarding",
+            "instance": "EXODisableAutoForwarding",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "EnableMailboxAuditing",
+            "instance": "EnableMailboxAuditing",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "SpoofWarn",
+            "instance": "SpoofWarn",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          }
+        ]
+      },
+      {
+        "name": "Hardening",
+        "logic": "and",
+        "conditions": [
+          {
+            "type": "manual"
+          }
+        ],
+        "conditionGroups": [],
+        "standards": [
+          {
+            "standard": "DisableBasicAuthSMTP",
+            "instance": "DisableBasicAuthSMTP",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "SafeSendersDisable",
+            "instance": "SafeSendersDisable",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          }
+        ]
+      }
+    ],
+    "referencedTemplates": []
+  },
+  "Templates": []
+}

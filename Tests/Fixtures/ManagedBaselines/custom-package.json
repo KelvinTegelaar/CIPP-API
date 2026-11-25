@@ -1,0 +1,96 @@
+{
+  "id": "sample-custom",
+  "version": 1,
+  "Guide": {
+    "overview": "Sample data.\n\nThis is where our engineer explains how the custom baseline was built from your request, which exceptions were applied and what to check before you assign it.",
+    "stages": [
+      {
+        "name": "Baseline",
+        "guide": "Sample data.\n\nEverything arrives on report only. Review the deviations for one tenant before you assign the baseline more widely.",
+        "communications": [
+          {
+            "title": "Announcement to the client contact",
+            "audience": "Client contact",
+            "body": "Hi,\n\nWe are bringing your Microsoft 365 environment in line with our security baseline. We start by measuring only, so nothing changes yet. We will go through the findings with you before we change any setting."
+          }
+        ]
+      }
+    ]
+  },
+  "Baseline": {
+    "TemplateType": "BaselineTemplate",
+    "templateName": "Sample - Custom Baseline",
+    "description": "Sample data. What a custom baseline looks like when it arrives. Everything is report only.",
+    "assignedTenants": [
+      {
+        "label": "Exported Template",
+        "value": "Exported Template",
+        "type": "Tenant"
+      }
+    ],
+    "excludedTenants": [],
+    "alertEmails": "",
+    "alertWebhookUrl": "",
+    "disableAlerts": false,
+    "stages": [
+      {
+        "name": "Baseline",
+        "logic": "and",
+        "conditions": [],
+        "conditionGroups": [],
+        "standards": [
+          {
+            "standard": "SmartLockout",
+            "instance": "SmartLockout",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "OauthConsent",
+            "instance": "OauthConsent",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "EXODisableAutoForwarding",
+            "instance": "EXODisableAutoForwarding",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "EnableMailboxAuditing",
+            "instance": "EnableMailboxAuditing",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "DisableReshare",
+            "instance": "DisableReshare",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "SPDisallowInfectedFiles",
+            "instance": "SPDisallowInfectedFiles",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          }
+        ]
+      }
+    ],
+    "referencedTemplates": []
+  },
+  "Templates": []
+}

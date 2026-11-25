@@ -1,0 +1,101 @@
+{
+  "id": "sample-identity-essentials",
+  "version": 2,
+  "Guide": {
+    "overview": "Sample data.\n\nThis baseline covers the sign-in and app consent settings we expect in every tenant.\n\n**Before you start**\n\n- Check that no line-of-business app depends on users registering their own applications.\n- Decide who approves app consent requests, because users can no longer consent on their own.\n\n**How to roll it out**\n\n1. Assign the baseline to one tenant and leave everything on report only.\n2. Review the deviations with the client.\n3. Turn on remediation per standard once the client agrees.",
+    "stages": [
+      {
+        "name": "Baseline",
+        "guide": "Sample data.\n\nAll six standards can go out together. The only one users notice is app consent: they get an approval request instead of a consent prompt.\n\nAllow a week of report only before you turn on remediation.",
+        "communications": [
+          {
+            "title": "Announcement to the client contact",
+            "audience": "Client contact",
+            "body": "Hi,\n\nNext week we are tightening the sign-in settings of your Microsoft 365 environment. Passwords no longer expire, accounts lock after repeated failed sign-ins, and staff can register a security key.\n\nNothing changes in how your staff work day to day. Let us know if you have questions."
+          },
+          {
+            "title": "Notice to staff about app approval",
+            "audience": "End users",
+            "body": "From Monday you may see a message asking for approval when you connect a new app to your work account. Send the request and we will review it, usually within one working day."
+          }
+        ]
+      }
+    ]
+  },
+  "Baseline": {
+    "TemplateType": "BaselineTemplate",
+    "templateName": "Sample - Identity Essentials",
+    "description": "Sample data. Sign-in and app consent settings every tenant should have. Everything is report only.",
+    "assignedTenants": [
+      {
+        "label": "Exported Template",
+        "value": "Exported Template",
+        "type": "Tenant"
+      }
+    ],
+    "excludedTenants": [],
+    "alertEmails": "",
+    "alertWebhookUrl": "",
+    "disableAlerts": false,
+    "stages": [
+      {
+        "name": "Baseline",
+        "logic": "and",
+        "conditions": [],
+        "conditionGroups": [],
+        "standards": [
+          {
+            "standard": "SmartLockout",
+            "instance": "SmartLockout",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "PasswordExpireDisabled",
+            "instance": "PasswordExpireDisabled",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "DisableAppCreation",
+            "instance": "DisableAppCreation",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "OauthConsent",
+            "instance": "OauthConsent",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "DisableTenantCreation",
+            "instance": "DisableTenantCreation",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          },
+          {
+            "standard": "EnableFIDO2",
+            "instance": "EnableFIDO2",
+            "variables": {},
+            "remediateEnabled": false,
+            "alertEnabled": true,
+            "alertOnRemediate": false
+          }
+        ]
+      }
+    ],
+    "referencedTemplates": []
+  },
+  "Templates": []
+}

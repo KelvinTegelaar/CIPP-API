@@ -14,6 +14,8 @@ function New-CIPPBaseline {
         catalog can show Imported/UpdateAvailable and re-imports dedupe; when omitted,
         an existing row's markers carry forward so an editor re-save of an imported
         baseline keeps its provenance.
+        Managed (Id, Version, Kind, RequestId) marks a baseline CyberDrain maintains and
+        carries forward the same way.
     .OUTPUTS
         @{ GUID = <baseline id>; DeltaCount = <delta rows written> }
     .FUNCTIONALITY
@@ -26,7 +28,8 @@ function New-CIPPBaseline {
         $Source,
         $SHA,
         $SourcePath,
-        [bool]$LocalChanges
+        [bool]$LocalChanges,
+        $Managed
     )
 
     if (-not $Baseline.templateName) {
@@ -97,6 +100,13 @@ function New-CIPPBaseline {
     # A brand-new baseline with no Source and no explicit flag gets no LocalChanges column at all.
     if ($null -ne $LocalChangesValue) {
         $RolloutEntity.LocalChanges = [bool]$LocalChangesValue
+    }
+    $ManagedId = "$($Managed.Id ?? $ExistingRollout.ManagedId)"
+    if ($ManagedId) {
+        $RolloutEntity.ManagedId = $ManagedId
+        $RolloutEntity.ManagedVersion = "$($Managed.Version ?? $ExistingRollout.ManagedVersion)"
+        $RolloutEntity.ManagedKind = "$($Managed.Kind ?? $ExistingRollout.ManagedKind)"
+        $RolloutEntity.ManagedRequestId = "$($Managed.RequestId ?? $ExistingRollout.ManagedRequestId)"
     }
     Add-CIPPAzDataTableEntity @RolloutTable -Entity $RolloutEntity
 
