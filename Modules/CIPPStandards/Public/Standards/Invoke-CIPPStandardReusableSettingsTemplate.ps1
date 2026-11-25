@@ -201,7 +201,7 @@ function Invoke-CIPPStandardReusableSettingsTemplate {
             $AlertObj = $Template | Select-Object -Property displayName, compare, existingId
             if ($Template.compare) {
                 Write-StandardsAlert -message "Reusable setting $($Template.displayName) does not match the expected configuration." -object $AlertObj -tenant $Tenant -standardName 'ReusableSettingsTemplate' -standardId $Template.templateId
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Reusable setting $($Template.displayName) is out of compliance." -sev info
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Reusable setting $($Template.displayName) is out of compliance." -sev Info
             } else {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Reusable setting $($Template.displayName) is compliant." -sev Info
             }

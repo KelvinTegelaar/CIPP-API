@@ -20,7 +20,7 @@ Function Invoke-ExecAssignAPDevice {
             userPrincipalName   = $UserObject.userPrincipalName
             addressableUserName = $UserObject.addressableUserName
         } | ConvertTo-Json
-        New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$($DeviceObject)/UpdateDeviceProperties" -tenantid $TenantFilter -body $body -method POST | Out-Null
+        New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$($DeviceObject)/UpdateDeviceProperties" -tenantid $TenantFilter -body $body | Out-Null
         Write-LogMessage -Headers $User -API $APINAME -message "Successfully assigned device: $DeviceObject with Serial: $SerialNumber to $($UserObject.userPrincipalName) for $($TenantFilter)" -Sev Info
         $Results = "Successfully assigned device: $DeviceObject with Serial: $SerialNumber to  $($UserObject.userPrincipalName) for $($TenantFilter)"
         $StatusCode = [HttpStatusCode]::OK

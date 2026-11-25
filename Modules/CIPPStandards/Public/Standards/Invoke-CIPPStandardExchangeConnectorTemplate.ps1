@@ -67,10 +67,10 @@ function Invoke-CIPPStandardExchangeConnectorTemplate {
                 if ($Existing) {
                     $RequestParams | Add-Member -NotePropertyValue $Existing.Identity -NotePropertyName Identity -Force
                     $null = New-ExoRequest -tenantid $Tenant -cmdlet "Set-$($ConnectorType)connector" -cmdParams $RequestParams -useSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated transport rule $($RequestParams.name)" -sev info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated transport rule $($RequestParams.name)" -sev Info
                 } else {
                     $null = New-ExoRequest -tenantid $Tenant -cmdlet "New-$($ConnectorType)connector" -cmdParams $RequestParams -useSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created transport rule $($RequestParams.name)" -sev info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created transport rule $($RequestParams.name)" -sev Info
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

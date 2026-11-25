@@ -23,7 +23,7 @@ function New-CIPPApplicationCopy {
             $Type = 'ServicePrincipal'
         }
         if (!$ExistingApp -and !$ExistingAppRoleAssignments) {
-            Write-LogMessage -message "Failed to add $App to tenant. This app does not exist or does not have any consented permissions." -tenant $tenant -API 'Application Copy' -sev error
+            Write-LogMessage -message "Failed to add $App to tenant. This app does not exist or does not have any consented permissions." -tenant $tenant -API 'Application Copy' -sev Error
             continue
         }
         if ($Type -eq 'Application') {

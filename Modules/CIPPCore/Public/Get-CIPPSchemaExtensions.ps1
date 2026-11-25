@@ -62,7 +62,7 @@ function Get-CIPPSchemaExtensions {
                     Write-Verbose $Json
                     $null = New-GraphPOSTRequest -type PATCH -Uri "https://graph.microsoft.com/v1.0/schemaExtensions/$($Schema.id)" -Body $Json -AsApp $true -NoAuthCheck $true
                     $Schema = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/schemaExtensions/$($Schema.id)" -AsApp $true -NoAuthCheck $true
-                    Write-LogMessage -headers $Headers -message "Updated Schema Extension: $($SchemaDefinition.id)" -API 'Get-CIPPSchemaExtensions' -Sev 'info' -LogData $Body
+                    Write-LogMessage -headers $Headers -message "Updated Schema Extension: $($SchemaDefinition.id)" -API 'Get-CIPPSchemaExtensions' -Sev 'Info' -LogData $Body
                 }
                 if ($Patch.status -eq 'Deprecated') {
                     Remove-CIPPAzDataTableEntity @CustomDataTable -Entity $SchemaExtension -Force
@@ -97,7 +97,7 @@ function Get-CIPPSchemaExtensions {
                 Write-Warning 'Failed to update schema extension in table'
                 Write-Warning ($OldSchema | ConvertTo-Json -Depth 5)
             }
-            Write-LogMessage -headers $Headers -message "Created Schema Extension: $($SchemaDefinition.id)" -API 'Get-CIPPSchemaExtensions' -Sev 'info' -LogData $Body
+            Write-LogMessage -headers $Headers -message "Created Schema Extension: $($SchemaDefinition.id)" -API 'Get-CIPPSchemaExtensions' -Sev 'Info' -LogData $Body
             $Schema
         }
     }

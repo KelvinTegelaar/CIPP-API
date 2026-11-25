@@ -31,7 +31,7 @@ Function Invoke-ExecSetAPDeviceGroupTag {
                 groupTag = $GroupTag
             } | ConvertTo-Json
 
-            New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$($DeviceId)/UpdateDeviceProperties" -tenantid $TenantFilter -body $body -method POST | Out-Null
+            New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$($DeviceId)/UpdateDeviceProperties" -tenantid $TenantFilter -body $body | Out-Null
             $Result = "Successfully updated group tag for device '$($DeviceId)' with serial number '$($SerialNumber)' to '$($GroupTag)'"
             Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev Info
             $StatusCode = [HttpStatusCode]::OK

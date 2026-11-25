@@ -194,7 +194,7 @@ function New-CIPPAPIConfig {
                 if (-not $IdentifierUriUpdated) {
                     throw 'Failed to set application identifier URI after retries. The app may not have replicated yet; wait a moment and retry.'
                 }
-                Write-LogMessage -headers $Headers -API $APINAME -tenant 'None '-message "Created CIPP-API App with name '$($APIApp.displayName)'." -Sev 'info'
+                Write-LogMessage -headers $Headers -API $APINAME -tenant 'None '-message "Created CIPP-API App with name '$($APIApp.displayName)'." -Sev 'Info'
             }
         }
 
@@ -304,7 +304,7 @@ function New-CIPPAPIConfig {
                     }
                     Write-LogMessage -headers $Headers -API $APINAME -tenant 'None' -message "Reset CIPP-API Password for '$($APIApp.displayName)', but $($NotRemoved.Count) old secret(s) could not be removed." -Sev 'Warning'
                 }
-                Write-LogMessage -headers $Headers -API $APINAME -tenant 'None '-message "Reset CIPP-API Password for '$($APIApp.displayName)'." -Sev 'info'
+                Write-LogMessage -headers $Headers -API $APINAME -tenant 'None '-message "Reset CIPP-API Password for '$($APIApp.displayName)'." -Sev 'Info'
             }
         }
 

@@ -35,7 +35,7 @@ Function Invoke-ExecRenameAPDevice {
                 displayName = $DisplayName
             } | ConvertTo-Json
 
-            New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$($DeviceId)/UpdateDeviceProperties" -tenantid $TenantFilter -body $body -method POST | Out-Null
+            New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$($DeviceId)/UpdateDeviceProperties" -tenantid $TenantFilter -body $body | Out-Null
             $Result = "Successfully renamed device '$($DeviceId)' with serial number '$($SerialNumber)' to '$($DisplayName)'"
             Write-LogMessage -Headers $Request.Headers -API $APINAME -tenant $TenantFilter -message $Result -Sev Info
             $StatusCode = [HttpStatusCode]::OK

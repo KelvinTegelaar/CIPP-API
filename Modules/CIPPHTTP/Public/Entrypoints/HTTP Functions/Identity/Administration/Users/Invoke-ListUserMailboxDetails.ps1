@@ -86,9 +86,16 @@ function Invoke-ListUserMailboxDetails {
                     Parameters = @{ Identity = $UserID }
                 }
             }
+            @{
+                CmdletInput = @{
+                    CmdletName = 'Get-MailboxMessageConfiguration'
+                    Parameters = @{ Identity = $UserID }
+                }
+            }
         )
         $usernames = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/users?$select=id,userPrincipalName,displayName,mailNickname&$top=999'
-        $Results = New-ExoBulkRequest -TenantId $TenantFilter -CmdletArray $Requests -returnWithCommand $true -Anchor $username
+        # Exchange runs a $batch's cmdlets one after another; one per batch, in parallel, takes ~2 s instead of ~8 s
+        $Results = New-ExoBulkRequest -TenantId $TenantFilter -CmdletArray $Requests -returnWithCommand $true -BatchSize 1 -MaxConcurrency $Requests.Count
         Write-Information "First line of usernames is $($usernames[0] | ConvertTo-Json)"
 
         # Assign variables from $Results
@@ -100,8 +107,11 @@ function Invoke-ListUserMailboxDetails {
         $BlockedSender = $Results.'Get-BlockedSenderAddress'
         $PermsRequest2 = $Results.'Get-RecipientPermission'
         $FocusedInboxRequest = $Results.'Get-FocusedInbox'
+        $MessageConfigRequest = $Results.'Get-MailboxMessageConfiguration'
 
-        $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($TenantFilter)/Mailbox('$($UserID)')/Exchange.GetMailboxStatistics()" -Tenantid $TenantFilter -scope ExchangeOnline -noPagination $true
+        # Without routing to the mailbox's server this call takes ~16 s; the anchor routes only, the object id still selects the mailbox
+        $Anchor = @{ 'X-AnchorMailbox' = "Oid:$UserID@$((Get-Tenants -TenantFilter $TenantFilter).customerId)" }
+        $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($TenantFilter)/Mailbox('$($UserID)')/Exchange.GetMailboxStatistics()" -Tenantid $TenantFilter -scope ExchangeOnline -noPagination $true -extraHeaders $Anchor
 
 
         # Handle ArchiveEnabled and AutoExpandingArchiveEnabled
@@ -295,6 +305,19 @@ function Invoke-ListUserMailboxDetails {
         TotalArchiveItemCount            = $TotalArchiveItemCount
         BlockedForSpam                   = $BlockedForSpam
         FocusedInbox                     = $FocusedInboxRequest.FocusedInboxOn
+        MessageConfiguration             = [PSCustomObject]@{
+            MailSendUndoInterval         = $MessageConfigRequest.MailSendUndoInterval
+            AlwaysShowFrom               = $MessageConfigRequest.AlwaysShowFrom
+            AlwaysShowBcc                = $MessageConfigRequest.AlwaysShowBcc
+            CheckForForgottenAttachments = $MessageConfigRequest.CheckForForgottenAttachments
+            IsReplyAllTheDefaultResponse = $MessageConfigRequest.IsReplyAllTheDefaultResponse
+            DefaultFormat                = $MessageConfigRequest.DefaultFormat
+            ReadReceiptResponse          = $MessageConfigRequest.ReadReceiptResponse
+            LinkPreviewEnabled           = $MessageConfigRequest.LinkPreviewEnabled
+            DefaultFontName              = $MessageConfigRequest.DefaultFontName
+            DefaultFontSize              = $MessageConfigRequest.DefaultFontSize
+            DefaultFontColor             = $MessageConfigRequest.DefaultFontColor
+        }
         ArchiveMailBox                   = $ArchiveEnabled
         AutoExpandingArchive             = $AutoExpandingArchiveEnabled
         AutoExpandingArchiveScope        = $AutoExpandingArchiveScope

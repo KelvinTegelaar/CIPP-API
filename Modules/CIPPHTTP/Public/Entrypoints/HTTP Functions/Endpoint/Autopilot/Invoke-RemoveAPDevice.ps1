@@ -13,12 +13,12 @@ Function Invoke-RemoveAPDevice {
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
     $Deviceid = $Request.Query.ID ?? $Request.body.ID
 
+    if (-not $TenantFilter -or $TenantFilter -eq 'null') {
+        return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = @{ Results = 'tenantFilter is required' } })
+    }
+
     try {
-        if ($null -eq $TenantFilter -or $TenantFilter -eq 'null') {
-            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$Deviceid" -type DELETE
-        } else {
-            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$Deviceid" -tenantid $TenantFilter -type DELETE
-        }
+        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$Deviceid" -tenantid $TenantFilter -type DELETE
         $Result = "Deleted autopilot device $Deviceid"
         Write-LogMessage -headers $Request.Headers -tenant $TenantFilter -API $APIName -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK

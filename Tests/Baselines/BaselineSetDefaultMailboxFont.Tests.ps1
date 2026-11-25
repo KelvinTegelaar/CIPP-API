@@ -119,7 +119,7 @@ Describe 'Set-CIPPDBCacheMailboxMessageConfiguration' {
         Set-CIPPDBCacheMailboxMessageConfiguration -TenantFilter $script:Tenant
         Should -Invoke New-ExoBulkRequest -Times 1 -Exactly -ParameterFilter {
             $Ids = @($cmdletArray | ForEach-Object { $_.CmdletInput.Parameters.Identity })
-            $Select -eq 'Identity,DefaultFontName,DefaultFontSize,DefaultFontColor' -and
+            $Select -eq 'Identity,DefaultFontName,DefaultFontSize,DefaultFontColor,MailSendUndoInterval,AlwaysShowFrom,AlwaysShowBcc,CheckForForgottenAttachments,IsReplyAllTheDefaultResponse,DefaultFormat,ReadReceiptResponse,LinkPreviewEnabled' -and
             @($cmdletArray.CmdletInput.CmdletName | Sort-Object -Unique) -eq 'Get-MailboxMessageConfiguration' -and
             ($Ids -join ',') -eq 'alice@contoso.com,info@contoso.com' -and
             $MaxConcurrency -eq 32

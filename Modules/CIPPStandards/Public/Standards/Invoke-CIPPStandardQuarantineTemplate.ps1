@@ -194,11 +194,11 @@ function Invoke-CIPPStandardQuarantineTemplate {
                     if ($Policy.missing) {
                         $CurrentInfo = $Policy | Select-Object -Property displayName, missing
                         Write-StandardsAlert -message "Quarantine policy $($Policy.displayName) is missing." -object $CurrentInfo -tenant $Tenant -standardName 'QuarantineTemplate' -standardId $Settings.templateId
-                        Write-LogMessage -API $APIName -tenant $Tenant -message "Quarantine policy $($Policy.displayName) is missing." -sev info
+                        Write-LogMessage -API $APIName -tenant $Tenant -message "Quarantine policy $($Policy.displayName) is missing." -sev Info
                     } else {
                         $CurrentInfo = $CurrentPolicies | Where-Object -Property Name -EQ $Policy.displayName | Select-Object -Property Name, ESNEnabled, IncludeMessagesFromBlockedSenderAddress, EndUserQuarantinePermissions
                         Write-StandardsAlert -message "Quarantine policy $($Policy.displayName) does not match the expected configuration." -object $CurrentInfo -tenant $Tenant -standardName 'QuarantineTemplate' -standardId $Settings.templateId
-                        Write-LogMessage -API $APIName -tenant $Tenant -message "Quarantine policy $($Policy.displayName) does not match the expected configuration. We've generated an alert" -sev info
+                        Write-LogMessage -API $APIName -tenant $Tenant -message "Quarantine policy $($Policy.displayName) does not match the expected configuration. We've generated an alert" -sev Info
                     }
                 }
             }

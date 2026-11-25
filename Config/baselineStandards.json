@@ -10959,6 +10959,217 @@
     ]
   },
   {
+    "name": "standards.MailboxComposeSettings",
+    "cat": "Exchange Standards",
+    "tag": [],
+    "helpText": "Sets Outlook on the web and new Outlook compose settings on every user and shared mailbox: the undo send delay, whether the From and Bcc fields always show, the forgotten attachment reminder, Reply all as the default, the message format, read receipt handling and link previews. Leave a setting on Do not change to leave it alone. Classic Outlook for Windows and Mac keeps its own settings and is not affected. With remediation on, a user who changes one of these settings has it set back on the next run.",
+    "docsDescription": "Loops through all UserMailbox and SharedMailbox recipients and applies the configured compose settings with `Set-MailboxMessageConfiguration`. Current values are read from the MailboxMessageConfiguration cache, refreshed when older than 3 hours, and only mailboxes that differ from a configured setting are changed, so new mailboxes are picked up on the next run and steady-state runs make no writes. Settings left on Do not change are neither checked nor written. Mailboxes whose settings cannot be read are reported as drift. The undo send delay is 0 to 10 seconds, the range Outlook on the web offers; 0 turns undo send off. These settings apply to Outlook on the web and the new Outlook client only. See [Microsoft's documentation.](https://learn.microsoft.com/powershell/module/exchangepowershell/set-mailboxmessageconfiguration)",
+    "executiveText": "Gives every mailbox the same safe sending defaults, such as a short delay that lets people take back an email sent by mistake and a reminder when an attachment is mentioned but missing. This affects the web and new Outlook clients.",
+    "label": "Set Outlook compose settings for all mailboxes (undo send, From/Bcc, read receipts)",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-11-25",
+    "powershellEquivalent": "Set-MailboxMessageConfiguration -MailSendUndoInterval -AlwaysShowFrom -AlwaysShowBcc -CheckForForgottenAttachments -IsReplyAllTheDefaultResponse -DefaultFormat -ReadReceiptResponse -LinkPreviewEnabled",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "EXCHANGE_S_STANDARD",
+      "EXCHANGE_S_ENTERPRISE",
+      "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
+      "EXCHANGE_S_ENTERPRISE_GOV",
+      "EXCHANGE_LITE"
+    ],
+    "secureScoreImpact": 0,
+    "expected": {
+      "offenders": [],
+      "unreadable": []
+    },
+    "addedComponent": [
+      {
+        "name": "standards.MailboxComposeSettings.MailSendUndoInterval",
+        "type": "number",
+        "label": "Undo send delay in seconds (0-10)",
+        "helperText": "How long Outlook waits before sending, so the user can take the message back. 0 turns undo send off. Leave blank to not change it.",
+        "omitWhenBlank": true,
+        "validators": {
+          "min": {
+            "value": 0,
+            "message": "Minimum value is 0"
+          },
+          "max": {
+            "value": 10,
+            "message": "Maximum value is 10"
+          }
+        }
+      },
+      {
+        "name": "standards.MailboxComposeSettings.AlwaysShowFrom",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Always show the From field",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Do not change",
+            "value": ""
+          },
+          {
+            "label": "Show",
+            "value": true
+          },
+          {
+            "label": "Hide",
+            "value": false
+          }
+        ],
+        "default": ""
+      },
+      {
+        "name": "standards.MailboxComposeSettings.AlwaysShowBcc",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Always show the Bcc field",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Do not change",
+            "value": ""
+          },
+          {
+            "label": "Show",
+            "value": true
+          },
+          {
+            "label": "Hide",
+            "value": false
+          }
+        ],
+        "default": ""
+      },
+      {
+        "name": "standards.MailboxComposeSettings.CheckForForgottenAttachments",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Remind users about forgotten attachments",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Do not change",
+            "value": ""
+          },
+          {
+            "label": "On",
+            "value": true
+          },
+          {
+            "label": "Off",
+            "value": false
+          }
+        ],
+        "default": ""
+      },
+      {
+        "name": "standards.MailboxComposeSettings.IsReplyAllTheDefaultResponse",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Default reply action",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Do not change",
+            "value": ""
+          },
+          {
+            "label": "Reply all",
+            "value": true
+          },
+          {
+            "label": "Reply",
+            "value": false
+          }
+        ],
+        "default": ""
+      },
+      {
+        "name": "standards.MailboxComposeSettings.DefaultFormat",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Message format",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Do not change",
+            "value": ""
+          },
+          {
+            "label": "HTML",
+            "value": "Html"
+          },
+          {
+            "label": "Plain text",
+            "value": "PlainText"
+          }
+        ],
+        "default": ""
+      },
+      {
+        "name": "standards.MailboxComposeSettings.ReadReceiptResponse",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Read receipt requests",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Do not change",
+            "value": ""
+          },
+          {
+            "label": "Ask the user each time",
+            "value": "DoNotAutomaticallySend"
+          },
+          {
+            "label": "Always send a receipt",
+            "value": "AlwaysSend"
+          },
+          {
+            "label": "Never send a receipt",
+            "value": "NeverSend"
+          }
+        ],
+        "default": ""
+      },
+      {
+        "name": "standards.MailboxComposeSettings.LinkPreviewEnabled",
+        "type": "autoComplete",
+        "multiple": false,
+        "creatable": false,
+        "label": "Link previews in messages",
+        "omitWhenBlank": true,
+        "options": [
+          {
+            "label": "Do not change",
+            "value": ""
+          },
+          {
+            "label": "On",
+            "value": true
+          },
+          {
+            "label": "Off",
+            "value": false
+          }
+        ],
+        "default": ""
+      }
+    ]
+  },
+  {
     "name": "standards.MailboxDefaultAuditSet",
     "cat": "Exchange Standards",
     "tag": [

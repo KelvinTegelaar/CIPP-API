@@ -13,6 +13,8 @@ function New-ExoBulkRequest {
         $Select,
         $ReturnWithCommand,
         [int]$MaxConcurrency = 1,
+        # Cmdlets per $batch. EXO runs a batch's cmdlets one after another, so a few slow ones go faster at 1 with -MaxConcurrency.
+        [ValidateRange(1, 10)][int]$BatchSize = 10,
         [int]$TimeoutSec = 100,
         [switch]$Compliance,
         [switch]$AsApp,
@@ -54,8 +56,7 @@ function New-ExoBulkRequest {
             $IdToOperationGuid = @{}  # Track operation GUIDs when provided
             $IdToBatchRequest = @{}   # Original sub-requests, reused for nextLink continuations
 
-            # Split the cmdletArray into batches of 10
-            $BatchSize = if ($AnchorPerMailbox) { 1 } else { 10 }
+            if ($AnchorPerMailbox) { $BatchSize = 1 }
             $batches = [System.Collections.Generic.List[object]]::new()
             for ($i = 0; $i -lt $cmdletArray.Length; $i += $BatchSize) {
                 $batches.Add($cmdletArray[$i..[math]::Min($i + $BatchSize - 1, $cmdletArray.Length - 1)])

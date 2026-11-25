@@ -21,16 +21,16 @@ function Invoke-ListCVEManagement {
             $GraphRequest = Get-CIPPCVEReport -TenantFilter $TenantFilter -ErrorAction Stop
             $StatusCode = [HttpStatusCode]::OK
             $SortedCves = $GraphRequest
-            Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'running cve report' -sev 'info'
+            Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'running cve report' -sev 'Info'
         } catch {
             Write-Information "Error retrieving CVEs from report database: $($_.Exception.Message)"
             $StatusCode = [HttpStatusCode]::InternalServerError
             $GraphRequest = $_.Exception.Message
-            Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'Error retrieving' -sev 'info'
+            Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'Error retrieving' -sev 'Info'
         }
     } else {
         try {
-            Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'retrieving CVEs' -sev 'info'
+            Write-LogMessage -API 'ListCVEManagement' -tenant $TenantFilter -message 'retrieving CVEs' -sev 'Info'
 
             # AnyTenant: the live path queries this tenant's Defender TVM; enforce scope
             $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList

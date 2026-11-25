@@ -103,7 +103,7 @@ function Set-CIPPSAMCertificate {
             # A 409 on the secret PUT means the name is backed by a Key Vault certificate but we can
             # no longer import one - certificate permissions were revoked after operating in
             # certificate mode. Manual intervention required; the previous certificate remains valid.
-            Write-LogMessage -API 'SAMCertificate' -message "Failed to store SAM certificate '$Name' in vault '$VaultName'. If certificate permissions were removed from the Key Vault access policy after the certificate was stored via the certificates API, restore them (get, list, import, update, delete). See Log Data for details." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
+            Write-LogMessage -API 'SAMCertificate' -message "Failed to store SAM certificate '$Name' in vault '$VaultName'. If certificate permissions were removed from the Key Vault access policy after the certificate was stored via the certificates API, restore them (get, list, import, update, delete). See Log Data for details." -sev 'Critical' -LogData (Get-CippException -Exception $_)
             throw
         }
         Update-CIPPSAMCertificateEnvCache -Name $Name -PfxBase64 $PfxBase64

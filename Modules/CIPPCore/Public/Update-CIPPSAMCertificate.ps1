@@ -207,14 +207,14 @@ function Update-CIPPSAMCertificate {
         try {
             $StoreResult = Set-CIPPSAMCertificate -PfxBase64 $NewCert.PfxBase64 -ErrorAction Stop
         } catch {
-            Write-LogMessage -API 'SAMCertificate' -message "Failed to store new SAM certificate for $AppId. Rolling back the registered key credential, see Log Data for details." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
+            Write-LogMessage -API 'SAMCertificate' -message "Failed to store new SAM certificate for $AppId. Rolling back the registered key credential, see Log Data for details." -sev 'Critical' -LogData (Get-CippException -Exception $_)
             try {
                 $RollbackCredentials = @($KeyCredentials | Where-Object { $_.key -ne $NewCert.PublicKeyBase64 })
                 $RollbackBody = @{ keyCredentials = @($RollbackCredentials) } | ConvertTo-Json -Compress -Depth 10
                 New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/v1.0/applications/$($AppRegistration.id)" -Body $RollbackBody -NoAuthCheck $true -AsApp $true -Headers $Headers -ErrorAction Stop
                 Write-Information "Rolled back unstored SAM certificate $($NewCert.Thumbprint) from application $AppId"
             } catch {
-                Write-LogMessage -API 'SAMCertificate' -message "Failed to roll back unstored SAM certificate $($NewCert.Thumbprint) for $AppId, see Log Data for details. Renewal will retry on the next run." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
+                Write-LogMessage -API 'SAMCertificate' -message "Failed to roll back unstored SAM certificate $($NewCert.Thumbprint) for $AppId, see Log Data for details. Renewal will retry on the next run." -sev 'Critical' -LogData (Get-CippException -Exception $_)
             }
             throw
         }

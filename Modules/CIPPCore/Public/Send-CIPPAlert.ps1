@@ -158,7 +158,7 @@ function Send-CIPPAlert {
                 $LogData = @{
                     Recipients = $Recipients
                 }
-                Write-LogMessage -API 'Webhook Alerts' -message "Sent an email alert: $Title" -tenant $TenantFilter -sev info -LogData $LogData
+                Write-LogMessage -API 'Webhook Alerts' -message "Sent an email alert: $Title" -tenant $TenantFilter -sev Info -LogData $LogData
                 return "Sent an email alert: $Title"
             }
 
@@ -262,7 +262,7 @@ function Send-CIPPAlert {
                             }
                         }
                     } catch {
-                        Write-LogMessage -API 'Webhook Alerts' -message 'Webhook custom headers JSON is invalid. Continuing without custom auth headers.' -tenant $TenantFilter -sev warning
+                        Write-LogMessage -API 'Webhook Alerts' -message 'Webhook custom headers JSON is invalid. Continuing without custom auth headers.' -tenant $TenantFilter -sev Warning
                     }
                 }
             }
@@ -323,7 +323,7 @@ function Send-CIPPAlert {
                 foreach ($HeaderName in @($RequestHeaders.Keys)) {
                     if ($HeaderName -match '^(x-ms-client-principal|x-forwarded-|host$)') {
                         $RequestHeaders.Remove($HeaderName)
-                        Write-LogMessage -API 'Webhook Alerts' -message "Webhook header '$HeaderName' is not allowed and was not sent." -tenant $TenantFilter -sev warning
+                        Write-LogMessage -API 'Webhook Alerts' -message "Webhook header '$HeaderName' is not allowed and was not sent." -tenant $TenantFilter -sev Warning
                     }
                 }
                 if ($PSCmdlet.ShouldProcess($webhook, 'Sending webhook')) {
@@ -418,7 +418,7 @@ function Send-CIPPAlert {
                             $RetryCount++
                             if ($RetryCount -le $MaxRetries) {
                                 $WaitSeconds = Get-Random -Minimum 2 -Maximum 5
-                                Write-LogMessage -API 'Webhook Alerts' -message "Webhook to $webhook failed with $($WebhookStatusCode ?? 'no response'), retrying in $WaitSeconds seconds (attempt $RetryCount/$MaxRetries)" -tenant $TenantFilter -sev warning
+                                Write-LogMessage -API 'Webhook Alerts' -message "Webhook to $webhook failed with $($WebhookStatusCode ?? 'no response'), retrying in $WaitSeconds seconds (attempt $RetryCount/$MaxRetries)" -tenant $TenantFilter -sev Warning
                                 Start-Sleep -Seconds $WaitSeconds
                             }
                         } else {
@@ -432,21 +432,21 @@ function Send-CIPPAlert {
                     Response   = $WebhookResponse
                 }
                 if ($WebhookStatusCode -ge 200 -and $WebhookStatusCode -lt 300) {
-                    Write-LogMessage -API 'Webhook Alerts' -message "Sent Webhook alert $title to External webhook. Status code: $WebhookStatusCode" -tenant $TenantFilter -sev info -LogData $LogData
+                    Write-LogMessage -API 'Webhook Alerts' -message "Sent Webhook alert $title to External webhook. Status code: $WebhookStatusCode" -tenant $TenantFilter -sev Info -LogData $LogData
                     return "Sent webhook to $webhook with status code: $WebhookStatusCode"
                 } else {
-                    Write-LogMessage -API 'Webhook Alerts' -message "Webhook alert $title failed. $WebhookResponse" -tenant $TenantFilter -sev error -LogData $LogData
+                    Write-LogMessage -API 'Webhook Alerts' -message "Webhook alert $title failed. $WebhookResponse" -tenant $TenantFilter -sev Error -LogData $LogData
                     return "Error: Webhook returned status code $WebhookStatusCode for $webhook - Response: $WebhookResponse"
                 }
             } else {
-                Write-LogMessage -API 'Webhook Alerts' -message 'No webhook URL configured' -sev warning
+                Write-LogMessage -API 'Webhook Alerts' -message 'No webhook URL configured' -sev Warning
             }
 
         } catch {
             $ErrorObject = Get-CippException -Exception $_
             $ErrorObject | Add-Member -NotePropertyName WebhookUrl -NotePropertyValue ($Config.webhook ?? $AltWebhook) -Force
             Write-Information "Could not send alerts to webhook: $($_.Exception.Message)"
-            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($_.Exception.Message)" -tenant $TenantFilter -sev error -LogData $ErrorObject
+            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($_.Exception.Message)" -tenant $TenantFilter -sev Error -LogData $ErrorObject
             return "Error: Could not send alerts to webhook $($_.Exception.Message)"
         }
     }
@@ -507,7 +507,7 @@ function Send-CIPPAlert {
                     Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "PSA delivery failed for '$Title': $Failure" -sev Error
                     return "Error: $Failure"
                 }
-                Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Sent PSA alert $title" -sev info
+                Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Sent PSA alert $title" -sev Info
                 # Same shape as the email and webhook branches; the text carries the ticket id.
                 return "Sent PSA alert: $title$(if ($PsaResult) { " - $PsaResult" })"
             } catch {

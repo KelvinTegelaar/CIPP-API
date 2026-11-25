@@ -25,7 +25,7 @@ function Get-NinjaOneToken {
         } else {
             $_.Exception.message
         }
-        Write-LogMessage -Message $Message -sev error -API 'NinjaOne'
+        Write-LogMessage -Message $Message -sev Error -API 'NinjaOne'
     }
     return $token
 

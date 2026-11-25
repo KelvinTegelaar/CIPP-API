@@ -45,7 +45,7 @@ function Get-SyncroMapping {
             $_.Exception.Message
         }
 
-        Write-LogMessage -Message "Could not get Syncro customers, error: $Message" -Level Error -tenant 'CIPP' -API 'SyncroMapping'
+        Write-LogMessage -Message "Could not get Syncro customers, error: $Message" -sev 'Error' -tenant 'CIPP' -API 'SyncroMapping'
         $SyncroCustomers = @(@{ name = "Could not get Syncro customers, error: $Message"; value = '-1' })
     }
 

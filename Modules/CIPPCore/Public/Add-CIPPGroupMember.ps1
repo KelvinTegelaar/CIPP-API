@@ -137,7 +137,7 @@ function Add-CIPPGroupMember {
             ($Member -join ', ')
         }
         $Results = "Failed to add $MemberList to group $($GroupName ?? $GroupId) - $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Results -Sev 'Error' -LogData $ErrorMessage
         throw $Results
     }
 }

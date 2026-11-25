@@ -20,20 +20,20 @@ function Start-UpdateTokensTimer {
                     $Secret.RefreshToken = $Refreshtoken
                     Add-AzDataTableEntity @Table -Entity $Secret -Force
                 } else {
-                    Write-LogMessage -API 'Update Tokens' -message 'Could not update refresh token. Will try again in 7 days.' -sev 'CRITICAL'
+                    Write-LogMessage -API 'Update Tokens' -message 'Could not update refresh token. Will try again in 7 days.' -sev 'Critical'
                 }
             } else {
                 $KV = Get-CippKeyVaultName
                 if ($Refreshtoken) {
                     Set-CippKeyVaultSecret -VaultName $KV -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Refreshtoken -AsPlainText -Force)
                 } else {
-                    Write-LogMessage -API 'Update Tokens' -message 'Could not update refresh token. Will try again in 7 days.' -sev 'CRITICAL'
+                    Write-LogMessage -API 'Update Tokens' -message 'Could not update refresh token. Will try again in 7 days.' -sev 'Critical'
                 }
             }
         } catch {
             Write-Warning "Error updating refresh token $($_.Exception.Message)."
             Write-Information ($_.InvocationInfo.PositionMessage)
-            Write-LogMessage -API 'Update Tokens' -message 'Error updating refresh token, see Log Data for details. Will try again in 7 days.' -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
+            Write-LogMessage -API 'Update Tokens' -message 'Error updating refresh token, see Log Data for details. Will try again in 7 days.' -sev 'Critical' -LogData (Get-CippException -Exception $_)
         }
 
         # Credentials before this run, so the changes it makes can be acknowledged to the credential monitor.
@@ -72,7 +72,7 @@ function Start-UpdateTokensTimer {
                     $AppSecret = Update-CIPPSAMSecret -ApplicationObjectId $AppRegistration.id -DisplayName 'UpdateTokens' -Source 'ScheduledRotation' -APIName 'Update Tokens'
                     Write-Information "New application secret generated for $AppId. Expiration date: $($AppSecret.EndDateTime)."
                 } catch {
-                    Write-LogMessage -API 'Update Tokens' -message "Failed to rotate the application secret for $AppId, see Log Data for details. Will try again in 7 days." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
+                    Write-LogMessage -API 'Update Tokens' -message "Failed to rotate the application secret for $AppId, see Log Data for details. Will try again in 7 days." -sev 'Critical' -LogData (Get-CippException -Exception $_)
                 }
             } else {
                 Write-Information "Application secret for $AppId is valid until $($LastPasswordCredential.endDateTime). No need to generate a new application secret."
@@ -87,7 +87,7 @@ function Start-UpdateTokensTimer {
                         New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/applications/$($AppRegistration.id)/removePassword" -Body "{`"keyId`":`"$($Secret.keyId)`"}" -NoAuthCheck $true -AsApp $true -ErrorAction Stop
                         Write-LogMessage -API 'Update Tokens' -tenant 'Global' -message "Scheduled cleanup: removed expired CIPP-SAM client secret '$($Secret.displayName)' (keyId $($Secret.keyId)) from $AppId." -sev 'Alert'
                     } catch {
-                        Write-LogMessage -API 'Update Tokens' -message "Error removing expired application secret with keyId $($Secret.keyId), see Log Data for details." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
+                        Write-LogMessage -API 'Update Tokens' -message "Error removing expired application secret with keyId $($Secret.keyId), see Log Data for details." -sev 'Critical' -LogData (Get-CippException -Exception $_)
                     }
                 }
             } else {
@@ -110,7 +110,7 @@ function Start-UpdateTokensTimer {
         } catch {
             Write-Warning "Error updating application secret $($_.Exception.Message)."
             Write-Information ($_.InvocationInfo.PositionMessage)
-            Write-LogMessage -API 'Update Tokens' -message 'Error updating application secret, will try again in 7 days' -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
+            Write-LogMessage -API 'Update Tokens' -message 'Error updating application secret, will try again in 7 days' -sev 'Critical' -LogData (Get-CippException -Exception $_)
         }
 
         # Create or renew the SAM certificate when missing or within 30 days of expiry
@@ -122,7 +122,7 @@ function Start-UpdateTokensTimer {
         } catch {
             Write-Warning "Error updating SAM certificate $($_.Exception.Message)."
             Write-Information ($_.InvocationInfo.PositionMessage)
-            Write-LogMessage -API 'Update Tokens' -message 'Error updating SAM certificate, will try again in 7 days' -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
+            Write-LogMessage -API 'Update Tokens' -message 'Error updating SAM certificate, will try again in 7 days' -sev 'Critical' -LogData (Get-CippException -Exception $_)
         }
 
         # Rotate the CIPP-SSO client secret within 30 days of expiry. Isolated so SSO failures never block SAM work.
@@ -176,7 +176,7 @@ function Start-UpdateTokensTimer {
                             Add-AzDataTableEntity @Table -Entity $Secret -Force
                         } else {
                             Write-Warning "Could not update refresh token for tenant $($Tenant.displayName) ($($Tenant.customerId))."
-                            Write-LogMessage -API 'Update Tokens' -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -message "Could not update refresh token for tenant $($Tenant.displayName). Will try again in 7 days." -sev 'CRITICAL'
+                            Write-LogMessage -API 'Update Tokens' -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -message "Could not update refresh token for tenant $($Tenant.displayName). Will try again in 7 days." -sev 'Critical'
                         }
                     } else {
                         if ($Refreshtoken) {
@@ -184,11 +184,11 @@ function Start-UpdateTokensTimer {
                             Set-CippKeyVaultSecret -VaultName $KV -Name $name -SecretValue (ConvertTo-SecureString -String $Refreshtoken -AsPlainText -Force)
                         } else {
                             Write-Warning "Could not update refresh token for tenant $($Tenant.displayName) ($($Tenant.customerId))."
-                            Write-LogMessage -API 'Update Tokens' -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -message "Could not update refresh token for tenant $($Tenant.displayName). Will try again in 7 days." -sev 'CRITICAL'
+                            Write-LogMessage -API 'Update Tokens' -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -message "Could not update refresh token for tenant $($Tenant.displayName). Will try again in 7 days." -sev 'Critical'
                         }
                     }
                 } catch {
-                    Write-LogMessage -API 'Update Tokens' -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -message "Error updating refresh token for tenant $($Tenant.displayName), see Log Data for details. Will try again in 7 days." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
+                    Write-LogMessage -API 'Update Tokens' -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -message "Error updating refresh token for tenant $($Tenant.displayName), see Log Data for details. Will try again in 7 days." -sev 'Critical' -LogData (Get-CippException -Exception $_)
                 }
             }
         }
@@ -200,7 +200,7 @@ function Start-UpdateTokensTimer {
                 Write-Information "Updating refresh token for partner tenant $($Partner.displayName) - $($Partner.RowKey)"
                 $Refreshtoken = (Get-GraphToken -ReturnRefresh $true -TenantId $Partner.RowKey).Refresh_token
                 if (!$Refreshtoken) {
-                    Write-LogMessage -API 'Update Tokens' -message "Could not update refresh token for partner tenant $($Partner.displayName) ($($Partner.RowKey)). Will try again in 7 days." -sev 'CRITICAL'
+                    Write-LogMessage -API 'Update Tokens' -message "Could not update refresh token for partner tenant $($Partner.displayName) ($($Partner.RowKey)). Will try again in 7 days." -sev 'Critical'
                     continue
                 }
                 $SecretName = "partner-$($Partner.RowKey)"
@@ -220,7 +220,7 @@ function Start-UpdateTokensTimer {
                 $Partner | Add-Member -MemberType NoteProperty -Name 'lastTokenRefresh' -Value (Get-Date).ToUniversalTime() -Force
                 $null = Add-CIPPAzDataTableEntity @PartnerTable -Entity ($Partner | Select-Object -Property * -ExcludeProperty IsPrimary) -Force
             } catch {
-                Write-LogMessage -API 'Update Tokens' -message "Error updating refresh token for partner tenant $($Partner.displayName) ($($Partner.RowKey)), see Log Data for details. Will try again in 7 days." -sev 'CRITICAL' -LogData (Get-CippException -Exception $_)
+                Write-LogMessage -API 'Update Tokens' -message "Error updating refresh token for partner tenant $($Partner.displayName) ($($Partner.RowKey)), see Log Data for details. Will try again in 7 days." -sev 'Critical' -LogData (Get-CippException -Exception $_)
             }
         }
 

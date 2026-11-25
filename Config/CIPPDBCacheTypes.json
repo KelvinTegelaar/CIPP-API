@@ -383,7 +383,7 @@
   {
     "type": "MailboxMessageConfiguration",
     "friendlyName": "Mailbox Message Configuration",
-    "description": "Default compose font name, size and colour of every user and shared mailbox (collected on demand)"
+    "description": "Outlook on the web compose settings (font, undo send, From/Bcc, read receipts) of every user and shared mailbox (collected on demand)"
   },
   {
     "type": "MailboxUsage",

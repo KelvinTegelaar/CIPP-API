@@ -11,10 +11,11 @@ BeforeAll {
     function Get-CIPPTable { param($TableName) }
     function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
     function ConvertTo-CIPPODataFilterValue { param($Value) $Value }
-    function New-GraphGetRequest { param($uri, $tenantid, $scope, $noPagination, $AsApp) }
-    function New-ExoBulkRequest { param($TenantId, $CmdletArray, $returnWithCommand, $Anchor) }
+    function New-GraphGetRequest { param($uri, $tenantid, $scope, $noPagination, $AsApp, $extraHeaders) }
+    function New-ExoBulkRequest { param($TenantId, $CmdletArray, $returnWithCommand, [int]$BatchSize, [int]$MaxConcurrency) }
     function Get-CIPPAutoExpandingArchiveState { param($MailboxAutoExpandingArchiveEnabled, $OrgAutoExpandingArchiveEnabled) }
     function Get-ExoOnlineStringBytes { param($SizeString) 0 }
+    function Get-Tenants { param($TenantFilter) [pscustomobject]@{ customerId = 'tenant-guid' } }
 
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Identity/Administration/Users/Invoke-ListUserMailboxDetails.ps1'
     $EndpointScript = [ScriptBlock]::Create("using namespace System.Net`n" + (Get-Content -LiteralPath $EndpointPath -Raw))
@@ -66,6 +67,26 @@ Describe 'Invoke-ListUserMailboxDetails - forwarding' {
         $Body.ForwardingContact.mail | Should -Be 'ann@gmail.com'
         @($Body.ForwardingContact.PSObject.Properties.Name) | Should -Be @('id', 'displayName', 'mail')
         Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*/beta/contacts*' -and $uri -like '*$select=id,*' }
+    }
+
+    It 'sends every Exchange cmdlet in its own batch, all at once' {
+        $null = Invoke-ListUserMailboxDetails -Request (New-DetailsRequest)
+
+        Should -Invoke New-ExoBulkRequest -Times 1 -Exactly -ParameterFilter {
+            $BatchSize -eq 1 -and @($CmdletArray).Count -gt 1 -and $MaxConcurrency -eq @($CmdletArray).Count
+        }
+    }
+
+    It 'selects the mailbox by object id and only routes the statistics call by it' {
+        $null = Invoke-ListUserMailboxDetails -Request (New-DetailsRequest)
+
+        Should -Invoke New-ExoBulkRequest -Times 1 -Exactly -ParameterFilter {
+            $Ids = @(@($CmdletArray).Where({ $_.CmdletInput.Parameters.Identity }).CmdletInput.Parameters.Identity)
+            $Ids.Count -ge 6 -and @($Ids | Sort-Object -Unique) -eq 'user-guid'
+        }
+        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter {
+            $uri -like "*/Mailbox('user-guid')/Exchange.GetMailboxStatistics()" -and $extraHeaders['X-AnchorMailbox'] -eq 'Oid:user-guid@tenant-guid'
+        }
     }
 
     It 'returns the UPN and no contact when the forward resolves to a user' {

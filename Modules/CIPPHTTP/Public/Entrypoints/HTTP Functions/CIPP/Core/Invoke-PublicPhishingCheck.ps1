@@ -13,7 +13,7 @@ function Invoke-PublicPhishingCheck {
     $Tenant = (Get-CIPPTenantLookup)[[string]$Request.body.TenantId]
 
     if ($Request.body.Cloned -and $Tenant.customerId -eq $Request.body.TenantId) {
-        Write-AlertMessage -message $Request.body.AlertMessage -sev 'Alert' -tenant $Request.body.TenantId
+        Write-AlertMessage -message $Request.body.AlertMessage -tenant $Request.body.TenantId
     } elseif ($Request.Body.source -and $Tenant) {
         $table = Get-CIPPTable -tablename CheckExtensionAlerts
         $Message = "Alert received from $($Request.Body.source) for $($Request.body.TenantId)"

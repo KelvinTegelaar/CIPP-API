@@ -317,13 +317,13 @@ function Invoke-CIPPStandardIntuneTemplate {
                 "Template $($CompareResult.displayname) does not match the expected configuration."
             }
             Write-StandardsAlert -message $Message -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "$Message We've generated an alert" -sev info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "$Message We've generated an alert" -sev Info
         } else {
             if ($CompareResult.existingPolicyId) {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($CompareResult.displayname) has the correct configuration." -sev Info
             } else {
                 Write-StandardsAlert -message "Template $($CompareResult.displayname) is missing." -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($CompareResult.displayname) is missing." -sev info
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Template $($CompareResult.displayname) is missing." -sev Info
             }
         }
     }

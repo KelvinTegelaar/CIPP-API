@@ -112,7 +112,7 @@ function Push-SchedulerCIPPNotifications {
         }
     } catch {
         Write-Information "Could not send alerts to email: $($_.Exception.message)"
-        Write-LogMessage -API 'Alerts' -message "Could not send alert emails: $($_.Exception.message)" -sev error -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -API 'Alerts' -message "Could not send alert emails: $($_.Exception.message)" -sev Error -LogData (Get-CippException -Exception $_)
     }
 
     try {
@@ -145,7 +145,7 @@ function Push-SchedulerCIPPNotifications {
         }
     } catch {
         Write-Information "Could not send alerts to webhook $($config.webhook): $($_.Exception.message)"
-        Write-LogMessage -API 'Alerts' -message "Could not send alerts to webhook $($config.webhook): $($_.Exception.message)" -tenant 'AllTenants' -sev error -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -API 'Alerts' -message "Could not send alerts to webhook $($config.webhook): $($_.Exception.message)" -tenant 'AllTenants' -sev Error -LogData (Get-CippException -Exception $_)
     }
 
     if ($config.sendtoIntegration) {

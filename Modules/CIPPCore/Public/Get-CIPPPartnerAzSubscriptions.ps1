@@ -52,7 +52,7 @@ function Get-CIPPPartnerAzSubscriptions {
                     }
                 } catch {
                     # what do we do here error wise?
-                    #Write-LogMessage -message "Unable to retrieve subscriptions(s) from usagerecord $($usageRecord.id): $($_.Exception.Message)" -Sev 'ERROR' -API $APINAME
+                    #Write-LogMessage -message "Unable to retrieve subscriptions(s) from usagerecord $($usageRecord.id): $($_.Exception.Message)" -Sev 'Error' -API $APINAME
                     #Write-Error "Unable to retrieve sub(s) from usagerecord $($usageRecord.id) for tenant $($tenantFilter): $($_.Exception.Message)"
                 }
             }
@@ -61,6 +61,6 @@ function Get-CIPPPartnerAzSubscriptions {
         return $subsCache
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -message "Unable to retrieve CSP Azure subscriptions for $($TenantFilter): $($ErrorMessage.NormalizedError)" -Sev 'ERROR' -API $APINAME -LogData $ErrorMessage
+        Write-LogMessage -message "Unable to retrieve CSP Azure subscriptions for $($TenantFilter): $($ErrorMessage.NormalizedError)" -Sev 'Error' -API $APINAME -LogData $ErrorMessage
     }
 }

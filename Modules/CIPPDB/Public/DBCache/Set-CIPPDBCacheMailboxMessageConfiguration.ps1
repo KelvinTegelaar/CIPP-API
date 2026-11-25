@@ -1,7 +1,7 @@
 function Set-CIPPDBCacheMailboxMessageConfiguration {
     <#
     .SYNOPSIS
-        Caches the default compose font of every user and shared mailbox
+        Caches the Outlook on the web compose settings of every user and shared mailbox
 
     .DESCRIPTION
         One Get-MailboxMessageConfiguration per mailbox in the Mailboxes cache, batched 10 per
@@ -43,7 +43,7 @@ function Set-CIPPDBCacheMailboxMessageConfiguration {
         # 32 batches in flight measured fastest for a tenant; CIPPRateLimiter paces EXO to its Rate-Limit budget.
         $ById = @{}
         if ($Mailboxes.Count -gt 0) {
-            foreach ($Config in @(New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($Requests) -Select 'Identity,DefaultFontName,DefaultFontSize,DefaultFontColor' -MaxConcurrency 32)) {
+            foreach ($Config in @(New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($Requests) -Select 'Identity,DefaultFontName,DefaultFontSize,DefaultFontColor,MailSendUndoInterval,AlwaysShowFrom,AlwaysShowBcc,CheckForForgottenAttachments,IsReplyAllTheDefaultResponse,DefaultFormat,ReadReceiptResponse,LinkPreviewEnabled' -MaxConcurrency 32)) {
                 if ($Config.OperationGuid) { $ById["$($Config.OperationGuid)"] = $Config }
             }
         }
@@ -52,11 +52,19 @@ function Set-CIPPDBCacheMailboxMessageConfiguration {
             $UPN = "$($Mailbox.UPN)"
             $Config = $ById[$UPN]
             [PSCustomObject]@{
-                id               = $UPN
-                DefaultFontName  = $Config.DefaultFontName
-                DefaultFontSize  = $Config.DefaultFontSize
-                DefaultFontColor = $Config.DefaultFontColor
-                error            = if (-not $Config) { 'no response' } elseif ($Config.error) { "$($Config.error)" } else { $null }
+                id                           = $UPN
+                DefaultFontName              = $Config.DefaultFontName
+                DefaultFontSize              = $Config.DefaultFontSize
+                DefaultFontColor             = $Config.DefaultFontColor
+                MailSendUndoInterval         = $Config.MailSendUndoInterval
+                AlwaysShowFrom               = $Config.AlwaysShowFrom
+                AlwaysShowBcc                = $Config.AlwaysShowBcc
+                CheckForForgottenAttachments = $Config.CheckForForgottenAttachments
+                IsReplyAllTheDefaultResponse = $Config.IsReplyAllTheDefaultResponse
+                DefaultFormat                = $Config.DefaultFormat
+                ReadReceiptResponse          = $Config.ReadReceiptResponse
+                LinkPreviewEnabled           = $Config.LinkPreviewEnabled
+                error                        = if (-not $Config) { 'no response' } elseif ($Config.error) { "$($Config.error)" } else { $null }
             }
         }
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'MailboxMessageConfiguration' -Data @($Rows) -AddCount -ClearOnEmpty

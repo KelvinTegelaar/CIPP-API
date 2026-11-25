@@ -160,7 +160,7 @@ function New-CIPPOneDriveShortCut {
         } elseif ($Created.name) {
             $ShortcutDisplayName = $Created.name
         }
-        Write-LogMessage -API $APIName -headers $Headers -message "Created OneDrive shortcut called $ShortcutDisplayName for $Username in $DestinationLabel" -Sev 'info'
+        Write-LogMessage -API $APIName -headers $Headers -message "Created OneDrive shortcut called $ShortcutDisplayName for $Username in $DestinationLabel" -Sev 'Info'
         return "Successfully created OneDrive Shortcut for $Username called $ShortcutDisplayName in $DestinationLabel"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

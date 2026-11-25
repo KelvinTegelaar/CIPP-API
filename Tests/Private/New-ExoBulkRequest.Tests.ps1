@@ -47,6 +47,12 @@ Describe 'New-ExoBulkRequest -AnchorPerMailbox' {
         $script:Posts.Size | Should -Be @(2)
         $script:Posts[0].Anchor | Should -BeLike 'APP:SystemMailbox*'
     }
+
+    It 'splits into smaller batches with -BatchSize and keeps the system-mailbox routing' {
+        $null = New-ExoBulkRequest -tenantid 'contoso.onmicrosoft.com' -cmdletArray @($script:Cmdlets) -BatchSize 1
+        $script:Posts.Size | Should -Be @(1, 1)
+        @($script:Posts.Anchor).Where({ $_ -notlike 'APP:SystemMailbox*' }) | Should -BeNullOrEmpty
+    }
 }
 
 Describe 'New-ExoBulkRequest transient sub-request errors' {

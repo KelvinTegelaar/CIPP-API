@@ -150,11 +150,11 @@ function Get-CIPPAuthentication {
             Write-Information "Could not resolve certificate auth mode: $($_.Exception.Message)"
         }
 
-        Write-LogMessage -message 'Reloaded authentication data from KeyVault' -Sev 'debug' -API 'CIPP Authentication'
+        Write-LogMessage -message 'Reloaded authentication data from KeyVault' -Sev 'Debug' -API 'CIPP Authentication'
 
         return $true
     } catch {
-        Write-LogMessage -message 'Could not retrieve keys from Keyvault' -Sev 'CRITICAL' -API 'CIPP Authentication' -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -message 'Could not retrieve keys from Keyvault' -Sev 'Critical' -API 'CIPP Authentication' -LogData (Get-CippException -Exception $_)
         return $false
     }
 }

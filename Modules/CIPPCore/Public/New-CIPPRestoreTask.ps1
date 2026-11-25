@@ -105,7 +105,7 @@ function New-CIPPRestoreTask {
                     try {
                         if ($overwrite) {
                             Add-CIPPAzDataTableEntity @ReplaceTable -Entity $entity -Force
-                            Write-LogMessage -message "Restored custom variable $($variable.RowKey) from backup" -Sev 'info'
+                            Write-LogMessage -message "Restored custom variable $($variable.RowKey) from backup" -Sev 'Info'
                             $restorationStats['CustomVariables'].success++
                             $RestoreData.Add("Restored custom variable $($variable.RowKey) from backup")
                         } else {
@@ -113,11 +113,11 @@ function New-CIPPRestoreTask {
                             $existing = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$CustomerId' and RowKey eq '$($variable.RowKey)'"
                             if (!$existing) {
                                 Add-CIPPAzDataTableEntity @ReplaceTable -Entity $entity -Force
-                                Write-LogMessage -message "Restored custom variable $($variable.RowKey) from backup" -Sev 'info'
+                                Write-LogMessage -message "Restored custom variable $($variable.RowKey) from backup" -Sev 'Info'
                                 $restorationStats['CustomVariables'].success++
                                 $RestoreData.Add("Restored custom variable $($variable.RowKey) from backup")
                             } else {
-                                Write-LogMessage -message "Custom variable $($variable.RowKey) already exists and overwrite is disabled" -Sev 'info'
+                                Write-LogMessage -message "Custom variable $($variable.RowKey) already exists and overwrite is disabled" -Sev 'Info'
                                 $RestoreData.Add("Custom variable $($variable.RowKey) already exists and overwrite is disabled")
                             }
                         }
@@ -164,7 +164,7 @@ function New-CIPPRestoreTask {
                             $cleanedUser = ConvertTo-RestorableGraphObject -Object $userObject
                             $patchBody = $cleanedUser | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/users/$($userObject.id)" -tenantid $TenantFilter -body $patchBody -type PATCH
-                            Write-LogMessage -message "Restored $($UPN) from backup by patching the existing object." -Sev 'info'
+                            Write-LogMessage -message "Restored $($UPN) from backup by patching the existing object." -Sev 'Info'
                             $restorationStats['Users'].success++
                             $RestoreData.Add("The user existed. Restored $($UPN) from backup")
                         } else {
@@ -189,7 +189,7 @@ function New-CIPPRestoreTask {
                             } catch {
                                 # If PwPush fails, use plain password
                             }
-                            Write-LogMessage -message "Restored $($UPN) from backup by creating a new object with a temporary password." -Sev 'info' -tenant $TenantFilter
+                            Write-LogMessage -message "Restored $($UPN) from backup by creating a new object with a temporary password." -Sev 'Info' -tenant $TenantFilter
                             $restorationStats['Users'].success++
                             $RestoreData.Add("The user did not exist. Restored $($UPN) from backup with temporary password: $displayPassword")
                         }
@@ -216,7 +216,7 @@ function New-CIPPRestoreTask {
                             } catch {
                                 # If PwPush fails, use plain password
                             }
-                            Write-LogMessage -message "Restored $($UPN) from backup with a temporary password." -Sev 'info' -tenant $TenantFilter
+                            Write-LogMessage -message "Restored $($UPN) from backup with a temporary password." -Sev 'Info' -tenant $TenantFilter
                             $restorationStats['Users'].success++
                             $RestoreData.Add("Restored $($UPN) from backup with temporary password: $displayPassword")
                         }
@@ -241,13 +241,13 @@ function New-CIPPRestoreTask {
                         if ($_.id -in $Groups.id) {
                             $JSON = ConvertTo-RestorableGraphObject $_ -ForUpdate | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/groups/$($_.id)" -tenantid $TenantFilter -body $JSON -type PATCH
-                            Write-LogMessage -message "Restored $DisplayName from backup by patching the existing object." -Sev 'info'
+                            Write-LogMessage -message "Restored $DisplayName from backup by patching the existing object." -Sev 'Info'
                             $restorationStats['Groups'].success++
                             $RestoreData.Add("The group existed. Restored $DisplayName from backup")
                         } else {
                             $JSON = ConvertTo-RestorableGraphObject $_ -ExcludeId | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $TenantFilter -body $JSON -type POST
-                            Write-LogMessage -message "Restored $DisplayName from backup" -Sev 'info'
+                            Write-LogMessage -message "Restored $DisplayName from backup" -Sev 'Info'
                             $restorationStats['Groups'].success++
                             $RestoreData.Add("Restored $DisplayName from backup")
                         }
@@ -256,11 +256,11 @@ function New-CIPPRestoreTask {
                         if ($_.id -notin $Groups.id) {
                             $JSON = ConvertTo-RestorableGraphObject $_ -ExcludeId | ConvertTo-Json -Depth 100 -Compress
                             $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $TenantFilter -body $JSON -type POST
-                            Write-LogMessage -message "Restored $DisplayName from backup" -Sev 'info'
+                            Write-LogMessage -message "Restored $DisplayName from backup" -Sev 'Info'
                             $restorationStats['Groups'].success++
                             $RestoreData.Add("Restored $DisplayName from backup")
                         } else {
-                            Write-LogMessage -message "Group $DisplayName already exists in tenant $TenantFilter and overwrite is disabled" -Sev 'info'
+                            Write-LogMessage -message "Group $DisplayName already exists in tenant $TenantFilter and overwrite is disabled" -Sev 'Info'
                             $RestoreData.Add("Group $DisplayName already exists in tenant $TenantFilter and overwrite is disabled")
                         }
                     }
@@ -441,7 +441,7 @@ function New-CIPPRestoreTask {
 
                             $null = New-ExoRequest -TenantId $Tenantfilter -cmdlet 'Set-HostedContentFilterPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
 
-                            Write-LogMessage -message "Restored $($policy.Identity) from backup" -Sev 'info'
+                            Write-LogMessage -message "Restored $($policy.Identity) from backup" -Sev 'Info'
                             $restorationStats['AntiSpam'].success++
                             $RestoreData.Add("Restored $($policy.Identity) from backup.")
                         }
@@ -462,7 +462,7 @@ function New-CIPPRestoreTask {
 
                         $null = New-ExoRequest -TenantId $Tenantfilter -cmdlet 'New-HostedContentFilterPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
 
-                        Write-LogMessage -message "Restored $($policy.Identity) from backup" -Sev 'info'
+                        Write-LogMessage -message "Restored $($policy.Identity) from backup" -Sev 'Info'
                         $restorationStats['AntiSpam'].success++
                         $RestoreData.Add("Restored $($policy.Identity) from backup.")
                     }
@@ -494,7 +494,7 @@ function New-CIPPRestoreTask {
 
                             $null = New-ExoRequest -TenantId $Tenantfilter -cmdlet 'Set-HostedContentFilterRule' -cmdparams $cmdparams -UseSystemMailbox $true
 
-                            Write-LogMessage -message "Restored $($rule.Identity) from backup" -Sev 'info'
+                            Write-LogMessage -message "Restored $($rule.Identity) from backup" -Sev 'Info'
                             $restorationStats['AntiSpam'].success++
                             $RestoreData.Add("Restored $($rule.Identity) from backup.")
                         }
@@ -515,7 +515,7 @@ function New-CIPPRestoreTask {
 
                         $null = New-ExoRequest -TenantId $Tenantfilter -cmdlet 'New-HostedContentFilterRule' -cmdparams $cmdparams -UseSystemMailbox $true
 
-                        Write-LogMessage -message "Restored $($rule.Identity) from backup" -Sev 'info'
+                        Write-LogMessage -message "Restored $($rule.Identity) from backup" -Sev 'Info'
                         $restorationStats['AntiSpam'].success++
                         $RestoreData.Add("Restored $($rule.Identity) from backup.")
                     }
@@ -609,7 +609,7 @@ function New-CIPPRestoreTask {
 
                             $null = New-ExoRequest -TenantId $Tenantfilter -cmdlet 'Set-AntiPhishPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
 
-                            Write-LogMessage -message "Restored $($policy.Identity) from backup" -Sev 'info'
+                            Write-LogMessage -message "Restored $($policy.Identity) from backup" -Sev 'Info'
                             $restorationStats['AntiPhishing'].success++
                             $RestoreData.Add("Restored $($policy.Identity) from backup.")
                         }
@@ -626,7 +626,7 @@ function New-CIPPRestoreTask {
 
                         $null = New-ExoRequest -TenantId $Tenantfilter -cmdlet 'New-AntiPhishPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
 
-                        Write-LogMessage -message "Restored $($policy.Identity) from backup" -Sev 'info'
+                        Write-LogMessage -message "Restored $($policy.Identity) from backup" -Sev 'Info'
                         $restorationStats['AntiPhishing'].success++
                         $RestoreData.Add("Restored $($policy.Identity) from backup.")
                     }
@@ -658,7 +658,7 @@ function New-CIPPRestoreTask {
 
                             $null = New-ExoRequest -TenantId $Tenantfilter -cmdlet 'Set-AntiPhishRule' -cmdparams $cmdparams -UseSystemMailbox $true
 
-                            Write-LogMessage -message "Restored $($rule.Identity) from backup" -Sev 'info'
+                            Write-LogMessage -message "Restored $($rule.Identity) from backup" -Sev 'Info'
                             $restorationStats['AntiPhishing'].success++
                             $RestoreData.Add("Restored $($rule.Identity) from backup.")
                         }
@@ -679,7 +679,7 @@ function New-CIPPRestoreTask {
 
                         $null = New-ExoRequest -TenantId $Tenantfilter -cmdlet 'New-AntiPhishRule' -cmdparams $cmdparams -UseSystemMailbox $true
 
-                        Write-LogMessage -message "Restored $($rule.Identity) from backup" -Sev 'info'
+                        Write-LogMessage -message "Restored $($rule.Identity) from backup" -Sev 'Info'
                         $restorationStats['AntiPhishing'].success++
                         $RestoreData.Add("Restored $($rule.Identity) from backup.")
                     }

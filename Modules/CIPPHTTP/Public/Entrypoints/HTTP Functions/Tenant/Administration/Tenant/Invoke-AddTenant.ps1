@@ -41,7 +41,7 @@ function Invoke-AddTenant {
         'GetOrganizationProfile' {
             $OrganizationProfileUri = 'https://api.partnercenter.microsoft.com/v1/profiles/organization'
             try {
-                $OrgResponse = New-GraphGetRequest -uri $OrganizationProfileUri -scope 'https://api.partnercenter.microsoft.com/.default' -NoAuthCheck $true -AddedHeaders $Headers
+                $OrgResponse = New-GraphGetRequest -uri $OrganizationProfileUri -scope 'https://api.partnercenter.microsoft.com/.default' -NoAuthCheck $true
                 # remove the first character from the response and then convert from JSON
                 if (!$OrgResponse.id -and $OrgResponse -notmatch '^{') {
                     $OrgResponse = $OrgResponse.Substring(1) | ConvertFrom-Json
