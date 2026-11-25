@@ -12,6 +12,7 @@
   "powershellEquivalent": "Set-SPOSite -Identity https://tenant-my.sharepoint.com/personal/user -StorageQuota 5242880",
   "recommendedBy": [],
   "requiredCapabilities": [
+    "SHAREPOINTDESKLESS",
     "SHAREPOINTENTERPRISE",
     "SHAREPOINTENTERPRISE_EDU",
     "SHAREPOINTENTERPRISE_GOV",

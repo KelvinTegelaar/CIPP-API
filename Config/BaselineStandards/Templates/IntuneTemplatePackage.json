@@ -15,6 +15,7 @@
   "executiveText": "Deploys a complete, named bundle of device management configurations in one step - for example an entire Windows security baseline - and keeps every policy in the bundle enforced as the bundle evolves.",
   "recommendedBy": ["CIPP"],
   "requiredCapabilities": [
+    "INTUNE_EDU",
     "INTUNE_A",
     "MDM_Services",
     "EMS",

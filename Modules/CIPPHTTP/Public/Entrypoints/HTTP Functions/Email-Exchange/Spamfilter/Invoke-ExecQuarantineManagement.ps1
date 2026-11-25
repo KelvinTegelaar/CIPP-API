@@ -64,8 +64,7 @@ function Invoke-ExecQuarantineManagement {
                 }
                 if (-not [string]::IsNullOrEmpty($SenderAddress) -and -not [string]::IsNullOrEmpty($PolicyName)) {
                     $CurrentPolicy = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-HostedContentFilterPolicy' -cmdParams @{ Identity = $PolicyName }
-                    # AllowedSenders can come back as plain strings or as {Sender:{Address}} objects
-                    $CurrentSenders = @($CurrentPolicy.AllowedSenders | ForEach-Object { if ($_.Sender.Address) { $_.Sender.Address } else { "$_" } } | Where-Object { $_ })
+                    $CurrentSenders = @($CurrentPolicy.AllowedSenders).Where({ $_ })
                     if ($SenderAddress -notin $CurrentSenders) {
                         $UpdatedSenders = @($CurrentSenders + $SenderAddress)
                         New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-HostedContentFilterPolicy' -cmdParams @{

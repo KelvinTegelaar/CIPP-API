@@ -61,4 +61,8 @@ Describe 'Get-CIPPDBCacheSchedule Global Secure Access' {
         $Schedule.ConditionalAccess.Types | Should -Contain 'NetworkAccess'
         $Schedule.ConditionalAccess.Types | Should -Contain 'NetworkAccessFiltering'
     }
+
+    It 'collects Defender CVEs only on tenants with vulnerability management' {
+        (Get-CIPPDBCacheSchedule).Defender.License | Should -Be 'DefenderVulnerabilityManagement'
+    }
 }

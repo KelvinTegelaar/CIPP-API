@@ -10261,7 +10261,33 @@
                     "description": "Proxy addresses (aliases) to remove from the group"
                   },
                   "RemoveDevice": {
-                    "type": "string",
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "addedFields": {
+                          "type": "object",
+                          "properties": {
+                            "azureADDeviceId": {
+                              "type": "string"
+                            },
+                            "deviceName": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string",
+                          "description": "Intune device rows carry the Entra deviceId (azureADDeviceId) rather than the directory object id - resolve it via the devices alternate key"
+                        }
+                      }
+                    },
                     "description": "Devices to remove from the group, as options carrying the device's directory object ID"
                   },
                   "RemoveLicenses": {

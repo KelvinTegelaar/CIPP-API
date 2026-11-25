@@ -77,7 +77,7 @@ Describe 'Get-CIPPCAPolicyImpact' {
         Should -Invoke New-GraphBulkRequest -Times 1 -ParameterFilter {
             $First = [System.Uri]::UnescapeDataString($Requests[0].url)
             $Requests[0].id -eq '0' -and
-            $First -like "*appliedConditionalAccessPolicies/any(p:p/id eq '$($script:PolicyId)')*" -and
+            $First -notlike '*/any(*' -and
             $First -match 'createdDateTime ge \S+ and createdDateTime lt \S+' -and
             $First -like '*$top=999*'
         }
@@ -113,7 +113,8 @@ Describe 'Get-CIPPCAPolicyImpact' {
                 (New-SignIn -Created "$($script:YesterdayKey)T10:00:00Z" -Result 'success'),
                 (New-SignIn -Created "$($script:YesterdayKey)T11:00:00Z" -Result 'failure'),
                 (New-SignIn -Created "$($script:YesterdayKey)T12:00:00Z" -Result 'notApplied'),
-                (New-SignIn -Created "$($script:TwoDaysAgoKey)T12:00:00Z" -Result 'success')
+                (New-SignIn -Created "$($script:TwoDaysAgoKey)T12:00:00Z" -Result 'success'),
+                ([pscustomobject]@{ id = 'other'; createdDateTime = "$($script:YesterdayKey)T13:00:00Z"; appliedConditionalAccessPolicies = @([pscustomobject]@{ id = $script:OtherPolicyId; result = 'success' }) })
             )
             $Answers
         }

@@ -19,6 +19,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -127,6 +128,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -268,6 +270,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -544,6 +547,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -713,6 +717,7 @@
     "powershellEquivalent": "Graph API - deviceManagement/appleUserInitiatedEnrollmentProfiles",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -808,6 +813,7 @@
     "powershellEquivalent": "Graph: POST or PATCH deviceManagement/assignmentFilters",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -867,6 +873,7 @@
       [
         "SHAREPOINTWAC",
         "SHAREPOINTSTANDARD",
+        "SHAREPOINTDESKLESS",
         "SHAREPOINTENTERPRISE",
         "SHAREPOINTENTERPRISE_EDU",
         "SHAREPOINTENTERPRISE_GOV",
@@ -928,6 +935,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -1611,6 +1619,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -1637,6 +1646,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -1680,6 +1690,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -1713,6 +1724,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -1736,6 +1748,7 @@
     "powershellEquivalent": "Graph API - deviceManagement/windowsAutopilotDeploymentProfiles",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -1894,6 +1907,7 @@
     "powershellEquivalent": "Graph API",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -2009,6 +2023,7 @@
     "powershellEquivalent": "Graph: POST or PUT deviceManagement/configurationPolicies",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -3214,6 +3229,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -3478,6 +3494,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -3545,6 +3562,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -4028,6 +4046,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -4306,6 +4325,7 @@
     "powershellEquivalent": "Graph API",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -4514,6 +4534,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -5565,6 +5586,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -5600,6 +5622,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -5686,6 +5709,7 @@
     "powershellEquivalent": "Add-CIPPW32ScriptApplication",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -5905,6 +5929,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -5950,6 +5975,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -6033,6 +6059,7 @@
       "CIPP"
     ],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -6056,6 +6083,7 @@
     "powershellEquivalent": "Graph API - deviceManagement/configurationPolicies",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -6206,6 +6234,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -6249,6 +6278,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -6384,6 +6414,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -6428,6 +6459,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -6524,6 +6556,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -6557,6 +6590,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -6866,6 +6900,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -6915,6 +6950,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -6995,6 +7031,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "SHAREPOINTENTERPRISE_GOV",
@@ -7037,6 +7074,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -7208,6 +7246,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "SHAREPOINTENTERPRISE_GOV",
@@ -7288,6 +7327,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -7375,6 +7415,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -7559,6 +7600,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -7592,6 +7634,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -7736,6 +7779,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -7798,6 +7842,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -7909,6 +7954,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -8039,6 +8085,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV"
     ],
     "secureScoreImpact": 0,
@@ -8175,6 +8222,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -8218,6 +8266,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -8281,6 +8330,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -8346,6 +8396,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -8399,6 +8450,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "SHAREPOINTENTERPRISE_GOV",
@@ -8441,6 +8493,7 @@
     "powershellEquivalent": "Graph: POST or PATCH deviceManagement/deviceEnrollmentConfigurations, then setPriority and assign",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -8488,6 +8541,7 @@
     "powershellEquivalent": "Graph API",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -8700,6 +8754,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -8742,6 +8797,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -9391,6 +9447,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -9457,6 +9514,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -9507,6 +9565,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -9578,6 +9637,7 @@
         "AAD_PREMIUM_P2"
       ],
       [
+        "INTUNE_EDU",
         "INTUNE_A",
         "MDM_Services",
         "EMS",
@@ -10131,6 +10191,7 @@
     "powershellEquivalent": "Graph API - /deviceAppManagement/mobileApps",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -10180,6 +10241,7 @@
     "powershellEquivalent": "Graph API",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -10234,6 +10296,7 @@
     "powershellEquivalent": "Graph: PATCH deviceManagement/deviceCompliancePolicies and deviceAppManagement/*ManagedAppProtections",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -10359,6 +10422,7 @@
       "CIPP"
     ],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -10521,6 +10585,7 @@
       "CIPP"
     ],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -10633,6 +10698,7 @@
     "powershellEquivalent": "Graph API",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -10739,6 +10805,7 @@
     "powershellEquivalent": "Graph API",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -10772,6 +10839,7 @@
     "powershellEquivalent": "Graph: PATCH policies/mobileDeviceManagementPolicies",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -10911,6 +10979,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -10939,6 +11008,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -10997,6 +11067,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -11181,6 +11252,7 @@
         "EXCHANGE_S_STANDARD",
         "EXCHANGE_S_ENTERPRISE",
         "EXCHANGE_S_STANDARD_GOV",
+        "EXCHANGE_S_DESKLESS",
         "EXCHANGE_S_ENTERPRISE_GOV",
         "EXCHANGE_LITE"
       ],
@@ -11346,6 +11418,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -11385,6 +11458,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "SHAREPOINTENTERPRISE_GOV",
@@ -11500,6 +11574,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -11657,6 +11732,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -11764,6 +11840,7 @@
     "powershellEquivalent": "Set-SPOSite -Identity https://tenant-my.sharepoint.com/personal/user -StorageQuota 5242880",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "SHAREPOINTENTERPRISE_GOV",
@@ -11806,6 +11883,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -11871,6 +11949,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -12201,6 +12280,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -12244,6 +12324,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -12342,6 +12423,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -12388,6 +12470,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -12454,6 +12537,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -12573,6 +12657,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "SHAREPOINTENTERPRISE_GOV",
@@ -12641,6 +12726,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -12673,6 +12759,7 @@
     "powershellEquivalent": "Graph: POST or PUT deviceManagement/reusablePolicySettings",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -12729,6 +12816,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -12767,6 +12855,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -12838,6 +12927,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -12872,6 +12962,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -12906,6 +12997,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -12935,6 +13027,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -12969,6 +13062,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -13005,6 +13099,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -13040,6 +13135,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -13086,6 +13182,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -13136,6 +13233,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "SHAREPOINTENTERPRISE_GOV",
@@ -13193,6 +13291,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -13227,6 +13326,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -13280,6 +13380,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -13329,6 +13430,7 @@
         "EXCHANGE_S_STANDARD",
         "EXCHANGE_S_ENTERPRISE",
         "EXCHANGE_S_STANDARD_GOV",
+        "EXCHANGE_S_DESKLESS",
         "EXCHANGE_S_ENTERPRISE_GOV",
         "EXCHANGE_LITE"
       ],
@@ -13445,6 +13547,7 @@
         "EXCHANGE_S_STANDARD",
         "EXCHANGE_S_ENTERPRISE",
         "EXCHANGE_S_STANDARD_GOV",
+        "EXCHANGE_S_DESKLESS",
         "EXCHANGE_S_ENTERPRISE_GOV",
         "EXCHANGE_LITE"
       ],
@@ -13519,6 +13622,7 @@
         "EXCHANGE_S_STANDARD",
         "EXCHANGE_S_ENTERPRISE",
         "EXCHANGE_S_STANDARD_GOV",
+        "EXCHANGE_S_DESKLESS",
         "EXCHANGE_S_ENTERPRISE_GOV",
         "EXCHANGE_LITE"
       ],
@@ -13574,6 +13678,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -13600,6 +13705,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -13754,6 +13860,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -13788,6 +13895,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -13910,6 +14018,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -14072,6 +14181,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -14253,6 +14363,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -14674,6 +14785,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -15962,6 +16074,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -16136,6 +16249,7 @@
         "EXCHANGE_S_STANDARD",
         "EXCHANGE_S_ENTERPRISE",
         "EXCHANGE_S_STANDARD_GOV",
+        "EXCHANGE_S_DESKLESS",
         "EXCHANGE_S_ENTERPRISE_GOV",
         "EXCHANGE_LITE"
       ],
@@ -16176,6 +16290,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -16218,6 +16333,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -16699,6 +16815,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -16748,6 +16865,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -16885,6 +17003,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -16952,6 +17071,7 @@
     "powershellEquivalent": "Graph API",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -17076,6 +17196,7 @@
       "EXCHANGE_S_STANDARD",
       "EXCHANGE_S_ENTERPRISE",
       "EXCHANGE_S_STANDARD_GOV",
+      "EXCHANGE_S_DESKLESS",
       "EXCHANGE_S_ENTERPRISE_GOV",
       "EXCHANGE_LITE"
     ],
@@ -17154,6 +17275,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -17179,6 +17301,7 @@
     "powershellEquivalent": "Graph API",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -17364,6 +17487,7 @@
     "powershellEquivalent": "Update-MgBetaPolicyDeviceRegistrationPolicy",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -17462,6 +17586,7 @@
     "powershellEquivalent": "Graph: POST or PATCH deviceManagement/managedDeviceCleanupRules",
     "recommendedBy": [],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",
@@ -17731,6 +17856,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -17793,6 +17919,7 @@
     "requiredCapabilities": [
       "SHAREPOINTWAC",
       "SHAREPOINTSTANDARD",
+      "SHAREPOINTDESKLESS",
       "SHAREPOINTENTERPRISE",
       "SHAREPOINTENTERPRISE_EDU",
       "ONEDRIVE_BASIC",
@@ -17858,6 +17985,7 @@
       "CIS"
     ],
     "requiredCapabilities": [
+      "INTUNE_EDU",
       "INTUNE_A",
       "MDM_Services",
       "EMS",

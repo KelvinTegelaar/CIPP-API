@@ -294,10 +294,9 @@ function Invoke-EditGroup {
         Write-Warning "Error in RemoveMembers: $($_.Exception.Message)"
     }
 
-    foreach ($Device in @($RemoveDevices | Where-Object { $_ })) {
-        $DeviceID = $Device.value ?? $Device
-        $DeviceLabel = $Device.addedFields.displayName ?? $Device.label
-        $DeviceLabel = if ($DeviceLabel) { "$DeviceLabel ($DeviceID)" } else { $DeviceID }
+    foreach ($Device in $RemoveDevices) {
+        $DeviceID = $Device.value
+        $DeviceLabel = "$($Device.addedFields.displayName) ($DeviceID)"
         $BulkRequests.Add(@{
                 id     = "removeDevice-$DeviceID"
                 method = 'DELETE'

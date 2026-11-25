@@ -6,7 +6,8 @@ function Get-CIPPCAPolicyImpact {
         Builds the equivalent of the Entra portal "Policy impact" view from the sign-in log. The portal's own
         report function (reports/conditionalAccess/getConditionalAccessPerPolicyImpactSummary) answers
         "Requested resource does not exist" to every caller except the portal's first-party app, so the
-        numbers here come from auditLogs/signIns filtered on appliedConditionalAccessPolicies for this policy.
+        numbers here come from auditLogs/signIns, matched to this policy's appliedConditionalAccessPolicies entry.
+        Graph accepts an appliedConditionalAccessPolicies/any() filter on signIns but always answers it with no rows.
 
     .FUNCTIONALITY
         Internal
@@ -72,7 +73,7 @@ function Get-CIPPCAPolicyImpact {
     while ($SliceEnd -gt $StartDateTime) {
         $SliceStart = $SliceEnd.AddDays(-1)
         if ($SliceStart -lt $StartDateTime) { $SliceStart = $StartDateTime }
-        $Filter = "createdDateTime ge $($SliceStart.ToString($IsoFormat)) and createdDateTime lt $($SliceEnd.ToString($IsoFormat)) and appliedConditionalAccessPolicies/any(p:p/id eq '$PolicyId')"
+        $Filter = "createdDateTime ge $($SliceStart.ToString($IsoFormat)) and createdDateTime lt $($SliceEnd.ToString($IsoFormat))"
         $SliceUrl = ('/auditLogs/signIns?$top=999&$select={0}&$filter={1}' -f $Select, [System.Uri]::EscapeDataString($Filter))
         $SliceRequest = @{
             id     = [string]$Requests.Count
@@ -111,8 +112,12 @@ function Get-CIPPCAPolicyImpact {
 
             foreach ($SignIn in @($Response.body.value)) {
                 if ($null -eq $SignIn) { continue }
-                $Entry = @($SignIn.appliedConditionalAccessPolicies).Where({ $_.id -eq $PolicyId }) | Select-Object -First 1
-                $Result = if ($Entry -and -not [string]::IsNullOrWhiteSpace($Entry.result)) { [string]$Entry.result } else { 'unknown' }
+                $Entry = $null
+                foreach ($Applied in $SignIn.appliedConditionalAccessPolicies) {
+                    if ($Applied.id -eq $PolicyId) { $Entry = $Applied; break }
+                }
+                if ($null -eq $Entry) { continue }
+                $Result = if (-not [string]::IsNullOrWhiteSpace($Entry.result)) { [string]$Entry.result } else { 'unknown' }
                 if ($ResultKeys -notcontains $Result) { $Result = 'unknown' }
 
                 $Created = ([datetime]$SignIn.createdDateTime).ToUniversalTime()

@@ -12,6 +12,7 @@
   "powershellEquivalent": "Graph API - deviceManagement/windowsAutopilotDeploymentProfiles",
   "recommendedBy": [],
   "requiredCapabilities": [
+    "INTUNE_EDU",
     "INTUNE_A",
     "MDM_Services",
     "EMS",

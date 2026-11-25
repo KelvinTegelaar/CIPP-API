@@ -15,6 +15,7 @@
   "executiveText": "Watches for device management policies created outside the agreed baseline - for example by a local admin - and raises each one for review, so unauthorized or forgotten configuration never accumulates unnoticed.",
   "recommendedBy": ["CIPP"],
   "requiredCapabilities": [
+    "INTUNE_EDU",
     "INTUNE_A",
     "MDM_Services",
     "EMS",

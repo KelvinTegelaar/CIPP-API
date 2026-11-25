@@ -59,16 +59,14 @@ Describe 'Invoke-ExecQuarantineManagement release and allow sender' {
         }
     }
 
-    It 'keeps existing allowed senders stored as Sender.Address objects' {
+    It 'sends only the new sender when the policy has none' {
         Mock New-ExoRequest {
-            if ($cmdlet -eq 'Get-HostedContentFilterPolicy') {
-                [pscustomobject]@{ AllowedSenders = @([pscustomobject]@{ Sender = [pscustomobject]@{ Address = 'a@x.test' } }) }
-            }
+            if ($cmdlet -eq 'Get-HostedContentFilterPolicy') { [pscustomobject]@{ AllowedSenders = $null } }
         }
         $null = Invoke-ExecQuarantineManagement -Request $script:Request -TriggerMetadata $null
         Should -Invoke New-ExoRequest -Times 1 -ParameterFilter {
             $cmdlet -eq 'Set-HostedContentFilterPolicy' -and
-            (@($cmdParams.AllowedSenders) -join ',') -eq 'a@x.test,new@sender.test'
+            @($cmdParams.AllowedSenders).Count -eq 1 -and $cmdParams.AllowedSenders[0] -eq 'new@sender.test'
         }
     }
 }

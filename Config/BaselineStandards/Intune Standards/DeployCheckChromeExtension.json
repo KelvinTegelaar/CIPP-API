@@ -15,6 +15,7 @@
   "powershellEquivalent": "Add-CIPPW32ScriptApplication",
   "recommendedBy": [],
   "requiredCapabilities": [
+    "INTUNE_EDU",
     "INTUNE_A",
     "MDM_Services",
     "EMS",

@@ -79,13 +79,15 @@ function Invoke-ExecAssignPolicy {
     }
 
     $Results = try {
-        # Resolve names to ids here: passed as GroupName, a group called 'AllDevices' or 'On' would hit
-        # Set-CIPPAssignedPolicy's broad-target switch and assign tenant-wide.
+        # As GroupName, a group called 'AllDevices' or 'On' would hit the broad-target switch and assign tenant-wide
         if (-not $AssignTo -and @($GroupIds).Count -eq 0 -and @($GroupNames).Count -gt 0) {
             $TenantGroups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter
             $GroupIds = foreach ($Name in $GroupNames) {
                 $Match = @($TenantGroups.Where({ $_.displayName -eq $Name }))
-                if ($Match.Count -ne 1) {
+                if ($Match.Count -eq 0) {
+                    throw [System.Management.Automation.ItemNotFoundException]::new("Group '$Name' was not found. Policy not assigned.")
+                }
+                if ($Match.Count -gt 1) {
                     throw [System.ArgumentException]::new("Group name '$Name' matches $($Match.Count) groups; send GroupIds instead. Policy not assigned.")
                 }
                 $Match[0].id

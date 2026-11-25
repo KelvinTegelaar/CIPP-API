@@ -198,7 +198,7 @@ function Get-CIPPDBCacheSchedule {
             )
         }
         Defender                         = @{
-            License = 'DefenderForEndpoint'
+            License = 'DefenderVulnerabilityManagement'
             Types   = @(
                 'DefenderCVEs'
             )

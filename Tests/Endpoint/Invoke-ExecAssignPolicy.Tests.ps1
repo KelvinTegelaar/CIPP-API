@@ -101,11 +101,14 @@ Describe 'Invoke-ExecAssignPolicy group names' {
         Should -Invoke Set-CIPPAssignedPolicy -Times 1 -Exactly -ParameterFilter { (@($GroupIds) -join ',') -eq 'g-alldevices' -and -not $GroupName }
     }
 
-    It 'refuses a name that matches no group or several groups' -ForEach @(@{ Name = 'Missing' }, @{ Name = 'Twice' }) {
+    It 'refuses a name that matches <Expected>' -ForEach @(
+        @{ Name = 'Missing'; Expected = 'no group'; Status = [System.Net.HttpStatusCode]::NotFound }
+        @{ Name = 'Twice'; Expected = 'several groups'; Status = [System.Net.HttpStatusCode]::BadRequest }
+    ) {
         $response = Invoke-ExecAssignPolicy -Request (New-NamesRequest @($Name)) -TriggerMetadata $null
 
-        $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
-        $response.Body.Results | Should -BeLike "*Group name '$Name'*Policy not assigned*"
+        $response.StatusCode | Should -Be $Status
+        $response.Body.Results | Should -BeLike "*Group*'$Name'*Policy not assigned*"
         Should -Invoke Set-CIPPAssignedPolicy -Times 0 -Exactly
     }
 }

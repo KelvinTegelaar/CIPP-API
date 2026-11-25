@@ -128,7 +128,7 @@ function Set-CIPPAssignedPolicy {
                 $UnresolvedExcludeNames = [System.Collections.Generic.List[string]]::new()
                 foreach ($SingleName in $ExcludeGroupNames) {
                     $Pattern = $SingleName -replace '\[', '`[' -replace '\]', '`]'
-                    $Matched = @($AllGroups | Where-Object { $_.displayName -like $Pattern })
+                    $Matched = $AllGroups.Where({ $_.displayName -like $Pattern })
                     if ($Matched.Count -eq 0) { $UnresolvedExcludeNames.Add($SingleName) }
                     foreach ($m in $Matched) { $ResolvedExcludeIds.Add($m.id) }
                 }

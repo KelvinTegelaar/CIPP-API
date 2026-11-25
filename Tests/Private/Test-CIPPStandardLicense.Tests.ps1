@@ -51,9 +51,9 @@ Describe 'Test-CIPPStandardLicense' {
     }
 
     It 'expands the <Preset> preset to <Plan>' -TestCases @(
-        @{ Preset = 'Exchange'; Plan = 'EXCHANGE_LITE' }
-        @{ Preset = 'SharePoint'; Plan = 'ONEDRIVE_ENTERPRISE' }
-        @{ Preset = 'Intune'; Plan = 'MICROSOFTINTUNEPLAN1' }
+        @{ Preset = 'Exchange'; Plan = 'EXCHANGE_S_DESKLESS' }
+        @{ Preset = 'SharePoint'; Plan = 'SHAREPOINTDESKLESS' }
+        @{ Preset = 'Intune'; Plan = 'INTUNE_EDU' }
         @{ Preset = 'Entra'; Plan = 'AAD_PREMIUM' }
         @{ Preset = 'EntraP2'; Plan = 'AAD_PREMIUM_P2' }
         @{ Preset = 'Compliance'; Plan = 'MIP_S_CLP2' }
@@ -70,6 +70,17 @@ Describe 'Test-CIPPStandardLicense' {
     It 'does not let EntraP2 accept a P1 tenant' {
         Set-TenantPlans @{ AAD_PREMIUM = 'Success' }
         Test-CIPPStandardLicense -StandardName 'X' -TenantFilter 'contoso.com' -Preset EntraP2 -SkipLog | Should -BeFalse
+    }
+
+    It 'gives <Plan> vulnerability management: <Expected>' -TestCases @(
+        @{ Plan = 'WINDEFATP'; Expected = $true }
+        @{ Plan = 'MDE_SMB'; Expected = $true }
+        @{ Plan = 'TVM_PREMIUM_1'; Expected = $true }
+        @{ Plan = 'MDE_LITE'; Expected = $false }
+    ) {
+        param($Plan, $Expected)
+        Set-TenantPlans @{ $Plan = 'Success' }
+        Test-CIPPStandardLicense -StandardName 'X' -TenantFilter 'contoso.com' -Preset DefenderVulnerabilityManagement -SkipLog | Should -Be $Expected
     }
 
     It 'accepts a capability from either the preset or the explicit list' {

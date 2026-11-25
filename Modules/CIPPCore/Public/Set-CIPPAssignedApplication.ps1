@@ -177,11 +177,10 @@ function Set-CIPPAssignedApplication {
                 $UnresolvedExcludeNames = [System.Collections.Generic.List[string]]::new()
                 foreach ($SingleName in $RequestedExcludeNames) {
                     $Pattern = $SingleName -replace '\[', '`[' -replace '\]', '`]'
-                    $Matched = @($AllGroups | Where-Object { $_.displayName -like $Pattern })
+                    $Matched = $AllGroups.Where({ $_.displayName -like $Pattern })
                     if ($Matched.Count -eq 0) { $UnresolvedExcludeNames.Add($SingleName) }
                     foreach ($m in $Matched) {
                         $ResolvedExcludeIds.Add($m.id)
-                        # The result message names the groups actually excluded, not the requested patterns.
                         $ExcludeGroupNames.Add($m.displayName)
                     }
                 }

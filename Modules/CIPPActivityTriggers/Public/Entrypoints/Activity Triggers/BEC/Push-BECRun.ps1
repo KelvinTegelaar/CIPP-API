@@ -590,7 +590,7 @@ function Push-BECRun {
             }
 
             'Tenant' {
-                $HasIntune = & $HasPlan 'INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1'
+                $HasIntune = & $HasPlan 'INTUNE_A', 'MDM_Services', 'EMS', 'SCCM', 'MICROSOFTINTUNEPLAN1', 'INTUNE_EDU'
                 # The rogue-application catalog (CIPP MaliciousApps.json + the Huntress feed) keyed by lowercase
                 # appId; shared with the consent collector so every section matches the same list.
                 $RogueAppFeed = Get-CIPPBecRogueAppFeed

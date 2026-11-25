@@ -12,6 +12,7 @@
   "powershellEquivalent": "Graph: PATCH policies/mobileDeviceManagementPolicies",
   "recommendedBy": [],
   "requiredCapabilities": [
+    "INTUNE_EDU",
     "INTUNE_A",
     "MDM_Services",
     "EMS",

@@ -75,14 +75,16 @@ function Register-CIPPExtensionScheduledTasks {
             }
             if ($Extension -eq 'CustomData') {
                 $CustomDataMappingTable = Get-CIPPTable -TableName CustomDataMappings
+                $TenantLookup = Get-CIPPTenantLookup -Tenants $Tenants
                 $Mappings = Get-CIPPAzDataTableEntity @CustomDataMappingTable | ForEach-Object {
                     $Mapping = $_.JSON | ConvertFrom-Json
                     if ($Mapping.sourceType.value -eq 'reportingDb' -or $Mapping.sourceType.value -eq 'extensionSync') {
                         $TenantMappings = if ($Mapping.tenantFilter.value -contains 'AllTenants') {
                             $Tenants
                         } else {
-                            $TenantValues = @((Expand-CIPPTenantGroups -TenantFilter $Mapping.tenantFilter).value)
-                            $Tenants | Where-Object { $_.customerId -in $TenantValues -or $_.defaultDomainName -in $TenantValues }
+                            foreach ($Value in @((Expand-CIPPTenantGroups -TenantFilter $Mapping.tenantFilter).value)) {
+                                if ($TenantLookup["$Value"]) { $TenantLookup["$Value"] }
+                            }
                         }
                         foreach ($TenantMapping in $TenantMappings) {
                             [pscustomobject]@{

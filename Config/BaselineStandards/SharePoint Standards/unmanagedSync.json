@@ -23,6 +23,7 @@
     "CIS"
   ],
   "requiredCapabilities": [
+    "INTUNE_EDU",
     "INTUNE_A",
     "MDM_Services",
     "EMS",
