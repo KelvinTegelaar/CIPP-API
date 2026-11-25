@@ -5809,6 +5809,299 @@
         ],
         "TargetContextId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3"
       }
+    },
+    "app-add-service-principal-microsoft": {
+      "id": "faffaa04-3cdb-4eaf-941c-4052f8ce4141",
+      "createdDateTime": "2026-10-30T00:00:10Z",
+      "auditLogRecordType": "AzureActiveDirectory",
+      "operation": "Add service principal.",
+      "organizationId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3",
+      "userType": "System",
+      "userId": "Not Available",
+      "service": "AzureActiveDirectory",
+      "objectId": "361b0294-195a-49f2-9218-65defd6a988f",
+      "userPrincipalName": "Certificate",
+      "clientIp": null,
+      "administrativeUnits": [
+        ""
+      ],
+      "auditData": {
+        "CreationTime": "2026-10-30T00:00:10Z",
+        "Id": "faffaa04-3cdb-4eaf-941c-4052f8ce4141",
+        "Operation": "Add service principal.",
+        "OrganizationId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3",
+        "RecordType": 8,
+        "ResultStatus": "Success",
+        "UserKey": "Not Available",
+        "UserType": 4,
+        "Version": 1,
+        "Workload": "AzureActiveDirectory",
+        "ObjectId": "361b0294-195a-49f2-9218-65defd6a988f",
+        "UserId": "Certificate",
+        "AzureActiveDirectoryEventType": 1,
+        "ActorContextId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3",
+        "InterSystemsId": "9b4a1e5c-7f6d-4a0e-9c2b-3d5e6f708192",
+        "IntraSystemId": "ac5b2f6d-8a7e-4b1f-8d3c-4e6f708192a3",
+        "SupportTicketId": "",
+        "TargetContextId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3",
+        "ExtendedProperties": [
+          {
+            "Name": "additionalDetails",
+            "Value": "{\"AppId\":\"361b0294-195a-49f2-9218-65defd6a988f\",\"AppOwnerOrganizationId\":\"f8cdef31-a31e-4b4a-93e4-5f571e91255a\",\"SubscribedSkus\":\"[{\\\"SkuId\\\":\\\"c42b9cae-ea4f-4ab7-9717-81576235ccac\\\",\\\"SkuName\\\":\\\"DEVELOPERPACK_E5\\\"}]\",\"ServicePrincipalProvisioningType\":\"Subscription\"}"
+          },
+          {
+            "Name": "extendedAuditEventCategory",
+            "Value": "ServicePrincipal"
+          }
+        ],
+        "ModifiedProperties": [
+          {
+            "Name": "AccountEnabled",
+            "NewValue": "[\r\n  true\r\n]",
+            "OldValue": "[]"
+          },
+          {
+            "Name": "AppPrincipalId",
+            "NewValue": "[\r\n  \"361b0294-195a-49f2-9218-65defd6a988f\"\r\n]",
+            "OldValue": "[]"
+          },
+          {
+            "Name": "DisplayName",
+            "NewValue": "[\r\n  \"IntuneAuthZService\"\r\n]",
+            "OldValue": "[]"
+          },
+          {
+            "Name": "ServicePrincipalName",
+            "NewValue": "[\r\n  \"361b0294-195a-49f2-9218-65defd6a988f\"\r\n]",
+            "OldValue": "[]"
+          },
+          {
+            "Name": "Credential",
+            "NewValue": "[\r\n  {\r\n    \"CredentialType\": 2,\r\n    \"KeyStoreId\": \"291154f0-a9f5-45bb-87be-9c8ee5b6d62c\",\r\n    \"KeyGroupId\": \"361b0294-195a-49f2-9218-65defd6a988f\"\r\n  }\r\n]",
+            "OldValue": "[]"
+          },
+          {
+            "Name": "ServicePrincipalTag",
+            "NewValue": "[\r\n  \"GitCreatedApp\",\r\n  \"disableLegacyUserImpersonationResource\",\r\n  \"disableLegacyUserImpersonationClient\"\r\n]",
+            "OldValue": "[]"
+          },
+          {
+            "Name": "Included Updated Properties",
+            "NewValue": "AccountEnabled, AppPrincipalId, DisplayName, ServicePrincipalName, Credential, ServicePrincipalTag",
+            "OldValue": ""
+          }
+        ],
+        "Actor": [
+          {
+            "ID": "Microsoft Azure AD Internal - Jit Provisioning",
+            "Type": 1
+          },
+          {
+            "ID": "Certificate",
+            "Type": 2
+          },
+          {
+            "ID": "Other",
+            "Type": 2
+          },
+          {
+            "ID": "NotAgentic",
+            "Type": 2
+          }
+        ],
+        "Target": [
+          {
+            "ID": "ServicePrincipal_7f2e9c3a-5d4b-4e8c-9a0f-1b3c4d5e6f70",
+            "Type": 2
+          },
+          {
+            "ID": "7f2e9c3a-5d4b-4e8c-9a0f-1b3c4d5e6f70",
+            "Type": 2
+          },
+          {
+            "ID": "ServicePrincipal",
+            "Type": 2
+          },
+          {
+            "ID": "NotAgentic",
+            "Type": 2
+          },
+          {
+            "ID": "IntuneAuthZService",
+            "Type": 1
+          },
+          {
+            "ID": "361b0294-195a-49f2-9218-65defd6a988f",
+            "Type": 2
+          },
+          {
+            "ID": "361b0294-195a-49f2-9218-65defd6a988f",
+            "Type": 4
+          },
+          {
+            "ID": "f8cdef31-a31e-4b4a-93e4-5f571e91255a",
+            "Type": 2
+          },
+          {
+            "ID": "[{\"SkuId\":\"c42b9cae-ea4f-4ab7-9717-81576235ccac\",\"SkuName\":\"DEVELOPERPACK_E5\"}]",
+            "Type": 2
+          },
+          {
+            "ID": "Subscription",
+            "Type": 2
+          }
+        ]
+      }
+    },
+    "app-add-service-principal-vendor": {
+      "id": "b5754fda-7183-47f8-9427-dd6bfe7b15ee",
+      "createdDateTime": "2026-11-13T14:46:46Z",
+      "auditLogRecordType": "AzureActiveDirectory",
+      "operation": "Add service principal.",
+      "organizationId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3",
+      "userType": "Regular",
+      "userId": "Not Available",
+      "service": "AzureActiveDirectory",
+      "objectId": "5d0c7a1e-3b2f-4c6a-9e8d-7f1a2b3c4d5e",
+      "userPrincipalName": "user_ca2a58ac020249dbb889193fd5ed0bad@fabrikampartner.onmicrosoft.com",
+      "clientIp": null,
+      "administrativeUnits": [
+        ""
+      ],
+      "auditData": {
+        "CreationTime": "2026-11-13T14:46:46Z",
+        "Id": "b5754fda-7183-47f8-9427-dd6bfe7b15ee",
+        "Operation": "Add service principal.",
+        "OrganizationId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3",
+        "RecordType": 8,
+        "ResultStatus": "Success",
+        "UserKey": "Not Available",
+        "UserType": 0,
+        "Version": 1,
+        "Workload": "AzureActiveDirectory",
+        "ObjectId": "5d0c7a1e-3b2f-4c6a-9e8d-7f1a2b3c4d5e",
+        "UserId": "user_ca2a58ac020249dbb889193fd5ed0bad@fabrikampartner.onmicrosoft.com",
+        "AzureActiveDirectoryEventType": 1,
+        "ActorContextId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3",
+        "InterSystemsId": "8a3f0d4b-6e5c-4f9d-8b1a-2c4d5e6f7081",
+        "IntraSystemId": "00000000-0000-0000-0000-000000000000",
+        "SupportTicketId": "",
+        "TargetContextId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3",
+        "ExtendedProperties": [
+          {
+            "Name": "additionalDetails",
+            "Value": "{\"User-Agent\":\"CIPP/11.3.0\",\"AppId\":\"5d0c7a1e-3b2f-4c6a-9e8d-7f1a2b3c4d5e\",\"AppOwnerOrganizationId\":\"e75dcc09-5152-44ca-8550-f8f22fa4cfa3\",\"ServicePrincipalProvisioningType\":\"Other\"}"
+          },
+          {
+            "Name": "extendedAuditEventCategory",
+            "Value": "ServicePrincipal"
+          }
+        ],
+        "ModifiedProperties": [
+          {
+            "Name": "AccountEnabled",
+            "NewValue": "[\r\n  true\r\n]",
+            "OldValue": "[]"
+          },
+          {
+            "Name": "AppPrincipalId",
+            "NewValue": "[\r\n  \"5d0c7a1e-3b2f-4c6a-9e8d-7f1a2b3c4d5e\"\r\n]",
+            "OldValue": "[]"
+          },
+          {
+            "Name": "DisplayName",
+            "NewValue": "[\r\n  \"Contoso Line of Business App\"\r\n]",
+            "OldValue": "[]"
+          },
+          {
+            "Name": "ServicePrincipalName",
+            "NewValue": "[\r\n  \"5d0c7a1e-3b2f-4c6a-9e8d-7f1a2b3c4d5e\"\r\n]",
+            "OldValue": "[]"
+          },
+          {
+            "Name": "Credential",
+            "NewValue": "[\r\n  {\r\n    \"CredentialType\": 2,\r\n    \"KeyStoreId\": \"291154f0-a9f5-45bb-87be-9c8ee5b6d62c\",\r\n    \"KeyGroupId\": \"291154f0-a9f5-45bb-87be-9c8ee5b6d62c\"\r\n  }\r\n]",
+            "OldValue": "[]"
+          },
+          {
+            "Name": "Included Updated Properties",
+            "NewValue": "AccountEnabled, AppPrincipalId, DisplayName, ServicePrincipalName, Credential",
+            "OldValue": ""
+          }
+        ],
+        "Actor": [
+          {
+            "ID": "Fabrikam Partner Technician",
+            "Type": 1
+          },
+          {
+            "ID": "user_ca2a58ac020249dbb889193fd5ed0bad@fabrikampartner.onmicrosoft.com",
+            "Type": 5
+          },
+          {
+            "ID": "ca2a58ac-0202-49db-b889-193fd5ed0bad",
+            "Type": 2
+          },
+          {
+            "ID": "user_ca2a58ac020249dbb889193fd5ed0bad@fabrikampartner.onmicrosoft.com",
+            "Type": 5
+          },
+          {
+            "ID": "User_ca2a58ac-0202-49db-b889-193fd5ed0bad",
+            "Type": 2
+          },
+          {
+            "ID": "ca2a58ac-0202-49db-b889-193fd5ed0bad",
+            "Type": 2
+          },
+          {
+            "ID": "User",
+            "Type": 2
+          },
+          {
+            "ID": "NotAgentic",
+            "Type": 2
+          }
+        ],
+        "Target": [
+          {
+            "ID": "ServicePrincipal_6e1d8b2f-4c3a-4d7b-8f9e-0a2b3c4d5e6f",
+            "Type": 2
+          },
+          {
+            "ID": "6e1d8b2f-4c3a-4d7b-8f9e-0a2b3c4d5e6f",
+            "Type": 2
+          },
+          {
+            "ID": "ServicePrincipal",
+            "Type": 2
+          },
+          {
+            "ID": "NotAgentic",
+            "Type": 2
+          },
+          {
+            "ID": "Contoso Line of Business App",
+            "Type": 1
+          },
+          {
+            "ID": "5d0c7a1e-3b2f-4c6a-9e8d-7f1a2b3c4d5e",
+            "Type": 2
+          },
+          {
+            "ID": "5d0c7a1e-3b2f-4c6a-9e8d-7f1a2b3c4d5e",
+            "Type": 4
+          },
+          {
+            "ID": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3",
+            "Type": 2
+          },
+          {
+            "ID": "Other",
+            "Type": 2
+          }
+        ]
+      }
     }
   },
   "cases": [
@@ -5982,11 +6275,13 @@
     {
       "preset": "Add service principal.",
       "trigger": [
-        "app-add-service-principal"
+        "app-add-service-principal-vendor"
       ],
       "noTrigger": [
         "app-add-application",
-        "app-remove-service-principal"
+        "app-remove-service-principal",
+        "app-add-service-principal-microsoft",
+        "app-add-service-principal"
       ]
     },
     {
@@ -5995,7 +6290,8 @@
         "app-remove-service-principal"
       ],
       "noTrigger": [
-        "app-add-service-principal"
+        "app-add-service-principal",
+        "app-add-service-principal-microsoft"
       ]
     },
     {

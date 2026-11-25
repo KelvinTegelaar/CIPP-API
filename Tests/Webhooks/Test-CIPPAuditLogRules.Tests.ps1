@@ -437,6 +437,20 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
         }
     }
 
+    Context 'the owner of a newly added app' {
+        It 'sets CIPPMicrosoftApp to <Expected> when <Name>' -ForEach @(
+            @{ Name = 'Microsoft owns the app'; Details = '{"AppId":"361b0294-195a-49f2-9218-65defd6a988f","AppOwnerOrganizationId":"f8cdef31-a31e-4b4a-93e4-5f571e91255a","ServicePrincipalProvisioningType":"Subscription"}'; Expected = 'true' }
+            @{ Name = 'a vendor owns the app'; Details = '{"AppId":"0a2345b5-361b-4ae3-ad7f-ede860aeef01","AppOwnerOrganizationId":"dddddddd-dddd-4ddd-8ddd-dddddddddddd"}'; Expected = $null }
+            @{ Name = 'the record names no owner'; Details = '{"AppId":"efac5c90-cba2-4398-a8e8-aae9e6d2a02f","ServicePrincipalProvisioningType":"Other"}'; Expected = $null }
+        ) {
+            $Row = New-AuditRow
+            $Row.auditData.ExtendedProperties = @([pscustomobject]@{ Name = 'additionalDetails'; Value = $Details })
+            $data = @((Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows @($Row)).DataToProcess)[0]
+            $data.Operation | Should -Be 'Set-Mailbox'
+            $data.CIPPMicrosoftApp | Should -Be $Expected
+        }
+    }
+
     Context 'a record carrying an ignore-listed extended property' {
         BeforeEach {
             # 'Consent:Set' is on $ExtendedPropertiesIgnoreList inside the function.

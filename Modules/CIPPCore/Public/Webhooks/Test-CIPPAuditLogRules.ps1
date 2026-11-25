@@ -30,6 +30,7 @@ function Test-CIPPAuditLogRules {
         )
         $script:PartnerUpnRegex = [regex]'user_([0-9a-f]{32})@([^@]+\.onmicrosoft\.com)'
         $script:KeyDescriptionRegex = [regex]'\[KeyIdentifier=(?<Id>[^,\]]*),KeyType=(?<Type>[^,\]]*),KeyUsage=(?<Usage>[^,\]]*)'
+        $script:AppOwnerRegex = [regex]'"AppOwnerOrganizationId"\s*:\s*"(?<Id>[0-9a-fA-F-]{36})"'
         $script:PartnerExchangeRegex = [regex]'([^\\]+\.onmicrosoft\.com)\\tenant:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}),\s*object:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})'
 
         # Helper function to map GUIDs and partner UPNs to user objects (Optimized with hashtable lookups)
@@ -652,6 +653,10 @@ function Test-CIPPAuditLogRules {
                             if ($Prop.Value -in $ExtendedPropertiesIgnoreList) { continue }
                             if ([string]::IsNullOrEmpty($Prop.Name)) { continue }
                             $Flattened[$Prop.Name] = $Prop.Value
+                            if ($Prop.Name -eq 'additionalDetails') {
+                                $OwnerMatch = $script:AppOwnerRegex.Match([string]$Prop.Value)
+                                if ($OwnerMatch.Success -and $MicrosoftTenantIds.Contains($OwnerMatch.Groups['Id'].Value)) { $Flattened['CIPPMicrosoftApp'] = 'true' }
+                            }
                         }
                     }
                     if ($Source.DeviceProperties) {
