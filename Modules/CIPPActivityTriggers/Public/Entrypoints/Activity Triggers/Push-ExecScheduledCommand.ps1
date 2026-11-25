@@ -417,8 +417,8 @@ function Push-ExecScheduledCommand {
         if (-not $Trigger.ExecutePerResource) {
             try {
                 # For orchestrator-based commands, add TaskInfo to enable post-execution updates
-                if ($Item.Command -eq 'Invoke-CIPPOffboardingJob') {
-                    Write-Information 'Adding TaskInfo to command parameters for orchestrator-based offboarding'
+                if ($Item.Command -in 'Invoke-CIPPOffboardingJob', 'Invoke-CIPPOnboardingJob') {
+                    Write-Information 'Adding TaskInfo to command parameters for the offboarding or onboarding job'
                     $commandParameters['TaskInfo'] = $task
                 }
 

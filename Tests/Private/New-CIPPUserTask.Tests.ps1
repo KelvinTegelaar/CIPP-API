@@ -21,6 +21,8 @@ BeforeAll {
     function Add-CIPPScheduledTask { param($Task, $hidden, $Headers, $DisallowDuplicateName) }
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $Select, $Anchor, $useSystemMailbox) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
+    function Get-CippRequestAllowedPermissions { }
+    function Get-CIPPRoleAssignableGroupId { param([string[]]$GroupId, $TenantFilter) }
 
     . $FunctionPath
 

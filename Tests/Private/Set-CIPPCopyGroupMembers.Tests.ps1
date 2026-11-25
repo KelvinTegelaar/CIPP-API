@@ -87,6 +87,21 @@ Describe 'Set-CIPPCopyGroupMembers' {
             $Result.Success | Should -Contain 'Added user to group: All-Users'
         }
 
+        It 'leaves out a group that grants admin roles only when asked to' {
+            $Admins = New-Group -Id 'group-admins' -DisplayName 'Helpdesk Admins'
+            $Admins | Add-Member -NotePropertyName isAssignableToRole -NotePropertyValue $true
+            Set-BulkResponse -SourceGroups @($Admins, (New-Group -Id 'group-sec' -DisplayName 'All-Users'))
+
+            $Result = Set-CIPPCopyGroupMembers -UserId 'new.user@contoso.com' -CopyFromId 'source-guid' -TenantFilter 'contoso.com' -SkipRoleAssignable
+
+            Should -Invoke New-GraphPostRequest -Times 0 -Exactly -ParameterFilter { $uri -like '*/groups/group-admins/*' }
+            Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*/groups/group-sec/members/$ref' }
+            @($Result.Skipped) -like 'Skipped Helpdesk Admins*Identity.PrivilegedUser.ReadWrite*' | Should -HaveCount 1
+
+            $null = Set-CIPPCopyGroupMembers -UserId 'new.user@contoso.com' -CopyFromId 'source-guid' -TenantFilter 'contoso.com'
+            Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter { $uri -like '*/groups/group-admins/members/$ref' }
+        }
+
         It 'copies a classic distribution list through Exchange' {
             # Mail-enabled, not a Team, not Unified - Graph cannot write this membership.
             Set-BulkResponse -SourceGroups @(New-Group -Id 'group-dl' -DisplayName 'All Office' -MailEnabled $true)

@@ -40,6 +40,18 @@ Describe 'Get-CIPPPrivilegedUserTaskTarget' {
         @(Get-CIPPPrivilegedUserTaskTarget -Command 'Set-CIPPUser' -Parameters @{ UserObj = [pscustomobject]@{ id = 'id-1' } }) | Should -Be @('id-1')
     }
 
+    It 'targets an onboarding job only when it has an account step' {
+        $Account = @{ Username = 'a@b.com'; Options = @{ Fixes = @(@{ Key = 'EnableArchive' }, @{ Key = 'ResetPassword' }) } }
+        $Setup = @{ Username = 'a@b.com'; Options = @{ Fixes = @(@{ Key = 'EnableArchive' }, @{ Key = 'AddGroups' }, @{ Key = 'GrantMailboxAccess' }) } }
+        @(Get-CIPPPrivilegedUserTaskTarget -Command 'Invoke-CIPPOnboardingJob' -Parameters $Account) | Should -Be @('a@b.com')
+        Get-CIPPPrivilegedUserTaskTarget -Command 'Invoke-CIPPOnboardingJob' -Parameters $Setup | Should -BeNullOrEmpty
+        # Stored parameters come back as JSON text or plain objects.
+        $Stored = @{ Username = 'a@b.com'; Options = ($Account.Options | ConvertTo-Json -Depth 5 -Compress) }
+        @(Get-CIPPPrivilegedUserTaskTarget -Command 'Invoke-CIPPOnboardingJob' -Parameters $Stored) | Should -Be @('a@b.com')
+        $Parsed = @{ Username = 'a@b.com'; Options = ($Setup.Options | ConvertTo-Json -Depth 5 | ConvertFrom-Json) }
+        Get-CIPPPrivilegedUserTaskTarget -Command 'Invoke-CIPPOnboardingJob' -Parameters $Parsed | Should -BeNullOrEmpty
+    }
+
     It 'skips an unresolved %variable%' {
         Get-CIPPPrivilegedUserTaskTarget -Command 'Set-CIPPResetPassword' -Parameters @{ UserID = '%id%' } | Should -BeNullOrEmpty
     }

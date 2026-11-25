@@ -10,7 +10,9 @@ function Set-CIPPCopyGroupMembers {
         # For a brand-new user: Exchange is not ready for the recipient yet, so queue those adds instead.
         [switch]$DeferExchange,
         # Set on the queued Exchange retry so it adds only the groups still pending, not every group again.
-        [string[]]$GroupIds
+        [string[]]$GroupIds,
+        # Leave out groups that grant admin roles to their members.
+        [switch]$SkipRoleAssignable
     )
 
     $Requests = @(
@@ -57,7 +59,9 @@ function Set-CIPPCopyGroupMembers {
     foreach ($Group in @($CopyFromMemberships | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' })) {
         if ($GroupIds -and $GroupIds -notcontains $Group.id) { continue }
         $GroupLabel = if ([string]::IsNullOrWhiteSpace($Group.displayName)) { $Group.id } else { $Group.displayName }
-        if ($Group.groupTypes -contains 'DynamicMembership') {
+        if ($SkipRoleAssignable -and $Group.isAssignableToRole -eq $true) {
+            $Skipped.Add("Skipped $($GroupLabel): it grants admin roles to its members, which needs the Identity.PrivilegedUser.ReadWrite permission.")
+        } elseif ($Group.groupTypes -contains 'DynamicMembership') {
             $Skipped.Add("Skipped $($GroupLabel): its membership is set by a dynamic rule, so members cannot be added directly.")
         } elseif ($Group.onPremisesSyncEnabled -eq $true) {
             $Skipped.Add("Skipped $($GroupLabel): it is synced from on-premises Active Directory and has to be changed there.")

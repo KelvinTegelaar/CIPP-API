@@ -68,9 +68,13 @@ function New-CIPPUserTask {
         Write-LogMessage -headers $Headers -API $APIName -tenant $($UserObj.tenantFilter) -message "Failed to create the Aliases. Error:$($_.Exception.Message)" -Sev 'Error'
         $Results.Add("Failed to create the Aliases: $($_.Exception.Message)")
     }
+    # A group that grants admin roles to its members may only be added to by a caller who can manage privileged users.
+    $AllowedPermissions = Get-CippRequestAllowedPermissions
+    $PrivilegedRestricted = [bool]($script:CippPrivilegedUserRestrictedStorage -and $script:CippPrivilegedUserRestrictedStorage.Value) -or ($null -ne $AllowedPermissions -and $AllowedPermissions -notcontains 'Identity.PrivilegedUser.ReadWrite')
+
     if ($UserObj.copyFrom.value) {
         Write-Information "Copying from $($UserObj.copyFrom.value)"
-        $CopyFrom = Set-CIPPCopyGroupMembers -Headers $Headers -CopyFromId $UserObj.copyFrom.value -UserID $CreationResults.Username -TenantFilter $UserObj.tenantFilter -DeferExchange
+        $CopyFrom = Set-CIPPCopyGroupMembers -Headers $Headers -CopyFromId $UserObj.copyFrom.value -UserID $CreationResults.Username -TenantFilter $UserObj.tenantFilter -DeferExchange -SkipRoleAssignable:$PrivilegedRestricted
         $CopyFrom.Success | ForEach-Object { $Results.Add($_) }
         $CopyFrom.Error | ForEach-Object { $Results.Add($_) }
         # Groups deliberately left out (dynamic, AD-synced, public, already assigned) are reported
@@ -82,10 +86,19 @@ function New-CIPPUserTask {
     # recipient yet, so an inline Add-DistributionGroupMember would fail. Graph groups are added inline,
     # and scheduled too if the new user cannot be found yet.
     if ($UserObj.AddToGroups) {
+        $RoleAssignable = @(if ($PrivilegedRestricted) {
+                try {
+                    Get-CIPPRoleAssignableGroupId -GroupId @($UserObj.AddToGroups.value) -TenantFilter $UserObj.tenantFilter
+                } catch {
+                    # The check itself failed, so no group can be shown to be safe.
+                    @($UserObj.AddToGroups.value)
+                }
+            })
         foreach ($Group in @($UserObj.AddToGroups)) {
             $GroupType = $Group.addedFields.groupType
             $GroupLabel = $Group.label ?? $Group.value
             try {
+                if ($RoleAssignable -contains [string]$Group.value) { throw 'it grants admin roles to its members, which needs the Identity.PrivilegedUser.ReadWrite permission.' }
                 # The live group wins; saved option types can be missing, stale or in another vocabulary.
                 # No fallback here so an unresolved group is detectable and the option fields decide.
                 $Lookup = Get-CIPPGroupType -GroupId $Group.value -TenantFilter $UserObj.tenantFilter

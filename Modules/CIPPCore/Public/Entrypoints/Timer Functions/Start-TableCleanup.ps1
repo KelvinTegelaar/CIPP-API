@@ -184,6 +184,17 @@ function Start-TableCleanup {
             }
         }
         @{
+            # What a user held before offboarding stripped it; a year covers a returning employee.
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
+            TableName      = 'OffboardingSnapshots'
+            DataTableProps = @{
+                Filter   = "Timestamp lt datetime'$((Get-Date).AddDays(-365).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
             # 5-minute instance health samples and boot markers. Two weeks covers the
             # diagnostics window (max 14 days) with nothing left over.
             FunctionName   = 'TableCleanupTask'

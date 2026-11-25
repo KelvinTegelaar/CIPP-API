@@ -463,6 +463,15 @@ function Invoke-CIPPOffboardingJob {
 
         Write-Information "Built batch of $($Batch.Count) offboarding tasks for $Username"
 
+        # Record what is about to be stripped so onboarding can offer it back. Full runs only; never blocks the offboarding.
+        if ($StepIndexes.Count -eq 0 -and @($Batch | Where-Object { $_.Cmdlet -in 'Remove-CIPPGroups', 'Remove-CIPPLicense', 'Remove-CIPPLicenseAfterOneDriveCopy', 'Remove-CIPPUserRoles' }).Count -gt 0) {
+            try {
+                $null = Save-CIPPOffboardingSnapshot -TenantFilter $TenantFilter -UserID $UserID -Username $Username -APIName $APIName -Headers $Headers
+            } catch {
+                Write-Information "Offboarding snapshot failed for $Username : $($_.Exception.Message)"
+            }
+        }
+
         # The copy's id is saved on the offboarding task so a licence-step-only re-run waits for this offboarding's copy, never another.
         $CopyStepIndex = -1
         $GateStepIndex = -1

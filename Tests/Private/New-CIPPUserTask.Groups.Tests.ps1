@@ -19,13 +19,15 @@ BeforeAll {
     function Set-CIPPUserLicense { param($UserId, $TenantFilter, $AddLicenses, $Headers, $APIName) }
     function Set-SherwebSubscription { param($Headers, $TenantFilter, $SKU, $Add) }
     function Add-CIPPAlias { param($User, $Aliases, $UserPrincipalName, $TenantFilter, $APIName, $Headers) }
-    function Set-CIPPCopyGroupMembers { param($Headers, $CopyFromId, $UserID, $TenantFilter, [switch]$DeferExchange) }
+    function Set-CIPPCopyGroupMembers { param($Headers, $CopyFromId, $UserID, $TenantFilter, [switch]$DeferExchange, [switch]$SkipRoleAssignable) }
     function Add-CIPPGroupMember { param($Headers, $GroupType, $GroupId, $Member, $TenantFilter, $APIName) }
     function Set-CIPPManager { param($Users, $Manager, $TenantFilter, $Headers) }
     function Set-CIPPSponsor { param($Users, $Sponsor, $TenantFilter, $Headers) }
     function Add-CIPPScheduledTask { param($Task, $hidden, $Headers, $DisallowDuplicateName) }
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $Select, $Anchor, $useSystemMailbox) }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
+    function Get-CippRequestAllowedPermissions { }
+    function Get-CIPPRoleAssignableGroupId { param([string[]]$GroupId, $TenantFilter) }
     function Get-CIPPGroupType { param($GroupId, $TenantFilter, $FallbackGroupType) }
 
     . $FunctionPath
@@ -93,6 +95,54 @@ Describe 'New-CIPPUserTask - Add to Groups' {
         Mock -CommandName Get-CIPPGroupType -MockWith {
             $Live = $script:LiveGroupTypes[$GroupId]
             if ($Live) { New-GroupLookup -GroupType $Live } else { New-GroupLookup -Unresolved }
+        }
+    }
+
+    Context 'Groups that grant admin roles' {
+        BeforeEach {
+            Set-LiveGroupTypes @{ 'group-1' = 'Security'; 'group-admins' = 'Security' }
+            Mock -CommandName Set-CIPPCopyGroupMembers -MockWith { [pscustomobject]@{ Success = @(); Error = @(); Skipped = @() } }
+            Mock -CommandName Get-CIPPRoleAssignableGroupId -MockWith { 'group-admins' }
+            $script:AdminUserObj = New-TestUserObj -AddToGroups @(
+                New-GroupOption -Label 'All-Users' -Value 'group-1' -GroupType 'Security'
+                New-GroupOption -Label 'Helpdesk Admins' -Value 'group-admins' -GroupType 'Security'
+            )
+            $script:AdminUserObj | Add-Member -NotePropertyName copyFrom -NotePropertyValue ([pscustomobject]@{ value = 'peer-guid' })
+        }
+        AfterEach { $script:CippPrivilegedUserRestrictedStorage = $null }
+
+        It 'are refused for a caller without the privileged permission' {
+            Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { , @('Identity.User.ReadWrite') }
+            $Result = New-CIPPUserTask -UserObj $script:AdminUserObj
+
+            Should -Invoke Add-CIPPGroupMember -Times 1 -Exactly -ParameterFilter { $GroupId -eq 'group-1' }
+            Should -Invoke Add-CIPPScheduledTask -Times 0 -Exactly
+            @($Result.Results) -like 'Failed to add to group Helpdesk Admins*Identity.PrivilegedUser.ReadWrite*' | Should -HaveCount 1
+            Should -Invoke Set-CIPPCopyGroupMembers -Times 1 -Exactly -ParameterFilter { $SkipRoleAssignable }
+        }
+
+        It 'are refused in a scheduled creation queued without the permission' {
+            $script:CippPrivilegedUserRestrictedStorage = [pscustomobject]@{ Value = $true }
+            $null = New-CIPPUserTask -UserObj $script:AdminUserObj
+            Should -Invoke Add-CIPPGroupMember -Times 0 -Exactly -ParameterFilter { $GroupId -eq 'group-admins' }
+        }
+
+        It 'refuses every group when the check itself fails' {
+            Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { , @('Identity.User.ReadWrite') }
+            Mock -CommandName Get-CIPPRoleAssignableGroupId -MockWith { throw 'Graph is unavailable' }
+            $null = New-CIPPUserTask -UserObj $script:AdminUserObj
+            Should -Invoke Add-CIPPGroupMember -Times 0 -Exactly
+        }
+
+        It 'are added for a caller who can manage privileged users, and outside a request' {
+            Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { , @('Identity.User.ReadWrite', 'Identity.PrivilegedUser.ReadWrite') }
+            $null = New-CIPPUserTask -UserObj $script:AdminUserObj
+            Mock -CommandName Get-CippRequestAllowedPermissions -MockWith { $null }
+            $null = New-CIPPUserTask -UserObj $script:AdminUserObj
+
+            Should -Invoke Add-CIPPGroupMember -Times 2 -Exactly -ParameterFilter { $GroupId -eq 'group-admins' }
+            Should -Invoke Get-CIPPRoleAssignableGroupId -Times 0 -Exactly
+            Should -Invoke Set-CIPPCopyGroupMembers -Times 2 -Exactly -ParameterFilter { -not $SkipRoleAssignable }
         }
     }
 
