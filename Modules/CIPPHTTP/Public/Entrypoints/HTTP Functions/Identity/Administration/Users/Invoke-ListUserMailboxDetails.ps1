@@ -276,6 +276,21 @@ function Invoke-ListUserMailboxDetails {
         }
     }
 
+    # A null mailbox value inherits the tenant default, read from the cached transport config; a failed lookup stays unknown.
+    $SmtpClientAuthenticationDisabled = $CASRequest.SmtpClientAuthenticationDisabled
+    $SmtpClientAuthenticationInherited = $false
+    if ($null -ne $CASRequest -and $null -ne @($CASRequest)[0].PSObject.Properties['SmtpClientAuthenticationDisabled'] -and $null -eq $SmtpClientAuthenticationDisabled) {
+        try {
+            $CachedTransportConfig = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ExoTransportConfig')[0]
+            if ($null -ne $CachedTransportConfig.SmtpClientAuthenticationDisabled) {
+                $SmtpClientAuthenticationDisabled = [bool]$CachedTransportConfig.SmtpClientAuthenticationDisabled
+                $SmtpClientAuthenticationInherited = $true
+            }
+        } catch {
+            $SmtpClientAuthenticationDisabled = $null
+        }
+    }
+
     # Build the GraphRequest object
     $GraphRequest = [ordered]@{
         ForwardAndDeliver                = $MailboxDetailedRequest.DeliverToMailboxAndForward
@@ -295,7 +310,8 @@ function Invoke-ListUserMailboxDetails {
         MailboxImapEnabled               = $CASRequest.ImapEnabled
         MailboxPopEnabled                = $CASRequest.PopEnabled
         MailboxActiveSyncEnabled         = $CASRequest.ActiveSyncEnabled
-        SmtpClientAuthenticationDisabled = $CASRequest.SmtpClientAuthenticationDisabled
+        SmtpClientAuthenticationDisabled = $SmtpClientAuthenticationDisabled
+        SmtpClientAuthenticationInherited = $SmtpClientAuthenticationInherited
         Permissions                      = @($ParsedPerms)
         ProhibitSendQuota                = $ProhibitSendQuota
         ProhibitSendReceiveQuota         = $ProhibitSendReceiveQuota
