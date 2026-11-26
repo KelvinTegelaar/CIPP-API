@@ -21,10 +21,9 @@ function Push-CippDriftManagement {
 
             # Process deviations more efficiently with foreach instead of ForEach-Object
             $Data = foreach ($deviation in $Drift.currentDeviations) {
-                $currentValue = if ($deviation.receivedValue -and $deviation.receivedValue.Length -gt 200) {
-                    $deviation.receivedValue.Substring(0, 200) + '...'
-                } else {
-                    $deviation.receivedValue
+                $currentValue = $deviation.CurrentValue ? [string]$deviation.CurrentValue : $deviation.receivedValue
+                if ($currentValue -and $currentValue.Length -gt 200) {
+                    $currentValue = $currentValue.Substring(0, 200) + '...'
                 }
                 [PSCustomObject]@{
                     Standard         = $deviation.standardDisplayName ? $deviation.standardDisplayName : $deviation.standardName

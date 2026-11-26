@@ -17457,7 +17457,7 @@
         "tags": [
           "Tenant > Standards"
         ],
-        "description": "Creates or removes a tenant-scoped delta (design doc §4.1) overriding one standard for\none tenant. Presence is the override: the delta's expectedValue (the configured variable\nvalues) fully replaces what the baselines apply. The resolved row's §4.2 columns are\nupdated immediately so the UI reflects the new effective configuration; the engine\nenforces it on the next run. createOverride requires a reason and takes an optional\nexpiry, after which the next baseline run removes the override.",
+        "description": "Creates or removes a tenant-scoped delta (design doc §4.1) overriding one standard for\none tenant. Presence is the override: the delta's expectedValue (the configured variable\nvalues) fully replaces what the baselines apply. The resolved row's §4.2 columns are\nupdated immediately so the UI reflects the new effective configuration; the engine\nenforces it on the next run. createOverride requires a reason and takes an optional\nexpiry, after which the next baseline run removes the override. The override carries\nits own remediateEnabled (default false) and alertEnabled (default true).",
         "requestBody": {
           "required": true,
           "content": {
@@ -17472,6 +17472,10 @@
                       "deleteOverride"
                     ]
                   },
+                  "alertEnabled": {
+                    "type": "string",
+                    "description": "Send an alert when this standard drifts on this tenant. On when omitted."
+                  },
                   "expires": {
                     "type": "string",
                     "description": "Unix seconds after which the override stops applying. Empty keeps it until it is removed, unless the instance sets a maximum."
@@ -17479,6 +17483,10 @@
                   "reason": {
                     "type": "string",
                     "description": "Why this tenant differs from its baselines. Required to create an override."
+                  },
+                  "remediateEnabled": {
+                    "type": "boolean",
+                    "description": "Fix drift on this standard automatically for this tenant. Off when omitted."
                   },
                   "standard": {
                     "type": "string"
