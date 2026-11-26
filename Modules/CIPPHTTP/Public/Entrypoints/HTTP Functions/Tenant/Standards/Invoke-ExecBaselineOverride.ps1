@@ -10,7 +10,8 @@ function Invoke-ExecBaselineOverride {
         values) fully replaces what the baselines apply. The resolved row's §4.2 columns are
         updated immediately so the UI reflects the new effective configuration; the engine
         enforces it on the next run. createOverride requires a reason and takes an optional
-        expiry, after which the next baseline run removes the override.
+        expiry, after which the next baseline run removes the override. The override carries
+        its own remediateEnabled (default false) and alertEnabled (default true).
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -55,6 +56,10 @@ function Invoke-ExecBaselineOverride {
         switch ($Action) {
             'createOverride' {
                 $Variables = $Request.Body.variables ?? [PSCustomObject]@{}
+                # Fix drift on this standard automatically for this tenant. Off when omitted.
+                $RemediateEnabled = [bool]($Request.Body.remediateEnabled -eq $true)
+                # Send an alert when this standard drifts on this tenant. On when omitted.
+                $AlertEnabled = [bool]($Request.Body.alertEnabled ?? $true)
                 $LegacyDeltas = @($ExistingDeltas | Where-Object { $_.RowKey -ne $DeltaRowKey })
                 if ($LegacyDeltas.Count -gt 0) { Remove-CIPPAzDataTableEntity -Force @DeltaTable -Entity $LegacyDeltas }
                 $DeltaTable.Force = $true
@@ -67,8 +72,8 @@ function Invoke-ExecBaselineOverride {
                     scopeId          = "$TenantId"
                     stage            = 1
                     expectedValue    = (ConvertTo-Json -Compress -Depth 100 -InputObject $Variables)
-                    remediateEnabled = $true
-                    alertEnabled     = $true
+                    remediateEnabled = $RemediateEnabled
+                    alertEnabled     = $AlertEnabled
                     alertOnRemediate = $false
                     rolloutId        = ''
                     reason           = $Reason

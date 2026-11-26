@@ -95,4 +95,32 @@ Describe 'Invoke-ExecBaselineOverride createOverride' {
 
         $script:Added[0].expires | Should -Be ''
     }
+
+    It 'stores the remediate and alert choice instead of forcing both on' {
+        $null = Invoke-ExecBaselineOverride -Request (& $script:NewRequest @{
+                action = 'createOverride'; tenantFilter = 'contoso.com'; standard = 'DisableGuests'; reason = 'Customer request'
+                remediateEnabled = $false; alertEnabled = $false
+            })
+
+        $script:Added[0].remediateEnabled | Should -BeFalse
+        $script:Added[0].alertEnabled | Should -BeFalse
+    }
+
+    It 'stays report only with alerts on when neither is given' {
+        $null = Invoke-ExecBaselineOverride -Request (& $script:NewRequest @{
+                action = 'createOverride'; tenantFilter = 'contoso.com'; standard = 'DisableGuests'; reason = 'Customer request'
+            })
+
+        $script:Added[0].remediateEnabled | Should -BeFalse
+        $script:Added[0].alertEnabled | Should -BeTrue
+    }
+
+    It 'turns on remediation when asked' {
+        $null = Invoke-ExecBaselineOverride -Request (& $script:NewRequest @{
+                action = 'createOverride'; tenantFilter = 'contoso.com'; standard = 'DisableGuests'; reason = 'Customer request'
+                remediateEnabled = $true
+            })
+
+        $script:Added[0].remediateEnabled | Should -BeTrue
+    }
 }
