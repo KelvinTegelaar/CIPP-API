@@ -84,6 +84,8 @@ function Invoke-ExecUpdateBaselineDeviation {
                 & $Set 'DeviationAt' $Now
                 & $Set 'DeviationExpires' $(if ($Expires) { $Expires } else { '' })
                 & $Set 'RemediateOnExpire' ([bool]$Request.Body.remediateOnExpire)
+                # Accepting the whole row supersedes per-property verdicts; left behind, the engine reads the row as accepted property by property.
+                & $Set 'AcceptedPaths' '{}'
                 $Message = "Accepted the deviation on $Standard for $TenantFilter."
                 $EventOutcome = 'Accepted'
                 $EventDetail = 'Accepted the deviation{0}{1}' -f $(if ($Request.Body.reason) { ": $($Request.Body.reason)" }), $(if ($Expires) { ' (expires {0:yyyy-MM-dd})' -f [datetimeoffset]::FromUnixTimeSeconds($Expires).UtcDateTime })

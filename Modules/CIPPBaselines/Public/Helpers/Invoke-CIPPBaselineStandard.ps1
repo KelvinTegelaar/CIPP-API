@@ -770,7 +770,8 @@ function Invoke-CIPPBaselineStandard {
         }
 
         $Expires = if ("$($Prior.DeviationExpires)" -match '^\d+$') { [int64]$Prior.DeviationExpires } else { 0 }
-        $AcceptActive = $PriorStatus -eq 'Accepted' -and ($Expires -eq 0 -or $Now -lt $Expires)
+        # A row accepted property by property tolerates only those properties.
+        $AcceptActive = $PriorStatus -eq 'Accepted' -and ($Expires -eq 0 -or $Now -lt $Expires) -and -not ($AcceptedKeys.Count -gt 0 -and $Differences.Count -gt 0)
         $RemediateOnExpire = $PriorStatus -eq 'Accepted' -and $Expires -gt 0 -and $Now -ge $Expires -and [bool]$Prior.RemediateOnExpire
         # A denied deviation is an operator order: remediate regardless of configured posture.
         $DeniedRemediate = $PriorStatus -eq 'Denied - Remediate Pending'
