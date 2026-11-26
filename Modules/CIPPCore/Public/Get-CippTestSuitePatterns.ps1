@@ -31,5 +31,6 @@ function Get-CippTestSuitePatterns {
         GenericTests     = 'Invoke-CippTestGenericTest*'
         E8               = 'Invoke-CippTestE8_*'
         SecuritySimulations = 'Invoke-CippTestSecuritySimulation_*'
+        CyberInsurance   = 'Invoke-CippTestCyberIns_*'
     }
 }

@@ -27,7 +27,7 @@ function Invoke-CIPPTestCollection {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CIS', 'SMB1001', 'CopilotReadiness', 'GenericTests', 'E8', 'SecuritySimulations', 'Custom')]
+        [ValidateSet('ZTNA', 'ORCA', 'EIDSCA', 'CISA', 'CIS', 'SMB1001', 'CopilotReadiness', 'GenericTests', 'E8', 'SecuritySimulations', 'CyberInsurance', 'Custom')]
         [string]$SuiteName,
 
         [Parameter(Mandatory = $true)]

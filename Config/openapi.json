@@ -22243,6 +22243,81 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecCyberInsuranceAttestation": {
+      "post": {
+        "summary": "Save an MSP attestation for a cyber insurance question",
+        "operationId": "ExecCyberInsuranceAttestation",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "Saves the MSP's attestation for one question of a tenant's Cyber Insurance Readiness report, with who entered it and when. Send an Id to attest to an existing question, or a Question to add a new attestation question for the tenant. Send an Answer of Yes or No to set the MSP's answer to a question. Saving an empty attestation removes it, and removes a question the MSP added.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Answer": {
+                    "type": "string",
+                    "enum": [
+                      "No",
+                      "Yes"
+                    ],
+                    "description": "Sets the MSP's answer to the question without changing its attestation text."
+                  },
+                  "Attestation": {
+                    "type": "string",
+                    "description": "The attestation text, as HTML from the editor."
+                  },
+                  "Id": {
+                    "type": "string",
+                    "description": "The question to attest to: its number on the application (1 to 25), or the id of a question the MSP added."
+                  },
+                  "Question": {
+                    "type": "string",
+                    "description": "The text of a new attestation question. Used when no Id is sent."
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Reports.ReadWrite"
+      }
+    },
     "/api/ExecDefenderMachineAction": {
       "post": {
         "summary": "Isolate, release or antivirus scan a Defender device",
@@ -27273,6 +27348,52 @@
           }
         ],
         "x-cipp-role": "Identity.User.Read"
+      }
+    },
+    "/api/ExecGetCyberInsuranceReportPdf": {
+      "get": {
+        "summary": "Download the Cyber Insurance Readiness report as a PDF",
+        "operationId": "ExecGetCyberInsuranceReportPdf",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "Renders the Cyber Insurance Readiness report for one tenant as a PDF: a summary, the 25 application questions in order, the detail behind each answer read from the tenant, the questions the MSP attests to, and a scope and limitations statement.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Reports.Read"
       }
     },
     "/api/ExecGetDomainReportPdf": {
@@ -55188,6 +55309,52 @@
         "x-cipp-role": "Endpoint.Security.Read",
         "x-cipp-any-tenant": true,
         "x-cipp-tenant-group": true
+      }
+    },
+    "/api/ListCyberInsuranceReport": {
+      "get": {
+        "summary": "Get the Cyber Insurance Readiness report for a tenant",
+        "operationId": "ListCyberInsuranceReport",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "Returns the 25 cyber insurance application questions for one tenant, each with its answer and supporting detail taken from the tenant's stored test results, plus summary counts and the age of the underlying data.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Reports.Read"
       }
     },
     "/api/ListDBCache": {
