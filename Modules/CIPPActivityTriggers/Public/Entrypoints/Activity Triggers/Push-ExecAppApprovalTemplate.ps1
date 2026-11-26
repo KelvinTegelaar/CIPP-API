@@ -134,7 +134,7 @@ function Push-ExecAppApprovalTemplate {
                 return $true
             }
 
-            $PropertiesToRemove = @('appId', 'id', 'createdDateTime', 'deletedDateTime', 'createdByAppId', 'publisherDomain', 'servicePrincipalLockConfiguration', 'identifierUris', 'applicationIdUris', 'keyCredentials', 'passwordCredentials')
+            $PropertiesToRemove = @('appId', 'id', 'createdDateTime', 'deletedDateTime', 'createdByAppId', 'publisherDomain', 'servicePrincipalLockConfiguration', 'identifierUris', 'applicationIdUris', 'keyCredentials', 'passwordCredentials', 'signInActivity', 'lastSignInDateTime', 'daysSinceLastSignIn', 'lastCredentialSignInDateTime', 'unusedCredentialCount', 'credentialUse')
 
             # Strip tenant-specific data that might cause conflicts
             $CleanManifest = $ApplicationManifest | ConvertTo-Json -Depth 10 | ConvertFrom-Json

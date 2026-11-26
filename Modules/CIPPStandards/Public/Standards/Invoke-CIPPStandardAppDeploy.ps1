@@ -220,7 +220,7 @@ function Invoke-CIPPStandardAppDeploy {
                             continue
                         }
 
-                        $PropertiesToRemove = @('appId', 'id', 'createdDateTime', 'deletedDateTime', 'createdByAppId', 'publisherDomain', 'servicePrincipalLockConfiguration', 'identifierUris', 'applicationIdUris')
+                        $PropertiesToRemove = @('appId', 'id', 'createdDateTime', 'deletedDateTime', 'createdByAppId', 'publisherDomain', 'servicePrincipalLockConfiguration', 'identifierUris', 'applicationIdUris', 'signInActivity', 'lastSignInDateTime', 'daysSinceLastSignIn', 'lastCredentialSignInDateTime', 'unusedCredentialCount', 'credentialUse')
 
                         # Strip tenant-specific data that might cause conflicts
                         $CleanManifest = $ApplicationManifest | ConvertTo-Json -Depth 10 | ConvertFrom-Json

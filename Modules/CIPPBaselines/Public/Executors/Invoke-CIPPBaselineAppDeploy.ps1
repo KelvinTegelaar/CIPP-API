@@ -105,7 +105,7 @@ function Invoke-CIPPBaselineAppDeploy {
                     continue
                 }
                 $CleanManifest = $ApplicationManifest | ConvertTo-Json -Depth 10 | ConvertFrom-Json
-                foreach ($Property in @('appId', 'id', 'createdDateTime', 'deletedDateTime', 'createdByAppId', 'publisherDomain', 'servicePrincipalLockConfiguration', 'identifierUris', 'applicationIdUris')) {
+                foreach ($Property in @('appId', 'id', 'createdDateTime', 'deletedDateTime', 'createdByAppId', 'publisherDomain', 'servicePrincipalLockConfiguration', 'identifierUris', 'applicationIdUris', 'signInActivity', 'lastSignInDateTime', 'daysSinceLastSignIn', 'lastCredentialSignInDateTime', 'unusedCredentialCount', 'credentialUse')) {
                     $CleanManifest.PSObject.Properties.Remove($Property)
                 }
                 $CreatedApp = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/applications' -type POST -tenantid $TenantFilter -body ($CleanManifest | ConvertTo-Json -Depth 10)
