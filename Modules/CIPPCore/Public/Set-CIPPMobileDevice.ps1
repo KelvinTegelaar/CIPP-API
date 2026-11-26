@@ -6,6 +6,8 @@ function Set-CIPPMobileDevice(
     [string]$TenantFilter,
     [string]$Delete,
     [string]$Guid,
+    [string]$Wipe,
+    [string]$CancelWipe,
     [string]$APIName = 'Mobile Device'
 ) {
 
@@ -21,6 +23,24 @@ function Set-CIPPMobileDevice(
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to delete Mobile Device $($Guid): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         throw "Failed to delete Mobile Device $($Guid): $($ErrorMessage.NormalizedError)"
+    }
+
+    try {
+        if ($Wipe -eq 'true') {
+            # AccountOnly removes the Exchange account data, never the whole device. Needs EAS 16.1+ or Outlook mobile.
+            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Clear-MobileDevice' -Anchor $UserId -cmdParams @{Identity = $Guid; AccountOnly = $true }
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Issued an account-only wipe for a mobile device of $UserId" -Sev 'Info'
+            return "Issued an account-only wipe for the mobile device of $UserId. The wipe is performed when the device next connects to Exchange."
+        } elseif ($CancelWipe -eq 'true') {
+            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Clear-MobileDevice' -Anchor $UserId -cmdParams @{Identity = $Guid; AccountOnly = $true; Cancel = $true }
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Cancelled the account-only wipe for a mobile device of $UserId" -Sev 'Info'
+            return "Cancelled the pending account-only wipe for the mobile device of $UserId"
+        }
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        $Action = if ($Wipe -eq 'true') { 'wipe' } else { 'cancel the wipe for' }
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to $Action Mobile Device $($Guid): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        throw "Failed to $Action Mobile Device $($Guid): $($ErrorMessage.NormalizedError)"
     }
 
     try {

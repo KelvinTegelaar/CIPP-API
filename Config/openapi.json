@@ -30750,6 +30750,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "CancelWipe": {
+                    "type": "string",
+                    "description": "Cancel an account-only wipe that the device has not yet carried out."
+                  },
                   "Delete": {
                     "type": "string"
                   },
@@ -30768,6 +30772,10 @@
                   "Userid": {
                     "type": "string",
                     "description": "Interact with query parameters or the body of the request. This is a state-changing action, so the frontend dispatches it as a POST; keep the query fallback for backwards compatibility."
+                  },
+                  "Wipe": {
+                    "type": "string",
+                    "description": "Issue an account-only wipe: removes the Exchange account data from the device, not the whole device."
                   }
                 },
                 "required": [
@@ -65481,6 +65489,12 @@
                     "type": "object",
                     "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                     "properties": {
+                      "accountOnlyWipeAckTime": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "accountOnlyWipeRequestTime": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "clientType": {
                         "x-cipp-field-source": "backend"
                       },
@@ -65488,6 +65502,9 @@
                         "x-cipp-field-source": "backend"
                       },
                       "deviceAccessState": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "deviceAccessStateReason": {
                         "x-cipp-field-source": "backend"
                       },
                       "deviceFriendlyName": {

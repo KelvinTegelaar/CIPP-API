@@ -16,9 +16,13 @@ Function Invoke-ExecMailboxMobileDevices {
     $DeviceId = $Request.Body.deviceid ?? $Request.Query.deviceid
     $Quarantine = $Request.Body.Quarantine ?? $Request.Query.Quarantine
     $Delete = $Request.Body.Delete ?? $Request.Query.Delete
+    # Issue an account-only wipe: removes the Exchange account data from the device, not the whole device.
+    $Wipe = $Request.Body.Wipe
+    # Cancel an account-only wipe that the device has not yet carried out.
+    $CancelWipe = $Request.Body.CancelWipe
     $TenantFilter = $Request.Body.tenantFilter ?? $Request.Query.tenantFilter
     Try {
-        $MobileResults = Set-CIPPMobileDevice -UserId $UserId -Guid $Guid -DeviceId $DeviceId -Quarantine $Quarantine -tenantFilter $TenantFilter -APIName $APINAME -Delete $Delete -Headers $Request.Headers
+        $MobileResults = Set-CIPPMobileDevice -UserId $UserId -Guid $Guid -DeviceId $DeviceId -Quarantine $Quarantine -tenantFilter $TenantFilter -APIName $APINAME -Delete $Delete -Wipe $Wipe -CancelWipe $CancelWipe -Headers $Request.Headers
         $Results = [pscustomobject]@{'Results' = $MobileResults }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
