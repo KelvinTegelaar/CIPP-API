@@ -13,6 +13,8 @@ BeforeAll {
     function Add-CIPPBaselineHistoryEvent { param($TenantFilter, $Standard, $Mode, $TriggeredBy, $Outcome, $Detail) }
     function Write-LogMessage { param($headers, $API, $message, $Sev) }
     function Get-CippErrorStatusCode { param($ErrorRecord) 500 }
+    function Get-CIPPBaselineDefinition { param($Name) }
+    function Get-CIPPTextReplacement { param($TenantFilter, $Text, [switch]$EscapeForJson) $Text }
     . (Join-Path $BackendRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Tenant/Standards/Invoke-ExecBaselineOverride.ps1')
     . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Baselines/Resolve-CIPPBaselineExpiry.ps1')
     function Get-CIPPBaselineExpiryPolicy { [pscustomobject]@{ defaultDays = 0; maxDays = 0 } }
@@ -53,6 +55,24 @@ Describe 'Invoke-ExecBaselineOverride deleteOverride' {
         Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -ParameterFilter { $Entity.DeviationReason -eq 'accepted by test' }
     }
 
+    It 'clears the expected value and the graded state when the standard has no expected template' {
+        $script:Row = New-Row @($script:BaselineTier, $script:OverrideTier)
+        $script:Row.Status = 'Compliant'
+        $null = Invoke-ExecBaselineOverride -Request $script:Request
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -ParameterFilter {
+            $Entity.ExpectedValue -eq 'null' -and $Entity.Status -eq 'No Data' -and $Entity.Compliant -eq $false -and $Entity.Diff -eq '[]'
+        }
+    }
+
+    It 'falls back to the tier value when the standard has an expected template' {
+        Mock Get-CIPPBaselineDefinition { [pscustomobject]@{ expected = [pscustomobject]@{ Language = '%Language%' } } }
+        $script:Row = New-Row @($script:BaselineTier, $script:OverrideTier)
+        $null = Invoke-ExecBaselineOverride -Request $script:Request
+        Should -Invoke Add-CIPPAzDataTableEntity -Times 1 -ParameterFilter {
+            $Entity.ExpectedValue -eq '{"Language":"en-US"}' -and $Entity.Status -eq 'Accepted'
+        }
+    }
+
     It 'still removes a row that only the tenant override backs' {
         $script:Row = New-Row @($script:OverrideTier)
         (Invoke-ExecBaselineOverride -Request $script:Request).StatusCode | Should -Be 200
@@ -86,6 +106,45 @@ Describe 'Invoke-ExecBaselineOverride createOverride' {
         $script:Added[0].updatedBy | Should -Be 'admin@contoso.com'
         $Response.Body.Results | Should -Match 'expires on 2030-01-01'
         $script:Events[0] | Should -Match 'Change ticket 42'
+    }
+
+    It 'shows the override settings and resets the graded state when the standard has no expected template' {
+        $Row = [pscustomobject]@{
+            PartitionKey = 'contoso.com'; RowKey = 'SmartLockout'; StandardName = 'SmartLockout'; TemplateId = 'baseline-guid'
+            Status = 'Compliant'; Compliant = $true; ExpectedValue = '{"lockoutThreshold":"10"}'; Diff = '[]'
+            Inheritance = ConvertTo-Json -Compress -Depth 10 -InputObject @([pscustomobject]@{ templateName = 'CIPPTestBaseline'; value = [pscustomobject]@{ LockoutThreshold = 10 }; effective = $true })
+        }
+        Mock Get-CIPPAzDataTableEntity { if ($Filter -notlike '*standardItem*') { $Row } }
+        $null = Invoke-ExecBaselineOverride -Request (& $script:NewRequest @{
+                action = 'createOverride'; tenantFilter = 'contoso.com'; standard = 'SmartLockout'; reason = 'Customer request'
+                variables = [pscustomobject]@{ LockoutThreshold = 5 }
+            })
+
+        $Written = $script:Added.Where({ $_.SourceTemplate -eq 'Tenant Override' })[0]
+        $Written.ExpectedValue | Should -Be 'null'
+        $Written.Status | Should -Be 'No Data'
+        $Written.Compliant | Should -BeFalse
+        $Tiers = @($Written.Inheritance | ConvertFrom-Json)
+        $Tiers[-1].value.LockoutThreshold | Should -Be 5
+        $Tiers[0].effective | Should -BeFalse
+    }
+
+    It 'renders the expected template with the override settings' {
+        $Row = [pscustomobject]@{
+            PartitionKey = 'contoso.com'; RowKey = 'UserPreferredLanguage'; StandardName = 'UserPreferredLanguage'; TemplateId = 'baseline-guid'
+            Status = 'Drift'; ExpectedValue = '{"Language":"en-US"}'; Inheritance = ''
+        }
+        Mock Get-CIPPAzDataTableEntity { if ($Filter -notlike '*standardItem*') { $Row } }
+        Mock Get-CIPPBaselineDefinition { [pscustomobject]@{ expected = [pscustomobject]@{ Language = '%Language%' } } }
+        $null = Invoke-ExecBaselineOverride -Request (& $script:NewRequest @{
+                action = 'createOverride'; tenantFilter = 'contoso.com'; standard = 'UserPreferredLanguage'; reason = 'Customer request'
+                variables = [pscustomobject]@{ Language = 'de-DE' }
+            })
+
+        $Written = $script:Added.Where({ $_.SourceTemplate -eq 'Tenant Override' })[0]
+        $Written.ExpectedValue | Should -Be '{"Language":"de-DE"}'
+        $Written.Status | Should -Be 'No Data'
+        (@($Written.Inheritance | ConvertFrom-Json))[-1].value.Language | Should -Be 'de-DE'
     }
 
     It 'stores no expiry when none is given' {

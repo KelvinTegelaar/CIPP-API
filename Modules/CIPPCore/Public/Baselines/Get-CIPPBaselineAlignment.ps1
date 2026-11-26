@@ -446,6 +446,8 @@ function Get-CIPPBaselineAlignment {
             $BaseName = ($Delta.standardName -split '#')[0]
             $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
             $Expected = & $RenderExpected $Definition $Variables
+            # Without an expected template the tier shows the configured settings, as the engine writes it.
+            $TierValue = if ($Definition.expected) { $Expected } else { $Variables }
             $Row = $Rows | Where-Object { $_.standardName -eq $Delta.standardName } | Select-Object -First 1
             $OverrideFields = @{
                 overrideReason  = $Delta.reason
@@ -465,7 +467,7 @@ function Get-CIPPBaselineAlignment {
                     $Inheritance.Add([PSCustomObject]@{
                             templateName = 'Tenant Override'
                             assignedTo   = $TenantFilter
-                            value        = $Expected
+                            value        = $TierValue
                             effective    = $true
                         })
                     $Row.expectedValue = $Expected
@@ -494,7 +496,7 @@ function Get-CIPPBaselineAlignment {
                         inheritance         = @([PSCustomObject]@{
                                 templateName = 'Tenant Override'
                                 assignedTo   = $TenantFilter
-                                value        = $Expected
+                                value        = $TierValue
                                 effective    = $true
                             })
                         acceptedPaths       = [PSCustomObject]@{}
@@ -504,7 +506,7 @@ function Get-CIPPBaselineAlignment {
                         deviationAt         = $null
                         deviationExpires    = $null
                         remediateOnExpire   = $false
-                        overrideReason      = $OverrideFields.overrideReason
+                        overrideReason     = $OverrideFields.overrideReason
                         overrideBy          = $OverrideFields.overrideBy
                         overrideAt          = $OverrideFields.overrideAt
                         overrideExpires     = $OverrideFields.overrideExpires
