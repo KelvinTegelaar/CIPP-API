@@ -190,7 +190,7 @@ function Invoke-ExecModifyMBPerms {
         # Use bulk processing with GUID tracking
         try {
             Write-LogMessage -headers $Headers -API $APIName -message "Executing bulk request with $($CmdletArray.Count) cmdlets" -Sev 'Info' -tenant $TenantFilter
-            $BulkResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($CmdletArray) -ReturnWithCommand $true
+            $BulkResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($CmdletArray) -ReturnWithCommand $true -AnchorPerMailbox -MaxConcurrency 32
 
             # Process bulk results using GUID mapping
             if ($BulkResults -is [hashtable] -and $BulkResults.Keys.Count -gt 0) {

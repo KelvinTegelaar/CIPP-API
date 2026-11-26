@@ -30,7 +30,7 @@ Describe 'New-ExoBulkRequest -AnchorPerMailbox' {
         }
     }
 
-    It 'sends one POST per cmdlet, each routed to its own mailbox' {
+    It 'sends one POST per mailbox, each routed to its own mailbox' {
         $null = New-ExoBulkRequest -tenantid 'contoso.onmicrosoft.com' -cmdletArray @($script:Cmdlets) -AnchorPerMailbox
         $script:Posts.Anchor | Should -Be @('UPN:a@contoso.com', 'UPN:b@contoso.com')
         $script:Posts.Size | Should -Be @(1, 1)
@@ -40,6 +40,28 @@ Describe 'New-ExoBulkRequest -AnchorPerMailbox' {
         $script:Throttle = $true
         $null = New-ExoBulkRequest -tenantid 'contoso.onmicrosoft.com' -cmdletArray @($script:Cmdlets) -AnchorPerMailbox
         $script:Posts.Anchor | Should -Be @('UPN:a@contoso.com', 'UPN:b@contoso.com', 'UPN:a@contoso.com')
+    }
+
+    It 'routes an object-id Identity by Oid and batches each mailbox''s cmdlets together, not by the grantee' {
+        $Oid = '11111111-1111-1111-1111-111111111111'
+        $Cmds = @(
+            foreach ($User in 'x@contoso.com', 'y@contoso.com') { @{ CmdletInput = @{ CmdletName = 'Add-MailboxFolderPermission'; Parameters = @{ Identity = "$($Oid):\Calendar"; User = $User } } } }
+            @{ CmdletInput = @{ CmdletName = 'Add-MailboxFolderPermission'; Parameters = @{ Identity = 'b@contoso.com:\Calendar'; User = 'x@contoso.com' } } }
+        )
+        $null = New-ExoBulkRequest -tenantid 'contoso.onmicrosoft.com' -cmdletArray $Cmds -AnchorPerMailbox
+        $script:Posts.Anchor | Should -Be @("Oid:$Oid@cid", 'UPN:b@contoso.com')
+        $script:Posts.Size | Should -Be @(2, 1)
+    }
+
+    It 'sends a mailbox''s cmdlets beyond -BatchSize in a later wave so it never takes two batches at once' {
+        $Cmds = @(
+            foreach ($i in 1..3) { @{ CmdletInput = @{ CmdletName = 'Set-Mailbox'; Parameters = @{ Identity = 'a@contoso.com' } } } }
+            @{ CmdletInput = @{ CmdletName = 'Set-Mailbox'; Parameters = @{ Identity = 'b@contoso.com' } } }
+        )
+        $null = New-ExoBulkRequest -tenantid 'contoso.onmicrosoft.com' -cmdletArray $Cmds -AnchorPerMailbox -BatchSize 2
+        # Wave 1: a's first two and b's only cmdlet; wave 2: a's third
+        $script:Posts.Anchor | Should -Be @('UPN:a@contoso.com', 'UPN:b@contoso.com', 'UPN:a@contoso.com')
+        $script:Posts.Size | Should -Be @(2, 1, 1)
     }
 
     It 'keeps the default: one system-mailbox-routed batch' {

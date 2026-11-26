@@ -18,8 +18,9 @@ function New-ExoBulkRequest {
         [int]$TimeoutSec = 100,
         [switch]$Compliance,
         [switch]$AsApp,
-        # Routes each cmdlet to its Identity (a UPN): mailbox-store writes such as audit settings fail when proxied.
-        # NOTE: this forces the batch size to 1 (one POST per cmdlet), so tune the fan-out with -MaxConcurrency.
+        # Routes each cmdlet to the mailbox in its Identity (UPN or object id): mailbox-store writes fail or crawl when proxied.
+        # Batches hold one mailbox's cmdlets, which EXO runs in order, so a mailbox never takes two writes at once;
+        # a mailbox with more than -BatchSize cmdlets continues in a later wave. Tune the fan-out with -MaxConcurrency.
         [switch]$AnchorPerMailbox
     )
 
@@ -56,26 +57,40 @@ function New-ExoBulkRequest {
             $IdToOperationGuid = @{}  # Track operation GUIDs when provided
             $IdToBatchRequest = @{}   # Original sub-requests, reused for nextLink continuations
 
-            if ($AnchorPerMailbox) { $BatchSize = 1 }
+            if ($useSystemMailbox) { $AnchorPerMailbox = $false }
+            # Each batch is { Wave; Anchor; Cmds }. Batches in one wave are dispatched together.
             $batches = [System.Collections.Generic.List[object]]::new()
-            for ($i = 0; $i -lt $cmdletArray.Length; $i += $BatchSize) {
-                $batches.Add($cmdletArray[$i..[math]::Min($i + $BatchSize - 1, $cmdletArray.Length - 1)])
+            if ($AnchorPerMailbox) {
+                $AnchorOrder = [System.Collections.Generic.List[string]]::new()
+                $CmdsByAnchor = @{}
+                foreach ($cmd in $cmdletArray) {
+                    # The mailbox part of an Identity such as '<objectId>:\Calendar' or 'user@contoso.com'
+                    $MailboxKey = ([string]$cmd.CmdletInput.Parameters.Identity -split ':')[0]
+                    $CmdAnchor = if ($MailboxKey -as [guid]) { "Oid:$MailboxKey@$($Tenant.customerId)" } else { "UPN:$($MailboxKey -replace '^UPN:')" }
+                    if (-not $CmdsByAnchor.ContainsKey($CmdAnchor)) {
+                        $CmdsByAnchor[$CmdAnchor] = [System.Collections.Generic.List[object]]::new()
+                        $AnchorOrder.Add($CmdAnchor)
+                    }
+                    $CmdsByAnchor[$CmdAnchor].Add($cmd)
+                }
+                foreach ($CmdAnchor in $AnchorOrder) {
+                    $Cmds = $CmdsByAnchor[$CmdAnchor]
+                    for ($i = 0; $i -lt $Cmds.Count; $i += $BatchSize) {
+                        $batches.Add(@{ Wave = [int]($i / $BatchSize); Anchor = $CmdAnchor; Cmds = $Cmds.GetRange($i, [math]::Min($BatchSize, $Cmds.Count - $i)) })
+                    }
+                }
+            } else {
+                for ($i = 0; $i -lt $cmdletArray.Length; $i += $BatchSize) {
+                    $batches.Add(@{ Wave = 0; Cmds = $cmdletArray[$i..[math]::Min($i + $BatchSize - 1, $cmdletArray.Length - 1)] })
+                }
             }
 
             $ReturnedData = [System.Collections.Generic.List[object]]::new()
-            $BatchPayloads = [System.Collections.Generic.List[object]]::new()
+            $Waves = [System.Collections.Generic.List[object]]::new()
             foreach ($batch in $batches) {
                 $BatchRequests = [System.Collections.Generic.List[object]]::new()
-                foreach ($cmd in $batch) {
-                    $cmdparams = $cmd.CmdletInput.Parameters
-                    if ($cmdparams.Identity) { $Anchor = $cmdparams.Identity }
-                    if ($cmdparams.anr) { $Anchor = $cmdparams.anr }
-                    if ($cmdparams.User) { $Anchor = $cmdparams.User }
-                    if (!$Anchor -or $useSystemMailbox) {
-                        $OnMicrosoft = $Tenant.initialDomainName
-                        $Anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
-                    }
-                    $Headers['X-AnchorMailbox'] = if ($AnchorPerMailbox) { "UPN:$($Anchor -replace '^UPN:')" } else { "APP:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($tenant.customerId)" }
+                foreach ($cmd in $batch.Cmds) {
+                    $Headers['X-AnchorMailbox'] = if ($AnchorPerMailbox) { $batch.Anchor } else { "APP:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($tenant.customerId)" }
                     $Headers['X-CmdletName'] = $cmd.CmdletInput.CmdletName
                     $Headers['Accept'] = 'application/json; odata.metadata=minimal'
                     $Headers['Accept-Encoding'] = 'gzip'
@@ -113,7 +128,8 @@ function New-ExoBulkRequest {
                 $BatchBodyJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $BatchBodyJson
                 # Clone the headers as they stood for this batch's POST (X-AnchorMailbox/X-CmdletName are
                 # mutated per sub-request above); the $batch envelope also carries per-request headers.
-                $BatchPayloads.Add(@{ Json = $BatchBodyJson; Headers = $Headers.Clone(); Ids = @($BatchRequests.id) })
+                while ($Waves.Count -le $batch.Wave) { $Waves.Add([System.Collections.Generic.List[object]]::new()) }
+                $Waves[$batch.Wave].Add(@{ Json = $BatchBodyJson; Headers = $Headers.Clone(); Ids = @($BatchRequests.id) })
             }
 
             # Dispatch a set of batch payloads and return the flattened sub-responses. -MaxConcurrency 1
@@ -171,7 +187,9 @@ function New-ExoBulkRequest {
                 return $Out
             }
 
-            foreach ($Response in (Send-BatchPayloadSet $BatchPayloads $BatchURL $MaxConcurrency $TimeoutSec)) { $ReturnedData.Add($Response) }
+            foreach ($Wave in $Waves) {
+                foreach ($Response in (Send-BatchPayloadSet $Wave $BatchURL $MaxConcurrency $TimeoutSec)) { $ReturnedData.Add($Response) }
+            }
 
             # EXO can throttle individual sub-requests inside a 200 batch envelope (status 429 per response,
             # emitted under Prefer: odata.continue-on-error). SendConcurrent only sees the outer 200, so
@@ -192,14 +210,23 @@ function New-ExoBulkRequest {
                 if ($RetryAfter -le 0) { $RetryAfter = [int][math]::Pow(2, $RateLimitRetry) }  # 2s, 4s, 8s
                 Start-Sleep -Seconds $RetryAfter
 
-                $ThrottledRequests = @($Throttled | ForEach-Object { $IdToBatchRequest[$_.id] })
+                # Per-mailbox anchors: a retried batch must keep one mailbox's requests together
+                $RetryGroups = @{}
+                foreach ($ThrottledResponse in $Throttled) {
+                    $ThrottledRequest = $IdToBatchRequest[$ThrottledResponse.id]
+                    $GroupKey = if ($AnchorPerMailbox) { $ThrottledRequest.headers['X-AnchorMailbox'] } else { '' }
+                    if (-not $RetryGroups.ContainsKey($GroupKey)) { $RetryGroups[$GroupKey] = [System.Collections.Generic.List[object]]::new() }
+                    $RetryGroups[$GroupKey].Add($ThrottledRequest)
+                }
                 $RetryPayloads = [System.Collections.Generic.List[object]]::new()
-                for ($i = 0; $i -lt $ThrottledRequests.Count; $i += $BatchSize) {
-                    $Slice = $ThrottledRequests[$i..[math]::Min($i + $BatchSize - 1, $ThrottledRequests.Count - 1)]
-                    $RetryBody = @{ requests = @($Slice) }
-                    $RetryJson = [CIPP.CippJson]::ToJson($RetryBody, 10) ?? (ConvertTo-Json -InputObject $RetryBody -Depth 10)
-                    $RetryJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $RetryJson
-                    $RetryPayloads.Add(@{ Json = $RetryJson; Headers = if ($AnchorPerMailbox) { $Slice[0].headers.Clone() } else { $Headers.Clone() }; Ids = @($Slice.id) })
+                foreach ($ThrottledRequests in $RetryGroups.Values) {
+                    for ($i = 0; $i -lt $ThrottledRequests.Count; $i += $BatchSize) {
+                        $Slice = $ThrottledRequests.GetRange($i, [math]::Min($BatchSize, $ThrottledRequests.Count - $i))
+                        $RetryBody = @{ requests = @($Slice) }
+                        $RetryJson = [CIPP.CippJson]::ToJson($RetryBody, 10) ?? (ConvertTo-Json -InputObject $RetryBody -Depth 10)
+                        $RetryJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $RetryJson
+                        $RetryPayloads.Add(@{ Json = $RetryJson; Headers = if ($AnchorPerMailbox) { $Slice[0].headers.Clone() } else { $Headers.Clone() }; Ids = @($Slice.id) })
+                    }
                 }
 
                 # Halve the fan-out each round: firing every throttled batch back at once re-trips the same limit.
