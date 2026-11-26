@@ -52,7 +52,12 @@ function Set-CIPPNamedLocation {
 
         if ($PSCmdlet.ShouldProcess($NamedLocations.displayName, $ActionDescription)) {
             if ($Change -eq 'delete') {
-                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$NamedLocationId" -tenantid $TenantFilter -type DELETE
+                # Graph refuses to delete a trusted location (error 1177)
+                if ($NamedLocations.isTrusted -eq $true) {
+                    $UntrustBody = '{"@odata.type":"#microsoft.graph.ipNamedLocation","isTrusted":false}'
+                    $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$NamedLocationId" -tenantid $TenantFilter -type PATCH -body $UntrustBody
+                }
+                $null =New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$NamedLocationId" -tenantid $TenantFilter -type DELETE
                 $Result = "Deleted named location: $($NamedLocations.displayName)"
             } else {
                 # PATCH operations - remove unneeded properties
