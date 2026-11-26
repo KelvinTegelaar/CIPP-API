@@ -27912,7 +27912,7 @@
         "tags": [
           "Tenant > Administration > Non-Human Identity"
         ],
-        "description": "Server-renders a completed NHI run as application/pdf bytes: the case level, what was found, priority actions, order of events, containment already run, and the addresses, credentials, changes, mail and file reach, access and owners behind it. Reads the stored run; it does not start an investigation. The app in other tenants is never included. Metadata only.",
+        "description": "Server-renders a completed NHI run as application/pdf bytes: the case level, what was found, priority actions, order of events, containment already run, and the addresses, credentials, changes, mail and file reach, access and owners behind it. Reads the stored run; it does not start an investigation. variant=summary renders the cover and executive summary only. The app in other tenants is never included. Metadata only.",
         "requestBody": {
           "required": true,
           "content": {
@@ -27930,6 +27930,10 @@
                   },
                   "tenantFilter": {
                     "type": "string"
+                  },
+                  "variant": {
+                    "type": "string",
+                    "description": "'full' (default) = every page; 'summary' = the cover and executive summary only, for a C-suite reader"
                   }
                 },
                 "required": [
@@ -27960,6 +27964,15 @@
           },
           {
             "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "variant",
+            "in": "query",
+            "description": "'full' (default) = every page; 'summary' = the cover and executive summary only, for a C-suite reader",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -36387,7 +36400,7 @@
                   },
                   "reportType": {
                     "type": "string",
-                    "description": "Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, nhi, sharing, permissions, mailFlow, storage, licensing, baseline or domain."
+                    "description": "Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, nhi, nhiSummary, sharing, permissions, mailFlow, storage, licensing, baseline or domain."
                   },
                   "tenantFilter": {
                     "type": "string",
@@ -43807,6 +43820,93 @@
           }
         ],
         "x-cipp-role": "Tenant.AI.ReadWrite"
+      }
+    },
+    "/api/ExecSharePointAccessReport": {
+      "post": {
+        "summary": "Start or delete a SharePoint Advanced Management access report",
+        "operationId": "ExecSharePointAccessReport",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Starts a SharePoint Advanced Management site permissions report (every SharePoint site or\nOneDrive with who can reach it) or user permissions report (every site the selected users can\nreach), or deletes a report. Microsoft builds reports in the background: the first site\npermissions report takes up to 5 days, later ones usually under 24 hours. Microsoft allows a\nreport to be run again only every 30 days and keeps at most five user reports per tenant;\ndeleting old reports frees a slot.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "enum": [
+                      "Create",
+                      "Delete"
+                    ],
+                    "description": "Create or Delete"
+                  },
+                  "ReportId": {
+                    "type": "string",
+                    "description": "The report to delete, for Delete"
+                  },
+                  "ReportType": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "SitePermissions or UserPermissions, for Create"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "Users": {
+                    "type": "string",
+                    "description": "User principal names to report on, for a UserPermissions report"
+                  },
+                  "Workload": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "sharePoint or oneDrive, for Create"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.ReadWrite"
       }
     },
     "/api/ExecSharePointPermissionsSync": {
@@ -72418,6 +72518,87 @@
           }
         ],
         "x-cipp-role": "Exchange.Mailbox.Read"
+      }
+    },
+    "/api/ListSharePointAccessReports": {
+      "get": {
+        "summary": "SharePoint Advanced Management access reports",
+        "operationId": "ListSharePointAccessReports",
+        "tags": [
+          "Teams-Sharepoint"
+        ],
+        "description": "Lists the SharePoint Advanced Management site permissions and user permissions reports\ngenerated in a tenant, whoever started them (CIPP or the SharePoint admin center), with their\nstatus. Microsoft builds each report in the background.\n\nWith ReportId, returns the rows of that completed report instead: one row per SharePoint\nsite or OneDrive with the number of users who can reach it, guest, Everyone and Everyone\nexcept external users permissions, items with unique permissions and sharing link counts.\nUser permissions reports return one row per user and site they can reach. Counts only, no\nfile or folder names.",
+        "parameters": [
+          {
+            "name": "ReportId",
+            "in": "query",
+            "description": "A completed report to return the rows of, instead of listing the reports",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "createdDateTime": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "name": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "reportType": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "requestedDateTime": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "status": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "users": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "workload": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Sharepoint.Site.Read"
       }
     },
     "/api/ListSharepointAdminUrl": {
