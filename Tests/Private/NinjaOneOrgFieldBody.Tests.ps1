@@ -124,6 +124,22 @@ Describe 'Get-NinjaOneOrgFieldBody' {
         $Body | Should -Match "Only the first $Rows users are displayed here\."
     }
 
+    It 'drops tenant summary rows until the field fits the length budget and keeps the totals' {
+        $Models = New-TestModels
+        $Models.TenantSummary.Details.Domains = @(1..400 | ForEach-Object { "domain$_.fabrikam.example" })
+        $Models.TenantSummary.Licenses.Items = @(1..300 | ForEach-Object { @{ Name = "License $_"; Active = 10; Consumed = 6; Unused = 4 } })
+        $Models.TenantSummary.Standards.Items = @(1..300 | ForEach-Object { @{ Standard = "Standard $_"; Template = 'Baseline'; Actions = @('Remediate', 'Report') } })
+        $Full = Get-NinjaOneOrgFieldBody -Field TenantSummary -Model $Models.TenantSummary -SyncedAt $script:AsOf -MaxLength ([int]::MaxValue)
+        $Full.Length | Should -BeGreaterThan 150000
+        $Body = Get-TestField TenantSummary $Models
+        $Body.Length | Should -BeLessOrEqual 150000
+        $Body | Should -Match '>License 1</td>'
+        $Body | Should -Not -Match '>License 300</td>'
+        $Body | Should -Match '>Standard 1</td>'
+        [regex]::Matches($Body, '>300</span>').Count | Should -Be 2
+        $Body | Should -Match 'Turn on MFA'
+    }
+
     It 'lists five devices per user and counts the rest so one enrollment account cannot fill the field' {
         $Models = New-TestModels
         $Models.UsersSummary.Users[0].Devices = @(1..400 | ForEach-Object { @{ Name = "PC-$_"; Url = 'https://app.ninjarmm.com/#/deviceDashboard/1/overview'; Compliant = $true; Os = 'Windows'; LastLogin = '2026-10-19' } })

@@ -2154,7 +2154,12 @@ function Invoke-NinjaOneTenantSync {
         $Token = Get-NinjaOneToken -configuration $Configuration -WebSession $NinjaSession
 
         #Write-Information "Ninja Body: $($NinjaOrgUpdate | ConvertTo-Json -Depth 100)"
-        $Result = Invoke-WebRequest -WebSession $NinjaSession -Uri "https://$($Configuration.Instance)/api/v2/organization/$($MappedTenant.IntegrationId)/custom-fields" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8' -Body ($NinjaOrgUpdate | ConvertTo-Json -Depth 100)
+        try {
+            $Result = Invoke-WebRequest -WebSession $NinjaSession -Uri "https://$($Configuration.Instance)/api/v2/organization/$($MappedTenant.IntegrationId)/custom-fields" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8' -Body ($NinjaOrgUpdate | ConvertTo-Json -Depth 100)
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -tenant $TenantFilter -API 'NinjaOneSync' -message "NinjaOne rejected the organization custom fields for $($Customer.displayName), so they were not updated: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
+        }
 
 
 
@@ -2324,6 +2329,15 @@ function Invoke-NinjaOneTenantSync {
         $CurrentItem | Add-Member -NotePropertyName lastEndTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))) -Force
         $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Failed' -Force
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
+        # A failed run must not leave devices cached, or the next run would skip them
+        if ($DeviceTable) {
+            try {
+                $StaleDevices = Get-CIPPAzDataTableEntity @DeviceTable -Filter $DeviceFilter -Property PartitionKey, RowKey
+                if ($StaleDevices) { Remove-CIPPAzDataTableEntity -Force @DeviceTable -Entity $StaleDevices }
+            } catch {
+                Write-LogMessage -tenant $Customer.defaultDomainName -API 'NinjaOneSync' -message "Could not clear the NinjaOne device cache after the failed sync: $($_.Exception.Message)" -Sev 'Warning'
+            }
+        }
     } finally {
         $NinjaSession.Dispose()
     }

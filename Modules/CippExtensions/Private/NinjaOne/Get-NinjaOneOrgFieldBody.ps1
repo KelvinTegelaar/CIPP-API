@@ -14,7 +14,8 @@ function Get-NinjaOneOrgFieldBody {
         UsersSummary: Users (list), Total, Url.
 
         .PARAMETER MaxLength
-        UsersSummary drops users until the field is at most this many characters.
+        UsersSummary drops users, and TenantSummary drops domain, admin, license and standard rows, until the field is
+        at most this many characters.
     #>
     [CmdletBinding()]
     param(
@@ -128,7 +129,8 @@ function Get-NinjaOneOrgFieldBody {
                     })
                 & $Grid @('License', 'Active', 'Consumed', 'Unused') $Rows
             } else { "<div style=`"font-size:13px;opacity:.7`">No licenses</div>" }
-            $LicCard = New-CippExtensionUiCard -Title 'Licenses' -Icon 'key' -Count "$(@($Lic.Items).Count)" -Flag (& $Open $Lic.Url 'Open the license report in CIPP') -Body $LicBody
+            $LicTotal = if ($Lic.Total) { [int]$Lic.Total } else { @($Lic.Items).Count }
+            $LicCard = New-CippExtensionUiCard -Title 'Licenses' -Icon 'key' -Count "$LicTotal" -Flag (& $Open $Lic.Url 'Open the license report in CIPP') -Body $LicBody
 
             # Devices
             $Dev = $m.Devices
@@ -143,7 +145,8 @@ function Get-NinjaOneOrgFieldBody {
                     })
                 & $Grid @('Standard', 'Template', 'Actions') $Rows
             } else { "<div style=`"font-size:13px;opacity:.7`">$(ConvertTo-CippExtensionUiText $(if ($Std.Error) { $Std.Error } else { 'No standards applied' }))</div>" }
-            $StdCard = New-CippExtensionUiCard -Title 'CIPP Applied Standards' -Icon 'shield-alt' -Count "$(@($Std.Items).Count)" -Flag (& $Open $Std.Url 'Open standards in CIPP') -Body $StdBody
+            $StdTotal = if ($Std.Total) { [int]$Std.Total } else { @($Std.Items).Count }
+            $StdCard = New-CippExtensionUiCard -Title 'CIPP Applied Standards' -Icon 'shield-alt' -Count "$StdTotal" -Flag (& $Open $Std.Url 'Open standards in CIPP') -Body $StdBody
 
             # Secure Score
             $Ss = $m.SecureScore
@@ -230,6 +233,21 @@ function Get-NinjaOneOrgFieldBody {
     if ($Field -eq 'UsersSummary' -and $Html.Length -gt $MaxLength -and $Shown.Count) {
         $Fit = [int][math]::Min($Shown.Count - 1, [math]::Floor($Shown.Count * $MaxLength / $Html.Length))
         return Get-NinjaOneOrgFieldBody -Field $Field -Model @{ Users = @($Shown | Select-Object -First $Fit); Total = $Total; Url = $m.Url } -SyncedAt $SyncedAt -Culture $Culture -TimeZone $TimeZone -MaxLength $MaxLength
+    }
+    if ($Field -eq 'TenantSummary' -and $Html.Length -gt $MaxLength -and (@($d.Domains).Count + @($d.Admins).Count + @($Lic.Items).Count + @($Std.Items).Count)) {
+        $Ratio = $MaxLength / $Html.Length
+        $Trim = {
+            param($List)
+            $List = @($List)
+            $Keep = [int][math]::Min($List.Count - 1, [math]::Floor($List.Count * $Ratio))
+            @(if ($Keep -gt 0) { $List[0..($Keep - 1)] })
+        }
+        $Trimmed = @{}
+        foreach ($Key in $m.Keys) { $Trimmed[$Key] = $m[$Key] }
+        $Trimmed.Details = @{ Created = $d.Created; Domains = @(& $Trim $d.Domains); Admins = @(& $Trim $d.Admins) }
+        $Trimmed.Licenses = @{ Url = $Lic.Url; Items = @(& $Trim $Lic.Items); Total = $LicTotal }
+        $Trimmed.Standards = @{ Url = $Std.Url; Items = @(& $Trim $Std.Items); Error = $Std.Error; Total = $StdTotal }
+        return Get-NinjaOneOrgFieldBody -Field $Field -Model $Trimmed -SyncedAt $SyncedAt -Culture $Culture -TimeZone $TimeZone -MaxLength $MaxLength
     }
     $Html
 }
