@@ -33,6 +33,11 @@ BeforeAll {
         [CmdletBinding()] param($uri, $tenantid, $type, $body, $asApp, $ScheduleRetry)
         $body = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $body -EscapeForJson
         $script:GraphWrites.Add(@{ Uri = $uri; Type = $type; Body = $body })
+        if ($type -eq 'PATCH' -and $script:LocationPatchError) {
+            $GraphException = [System.Exception]::new('Graph refused the update')
+            $GraphException.Data['RawErrorBody'] = $script:LocationPatchError
+            throw $GraphException
+        }
         if ($uri -match 'namedLocations$') {
             $Name = ($body | ConvertFrom-Json).displayName
             return [pscustomobject]@{ id = @{ 'Site A' = $script:SiteAId; 'Site B' = $script:SiteBId; 'Allowed Countries' = $script:SiteAId; 'Office IPs' = $script:SiteBId }[$Name]; displayName = $Name }
@@ -94,6 +99,7 @@ BeforeAll {
 
 Describe 'New-CIPPCAPolicy custom variables' {
     BeforeEach {
+        $script:LocationPatchError = $null
         $script:TenantLocations = @(
             [pscustomobject]@{ id = $script:SiteAId; displayName = 'Site A' }
             [pscustomobject]@{ id = $script:SiteBId; displayName = 'Site B' }
@@ -110,6 +116,7 @@ Describe 'New-CIPPCAPolicy custom variables' {
             New-VariableRow -Name 'grouplist' -Value '["CA Exclusions"]' -VariableType 'list'
             New-VariableRow -Name 'countries' -Value '["NL","BE"]' -VariableType 'list'
             New-VariableRow -Name 'officeips' -Value '["203.0.113.0/24","2001:db8::/48"]' -VariableType 'list'
+            New-VariableRow -Name 'oneofficeip' -Value '["2001:db8::/48"]' -VariableType 'list'
             New-VariableRow -Name 'sitedefs' -Value '[{"@odata.type":"#microsoft.graph.ipNamedLocation","displayName":"Site A","isTrusted":true,"ipRanges":[{"@odata.type":"#microsoft.graph.iPv4CidrRange","cidrAddress":"192.0.2.0/24"}]},{"@odata.type":"#microsoft.graph.ipNamedLocation","displayName":"Site B","isTrusted":true,"ipRanges":[{"@odata.type":"#microsoft.graph.iPv4CidrRange","cidrAddress":"198.51.100.0/24"}]}]' -VariableType 'json'
         )
     }
@@ -254,6 +261,40 @@ Describe 'New-CIPPCAPolicy custom variables' {
                 Should -Throw '*uses %notdefined%, which is not defined for customer.example.com*'
             $script:GraphWrites.Count | Should -Be 0
             $script:LocationFetches | Should -Be 0
+        }
+    }
+
+    Context 'overwriting a template location the tenant already has' {
+        BeforeEach {
+            $script:TenantLocations = @([pscustomobject]@{ id = $script:SiteBId; displayName = 'Office IPs' })
+            $Info = '[{"@odata.type":"#microsoft.graph.ipNamedLocation","displayName":"Office IPs","isTrusted":true,"ipRanges":[{"@odata.type":"#microsoft.graph.iPv4CidrRange","cidrAddress":"%oneofficeip%"}]}]'
+            $script:Template = New-Template -Locations '"includeLocations": ["All"], "excludeLocations": ["Office IPs"]' -LocationInfo $Info
+        }
+
+        It 'sends a list variable holding one address as a single CIDR string' {
+            $Policy = Invoke-Deploy $script:Template
+            $Patch = @($script:GraphWrites | Where-Object { $_.Uri -match "namedLocations/$($script:SiteBId)$" -and $_.Type -eq 'PATCH' })
+            $Patch.Count | Should -Be 1
+            $Ranges = @(($Patch[0].Body | ConvertFrom-Json).ipRanges)
+            $Ranges.Count | Should -Be 1
+            $Patch[0].Body | Should -Not -Match '"cidrAddress":\s*\['
+            $Ranges[0].cidrAddress | Should -Be '2001:db8::/48'
+            $Ranges[0].'@odata.type' | Should -Be '#microsoft.graph.iPv6CidrRange'
+            @($script:GraphWrites | Where-Object { $_.Uri -match 'namedLocations$' }).Count | Should -Be 0
+            @($Policy.conditions.locations.excludeLocations) | Should -Be @($script:SiteBId)
+        }
+
+        It 'creates the location again when the update reports it is gone' {
+            $script:LocationPatchError = '{"error":{"code":"ResourceNotFound","message":"NamedLocation does not exist in the directory."}}'
+            $null = Invoke-Deploy $script:Template
+            @($script:GraphWrites | Where-Object { $_.Uri -match 'namedLocations$' -and $_.Type -eq 'POST' }).Count | Should -Be 1
+        }
+
+        It 'stops without creating a second location when the update is rejected' {
+            $script:LocationPatchError = '{"error":{"code":"BadRequest","message":"The server could not process the request because it is malformed or incorrect.","innerError":{"message":"1041: Incoming NamedLocationPolicy object is null or does not match the schema of NamedLocationPolicy type."}}}'
+            { Invoke-Deploy $script:Template } | Should -Throw "*Failed to update named location 'Office IPs'*"
+            @($script:GraphWrites | Where-Object { $_.Uri -match 'namedLocations$' }).Count | Should -Be 0
+            @($script:GraphWrites | Where-Object { $_.Uri -match '/policies' }).Count | Should -Be 0
         }
     }
 }

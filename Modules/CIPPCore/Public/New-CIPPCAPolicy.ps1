@@ -343,7 +343,11 @@ function New-CIPPCAPolicy {
                     } catch {
                         $ErrorMessage = Get-CippException -Exception $_
                         Write-Information "Error updating named location: $($ErrorMessage | ConvertTo-Json -Depth 10 -Compress)"
-                        Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Named Location '$($location.displayName)' (id: $($ExistingLocation.id)) could not be updated — it may have been deleted. Will attempt to create it. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
+                        # Only a location that is gone may be recreated: any other failure would leave two with the same name.
+                        if ("$($_.Exception.Data['RawErrorBody']) $($_.Exception.Message)" -notmatch 'NotFound|does not exist') {
+                            throw "Failed to update named location '$($location.displayName)': $($ErrorMessage.NormalizedError)"
+                        }
+                        Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Named Location '$($location.displayName)' (id: $($ExistingLocation.id)) no longer exists in the tenant. Creating it again. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
                         $locationExistsInCache = $false
                     }
                 } else {

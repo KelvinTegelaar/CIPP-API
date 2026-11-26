@@ -13,7 +13,7 @@ function Format-CIPPNamedLocationRange {
 
     if (-not $Location -or -not $Location.PSObject.Properties['ipRanges']) { return }
     $Location.ipRanges = @(foreach ($Range in @($Location.ipRanges)) {
-            if ($Range -isnot [string] -and @($Range.cidrAddress).Count -le 1) { $Range; continue }
+            if ($Range -isnot [string] -and $Range.cidrAddress -isnot [array]) { $Range; continue }
             $Cidrs = if ($Range -is [string]) { $Range } else { $Range.cidrAddress }
             foreach ($Cidr in @($Cidrs)) {
                 if ([string]::IsNullOrWhiteSpace($Cidr)) { continue }

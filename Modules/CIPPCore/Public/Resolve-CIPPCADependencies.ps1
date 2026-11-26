@@ -161,7 +161,11 @@ function Resolve-CIPPCADependencies {
                                 Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Updated existing Named Location: $Name" -Sev 'Info'
                             } catch {
                                 $ErrorMessage = Get-CippException -Exception $_
-                                Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Named Location '$Name' (id: $($ExistingLocation.id)) could not be updated - it may have been deleted. Will attempt to create it. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
+                                # Only a location that is gone may be recreated: any other failure would leave two with the same name.
+                                if ("$($_.Exception.Data['RawErrorBody']) $($_.Exception.Message)" -notmatch 'NotFound|does not exist') {
+                                    throw "Failed to update named location '$Name': $($ErrorMessage.NormalizedError)"
+                                }
+                                Write-LogMessage -Tenant $TenantFilter -Headers $Headers -API $APIName -message "Named Location '$Name' (id: $($ExistingLocation.id)) no longer exists in the tenant. Creating it again. Error: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
                                 $locationExists = $false
                             }
                         }
