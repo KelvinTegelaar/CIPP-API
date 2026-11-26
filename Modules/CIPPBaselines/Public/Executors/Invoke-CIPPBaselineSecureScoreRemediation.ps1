@@ -22,7 +22,7 @@ function Invoke-CIPPBaselineSecureScoreRemediation {
     foreach ($Skip in $Skipped) {
         Write-LogMessage -API 'Baselines' -tenant $TenantFilter -message "Secure score control '$($Skip.Control)' is a Defender control and cannot be set through this endpoint - skipped." -Sev 'Info'
     }
-    if ($Controls.Count -eq 0) { return }
+    if ($Controls.Count -eq 0) { return [PSCustomObject]@{ Changed = $false } }
 
     $Id = 1
     $Requests = @(foreach ($Control in $Controls) {

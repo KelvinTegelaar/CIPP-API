@@ -10,7 +10,8 @@ function Get-CIPPBaselineSecureScoreRemediationState {
 
         Grades each configured control (three lists: back to default, ignored, marked
         third-party) against its effective state. Controls outside the configured lists are
-        never graded - operators mark controls for their own reasons.
+        never graded - operators mark controls for their own reasons. Defender controls
+        (scid_*) are never graded either: their state cannot be set through Graph.
     .FUNCTIONALITY
         Internal
     #>
@@ -41,6 +42,8 @@ function Get-CIPPBaselineSecureScoreRemediationState {
 
     $Drifted = [System.Collections.Generic.List[object]]::new()
     foreach ($Want in $Wanted) {
+        # Defender controls cannot be set through Graph, so grading them would drift forever.
+        if ("$($Want.Control)" -match '^scid_') { continue }
         $Effective = "$($States["$($Want.Control)"])"
         if ($Effective -ne $Want.State) {
             $Drifted.Add([PSCustomObject]@{ Control = "$($Want.Control)"; State = "$($Want.State)"; Reason = "$($Want.Reason)"; CurrentState = $Effective })

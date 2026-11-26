@@ -301,6 +301,23 @@ Describe 'Get-CIPPBaselineSecureScoreRemediationState' {
         @($Prepared.Current.controlsOutOfState) | Should -Not -Contain 'SomeOtherControl'
     }
 
+    It 'never grades Defender scid_ controls' {
+        Mock New-CIPPDbRequest { @(@{ id = 'scid_2513'; controlStateUpdates = @() } | ConvertTo-Cached) }
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ ThirdParty = @([PSCustomObject]@{ value = 'scid_2513' }) } }
+        $Prepared = Get-CIPPBaselineSecureScoreRemediationState -Item $Item -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+        @($Prepared.Current.driftedControls).Count | Should -Be 0
+    }
+
+    It 'reports Changed=false and writes nothing when only scid_ controls drifted' {
+        Mock New-GraphBulkRequest { }
+        $Current = [PSCustomObject]@{ driftedControls = @([PSCustomObject]@{ Control = 'scid_2513'; State = 'thirdParty'; Reason = 'ThirdParty' }) }
+        $Output = Invoke-CIPPBaselineSecureScoreRemediation -Remediate ([PSCustomObject]@{}) -TenantFilter $script:Tenant -Current $Current
+        $Output.Changed | Should -BeFalse
+        $Output.PSObject.Properties['Changed'] | Should -Not -BeNullOrEmpty
+        Should -Invoke New-GraphBulkRequest -Times 0 -Exactly
+    }
+
     It 'skips Defender scid_ controls and bulk-patches the rest with the SecureScore vendor block' {
         Mock New-GraphBulkRequest { @([PSCustomObject]@{ id = '1'; status = 200 }) }
         $Current = [PSCustomObject]@{ driftedControls = @(

@@ -14004,7 +14004,7 @@
     "cat": "Global Standards",
     "tag": [],
     "helpText": "Marks the configured Secure Score controls as default, ignored, reviewed, or resolved by a third party.",
-    "docsDescription": "Grades each configured control's EFFECTIVE state - the newest controlStateUpdates entry, or default when none exist. Controls outside the configured lists are never graded. Remediation bulk-patches the drifted controls; Defender (scid_) controls cannot be set through this endpoint and are skipped with a log line.",
+    "docsDescription": "Grades each configured control's EFFECTIVE state - the newest controlStateUpdates entry, or default when none exist. Controls outside the configured lists are never graded. Remediation bulk-patches the drifted controls. Defender (scid_) controls cannot be set through this endpoint, so they are not offered in the lists and are never graded or changed.",
     "executiveText": "Keeps the Secure Score honest across tenants by consistently marking controls that are handled elsewhere or deliberately ignored, so the score reflects real posture.",
     "label": "Set Secure Score control states",
     "impact": "Low Impact",
@@ -14030,7 +14030,8 @@
         "api": {
           "url": "/secureScore.json",
           "labelField": "title",
-          "valueField": "id"
+          "valueField": "id",
+          "excludeValuePrefix": "scid_"
         }
       },
       {
@@ -14043,7 +14044,8 @@
         "api": {
           "url": "/secureScore.json",
           "labelField": "title",
-          "valueField": "id"
+          "valueField": "id",
+          "excludeValuePrefix": "scid_"
         }
       },
       {
@@ -14056,7 +14058,8 @@
         "api": {
           "url": "/secureScore.json",
           "labelField": "title",
-          "valueField": "id"
+          "valueField": "id",
+          "excludeValuePrefix": "scid_"
         }
       },
       {
@@ -14069,7 +14072,8 @@
         "api": {
           "url": "/secureScore.json",
           "labelField": "title",
-          "valueField": "id"
+          "valueField": "id",
+          "excludeValuePrefix": "scid_"
         }
       }
     ]
