@@ -271,7 +271,7 @@ function Set-CIPPDBCacheIntunePolicies {
                                     throw "HTTP $($ReportResult.status) - $($Page.error.message ?? 'Unknown Graph error')"
                                 }
 
-                                $ReportRows = if (@($Page.Values).Count -eq $ReportPageSize -and [int]$Page.TotalRowCount -gt $ReportPageSize) {
+                                $ReportRows = if (@($Page.Values).Count -lt [int]$Page.TotalRowCount) {
                                     Get-CIPPIntuneReportRows -TenantFilter $TenantFilter -Uri "https://graph.microsoft.com/beta$ReportUri" -Filter "($ReportTypeFilter) and (PolicyId eq '$($ReportResult.id)')" -Select $ReportColumns -OrderBy @() -PageSize $ReportPageSize
                                 } else {
                                     $Columns = @($Page.Schema.Column)

@@ -101,7 +101,7 @@ Describe 'Set-CIPPDBCacheIntunePolicies settings catalog device reports' {
                             [pscustomobject]@{ id = $Request.id; status = 400; body = ConvertTo-Base64Body ([pscustomobject]@{ error = [pscustomobject]@{ code = 'BadRequest'; message = 'Report unavailable' } }) }
                         }
                         $script:CatalogFull {
-                            [pscustomobject]@{ id = $Request.id; status = 200; body = New-ReportPage -Total 501 -Values @(foreach ($i in 1..500) { , @("dev-$i", "PC$i", '', "user-$i", 'succeeded', 'Succeeded', 'windows10', 'Windows 10 and later', '2026-11-01T10:00:00') }) }
+                            [pscustomobject]@{ id = $Request.id; status = 200; body = New-ReportPage -Total 501 -Values @(foreach ($i in 1..50) { , @("dev-$i", "PC$i", '', "user-$i", 'succeeded', 'Succeeded', 'windows10', 'Windows 10 and later', '2026-11-01T10:00:00') }) }
                         }
                         default {
                             [pscustomobject]@{ id = $Request.id; status = 200; body = New-ReportPage -Values @() }

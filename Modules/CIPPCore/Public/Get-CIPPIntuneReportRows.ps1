@@ -40,7 +40,9 @@ function Get-CIPPIntuneReportRows {
             }
             $Rows.Add([PSCustomObject]$Row)
         }
-        $Skip = $Skip + $PageSize
-    } while (@($Page.Values).Count -eq $PageSize -and $Skip -lt [int]$Page.TotalRowCount)
+        # Intune caps a page at 50 rows whatever top asks for, so step by what came back
+        $Received = @($Page.Values).Count
+        $Skip = $Skip + $Received
+    } while ($Received -gt 0 -and $Skip -lt [int]$Page.TotalRowCount)
     , @($Rows)
 }

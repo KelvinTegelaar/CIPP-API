@@ -22,6 +22,11 @@ BeforeAll {
         if ($Rows -is [scriptblock]) { throw 'report down' }
         , @($Rows)
     }
+    # The tenant's current settings catalog policies
+    function New-GraphGetRequest {
+        param($uri, $tenantid)
+        @($script:existingPolicies | ForEach-Object { [pscustomobject]@{ id = $_ } })
+    }
     function New-GraphBulkRequest {
         param($tenantid, $Requests)
         $script:bulkRequests += , @($Requests)
@@ -50,6 +55,7 @@ Describe 'Invoke-ListIntunePolicyFailures' {
         $script:reports = @{}
         $script:policy = '11111111-1111-1111-1111-111111111111'
         $script:other = '22222222-2222-2222-2222-222222222222'
+        $script:existingPolicies = @($policy, $other, '33333333-3333-3333-3333-333333333333')
     }
 
     Context 'list mode' {
@@ -199,6 +205,70 @@ Describe 'Invoke-ListIntunePolicyFailures' {
             @($response.Body.Results.settings).settingName | Should -Be @('Firewall')
             @($response.Body.Results.settings[0].conflictingPolicies) | Should -Be @('Other catalog')
             $response.Body.Results.settings[0].conflictDevices | Should -Be 1
+        }
+
+        It 'skips a deleted policy the device report still lists' {
+            $deleted = '99999999-9999-9999-9999-999999999999'
+            $script:reports['getConfigurationPoliciesReportForDevice'] = @(
+                [pscustomobject]@{ PolicyId = $other }
+                [pscustomobject]@{ PolicyId = $deleted; PolicyName = 'Old policy' }
+            )
+            $definition = [pscustomobject]@{ settingInstance = [pscustomobject]@{ settingDefinitionId = 'device_vendor_msft_firewall_enable' }; settingDefinitions = @([pscustomobject]@{ id = 'device_vendor_msft_firewall_enable'; displayName = 'Firewall' }) }
+            $script:bulkResponses[$policy] = [pscustomobject]@{ id = $policy; status = 200; body = [pscustomobject]@{ name = 'Me'; settings = @($definition) } }
+            $script:bulkResponses[$other] = [pscustomobject]@{ id = $other; status = 200; body = [pscustomobject]@{ name = 'Other catalog'; settings = @($definition) } }
+            $script:bulkResponses[$deleted] = [pscustomobject]@{ id = $deleted; status = 400; body = [pscustomobject]@{ error = [pscustomobject]@{ message = 'An error has occurred' } } }
+
+            $response = Invoke-ListIntunePolicyFailures -Request (New-Request @{ policyId = $policy; policyBaseTypeName = 'DeviceManagementConfigurationPolicy' }) -TriggerMetadata $null
+
+            $response.Body.Results.errors.Count | Should -Be 0 -Because ($response.Body.Results.errors | ConvertTo-Json -Compress)
+            $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+            @($bulkRequests | ForEach-Object { $_.id }) | Should -Not -Contain $deleted
+            @($response.Body.Results.deletedPolicies) | Should -Be @('Old policy')
+            @($response.Body.Results.settings[0].conflictingPolicies) | Should -Be @('Other catalog')
+        }
+
+        It 'asks for a policy whose lookup fails once, not once per device' {
+            $script:reports['getConfigurationPolicyNonComplianceReport'] = @(
+                [pscustomobject]@{ IntuneDeviceId = 'd1'; UserId = 'u1'; DeviceName = 'PC1'; ReportStatus = 'Conflict' }
+                [pscustomobject]@{ IntuneDeviceId = 'd2'; UserId = 'u2'; DeviceName = 'PC2'; ReportStatus = 'Conflict' }
+            )
+            $script:reports['getConfigurationPoliciesReportForDevice'] = @([pscustomobject]@{ PolicyId = $other })
+            $script:bulkResponses[$policy] = [pscustomobject]@{ id = $policy; status = 200; body = [pscustomobject]@{ name = 'Me'; settings = @() } }
+            $script:bulkResponses[$other] = [pscustomobject]@{ id = $other; status = 500; body = [pscustomobject]@{ error = [pscustomobject]@{ message = 'Graph down' } } }
+
+            $response = Invoke-ListIntunePolicyFailures -Request (New-Request @{ policyId = $policy; policyBaseTypeName = 'DeviceManagementConfigurationPolicy' }) -TriggerMetadata $null
+
+            $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::MultiStatus)
+            $response.Body.Results.errors.conflicts | Should -Match 'Failed 1 conflict lookup\(s\)'
+            @($reportCalls | Where-Object { $_.Name -eq 'getConfigurationPoliciesReportForDevice' }).Count | Should -Be 2
+            @($bulkRequests | ForEach-Object { $_.id } | Where-Object { $_ -eq $other }).Count | Should -Be 1
+        }
+
+        It 'names a deleted policy when it is the only other policy on the device' {
+            $script:reports['getConfigurationPoliciesReportForDevice'] = @(
+                [pscustomobject]@{ PolicyId = $policy; PolicyName = 'Me' }
+                [pscustomobject]@{ PolicyId = '99999999-9999-9999-9999-999999999999'; PolicyName = 'Old policy' }
+            )
+            $script:bulkResponses[$policy] = [pscustomobject]@{ id = $policy; status = 200; body = [pscustomobject]@{ name = 'Me'; settings = @() } }
+
+            $response = Invoke-ListIntunePolicyFailures -Request (New-Request @{ policyId = $policy; policyBaseTypeName = 'DeviceManagementConfigurationPolicy' }) -TriggerMetadata $null
+
+            $response.Body.Results.errors.Count | Should -Be 0 -Because ($response.Body.Results.errors | ConvertTo-Json -Compress)
+            $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+            @($response.Body.Results.deletedPolicies) | Should -Be @('Old policy')
+            @($bulkRequests | ForEach-Object { $_.id }) | Should -Be @($policy)
+        }
+
+        It 'does not call partners deleted when the policy list comes back without the policy itself' {
+            $script:existingPolicies = @()
+            $script:reports['getConfigurationPoliciesReportForDevice'] = @([pscustomobject]@{ PolicyId = $other; PolicyName = 'Other catalog' })
+            $script:bulkResponses[$policy] = [pscustomobject]@{ id = $policy; status = 200; body = [pscustomobject]@{ name = 'Me'; settings = @() } }
+
+            $response = Invoke-ListIntunePolicyFailures -Request (New-Request @{ policyId = $policy; policyBaseTypeName = 'DeviceManagementConfigurationPolicy' }) -TriggerMetadata $null
+
+            $response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::MultiStatus)
+            $response.Body.Results.errors.conflicts | Should -Match 'incomplete'
+            @($response.Body.Results.deletedPolicies).Count | Should -Be 0
         }
 
         It 'reports a failed sub-call in errors instead of failing the response' {

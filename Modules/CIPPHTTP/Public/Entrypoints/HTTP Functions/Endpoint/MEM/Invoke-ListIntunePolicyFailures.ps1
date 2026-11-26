@@ -84,6 +84,7 @@ function Invoke-ListIntunePolicyFailures {
     }
     $PolicyGuid = $ParsedId.ToString()
     $Errors = [ordered]@{}
+    $DeletedPolicies = [System.Collections.Generic.HashSet[string]]::new()
 
     $Devices = @()
     try {
@@ -192,7 +193,12 @@ function Invoke-ListIntunePolicyFailures {
                             [PSCustomObject]@{ id = $Id; method = 'GET'; url = "/deviceManagement/configurationPolicies('$Id')?`$expand=settings(`$expand=settingDefinitions)&`$select=id,name" }
                         }
                         foreach ($Response in @(New-GraphBulkRequest -tenantid $TenantFilter -Requests @($Requests))) {
-                            if ([int]$Response.status -ge 300) { $FailedLookups.Add("$($Response.id): $($Response.body.error.message)"); continue }
+                            if ([int]$Response.status -ge 300) {
+                                $FailedLookups.Add("$($Response.id): $($Response.body.error.message)")
+                                # remembered, so a failing policy is asked for once and not once per device
+                                $PolicySettings[[string]$Response.id] = $null
+                                continue
+                            }
                             # The setting report names settings by their definition display name
                             $DisplayNames = @{}
                             foreach ($Definition in @($Response.body.settings.settingDefinitions)) {
@@ -208,12 +214,26 @@ function Invoke-ListIntunePolicyFailures {
                 }
                 & $GetDefinitionIds @($PolicyGuid)
                 $OwnDefinitions = @($PolicySettings[$PolicyGuid].definitionIds)
+                # The device report keeps listing a deleted policy, and Graph answers a lookup of one with a 400
+                $Existing = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                foreach ($Policy in @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies?`$select=id" -tenantid $TenantFilter)) {
+                    [void]$Existing.Add([string]$Policy.id)
+                }
+                # a list without the policy just read is incomplete, and would name every partner as deleted
+                if ($PolicySettings[$PolicyGuid] -and -not $Existing.Contains($PolicyGuid)) { throw 'the policy list from Intune was incomplete' }
 
                 foreach ($Device in $ConflictDevices) {
                     $FailingRows = Get-CIPPIntuneReportRows -TenantFilter $TenantFilter -Uri "$ReportBase/getConfigurationSettingNonComplianceReport" -Filter "(PolicyId eq '$PolicyGuid') and (DeviceId eq '$($Device.IntuneDeviceId)') and (UserId eq '$($Device.UserId)')" -OrderBy @('SettingName')
                     $FailingNames = @(@($FailingRows) | ForEach-Object { [string]$_.SettingName })
                     $AppliedRows = Get-CIPPIntuneReportRows -TenantFilter $TenantFilter -Uri "$ReportBase/getConfigurationPoliciesReportForDevice" -Filter "(PolicyBaseTypeName eq '$CatalogType') and (IntuneDeviceId eq '$($Device.IntuneDeviceId)')"
-                    $Applied = @(@($AppliedRows) | ForEach-Object { [string]$_.PolicyId } | Where-Object { $_ -and $_ -ne $PolicyGuid } | Select-Object -Unique)
+                    $Applied = [System.Collections.Generic.HashSet[string]]::new()
+                    foreach ($Row in @($AppliedRows)) {
+                        $Id = [string]$Row.PolicyId
+                        if (-not $Id -or $Id -eq $PolicyGuid) { continue }
+                        # the report still carries the name the deleted policy had
+                        if ($Existing.Contains($Id)) { [void]$Applied.Add($Id) } else { [void]$DeletedPolicies.Add([string]($Row.PolicyName ?? $Id)) }
+                    }
+                    if ($Applied.Count -eq 0) { continue }
                     & $GetDefinitionIds $Applied
                     foreach ($OtherId in $Applied) {
                         $Other = $PolicySettings[$OtherId]
@@ -243,6 +263,8 @@ function Invoke-ListIntunePolicyFailures {
                     settings = @($Settings.Values)
                     devices  = @($Devices)
                     errors   = $Errors
+                    # Deleted policies the conflicting devices still report; a conflict with no policy named can come from one
+                    deletedPolicies = @($DeletedPolicies)
                 }
             }
         })

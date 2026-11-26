@@ -41,6 +41,15 @@ Describe 'Get-CIPPIntuneReportRows' {
         $posts[0].orderBy | Should -Be @('PolicyName')
     }
 
+    It 'keeps paging when Intune returns fewer rows than top asked for' {
+        # Intune caps report pages at 50 rows; a 500-row request for 3 rows can come back as 2 + 1
+        $rows = Get-CIPPIntuneReportRows -TenantFilter 't' -Uri 'u' -PageSize 500
+
+        @($rows).Count | Should -Be 3
+        $posts.Count | Should -Be 2
+        $posts[1].skip | Should -Be 2
+    }
+
     It 'stops after a short page' {
         $script:pages = @(@{ TotalRowCount = 1; Schema = @(@{ Column = 'A' }); Values = @(, @('x')) })
 
