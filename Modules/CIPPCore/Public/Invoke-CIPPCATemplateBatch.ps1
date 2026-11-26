@@ -245,7 +245,17 @@ function Invoke-CIPPCATemplateBatch {
     # ---- Reconcile shared dependencies ONCE, only for the policies we will actually deploy ----
     $DeployObjects = [System.Collections.Generic.List[object]]::new()
     foreach ($ct in $CATemplates) {
-        if ($ct.NeedsRemediation) { $DeployObjects.Add(($ct.RawJSON | ConvertFrom-Json)) }
+        if (-not $ct.NeedsRemediation) { continue }
+        $DeployObject = $ct.RawJSON | ConvertFrom-Json
+        $UnresolvedTokens = Get-CIPPCAUnresolvedVariable -Policy $DeployObject
+        if ($UnresolvedTokens) {
+            # Stopped here, before the shared named locations are written.
+            $ct.DeployError = "Policy '$($DeployObject.displayName)' uses $($UnresolvedTokens -join ', '), which is not defined for $Tenant. Add it under Custom Variables, globally or for this tenant."
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create or update conditional access rule from template $($ct.Settings.TemplateList.value). Error: $($ct.DeployError)" -sev 'Error'
+            $null = Set-CABatchCompareStatus -ct $ct
+            continue
+        }
+        $DeployObjects.Add($DeployObject)
     }
     $DependencyMap = $null
     if ($DeployObjects.Count -gt 0) {
@@ -261,7 +271,7 @@ function Invoke-CIPPCATemplateBatch {
     # ---- Remediate: deploy only the missing/drifted policies, sequentially ----
     $RemediatedAny = $false
     foreach ($ct in $CATemplates) {
-        if (-not $ct.NeedsRemediation -or -not $DependencyMap) { continue }
+        if (-not $ct.NeedsRemediation -or $ct.DeployError -or -not $DependencyMap) { continue }
         $Settings = $ct.Settings
         $TemplateValue = $Settings.TemplateList.value
         Set-CippStandardInfoContext -StandardInfo @{

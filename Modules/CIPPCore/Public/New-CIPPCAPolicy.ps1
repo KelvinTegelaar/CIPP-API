@@ -32,14 +32,7 @@ function New-CIPPCAPolicy {
     $displayName = ($RawJSON | ConvertFrom-Json).displayName
 
     $JSONobj = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty ID, GUID, *time*
-    $UnresolvedTokens = @(
-        foreach ($List in @($JSONobj.conditions.users, $JSONobj.conditions.locations, $JSONobj.conditions.applications)) {
-            if (-not $List) { continue }
-            foreach ($Property in $List.PSObject.Properties) {
-                foreach ($Value in @($Property.Value)) { if ($Value -is [string] -and $Value -match '^%[^%\s]+%$') { $Value } }
-            }
-        }
-    ) | Select-Object -Unique
+    $UnresolvedTokens = Get-CIPPCAUnresolvedVariable -Policy $JSONobj
     if ($UnresolvedTokens) {
         throw [System.ArgumentException]::new("Policy '$displayName' uses $($UnresolvedTokens -join ', '), which is not defined for $TenantFilter. Add it under Custom Variables, globally or for this tenant.")
     }

@@ -23,6 +23,7 @@ BeforeAll {
     function Get-CIPPTable { [CmdletBinding()] param($tablename) @{} }
     function Get-CIPPAzDataTableEntity { [CmdletBinding()] param($filter) @() }
     function Start-Sleep { [CmdletBinding()] param($Seconds) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Get-CIPPCAUnresolvedVariable.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/New-CIPPCAPolicy.ps1')
 
     $script:InTenant = '00000003-0000-0ff1-ce00-000000000000'

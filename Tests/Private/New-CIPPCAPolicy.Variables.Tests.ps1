@@ -58,6 +58,7 @@ BeforeAll {
     function Get-CippException { [CmdletBinding()] param($Exception) [pscustomobject]@{ NormalizedError = "$Exception" } }
     function Start-Sleep { [CmdletBinding()] param($Seconds) }
 
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Get-CIPPCAUnresolvedVariable.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/New-CIPPCAPolicy.ps1')
 
     function New-VariableRow {
@@ -239,6 +240,20 @@ Describe 'New-CIPPCAPolicy custom variables' {
             { Invoke-Deploy (New-Template -Locations '"includeLocations": ["All"], "excludeLocations": ["%notdefined%"]') } |
                 Should -Throw '*uses %notdefined%, which is not defined for customer.example.com*'
             $script:GraphWrites.Count | Should -Be 0
+        }
+
+        It 'throws for an undefined variable in a template location''s <Field>, before creating anything' -ForEach @(
+            @{ Field = 'IP range'; Info = '[{"@odata.type":"#microsoft.graph.ipNamedLocation","displayName":"Office IPs","isTrusted":true,"ipRanges":[{"@odata.type":"#microsoft.graph.iPv4CidrRange","cidrAddress":"%notdefined%"}]}]' }
+            @{ Field = 'plain IP range'; Info = '[{"@odata.type":"#microsoft.graph.ipNamedLocation","displayName":"Office IPs","isTrusted":true,"ipRanges":["%notdefined%"]}]' }
+            @{ Field = 'countries'; Info = '[{"@odata.type":"#microsoft.graph.countryNamedLocation","displayName":"Office IPs","countriesAndRegions":["NL","%notdefined%"]}]' }
+            @{ Field = 'name'; Info = '[{"@odata.type":"#microsoft.graph.ipNamedLocation","displayName":"%notdefined%","ipRanges":[]}]' }
+            @{ Field = 'definition'; Info = '["%notdefined%"]' }
+        ) {
+            $script:TenantLocations = @()
+            { Invoke-Deploy (New-Template -Locations '"includeLocations": ["All"], "excludeLocations": ["Office IPs"]' -LocationInfo $Info) } |
+                Should -Throw '*uses %notdefined%, which is not defined for customer.example.com*'
+            $script:GraphWrites.Count | Should -Be 0
+            $script:LocationFetches | Should -Be 0
         }
     }
 }

@@ -23,6 +23,7 @@ BeforeAll {
     function Get-CIPPTenantCapabilities { [CmdletBinding()] param($TenantFilter) }
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) $Value }
     function Sync-CIPPGSAFilteringProfile { [CmdletBinding()] param($ProfileTemplate, $PolicyTemplates, $TenantFilter) }
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Get-CIPPCAUnresolvedVariable.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/New-CIPPCAPolicy.ps1')
 
     $script:TenantProfileId = '33333333-3333-3333-3333-333333333333'

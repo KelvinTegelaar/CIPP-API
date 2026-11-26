@@ -58,6 +58,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { [CmdletBinding()] param($filter) @() }
     function Start-Sleep { [CmdletBinding()] param($Seconds) }
 
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Functions/Get-CIPPCAUnresolvedVariable.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/New-CIPPCAPolicy.ps1')
 
     $script:TemplateJSON = @'
