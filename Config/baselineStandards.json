@@ -18223,8 +18223,16 @@
       {
         "name": "standards.sharingDomainRestriction.Domains",
         "type": "textField",
-        "label": "Domains, comma separated (list modes only)",
-        "omitWhenBlank": true
+        "label": "Domains, comma separated",
+        "omitWhenBlank": true,
+        "validators": {
+          "required": "Enter at least one domain for the allow or block list"
+        },
+        "condition": {
+          "field": "Mode",
+          "compareType": "contains",
+          "compareValue": "List"
+        }
       }
     ]
   },
