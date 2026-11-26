@@ -18,18 +18,18 @@ function Invoke-ExecPreviewBrandingReportPdf {
 
     $ReportNames = @{
         executive = 'Executive Summary'; reportBuilder = 'Quarterly Security Review'; shadowAI = 'Shadow AI Report'
-        bec = 'BEC Analysis Report'; becSummary = 'BEC Executive Summary'; nhi = 'NHI Compromise Report'; sharing = 'Sharing Report'; permissions = 'Permissions Report'; mailFlow = 'Mail Flow Report'
+        bec = 'BEC Analysis Report'; becSummary = 'BEC Executive Summary'; nhi = 'NHI Compromise Report'; nhiSummary = 'NHI Executive Summary'; sharing = 'Sharing Report'; permissions = 'Permissions Report'; mailFlow = 'Mail Flow Report'
         storage = 'Storage Report'
         licensing = 'Licensing Report'
         baseline = 'Security Baseline Report'
         domain = 'Domain Security Assessment'
     }
-    # Report types that reuse another type's sample file (the BEC C-suite summary is the same
-    # investigation as the full report, rendered from the same sample, just a shorter variant).
-    $SampleAliases = @{ becSummary = 'bec' }
+    # Report types that reuse another type's sample file (a C-suite summary is the same investigation as
+    # the full report, rendered from the same sample, just a shorter variant).
+    $SampleAliases = @{ becSummary = 'bec'; nhiSummary = 'nhi' }
 
     try {
-        # Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, nhi, sharing, permissions, mailFlow, storage, licensing, baseline or domain.
+        # Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, nhi, nhiSummary, sharing, permissions, mailFlow, storage, licensing, baseline or domain.
         $ReportType = [string]($Request.Body.reportType ?? 'executive')
         if (-not $ReportNames.ContainsKey($ReportType)) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = "Unknown report type '$ReportType'. Use one of: $($ReportNames.Keys -join ', ')." })
@@ -53,6 +53,7 @@ function Invoke-ExecPreviewBrandingReportPdf {
             'bec' { Build-CippBecReportTree -UserData $Sample.userData -BecData $Sample.becData -TenantName $TenantName -Variant full }
             'becSummary' { Build-CippBecReportTree -UserData $Sample.userData -BecData $Sample.becData -TenantName $TenantName -Variant summary }
             'nhi' { Build-CippNhiReportTree -NhiData $Sample.nhiData -Containment $Sample.containment -TenantName $TenantName }
+            'nhiSummary' { Build-CippNhiReportTree -NhiData $Sample.nhiData -Containment $Sample.containment -TenantName $TenantName -Variant summary }
             'sharing' { Build-CippSharingReportTree -Data $Data }
             'permissions' { Build-CippPermissionsReportTree -Data $Data }
             'mailFlow' { Build-CippMailFlowReportTree -Data $Data }

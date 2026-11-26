@@ -15,10 +15,13 @@ function Build-CippNhiReportTree {
         The run's containment history (the Containment entries of its NhiReports row).
     .PARAMETER TenantName
         The tenant the app belongs to.
+    .PARAMETER Variant
+        full (every page) or summary (the cover and the executive summary, for a C-suite reader).
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$NhiData, $Containment, [string]$TenantName)
+    param([Parameter(Mandatory)]$NhiData, $Containment, [string]$TenantName, [ValidateSet('full', 'summary')][string]$Variant = 'full')
 
+    $IsSummary = $Variant -eq 'summary'
     $Nhi = $NhiData
     $Subject = $Nhi.Subject
     $Exposure = $Nhi.Exposure
@@ -280,6 +283,18 @@ function Build-CippNhiReportTree {
     $Partial = @($CompletenessEntries.Where({ $_.Value.Complete -eq $false -and -not $_.Value.Skipped }))
 
     $Encode = [System.Net.WebUtility]
+    $Variables = @{
+        coverlabel         = 'Security Incident Report'
+        covertitle         = 'App Compromise'
+        coveraccent        = if ($IsSummary) { 'Summary' } else { 'Analysis' }
+        covertenant        = $AppName
+        coversubtitle      = "$(if ($IsSummary) { 'Executive summary of the non-human identity investigation' } else { 'Non-Human Identity Investigation Report' }) for $TenantName"
+        covermeta          = if ($IsManagedIdentity) { "Managed identity $($Nhi.AppId)" } else { "Application ID $($Nhi.AppId)" }
+        covermetanote      = "Analysis Date: $(& $FormatDate $Nhi.ExtractedAt)"
+        coverfallbackimage = '/reportImages/soc.jpg'
+        coverfooternote    = 'Confidential & Proprietary - For Internal Use Only'
+        footerlabel        = "$TenantName - App Compromise $(if ($IsSummary) { 'Summary' } else { 'Report' }) for $AppName"
+    }
     $b = [System.Collections.Generic.List[object]]::new()
 
     # === EXECUTIVE SUMMARY ===
@@ -317,12 +332,14 @@ function Build-CippNhiReportTree {
     }
 
     $b.Add((New-CippReportHeading -Title 'Findings at a Glance'))
-    $b.Add((New-CippReportParagraph -Text "Every check in this investigation and its result. Flagged rows are expanded in the detailed findings later in this report. $FlaggedAreas of $($SummaryRows.Count) checks returned something to review."))
+    $b.Add((New-CippReportParagraph -Text "Every check in this investigation and its result. $(if (-not $IsSummary) { 'Flagged rows are expanded in the detailed findings later in this report. ' })$FlaggedAreas of $($SummaryRows.Count) checks returned something to review."))
     $b.Add((New-CippReportTable -Columns @(
                 @{ header = 'Check'; key = 'area'; width = 3; bold = $true }
                 @{ header = 'Result'; key = 'result'; width = 2; toneField = 'tone' }
             ) -Rows $SummaryRows -Limit $SummaryRows.Count))
-    $b.Add((New-CippReportNote -Text 'Checks that could not run (a missing licence or permission) are listed under Data Source Information below: a check that did not run is not a pass.'))
+    if (-not $IsSummary) {
+        $b.Add((New-CippReportNote -Text 'Checks that could not run (a missing licence or permission) are listed under Data Source Information below: a check that did not run is not a pass.'))
+    }
 
     $b.Add((New-CippReportHeading -Title 'Priority Remediation Actions'))
     $b.Add((New-CippReportParagraph -Text 'Actions specific to what this investigation found, most urgent first. Disabling the app, removing credentials, owners, permissions and roles, and disabling the apps it took over can all be run from the case in CIPP.'))
@@ -345,6 +362,9 @@ function Build-CippNhiReportTree {
     } else {
         $b.Add((New-CippReportClearBox -Title '[Pass] No flagged events in the window' -Content "None of the checks returned a flagged, dated event inside the window: no flagged change to the $Kind, nothing it changed in the directory and no sign-in from an attacker address."))
     }
+
+    # The summary stops after the executive lead: completed actions are marked in the priority table instead
+    if ($IsSummary) { return @{ Blocks = @($b); Variables = $Variables } }
 
     if ($RemediationRows.Count -gt 0) {
         $b.Add((New-CippReportHeading -Title 'Remediation Taken'))
@@ -668,17 +688,6 @@ function Build-CippNhiReportTree {
 
     @{
         Blocks    = @($b)
-        Variables = @{
-            coverlabel         = 'Security Incident Report'
-            covertitle         = 'App Compromise'
-            coveraccent        = 'Analysis'
-            covertenant        = $AppName
-            coversubtitle      = "Non-Human Identity Investigation Report for $TenantName"
-            covermeta          = if ($IsManagedIdentity) { "Managed identity $($Nhi.AppId)" } else { "Application ID $($Nhi.AppId)" }
-            covermetanote      = "Analysis Date: $(& $FormatDate $Nhi.ExtractedAt)"
-            coverfallbackimage = '/reportImages/soc.jpg'
-            coverfooternote    = 'Confidential & Proprietary - For Internal Use Only'
-            footerlabel        = "$TenantName - App Compromise Report for $AppName"
-        }
+        Variables = $Variables
     }
 }

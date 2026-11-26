@@ -43,6 +43,16 @@ Describe 'Invoke-ExecGetNhiReportPdf' {
         Should -Invoke Get-CIPPBecReport -Times 1 -Exactly -ParameterFilter { $Kind -eq 'NHI' -and $CaseId -eq 'NHI-1' -and $IncludeResults }
     }
 
+    It 'renders the C-suite summary for variant=summary, and the full report for anything else' {
+        Mock Get-CIPPBecReport { [pscustomobject]@{ CaseId = 'NHI-1'; Status = 'Completed'; Results = $Sample.nhiData; Containment = $Sample.containment } }
+        $Summary = Invoke-Report @{ tenantFilter = 'contoso.onmicrosoft.com'; caseId = 'NHI-1'; variant = 'summary' }
+        $Summary.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+        $Summary.Headers.'Content-Disposition' | Should -Be 'inline; filename="NHI_Summary_Sample_Invoice_Sync.pdf"'
+        $Other = Invoke-Report @{ tenantFilter = 'contoso.onmicrosoft.com'; caseId = 'NHI-1'; variant = 'bogus' }
+        $Other.Headers.'Content-Disposition' | Should -Be 'inline; filename="NHI_Report_Sample_Invoice_Sync.pdf"'
+        $Summary.Body.Length | Should -BeLessThan $Other.Body.Length
+    }
+
     It 'rejects a request without a case before reading anything' {
         Mock Get-CIPPBecReport { }
         $Response = Invoke-Report @{ tenantFilter = 'contoso.onmicrosoft.com' }

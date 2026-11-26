@@ -11,7 +11,7 @@ BeforeAll {
     # never loads OfficeIMO - the package's job here is collation, not the kit's PDF bytes.
     function Get-CippReportTenantName { param($TenantFilter, $BrandingPresetId) }
     function Build-CippBecReportTree { param($UserData, $BecData, $TenantName, $Variant) }
-    function Build-CippNhiReportTree { param($NhiData, $Containment, $TenantName) }
+    function Build-CippNhiReportTree { param($NhiData, $Containment, $TenantName, $Variant) }
     function ConvertTo-CippReportPdf { param($Blocks, $Variables, $TenantName, $TenantFilter, $ReportName, $Branding, $BrandingPresetId, $GeneratedOn, $PageSize, [switch]$Landscape) }
     function Get-CIPPBrandingSettings { }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/New-CIPPBecEvidencePackage.ps1')
@@ -138,7 +138,7 @@ Describe 'New-CIPPBecEvidencePackage' {
         { New-CIPPBecEvidencePackage -TenantFilter 'contoso.com' -CaseId 'BEC-x' } | Should -Throw '*only completed runs*'
     }
 
-    It 'renders the NHI report with its own preset and never the BEC reports or the other tenants' {
+    It 'renders the NHI full and summary reports with their own presets and never the BEC reports or the other tenants' {
         Mock Get-CIPPBecReport {
             [pscustomobject]@{
                 CaseId = 'NHI-1'; Status = 'Completed'; RequestedAt = '2026-08-20T12:00:00Z'
@@ -146,14 +146,16 @@ Describe 'New-CIPPBecEvidencePackage' {
                 Results = [pscustomobject]@{ CaseId = 'NHI-1'; DisplayName = 'App'; OtherTenants = @([pscustomobject]@{ Tenant = 'other.com' }); Score = [pscustomobject]@{ Level = 'High' } }
             }
         }
-        Mock Get-CIPPBrandingSettings { [pscustomobject]@{ reportDefaults = [pscustomobject]@{ nhi = 'p-nhi' } } }
+        Mock Get-CIPPBrandingSettings { [pscustomobject]@{ reportDefaults = [pscustomobject]@{ nhi = 'p-nhi'; nhiSummary = 'p-nhi-summary' } } }
         Mock Build-CippNhiReportTree { @{ Blocks = @(@{ type = 'blank' }); Variables = @{} } }
         $Package = New-CIPPBecEvidencePackage -Kind 'NHI' -TenantFilter 'contoso.com' -CaseId 'NHI-1'
         $Entries = Read-Zip -Bytes $Package.ZipBytes
-        $Entries.Keys | Should -Contain 'report.pdf'
-        $Entries.Keys | Should -Not -Contain 'report-full.pdf'
+        $Entries.Keys | Should -Contain 'report-full.pdf'
+        $Entries.Keys | Should -Contain 'report-summary.pdf'
         Should -Invoke Build-CippBecReportTree -Times 0 -Exactly
-        Should -Invoke Build-CippNhiReportTree -Times 1 -Exactly -ParameterFilter { -not $NhiData.PSObject.Properties['OtherTenants'] -and @($Containment).Count -eq 1 }
+        Should -Invoke Build-CippNhiReportTree -Times 2 -Exactly -ParameterFilter { -not $NhiData.PSObject.Properties['OtherTenants'] -and @($Containment).Count -eq 1 }
+        Should -Invoke Build-CippNhiReportTree -Times 1 -Exactly -ParameterFilter { $Variant -eq 'summary' }
         Should -Invoke ConvertTo-CippReportPdf -Times 1 -Exactly -ParameterFilter { $BrandingPresetId -eq 'p-nhi' -and $TenantName -eq 'name-p-nhi' }
+        Should -Invoke ConvertTo-CippReportPdf -Times 1 -Exactly -ParameterFilter { $BrandingPresetId -eq 'p-nhi-summary' -and $TenantName -eq 'name-p-nhi-summary' }
     }
 }

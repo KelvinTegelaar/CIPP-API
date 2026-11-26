@@ -263,6 +263,17 @@ Describe 'Report tree builders' {
         ($Glance | Where-Object area -EQ 'Mail and file activity from attacker addresses').result | Should -Be '2176 flagged - 2176 high-risk'
     }
 
+    It 'NHI: the C-suite summary stops after the executive lead and still marks completed actions' {
+        $Sample = Get-Content (Join-Path $RepoRoot 'Config/ReportSamples/nhi.json') -Raw | ConvertFrom-Json
+        $r = Build-CippNhiReportTree -TenantName 'Contoso' -NhiData $Sample.nhiData -Containment $Sample.containment -Variant summary
+        @($r.Blocks | Where-Object { $_.type -eq 'page' }).title | Should -Be @('Executive Summary')
+        ($r.Blocks | Where-Object { $_.type -eq 'blank' -and $_.title -in 'Remediation Taken', 'Data Source Information' }) | Should -BeNullOrEmpty
+        $Actions = @(($r.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[0].header -eq 'Priority' }).rows)
+        ($Actions | Where-Object { $_.text -like 'Disable Sample Invoice Sync*' }).text | Should -Match "`nCompleted "
+        $r.Variables.coveraccent | Should -Be 'Summary'
+        Test-Report $r 'Security Incident Report'
+    }
+
     It 'NHI: a quiet case with almost no data is Low, asks only for monitoring and renders' {
         $r = Build-CippNhiReportTree -TenantName 'Contoso' -NhiData @{ DisplayName = 'Quiet App'; AppId = 'a1'; ExtractedAt = '2026-09-01T00:00:00Z'; Score = @{ Level = 'Low'; Value = 0 } }
         ($r.Blocks | Where-Object { $_.type -eq 'alertbox' -and $_.title -like 'Case Level:*' }).title | Should -Be 'Case Level: Low'

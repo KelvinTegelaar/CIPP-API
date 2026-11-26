@@ -7,7 +7,7 @@ function Invoke-ExecGetNhiReportPdf {
     .SYNOPSIS
         Renders a non-human identity (NHI) compromise case as a PDF report.
     .DESCRIPTION
-        Server-renders a completed NHI run as application/pdf bytes: the case level, what was found, priority actions, order of events, containment already run, and the addresses, credentials, changes, mail and file reach, access and owners behind it. Reads the stored run; it does not start an investigation. The app in other tenants is never included. Metadata only.
+        Server-renders a completed NHI run as application/pdf bytes: the case level, what was found, priority actions, order of events, containment already run, and the addresses, credentials, changes, mail and file reach, access and owners behind it. Reads the stored run; it does not start an investigation. variant=summary renders the cover and executive summary only. The app in other tenants is never included. Metadata only.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -18,6 +18,11 @@ function Invoke-ExecGetNhiReportPdf {
     $CaseId = [string]($Request.Query.caseId ?? $Request.Body.caseId)
     # The branding preset to render with; omitted -> the default branding
     $BrandingPresetId = [string]($Request.Query.brandingPresetId ?? $Request.Body.brandingPresetId)
+    # 'full' (default) = every page; 'summary' = the cover and executive summary only, for a C-suite reader
+    $Variant = switch ([string]($Request.Query.variant ?? $Request.Body.variant)) {
+        'summary' { 'summary' }
+        default { 'full' }
+    }
 
     if (-not $TenantFilter -or -not $CaseId) {
         return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'A tenantFilter and a caseId are required' })
@@ -29,9 +34,10 @@ function Invoke-ExecGetNhiReportPdf {
             throw [System.Management.Automation.ItemNotFoundException]::new("No completed NHI investigation is stored for case '$CaseId'. Wait for the investigation to finish, then generate the report.")
         }
         $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $BrandingPresetId
-        $Report = Build-CippNhiReportTree -NhiData $Run.Results -Containment @($Run.Containment) -TenantName $TenantName
-        $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'NHI Compromise Report' -BrandingPresetId $BrandingPresetId
-        $FileName = ("NHI_Report_$($Run.Results.DisplayName)" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
+        $Report = Build-CippNhiReportTree -NhiData $Run.Results -Containment @($Run.Containment) -TenantName $TenantName -Variant $Variant
+        $ReportName = if ($Variant -eq 'summary') { 'NHI Executive Summary' } else { 'NHI Compromise Report' }
+        $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName $ReportName -BrandingPresetId $BrandingPresetId
+        $FileName = ("NHI_$(if ($Variant -eq 'summary') { 'Summary' } else { 'Report' })_$($Run.Results.DisplayName)" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
         return ([HttpResponseContext]@{
                 StatusCode  = [HttpStatusCode]::OK
                 ContentType = 'application/pdf'

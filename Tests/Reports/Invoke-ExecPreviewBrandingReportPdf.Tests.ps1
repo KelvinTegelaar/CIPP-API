@@ -33,7 +33,7 @@ BeforeAll {
 
 Describe 'Invoke-ExecPreviewBrandingReportPdf' {
     It 'renders the <type> sample against the supplied branding' -ForEach @(
-        @{ type = 'executive' }, @{ type = 'reportBuilder' }, @{ type = 'shadowAI' }, @{ type = 'bec' }, @{ type = 'nhi' }
+        @{ type = 'executive' }, @{ type = 'reportBuilder' }, @{ type = 'shadowAI' }, @{ type = 'bec' }, @{ type = 'nhi' }, @{ type = 'nhiSummary' }
         @{ type = 'sharing' }, @{ type = 'permissions' }, @{ type = 'mailFlow' }, @{ type = 'storage' }, @{ type = 'licensing' }, @{ type = 'baseline' }, @{ type = 'domain' }
     ) {
         $Response = Invoke-Preview @{ reportType = $type; branding = @{ colour = '#0E4C92'; coverStock = 'none'; footerText = '%tenantname% preview' } }

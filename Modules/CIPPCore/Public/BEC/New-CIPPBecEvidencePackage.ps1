@@ -18,8 +18,7 @@ function New-CIPPBecEvidencePackage {
     .PARAMETER APIName
         Logging API name.
     .PARAMETER Kind
-        BEC, or NHI for a non-human identity case: its own finding sets, and the NHI report PDF instead of
-        the two BEC ones.
+        BEC, or NHI for a non-human identity case: its own finding sets and its own report PDFs.
     .FUNCTIONALITY
         Internal
     #>
@@ -106,7 +105,7 @@ function New-CIPPBecEvidencePackage {
     }
     $Files['logbook.json'] = $Utf8.GetBytes((ConvertTo-Json -InputObject @($LogRows) -Depth 10))
 
-    # Render the report PDFs server-side (BEC: the full report and the C-suite summary; NHI: the report)
+    # Render the report PDFs server-side (the full report and the C-suite summary)
     # through the same builders and kit the report endpoints use. The BEC builder reads containment off
     # becData.Run, so attach the run block exactly as ExecGetBecReportPdf does. A render failure must not
     # lose the rest of the evidence, so it is caught and the package ships without the PDFs.
@@ -138,10 +137,15 @@ function New-CIPPBecEvidencePackage {
         }
     } else {
         try {
-            $ReportId = [string]$(try { (Get-CIPPBrandingSettings).reportDefaults.nhi } catch { $null })
-            $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $ReportId
-            $Report = Build-CippNhiReportTree -NhiData $Results -Containment @($Run.Containment) -TenantName $TenantName
-            $Files['report.pdf'] = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'NHI Compromise Report' -BrandingPresetId $ReportId
+            $ReportDefaults = try { (Get-CIPPBrandingSettings).reportDefaults } catch { $null }
+            $FullId = [string]$ReportDefaults.nhi
+            $SummaryId = [string]$ReportDefaults.nhiSummary
+            $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $FullId
+            $Full = Build-CippNhiReportTree -NhiData $Results -Containment @($Run.Containment) -TenantName $TenantName
+            $Files['report-full.pdf'] = ConvertTo-CippReportPdf -Blocks $Full.Blocks -Variables $Full.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'NHI Compromise Report' -BrandingPresetId $FullId
+            $SummaryName = if ($SummaryId -eq $FullId) { $TenantName } else { Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $SummaryId }
+            $Summary = Build-CippNhiReportTree -NhiData $Results -Containment @($Run.Containment) -TenantName $SummaryName -Variant summary
+            $Files['report-summary.pdf'] = ConvertTo-CippReportPdf -Blocks $Summary.Blocks -Variables $Summary.Variables -TenantName $SummaryName -TenantFilter $TenantFilter -ReportName 'NHI Executive Summary' -BrandingPresetId $SummaryId
         } catch {
             Write-Information "NHI evidence: server-side PDF render failed for $CaseId`: $($_.Exception.Message)"
         }
