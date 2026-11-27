@@ -48,14 +48,17 @@ function Get-CIPPUserOnboardingScan {
     }
 
     if ($Core['user'].status -eq 404) {
-        # A deleted user's UPN is prefixed with its object id, so match on the tail as well.
-        $Deleted = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directory/deletedItems/microsoft.graph.user?`$select=id,displayName,userPrincipalName,mail,deletedDateTime,onPremisesSyncEnabled&`$top=999" -tenantid $TenantFilter).Where({
-                $_.id -eq $UserId -or $_.mail -eq $UserId -or ([string]$_.userPrincipalName).EndsWith($UserId, [System.StringComparison]::OrdinalIgnoreCase)
-            }, 'First')
-        if ($Deleted.Count -eq 0) {
+        # A deleted user's UPN is its original UPN behind the 32-character object id; compare the original.
+        $DeletedUser = $null
+        foreach ($Candidate in @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directory/deletedItems/microsoft.graph.user?`$select=id,displayName,userPrincipalName,mail,deletedDateTime,onPremisesSyncEnabled&`$top=999" -tenantid $TenantFilter)) {
+            $OriginalUpn = [string]$Candidate.userPrincipalName -replace '^[0-9a-fA-F]{32}(?=.+@)', ''
+            if ($Candidate.id -ne $UserId -and $Candidate.mail -ne $UserId -and $OriginalUpn -ne $UserId) { continue }
+            # The same address deleted more than once: the latest deletion is the account being brought back.
+            if (-not $DeletedUser -or ($Candidate.deletedDateTime -as [datetime]) -gt ($DeletedUser.deletedDateTime -as [datetime])) { $DeletedUser = $Candidate }
+        }
+        if (-not $DeletedUser) {
             throw [System.Management.Automation.ItemNotFoundException]::new("User $UserId was not found in $TenantFilter, including deleted users.")
         }
-        $DeletedUser = $Deleted[0]
         $Upn = [string]$DeletedUser.userPrincipalName -replace '^[0-9a-fA-F]{32}(?=.+@)', ''
         $Findings.Add([pscustomobject]@{
                 Id       = 'SoftDeleted'

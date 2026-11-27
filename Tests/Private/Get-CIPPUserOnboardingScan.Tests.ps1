@@ -187,6 +187,22 @@ Describe 'Get-CIPPUserOnboardingScan' {
         Should -Invoke New-ExoBulkRequest -Times 0 -Exactly
     }
 
+    It 'matches a deleted user on the whole UPN, never a longer one, and takes the latest deletion' {
+        $script:Graph.user = @{ status = 404; body = [pscustomobject]@{ error = [pscustomobject]@{ message = 'does not exist' } } }
+        Mock New-GraphGetRequest {
+            @(
+                [pscustomobject]@{ id = 'big'; displayName = 'Big John'; userPrincipalName = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabigjohn@contoso.com'; deletedDateTime = '2026-11-20T10:00:00Z' }
+                [pscustomobject]@{ id = 'old'; displayName = 'John (2025)'; userPrincipalName = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbjohn@contoso.com'; deletedDateTime = '2025-03-01T10:00:00Z' }
+                [pscustomobject]@{ id = 'new'; displayName = 'John'; userPrincipalName = 'ccccccccccccccccccccccccccccccccjohn@contoso.com'; deletedDateTime = '2026-11-01T10:00:00Z' }
+            )
+        }
+
+        $Scan = Get-CIPPUserOnboardingScan -TenantFilter 'contoso.com' -UserId 'John@contoso.com'
+
+        $Scan.User.id | Should -Be 'new'
+        $Scan.User.userPrincipalName | Should -Be 'john@contoso.com'
+    }
+
     It 'throws not-found when the user is in neither live nor deleted users' {
         $script:Graph.user = @{ status = 404; body = [pscustomobject]@{ error = [pscustomobject]@{ message = 'does not exist' } } }
         Mock New-GraphGetRequest { @() }
