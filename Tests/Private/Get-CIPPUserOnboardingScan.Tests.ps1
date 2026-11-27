@@ -151,7 +151,7 @@ Describe 'Get-CIPPUserOnboardingScan' {
         , ($Json.Results.Findings | Where-Object Id -Like 'MailboxDelegate:*').Fix.Params.Items | Should -BeOfType [array]
     }
 
-    It 'does not default the password reset for an AD-synced user' {
+    It 'does not default the password reset or enabling sign-in for an AD-synced user' {
         $script:Graph.user.body.onPremisesSyncEnabled = $true
 
         $Scan = Get-CIPPUserOnboardingScan -TenantFilter 'contoso.com' -UserId 'u-1'
@@ -159,6 +159,9 @@ Describe 'Get-CIPPUserOnboardingScan' {
         $Reset = $Scan.Findings | Where-Object Id -EQ 'PasswordReset'
         $Reset.Fix.Default | Should -BeFalse
         $Reset.Detail | Should -BeLike '*Active Directory*'
+        $SignIn = $Scan.Findings | Where-Object Id -EQ 'SignInBlocked'
+        $SignIn.Fix.Default | Should -BeFalse
+        $SignIn.Detail | Should -BeLike '*Active Directory*'
         $Scan.Findings.Id | Should -Not -Contain 'ImmutableIdCleared'
     }
 

@@ -92,10 +92,16 @@ function Get-CIPPUserOnboardingScan {
 
     #region Account
     if ($SignInBlocked) {
+        # Set-CIPPSignInState reports a synced user as failed, and the next sync blocks the account again.
+        $SignInDetail = if ($IsSynced) {
+            'The account is disabled, so the user cannot sign in. It is synced from Active Directory, so enable it there.'
+        } else {
+            'The account is disabled, so the user cannot sign in.'
+        }
         $Findings.Add([pscustomobject]@{
                 Id = 'SignInBlocked'; Category = 'Account'; Title = 'Sign-in is blocked'
-                Detail = 'The account is disabled, so the user cannot sign in.'; Note = $null
-                Fix = @{ Key = 'EnableSignIn'; Label = 'Enable sign-in'; Default = $true; Params = @{} }
+                Detail = $SignInDetail; Note = $null
+                Fix = @{ Key = 'EnableSignIn'; Label = 'Enable sign-in'; Default = -not $IsSynced; Params = @{} }
             })
     }
     $PasswordDetail = if ($IsSynced) {
