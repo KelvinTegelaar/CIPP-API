@@ -20,6 +20,7 @@ BeforeAll {
     function Convert-AzureAdObjectIdToSid { param($ObjectID) }
     function Get-NormalizedError { param($Message) $Message }
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $Select, $useSystemMailbox) }
+    function Resolve-CIPPDirectoryId { param($Identity, $TenantFilter) }
 
     $EndpointPath = Join-Path $RepoRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Identity/Administration/Groups/Invoke-ListGroups.ps1'
     # The response stub is declared inside the endpoint script so the type binds at parse time;
@@ -187,5 +188,32 @@ Describe 'Invoke-ListGroups send permissions for one group' {
 
         $response.StatusCode | Should -Be 200
         $response.Body.groupInfo.displayName | Should -Be 'All Office'
+    }
+}
+
+Describe 'Invoke-ListGroups owners of a distribution list' {
+    It 'resolves every ManagedBy value in one Resolve-CIPPDirectoryId call' {
+        Mock -CommandName Convert-AzureAdObjectIdToSid -MockWith { 'S-1-12-1' }
+        Mock -CommandName New-GraphBulkRequest -MockWith {
+            [pscustomobject]@{ id = 1; body = [pscustomobject]@{ id = 'group-guid'; displayName = 'All Office'; mail = 'all@contoso.com'; mailEnabled = $true; securityEnabled = $false; groupTypes = @() } }
+        }
+        Mock -CommandName New-ExoRequest -MockWith {
+            [pscustomobject]@{ ManagedBy = @('11111111-1111-1111-1111-111111111111', 'bob', 'Legacy Admin') }
+        }
+        Mock -CommandName Resolve-CIPPDirectoryId -MockWith {
+            [pscustomobject]@{ Input = '11111111-1111-1111-1111-111111111111'; Id = '11111111-1111-1111-1111-111111111111'; DisplayName = 'Alice'; ODataType = '#microsoft.graph.user'; Label = 'Alice'; Resolved = $true }
+            [pscustomobject]@{ Input = 'bob'; Id = '22222222-2222-2222-2222-222222222222'; DisplayName = 'Bob'; UserPrincipalName = 'bob@contoso.com'; ODataType = '#microsoft.graph.user'; Label = 'Bob'; Resolved = $true }
+            [pscustomobject]@{ Input = 'Legacy Admin'; Id = $null; DisplayName = $null; Label = 'Legacy Admin'; Resolved = $false }
+        }
+        $response = Invoke-ListGroups -Request (New-GroupsRequest -Query @{
+                tenantFilter = 'contoso.com'; groupID = 'group-guid'; groupType = 'Distribution List'; owners = 'true'
+            }) -TriggerMetadata $null
+
+        $response.StatusCode | Should -Be 200
+        @($response.Body.owners.displayName) | Should -Be @('Alice', 'Bob', 'Legacy Admin')
+        @($response.Body.owners.id) | Should -Be @('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'Legacy Admin')
+        $response.Body.owners[0].'@odata.type' | Should -Be '#microsoft.graph.user'
+        Should -Invoke Resolve-CIPPDirectoryId -Times 1 -Exactly -ParameterFilter { @($Identity).Count -eq 3 -and $TenantFilter -eq 'contoso.com' }
+        Should -Invoke New-GraphBulkRequest -Times 1 -Exactly -ParameterFilter { -not ($Requests | Where-Object { $_.id -eq 3 }) }
     }
 }

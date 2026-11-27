@@ -106,19 +106,7 @@ function Invoke-ListGroups {
                     url    = "groups/$($GroupID)/owners?`$top=999&select=$SelectString"
                 })
         } else {
-            $OwnerIds = New-ExoRequest -cmdlet 'Get-DistributionGroup' -tenantid $TenantFilter -cmdParams @{Identity = $GroupID } -Select 'ManagedBy' -useSystemMailbox $true | Select-Object -ExpandProperty ManagedBy
-
-            $BulkRequestArrayList.add(@{
-                    id      = 3
-                    method  = 'POST'
-                    url     = 'directoryObjects/getByIds'
-                    body    = @{
-                        ids = @($OwnerIds)
-                    }
-                    headers = @{
-                        'Content-Type' = 'application/json'
-                    }
-                })
+            $ManagedBy = @(New-ExoRequest -cmdlet 'Get-DistributionGroup' -tenantid $TenantFilter -cmdParams @{Identity = $GroupID } -Select 'ManagedBy' -useSystemMailbox $true | Select-Object -ExpandProperty ManagedBy)
         }
     }
 
@@ -176,6 +164,18 @@ function Invoke-ListGroups {
     try {
         if ($BulkRequestArrayList.Count -gt 0) {
             $RawGraphRequest = New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($BulkRequestArrayList) -asapp $true
+            # ManagedBy can hold ids or names; one that does not resolve is kept under its Exchange value
+            $ManagedByOwners = if ($ManagedBy.Count -gt 0) {
+                foreach ($Owner in (Resolve-CIPPDirectoryId -Identity $ManagedBy -TenantFilter $TenantFilter)) {
+                    [PSCustomObject]@{
+                        '@odata.type'     = $Owner.ODataType
+                        id                = $Owner.Id ?? $Owner.Input
+                        displayName       = $Owner.DisplayName ?? $Owner.Label
+                        userPrincipalName = $Owner.UserPrincipalName
+                        mail              = $Owner.Mail
+                    }
+                }
+            }
             # Assigned outside the object so a single holder still serialises as an array
             if ($SendPermissions -and $IsMailEnabledGroup) {
                 $SendOnBehalf = @(($RawGraphRequest | Where-Object { $_.id -eq 4 }).body.value | Where-Object { $_ } | Select-Object id, displayName, userPrincipalName, mail | Sort-Object displayName)
@@ -199,7 +199,7 @@ function Invoke-ListGroups {
                 },
                 @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } }
                 members                = @(($RawGraphRequest | Where-Object { $_.id -eq 2 }).body.value | Sort-Object displayName)
-                owners                 = @(($RawGraphRequest | Where-Object { $_.id -eq 3 }).body.value | Sort-Object displayName)
+                owners                 = @(@(($RawGraphRequest | Where-Object { $_.id -eq 3 }).body.value) + @($ManagedByOwners) | Where-Object { $_ } | Sort-Object displayName)
                 allowExternal          = (!$OnlyAllowInternal)
                 sendCopies             = $SendCopies
                 hideFromOutlookClients = if ($GroupType -eq 'Microsoft 365') { $UnifiedGroupInfo.HiddenFromExchangeClientsEnabled } else { $null }

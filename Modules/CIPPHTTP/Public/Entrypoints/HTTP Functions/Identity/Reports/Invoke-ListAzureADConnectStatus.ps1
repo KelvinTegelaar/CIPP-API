@@ -62,12 +62,27 @@ Function Invoke-ListAzureADConnectStatus {
         )
 
         $Results = New-GraphBulkRequest -Requests $GraphRequest -tenantid $TenantFilter -verbose
+        # A failed sub-request or later page would otherwise drop objects from the report without a word
+        $FailedTypes = @(foreach ($Result in $Results) {
+                if (($Result.status -as [int]) -lt 200 -or ($Result.status -as [int]) -gt 299) {
+                    '{0}: {1}' -f $Result.id, ($Result.body.error.message ?? "HTTP $($Result.status)")
+                } elseif ($Result.PagingIncomplete) {
+                    '{0}: {1}' -f $Result.id, ($Result.PagingError ?? 'a continuation page failed')
+                }
+            })
+        if ($FailedTypes.Count -gt 0) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::InternalServerError
+                    Body       = "Failed to read objects in error. $($FailedTypes -join '; ')"
+                })
+        }
         $ObjectsInError = @(
             foreach ($Result in $Results) {
                 $Type = $Result.id -replace 's$' # Remove the 's' from the end of the type name
-                $Result.body.value | ForEach-Object {
-                    if ($null -ne $_.id) {
-                        $_ | Add-Member -NotePropertyName ObjectType -NotePropertyValue $Type -PassThru
+                foreach ($Object in $Result.body.value) {
+                    # Graph returns every object; only those with provisioning errors belong in the report
+                    if ($null -ne $Object.id -and $Object.onPremisesProvisioningErrors) {
+                        $Object | Add-Member -NotePropertyName ObjectType -NotePropertyValue $Type -PassThru
                     }
                 }
             }

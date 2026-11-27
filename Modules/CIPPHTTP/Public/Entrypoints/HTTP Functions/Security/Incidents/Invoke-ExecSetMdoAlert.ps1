@@ -16,7 +16,13 @@ function Invoke-ExecSetMdoAlert {
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $AlertId = $Request.Query.GUID ?? $Request.Body.GUID
     $Status = $Request.Query.Status ?? $Request.Body.Status
-    $Assigned = $Request.Query.Assigned ?? $Request.Body.Assigned ?? ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
+    # Assign the alert to the caller. Without it (or Assigned) the current assignee is left alone.
+    $AssignToSelf = [System.Convert]::ToBoolean($Request.Query.AssignToSelf ?? $Request.Body.AssignToSelf)
+    # User to assign the alert to
+    $Assigned = $Request.Query.Assigned ?? $Request.Body.Assigned
+    if ($AssignToSelf -eq $true) {
+        $Assigned = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
+    }
     $Classification = $Request.Query.Classification ?? $Request.Body.Classification
     $Determination = $Request.Query.Determination ?? $Request.Body.Determination
     $Result = ''
@@ -42,7 +48,7 @@ function Invoke-ExecSetMdoAlert {
         }
 
         # Set received assignee
-        if ($null -ne $Assigned) {
+        if (-not [string]::IsNullOrEmpty($Assigned)) {
             $AssignBody.assignedTo = $Assigned
             if ($null -eq $Status) {
                 $Result += 'Set assigned for incident ' + $AlertId + ' to ' + $Assigned
