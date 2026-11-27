@@ -129,7 +129,7 @@ function Invoke-ExecExtensionsConfig {
         }
 
         # The property name becomes the stored secret's name, so only the extensions the settings form posts may store one.
-        $KnownExtensions = @('AutotaskPSA', 'CFZTNA', 'cippapi', 'ConnectWisePSA', 'ExternalCSP', 'GitHub', 'Gradient', 'HaloPSA', 'HIBP', 'Hudu', 'KaseyaBMS', 'NinjaOne', 'Pax8', 'PWPush', 'Sherweb', 'Syncro')
+        $KnownExtensions = @('AutotaskPSA', 'CFZTNA', 'cippapi', 'ConnectWisePSA', 'CyberDrainManagedBaselines', 'ExternalCSP', 'GitHub', 'Gradient', 'HaloPSA', 'HIBP', 'Hudu', 'KaseyaBMS', 'NinjaOne', 'Pax8', 'PWPush', 'Sherweb', 'Syncro')
         foreach ($APIKey in $Body.PSObject.Properties.Name) {
             Write-Information "Working on $APIKey"
             if ($APIKey -notin $KnownExtensions) {
