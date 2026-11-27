@@ -82,7 +82,7 @@ function Invoke-ExecOnboardUser {
     }
     # The returning user: a user principal name or object id, as a string or an object with a 'value'
     $Username = $Request.Body.user.value ?? $Request.Body.user
-    if ($Username -isnot [string] -or $Username -notmatch "^[^\s/\\?#%&']+$") {
+    if ($Username -isnot [string] -or $Username -notmatch '^[^\s%]+$') {
         $Errors.Add("'user' is required and must be one user principal name or object id (a string, or an object with a 'value' property).")
     }
     # The fixes to run, each { Key, Params }

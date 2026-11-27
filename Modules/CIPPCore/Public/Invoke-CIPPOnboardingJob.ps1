@@ -316,7 +316,7 @@ function Invoke-CIPPOnboardingJob {
         if ($UnknownKeys.Count -gt 0) { throw "Unknown onboarding fix: $($UnknownKeys -join ', ')" }
         $Steps = @($StepOrder | Where-Object { $Requested.ContainsKey($_.Key) })
         if ($Steps.Count -eq 0) { throw "No onboarding fixes were selected for $Username." }
-        if ($Username -notmatch $UserPattern) { throw 'Username must be an object id or user principal name.' }
+        if ($Username -notmatch '^[^\s%]+$') { throw 'Username must be an object id or user principal name.' }
 
         $RunIndexes = @(0..($Steps.Count - 1))
         if ($StepIndexes.Count -gt 0) {
@@ -341,7 +341,8 @@ function Invoke-CIPPOnboardingJob {
             Set-CIPPAsyncDeploymentStatus -JobId $DeploymentId -Name $Username -Status 'running'
         }
 
-        $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)?`$select=id,displayName,userPrincipalName" -tenantid $TenantFilter
+        # Encoded: a UPN can hold an apostrophe, and a guest's '#EXT#' would truncate the path.
+        $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$([uri]::EscapeDataString($Username))?`$select=id,displayName,userPrincipalName" -tenantid $TenantFilter
         $UserObjectId = $User.id
         $Upn = $User.userPrincipalName
         if (-not $UserObjectId -or -not $Upn) { throw "Could not find the user $Username in $TenantFilter." }

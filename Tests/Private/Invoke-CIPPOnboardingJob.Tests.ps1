@@ -280,6 +280,15 @@ Describe 'Invoke-CIPPOnboardingJob' {
         Should -Invoke Set-CIPPSharePointPerms -Times 1 -Exactly -ParameterFilter { (@($OnedriveAccessUser) -join ',') -eq 'tom@contoso.com' -and $RemovePermission -eq $true -and $UserId -eq 'maria@contoso.com' }
     }
 
+    It 'looks up <Upn> with the UPN encoded in the Graph path' -ForEach @(
+        @{ Upn = "sean.o'brien@contoso.com"; Encoded = 'sean.o%27brien%40contoso.com' }
+        @{ Upn = 'guest_fabrikam.com#EXT#@contoso.onmicrosoft.com'; Encoded = 'guest_fabrikam.com%23EXT%23%40contoso.onmicrosoft.com' }
+    ) {
+        $null = Invoke-CIPPOnboardingJob -TenantFilter 'contoso.com' -Username $Upn -Options @{ Fixes = @(@{ Key = 'EnableArchive' }) } -DeploymentId 'job-1' -TaskInfo ([pscustomobject]@{ RowKey = 'task-1' })
+        Should -Invoke New-GraphGetRequest -Times 1 -Exactly -ParameterFilter { $uri -eq "https://graph.microsoft.com/beta/users/$Encoded`?`$select=id,displayName,userPrincipalName" }
+        Should -Invoke Set-CIPPMailboxArchive -Times 1 -Exactly
+    }
+
     It 'refuses a manager value carrying a replacement variable' {
         $null = Invoke-Job -Fixes @(@{ Key = 'SetManager'; Params = @{ ManagerId = '%manager%' } })
         Should -Invoke Set-CIPPManager -Times 0 -Exactly

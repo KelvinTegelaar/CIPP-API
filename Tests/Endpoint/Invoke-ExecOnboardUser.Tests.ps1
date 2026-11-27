@@ -74,7 +74,8 @@ Describe 'Invoke-ExecOnboardUser' {
             @{ Case = 'missing Fixes'; Body = @{ Fixes = $null }; Like = "*'Fixes' is required*" }
             @{ Case = 'a missing user'; Body = @{ user = $null }; Like = "*'user' is required*" }
             @{ Case = 'two users'; Body = @{ user = @('a@contoso.com', 'b@contoso.com') }; Like = "*'user' is required*" }
-            @{ Case = 'a user that would change the Graph path'; Body = @{ user = 'a@contoso.com/manager' }; Like = "*'user' is required*" }
+            @{ Case = 'a user carrying a replacement variable'; Body = @{ user = '%userprincipalname%' }; Like = "*'user' is required*" }
+            @{ Case = 'a user with a space'; Body = @{ user = 'maria @contoso.com' }; Like = "*'user' is required*" }
             @{ Case = 'a missing tenant'; Body = @{ tenantFilter = '' }; Like = "*'tenantFilter' is required*" }
             @{ Case = 'a schedule without a date'; Body = @{ Scheduled = @{ enabled = $true; date = 0 } }; Like = '*Scheduled.date*' }
         ) {
@@ -108,6 +109,15 @@ Describe 'Invoke-ExecOnboardUser' {
         It 'accepts the user as a plain string' {
             $null = Invoke-ExecOnboardUser -Request (New-OnboardRequest -Body @{ user = 'maria@contoso.com' })
             Should -Invoke Add-CIPPScheduledTask -Times 1 -Exactly -ParameterFilter { $Task.Parameters.Username -eq 'maria@contoso.com' }
+        }
+
+        It 'accepts the UPN <Upn>' -ForEach @(
+            @{ Upn = "sean.o'brien@contoso.com" }
+            @{ Upn = 'guest_fabrikam.com#EXT#@contoso.onmicrosoft.com' }
+        ) {
+            $Response = Invoke-ExecOnboardUser -Request (New-OnboardRequest -Body @{ user = [pscustomobject]@{ value = $Upn } })
+            $Response.StatusCode | Should -Be ([HttpStatusCode]::OK)
+            Should -Invoke Add-CIPPScheduledTask -Times 1 -Exactly -ParameterFilter { $Task.Name -eq "Onboarding: $Upn" -and $Task.Parameters.Username -eq $Upn }
         }
 
         It 'schedules for later without a job id to poll' {
