@@ -119,6 +119,17 @@ Describe 'ConvertTo-CippReportPdf' {
             $Start | Should -HaveCount 1
             $End | Should -Be $Start
         }
+        It 'leaves out the columns of a table too wide for the page instead of failing the report' {
+            # 85 columns on A4 portrait left each under the 6pt gutter and OfficeIMO threw
+            # "Table horizontal cell padding must leave a positive text width."
+            $Headers = 1..85 | ForEach-Object { "col$_" }
+            $md = (@(('| ' + ($Headers -join ' | ') + ' |'), ('| ' + (($Headers | ForEach-Object { '---' }) -join ' | ') + ' |'), ('| ' + (($Headers | ForEach-Object { 'v' }) -join ' | ') + ' |'))) -join "`n"
+            $b = @(@{ type = 'database'; title = 'Devices'; format = 'text'; content = $md })
+            $Bytes = ConvertTo-CippReportPdf -Blocks $b
+            Test-IsPdf $Bytes | Should -BeTrue
+            $Text = @([OfficeIMO.Pdf.PdfDocument]::Load([IO.MemoryStream]::new($Bytes)).Pages | ForEach-Object { $_.ExtractText() }) -join ' '
+            $Text | Should -Match 'more columns that do not fit'
+        }
         It 'accepts a pre-serialised JSON block string' {
             $json = ConvertTo-Json -InputObject @(@{ type = 'blank'; content = '<p>json</p>' }) -Depth 10
             Test-IsPdf (ConvertTo-CippReportPdf -Blocks $json) | Should -BeTrue

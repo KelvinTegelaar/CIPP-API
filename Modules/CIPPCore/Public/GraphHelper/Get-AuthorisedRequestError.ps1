@@ -35,10 +35,12 @@ function Get-AuthorisedRequestError {
 
     if (-not $TenantID) { $TenantID = $env:TenantID }
 
-    $Tenant = Get-Tenants -IncludeErrors -TenantFilter $TenantID | Select-Object -First 1
-    # A tenant-restricted caller only sees their own tenants, so a miss means "outside your access"
+    # -IncludeAll: the default lookup leaves excluded tenants out, which hid the excluded case below.
+    $Tenant = Get-Tenants -IncludeAll -TenantFilter $TenantID | Select-Object -First 1
+    # A tenant-restricted caller only sees their own tenants, so anything outside them means "outside your access"
     # whether or not CIPP manages it - and saying which would reveal what tenants exist.
-    if (-not $Tenant -and $script:CippAllowedTenantsStorage -and $null -ne $script:CippAllowedTenantsStorage.Value) {
+    if ($script:CippAllowedTenantsStorage -and $null -ne $script:CippAllowedTenantsStorage.Value -and
+        (-not $Tenant -or $script:CippAllowedTenantsStorage.Value -notcontains $Tenant.customerId)) {
         if ($TenantID -eq $env:TenantID) {
             return [System.UnauthorizedAccessException]::new("$Context denied: no tenant was selected, so it ran against the partner tenant, which is outside your access. Select one of your tenants and try again.")
         }

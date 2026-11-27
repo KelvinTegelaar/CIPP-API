@@ -29,7 +29,8 @@ function Invoke-ListOneDriveCopyToUser {
             $Table = Get-CIPPTable -TableName 'OneDriveCopyToUser'
             $SafeKey = (Get-CIPPOneDriveCopyTenantKey -TenantFilter $TenantFilter) -replace "'", "''"
             $Result = @(foreach ($Row in Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$SafeKey' and Kind eq 'Operation'") {
-                    $Recipients = if ($Row.RecipientSummary) { @([CIPP.CippJson]::ConvertFromJson([string]$Row.RecipientSummary, $null)) } else { @() }
+                    # @() outside the if: an if expression unwraps a one-recipient array to an object, which the page cannot .map().
+                    $Recipients = @(if ($Row.RecipientSummary) { [CIPP.CippJson]::ConvertFromJson([string]$Row.RecipientSummary, $null) })
                     [PSCustomObject]@{
                         OperationId     = $Row.RowKey
                         Leaver          = $Row.LeaverUPN

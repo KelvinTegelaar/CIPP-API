@@ -205,6 +205,17 @@ Describe 'Invoke-ListOneDriveCopyToUser' {
         Should -Invoke Update-CIPPOneDriveCopyToUserStatus -Times 0 -Exactly
     }
 
+    It 'sends Recipients as a JSON array when a copy has one recipient or none' {
+        Mock Get-CIPPAzDataTableEntity {
+            [pscustomobject]@{ RowKey = 'op-1'; Kind = 'Operation'; LeaverUPN = 'jane@contoso.com'; State = 'Completed'; RecipientSummary = '[{"UserPrincipalName":"bob@contoso.com","State":"Completed"}]' }
+            [pscustomobject]@{ RowKey = 'op-2'; Kind = 'Operation'; LeaverUPN = 'pat@contoso.com' }
+        }
+        $Response = Invoke-ListOneDriveCopyToUser -Request (New-ListRequest @{ tenantFilter = 'contoso.com' })
+        $Json = ConvertTo-Json -InputObject @($Response.Body) -Depth 5 -Compress
+        $Json | Should -Match '"Recipients":\[\{"UserPrincipalName":"bob@contoso.com"'
+        $Json | Should -Match '"Recipients":\[\]'
+    }
+
     It 'returns BadRequest when tenantFilter is missing' {
         $Response = Invoke-ListOneDriveCopyToUser -Request (New-ListRequest @{ OperationId = 'op-1' })
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)

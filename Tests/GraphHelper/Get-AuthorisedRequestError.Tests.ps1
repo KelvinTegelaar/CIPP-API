@@ -1,6 +1,6 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
-    function Get-Tenants { param([switch]$IncludeErrors, $TenantFilter) }
+    function Get-Tenants { param([switch]$IncludeErrors, [switch]$IncludeAll, $TenantFilter) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/GraphHelper/Get-AuthorisedRequestError.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
 }
@@ -22,10 +22,26 @@ Describe 'Get-AuthorisedRequestError' {
     }
 
     It 'tells an unrestricted caller the tenant is excluded, as a 403' {
-        Mock Get-Tenants { [pscustomobject]@{ customerId = 'x'; Excluded = $true } }
+        # Only a lookup that includes excluded tenants returns the row, as Get-Tenants does.
+        Mock Get-Tenants { }
+        Mock Get-Tenants -ParameterFilter { $IncludeAll } { [pscustomobject]@{ customerId = 'x'; Excluded = $true } }
         $Exception = Get-AuthorisedRequestError -TenantID 'excluded.onmicrosoft.com' -Context 'Graph request'
         $Exception.Message | Should -Be "Graph request denied for 'excluded.onmicrosoft.com': the tenant is excluded from CIPP management."
         Get-CippErrorStatusCode -ErrorRecord $Exception | Should -Be ([System.Net.HttpStatusCode]::Forbidden)
+    }
+
+    It 'does not tell a restricted caller that a tenant outside their access is excluded' {
+        $script:CippAllowedTenantsStorage = [pscustomobject]@{ Value = @('tenant-a') }
+        Mock Get-Tenants { [pscustomobject]@{ customerId = 'x'; Excluded = $true } }
+        (Get-AuthorisedRequestError -TenantID 'excluded.onmicrosoft.com' -Context 'Graph request').Message |
+            Should -Be "Graph request denied for 'excluded.onmicrosoft.com': the tenant is outside your access."
+    }
+
+    It 'tells a restricted caller their own tenant is excluded' {
+        $script:CippAllowedTenantsStorage = [pscustomobject]@{ Value = @('x') }
+        Mock Get-Tenants { [pscustomobject]@{ customerId = 'x'; Excluded = $true } }
+        (Get-AuthorisedRequestError -TenantID 'excluded.onmicrosoft.com' -Context 'Graph request').Message |
+            Should -BeLike '*the tenant is excluded from CIPP management.'
     }
 
     It 'tells a restricted caller the tenant is outside their access, whether or not it exists, as a 403' {

@@ -168,10 +168,10 @@ Describe 'Set-CIPPDBCacheDefenderIndicators' {
 }
 
 Describe 'DefenderIndicators registration' {
-    It 'registers the collector under the Defender for Endpoint licence, the cache type and the app permission' {
+    It 'registers the collector under the Defender licence gate, the cache type and the app permission' {
         $Schedule = Get-CIPPDBCacheSchedule
         $Schedule.Defender.Types | Should -Contain 'DefenderIndicators'
-        $Schedule.Defender.License | Should -Be 'DefenderForEndpoint'
+        $Schedule.Defender.License | Should -Be 'DefenderVulnerabilityManagement'
         $Backend = (Get-Content (Join-Path $RepoRoot 'Config/CIPPDBCacheTypes.json') -Raw | ConvertFrom-Json).Where({ $_.type -eq 'DefenderIndicators' })
         $Frontend = (Get-Content (Join-Path $RepoRoot '../frontend/src/data/CIPPDBCacheTypes.json') -Raw | ConvertFrom-Json).Where({ $_.type -eq 'DefenderIndicators' })
         $Backend.Count | Should -Be 1
