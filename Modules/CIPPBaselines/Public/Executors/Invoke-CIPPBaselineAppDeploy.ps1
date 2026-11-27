@@ -110,7 +110,7 @@ function Invoke-CIPPBaselineAppDeploy {
                 }
                 $CreatedApp = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/applications' -type POST -tenantid $TenantFilter -body ($CleanManifest | ConvertTo-Json -Depth 10)
                 if ("$($CreatedApp.appId)") {
-                    $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $TenantFilter -body (@{ appId = $CreatedApp.appId } | ConvertTo-Json)
+                    $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $TenantFilter -body (@{ appId = $CreatedApp.appId; tags = @('WindowsAzureActiveDirectoryIntegratedApp') } | ConvertTo-Json -Compress)
                     if ($CreatedApp.requiredResourceAccess) {
                         Add-CIPPDelegatedPermission -RequiredResourceAccess $CreatedApp.requiredResourceAccess -ApplicationId $CreatedApp.appId -Tenantfilter $TenantFilter
                         Add-CIPPApplicationPermission -RequiredResourceAccess $CreatedApp.requiredResourceAccess -ApplicationId $CreatedApp.appId -Tenantfilter $TenantFilter
@@ -122,7 +122,7 @@ function Invoke-CIPPBaselineAppDeploy {
             } else {
                 $AppId = "$($TemplateData.AppId)"
                 if ($AppId -notin @($ServicePrincipals.appId)) {
-                    $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $TenantFilter -body "{ `"appId`": `"$AppId`" }"
+                    $null = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $TenantFilter -body (@{ appId = $AppId; tags = @('WindowsAzureActiveDirectoryIntegratedApp') } | ConvertTo-Json -Compress)
                 }
                 Add-CIPPApplicationPermission -TemplateId $TemplateId -TenantFilter $TenantFilter
                 Add-CIPPDelegatedPermission -TemplateId $TemplateId -TenantFilter $TenantFilter

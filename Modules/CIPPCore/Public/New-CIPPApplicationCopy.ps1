@@ -49,6 +49,7 @@ function New-CIPPApplicationCopy {
             Write-Information "Creating service principal with ID: $($App)"
             $Body = @{
                 appId = $App
+                tags  = @('WindowsAzureActiveDirectoryIntegratedApp')
             }
             $Body = $Body | ConvertTo-Json -Compress
             Write-Information ($Body | ConvertTo-Json -Depth 10)

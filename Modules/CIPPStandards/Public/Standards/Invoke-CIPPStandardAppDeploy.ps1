@@ -236,6 +236,7 @@ function Invoke-CIPPStandardAppDeploy {
                                 # Create service principal for the application
                                 $ServicePrincipalBody = @{
                                     appId = $CreatedApp.appId
+                                    tags  = @('WindowsAzureActiveDirectoryIntegratedApp')
                                 } | ConvertTo-Json
 
                                 $ServicePrincipal = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Tenant -body $ServicePrincipalBody
@@ -259,7 +260,7 @@ function Invoke-CIPPStandardAppDeploy {
                         $AppId = $TemplateData.AppId
                         if ($AppId -notin $AppExists.appId) {
                             Write-Information "Adding $AppId to tenant $Tenant."
-                            $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Tenant -body "{ `"appId`": `"$AppId`" }"
+                            $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Tenant -body (@{ appId = $AppId; tags = @('WindowsAzureActiveDirectoryIntegratedApp') } | ConvertTo-Json -Compress)
                             Write-LogMessage -message "Added $AppId to tenant $Tenant" -tenant $Tenant -API 'Standards' -sev Info
                         }
 

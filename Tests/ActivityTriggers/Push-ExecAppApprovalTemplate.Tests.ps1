@@ -43,4 +43,18 @@ Describe 'Push-ExecAppApprovalTemplate application manifest' {
         }
         @($script:Sent.PSObject.Properties.Name | Sort-Object) | Should -Be @('displayName', 'signInAudience')
     }
+
+    It 'tags the new service principal so it is listed under Enterprise applications' {
+        $Template = @{ AppType = 'ApplicationManifest'; AppName = 'Contoso App'; ApplicationManifest = @{ displayName = 'Contoso App' } }
+        Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ RowKey = 't1'; JSON = ($Template | ConvertTo-Json -Depth 10) } }
+        Mock New-GraphGETRequest { @() }
+        Mock New-GraphPostRequest { [pscustomobject]@{ appId = 'a4be0e36-68b4-488f-a2ea-374f4ff009ed' } }
+        Mock Write-LogMessage {}
+
+        Push-ExecAppApprovalTemplate -Item @{ Tenant = 'a.com'; templateId = 't1' }
+
+        Should -Invoke New-GraphPostRequest -Times 1 -Exactly -ParameterFilter {
+            $uri -like '*/servicePrincipals' -and $body -match '"tags":\s*\[\s*"WindowsAzureActiveDirectoryIntegratedApp"\s*\]'
+        }
+    }
 }

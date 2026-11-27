@@ -26,7 +26,7 @@ function Invoke-ExecApproveAppConsentRequest {
         $ServicePrincipal = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$filter=appId eq '$AppId'&`$select=id" -tenantid $TenantFilter
         $GrantScopes = $Scopes
         if (!$ServicePrincipal) {
-            $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -tenantid $TenantFilter -type POST -body "{ `"appId`": `"$AppId`" }"
+            $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals' -tenantid $TenantFilter -type POST -body (@{ appId = $AppId; tags = @('WindowsAzureActiveDirectoryIntegratedApp') } | ConvertTo-Json -Compress)
         } else {
             # Add-CIPPDelegatedPermission replaces the scopes of an existing grant, so pass the current ones along.
             $Graph = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$GraphAppId')?`$select=id" -tenantid $TenantFilter
