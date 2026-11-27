@@ -282,7 +282,30 @@ function Invoke-CIPPOnboardingJob {
                             if ($Item.ShortcutName) { $ShortcutParams.ShortcutName = [string]$Item.ShortcutName }
                             New-CIPPOneDriveShortCut @ShortcutParams
                         } catch {
-                            "$($_.Exception.Message)"
+                            $ShortcutLabel = if ($Item.ShortcutName) { [string]$Item.ShortcutName } else { [string]$Item.URL }
+                            # Pre-provisioning only queues the OneDrive, and a licence only just assigned has not unlocked it yet,
+                            # so the shortcut is retried once, 30 minutes later; a slower OneDrive fails visibly in the scheduler.
+                            if ("$($_.Exception.Message)" -notmatch 'mysite|site has been blocked|is locked') {
+                                # The helper throws 'Could not add ...', which the step status would not read as a failure.
+                                "Failed to add the OneDrive shortcut to $($ShortcutLabel): $($_.Exception.Message)"
+                            } else {
+                                $RetryParams = [PSCustomObject]@{ Username = $Upn; UserId = $UserObjectId; URL = [string]$Item.URL; APIName = 'Create OneDrive shortcut (Onboarding)' }
+                                if ($Item.ShortcutName) { $RetryParams | Add-Member -NotePropertyName ShortcutName -NotePropertyValue ([string]$Item.ShortcutName) }
+                                $TaskBody = [PSCustomObject]@{
+                                    TenantFilter  = $TenantFilter
+                                    Name          = "OneDrive Shortcut: $Upn -> $ShortcutLabel"
+                                    Command       = @{ value = 'New-CIPPOneDriveShortCut' }
+                                    Parameters    = $RetryParams
+                                    ScheduledTime = [int64](([datetime]::UtcNow).AddMinutes(30) - (Get-Date '1/1/1970')).TotalSeconds
+                                    PostExecution = @{ Webhook = $false; Email = $false; PSA = $false }
+                                }
+                                $ScheduleResult = Add-CIPPScheduledTask -Task $TaskBody -hidden $false -Headers $Headers -DisallowDuplicateName $true
+                                if ($ScheduleResult -like 'Successfully added task:*') {
+                                    "Scheduled adding the OneDrive shortcut to $ShortcutLabel in 30 minutes, once the OneDrive is ready."
+                                } else {
+                                    "Failed to schedule the OneDrive shortcut to $($ShortcutLabel): $ScheduleResult"
+                                }
+                            }
                         }
                     }
                 }

@@ -251,6 +251,23 @@ Describe 'Invoke-CIPPOnboardingJob' {
         @($script:StepUpdates | Where-Object { $_.Status -eq 'failed' }).Count | Should -Be 1
     }
 
+    It 'reports a shortcut error the helper throws as Could not ... as a failed step' {
+        Mock New-CIPPOneDriveShortCut { throw 'Could not add OneDrive shortcut to maria@contoso.com : Could not find a SharePoint site matching URL' }
+        $Results = Invoke-Job -Fixes @(@{ Key = 'AddOneDriveShortcuts'; Params = @{ Items = @(@{ URL = 'https://contoso.sharepoint.com/sites/A' }) } })
+        @($Results)[-1] | Should -BeLike 'Failed to add the OneDrive shortcut to https://contoso.sharepoint.com/sites/A:*'
+        Should -Invoke Add-CIPPScheduledTask -Times 0 -Exactly
+        @($script:StepUpdates | Where-Object { $_.Status -eq 'failed' }).Count | Should -Be 1
+    }
+
+    It 'schedules a shortcut for later when the OneDrive is not ready yet' {
+        Mock New-CIPPOneDriveShortCut { throw "Could not add OneDrive shortcut to maria@contoso.com : User's mysite not found." }
+        $Results = Invoke-Job -Fixes @(@{ Key = 'AddOneDriveShortcuts'; Params = @{ Items = @(@{ URL = 'https://contoso.sharepoint.com/sites/Sales'; ShortcutName = 'Sales' }) } })
+
+        Should -Invoke Add-CIPPScheduledTask -Times 1 -Exactly -ParameterFilter { $Task.Command.value -eq 'New-CIPPOneDriveShortCut' -and $Task.Parameters.Username -eq 'maria@contoso.com' -and $Task.Parameters.UserId -eq 'user-id-1' -and $Task.Parameters.URL -eq 'https://contoso.sharepoint.com/sites/Sales' -and $Task.Parameters.ShortcutName -eq 'Sales' -and $Task.ScheduledTime -gt 0 }
+        @($Results)[-1] | Should -BeLike 'Scheduled adding the OneDrive shortcut to Sales in 30 minutes*'
+        @($script:StepUpdates | Where-Object { $_.Status -eq 'failed' }).Count | Should -Be 0
+    }
+
     It 'only removes the three delegate rights and only from the onboarded mailbox' {
         $null = Invoke-Job -Fixes @(@{ Key = 'RemoveMailboxPermissions'; Params = @{ Items = @(@{ User = 'tom@contoso.com'; AccessRights = @('ChangeOwner', 'SendAs') }) } })
         Should -Invoke Set-CIPPMailboxPermission -Times 1 -Exactly
