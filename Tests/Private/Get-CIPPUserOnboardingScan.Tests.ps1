@@ -20,6 +20,7 @@ BeforeAll {
     function Get-CippException { param($Exception) @{ NormalizedError = "$($Exception.Exception.Message)" } }
     function Write-LogMessage { param($headers, $API, $tenant, $message, $sev, $LogData) }
     function Write-Information { param($MessageData) }
+    function Get-CippRequestAllowedPermissions { }
 
     . (Join-Path $Public 'BEC/Get-CIPPBecErrorInfo.ps1')
     . (Join-Path $Public 'Get-CIPPUserOnboardingScan.ps1')
@@ -279,6 +280,19 @@ Describe 'Get-CIPPUserOnboardingScan' {
         $Roles = $Scan.Findings | Where-Object Id -EQ 'RolesRemoved'
         $Roles.Detail | Should -BeLike '*Helpdesk Administrator*'
         $Roles.Fix | Should -BeNullOrEmpty
+    }
+
+    It 'offers a group that grants admin roles only to a caller who can manage privileged users' {
+        $script:SnapshotRow = New-TestSnapshotRow
+        $script:Graph['g-ok'].body = [pscustomobject]@{ id = 'g-ok'; displayName = 'Sales'; isAssignableToRole = $true }
+
+        Mock Get-CippRequestAllowedPermissions { , @('Identity.User.ReadWrite') }
+        $Restricted = (Get-CIPPUserOnboardingScan -TenantFilter 'contoso.com' -UserId 'u-1').Snapshot.Groups | Where-Object id -EQ 'g-ok'
+        $Restricted.restorable | Should -BeFalse
+        $Restricted.skipReason | Should -BeLike '*Identity.PrivilegedUser.ReadWrite*'
+
+        Mock Get-CippRequestAllowedPermissions { , @('Identity.User.ReadWrite', 'Identity.PrivilegedUser.ReadWrite') }
+        ((Get-CIPPUserOnboardingScan -TenantFilter 'contoso.com' -UserId 'u-1').Snapshot.Groups | Where-Object id -EQ 'g-ok').restorable | Should -BeTrue
     }
 
     It 'reports a cleared immutable ID only when the snapshot recorded one' {

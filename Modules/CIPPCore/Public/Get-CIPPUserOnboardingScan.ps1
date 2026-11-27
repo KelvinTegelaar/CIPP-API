@@ -396,12 +396,15 @@ function Get-CIPPUserOnboardingScan {
             $SavedGroups = @($Saved.Groups | Where-Object { $_.id })
             $LiveGroups = @{}
             if ($SavedGroups.Count -gt 0) {
-                $GroupRequests = @($SavedGroups | ForEach-Object { @{ id = [string]$_.id; method = 'GET'; url = "groups/$($_.id)?`$select=id,displayName,onPremisesSyncEnabled,membershipRule" } })
+                $GroupRequests = @($SavedGroups | ForEach-Object { @{ id = [string]$_.id; method = 'GET'; url = "groups/$($_.id)?`$select=id,displayName,onPremisesSyncEnabled,membershipRule,isAssignableToRole" } })
                 $GroupResponses = @(New-GraphBulkRequest -tenantid $TenantFilter -Requests $GroupRequests)
                 foreach ($Response in $GroupResponses) {
                     $LiveGroups[[string]$Response.id] = $Response
                 }
             }
+            # The onboarding job refuses these groups for a caller who cannot manage privileged users.
+            $AllowedPermissions = Get-CippRequestAllowedPermissions
+            $CanAddRoleGroups = $null -eq $AllowedPermissions -or $AllowedPermissions -contains 'Identity.PrivilegedUser.ReadWrite'
             $SnapshotGroups = @(foreach ($Group in $SavedGroups) {
                     $Live = $LiveGroups[[string]$Group.id]
                     $SkipReason = if ($Live.status -eq 404) { 'This group has been deleted since the offboarding.' }
@@ -409,6 +412,7 @@ function Get-CIPPUserOnboardingScan {
                     elseif ($CurrentGroupIds.Contains([string]$Group.id)) { 'The user is already a member of this group.' }
                     elseif (-not [string]::IsNullOrWhiteSpace($Live.body.membershipRule)) { 'This is a dynamic group. Its membership rule adds the user.' }
                     elseif ($Live.body.onPremisesSyncEnabled) { 'This group is synced from Active Directory. Add the user on-premises.' }
+                    elseif ($Live.body.isAssignableToRole -eq $true -and -not $CanAddRoleGroups) { 'This group grants admin roles to its members. Adding to it needs the Identity.PrivilegedUser.ReadWrite permission.' }
                     [pscustomobject]@{
                         id          = $Group.id
                         displayName = ($Live.body.displayName ?? $Group.displayName)
