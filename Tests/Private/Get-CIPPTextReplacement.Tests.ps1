@@ -448,6 +448,17 @@ Describe 'Get-CIPPTextReplacement' {
             Should -Invoke Get-CIPPTenantGroupVariables -Times 1 -Exactly
         }
 
+        It 'reads a changed variable once the memo expires' {
+            Mock -CommandName Get-CIPPTenantGroupVariables -MockWith { @{} }
+            $script:GlobalRows = @(New-VariableRow -Name 'site' -Value 'HQ')
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%site%' | Should -Be 'HQ'
+
+            $script:GlobalRows = @(New-VariableRow -Name 'site' -Value 'Branch')
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%site%' | Should -Be 'HQ'
+            $script:CIPPVariableMemo.Expires = [datetime]::UtcNow.AddSeconds(-1)
+            Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%site%' | Should -Be 'Branch'
+        }
+
         It 'keeps each tenant to its own variables' {
             $script:TenantRows = @(New-VariableRow -Name 'site' -Value 'Contoso HQ')
             Get-CIPPTextReplacement -TenantFilter 'contoso.onmicrosoft.com' -Text '%site%' | Should -Be 'Contoso HQ'

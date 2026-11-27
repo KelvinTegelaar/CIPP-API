@@ -19,6 +19,7 @@ function Read-JwtAccessDetails {
         Name              = ''
         Scope             = ''
         Roles             = ''
+        DirectoryRoles    = ''
         TenantId          = ''
         UserPrincipalName = ''
     }
@@ -45,6 +46,7 @@ function Read-JwtAccessDetails {
     $TokenDetails.Name = $TokenObj.name
     $TokenDetails.Scope = $TokenObj.scp -split ' '
     $TokenDetails.Roles = $TokenObj.roles
+    $TokenDetails.DirectoryRoles = $TokenObj.wids
     $TokenDetails.TenantId = $TokenObj.tid
     $TokenDetails.UserPrincipalName = $TokenObj.upn
 

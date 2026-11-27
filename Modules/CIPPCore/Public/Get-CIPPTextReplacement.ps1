@@ -161,9 +161,13 @@ function Get-CIPPTextReplacement {
     $Tenant = if (-not $NoTenant) { Get-Tenants -TenantFilter $TenantFilter }
     $CustomerId = if ($Tenant.customerId) { $Tenant.customerId } else { $TenantFilter }
 
-    # One read per tenant serves every substitution in this invocation; Initialize-CippRequestContext clears it per request.
-    $script:CIPPVariableMemo ??= @{}
-    $Memo = $script:CIPPVariableMemo[$CustomerId]
+    # One read per tenant serves repeated substitutions. Initialize-CippRequestContext clears it per request; background
+    # workers keep $script: between tasks, so it also expires after 60 s for a variable change to reach them.
+    $Now = [datetime]::UtcNow
+    if (-not $script:CIPPVariableMemo -or $script:CIPPVariableMemo.Expires -lt $Now) {
+        $script:CIPPVariableMemo = @{ Expires = $Now.AddSeconds(60); Tenants = @{} }
+    }
+    $Memo = $script:CIPPVariableMemo.Tenants[$CustomerId]
     if (-not $Memo) {
         # Values are kept unescaped here and escaped at substitution time, so every token - custom and
         # built-in alike - goes through one code path. A typed variable is rendered from the raw value
@@ -209,7 +213,7 @@ function Get-CIPPTextReplacement {
             }
         }
         $Memo = @{ Vars = $Vars; VarTypes = $VarTypes; GroupConflicts = $GroupConflicts; Inherited = $Inherited }
-        $script:CIPPVariableMemo[$CustomerId] = $Memo
+        $script:CIPPVariableMemo.Tenants[$CustomerId] = $Memo
     }
     $Vars = $Memo.Vars
     $VarTypes = $Memo.VarTypes

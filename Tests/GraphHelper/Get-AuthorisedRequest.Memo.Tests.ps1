@@ -42,6 +42,14 @@ Describe 'Get-AuthorisedRequest invocation memo' {
         Should -Invoke Get-Tenants -Times 2 -Exactly
     }
 
+    It 'expires so a background worker sees a newly excluded tenant' {
+        $null = Get-AuthorisedRequest -TenantID 'contoso.com'
+        $script:CippAuthorisedTenantMemo.Expires = [datetime]::UtcNow.AddSeconds(-1)
+        $null = Get-AuthorisedRequest -TenantID 'contoso.com'
+
+        Should -Invoke Get-Tenants -Times 2 -Exactly
+    }
+
     It 'is cleared for the next request' {
         $null = Get-AuthorisedRequest -TenantID 'contoso.com'
         Initialize-CippRequestContext

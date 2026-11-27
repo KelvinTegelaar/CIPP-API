@@ -32,6 +32,46 @@ function Test-CIPPAccessPermissions {
         if (!$PartnerTenantId) { $PartnerTenantId = $env:TenantID }
         $IsPrimaryPartner = $PartnerTenantId -eq $env:TenantID
         $GraphToken = Get-GraphToken -returnRefresh $true -SkipCache $true -tenantid $PartnerTenantId
+
+        # Read the token before any Graph call: when CIPP-SAM holds no grants those calls throw, and
+        # these two checks are what tell the user how to recover.
+        try {
+            $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token -erroraction SilentlyContinue
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            $AccessTokenDetails = [PSCustomObject]@{
+                Name        = ''
+                AuthMethods = @()
+            }
+            Write-LogMessage -Headers $User -API $APINAME -tenant $tenant -message "Token exception: $($ErrorMessage.NormalizedError_) " -Sev 'Error' -LogData $ErrorMessage
+            $Success = $false
+        }
+
+        if ($AccessTokenDetails.Name) {
+            # CIPP needs these to grant every other permission to itself, in this tenant and in clients.
+            $BootstrapScopes = @('DelegatedPermissionGrant.ReadWrite.All', 'AppRoleAssignment.ReadWrite.All', 'Directory.ReadWrite.All')
+            $MissingBootstrapScopes = @(foreach ($Scope in $BootstrapScopes) { if ($AccessTokenDetails.Scope -notcontains $Scope) { $Scope } })
+            if ($MissingBootstrapScopes.Count -gt 0) {
+                $RefreshStep = if ($IsPrimaryPartner) { 'refresh your token in the Setup Wizard' } else { 'reconnect this partner tenant on the Partner Tenants page' }
+                $ErrorMessages.Add("CIPP's sign-in is missing Microsoft Graph permissions it needs to manage its own access: $($MissingBootstrapScopes -join ', '). Add them as delegated permissions on the CIPP-SAM app registration, grant admin consent, then $RefreshStep.") | Out-Null
+                $Links.Add([PSCustomObject]@{
+                        Text = 'CIPP cannot manage its own permissions'
+                        Href = 'https://docs.cipp.app/user-documentation/cipp/settings/permissions#cipp-cannot-manage-its-own-permissions'
+                    }) | Out-Null
+                $Success = $false
+            }
+
+            # Global Administrator, Privileged Role Administrator
+            $GrantingRoles = @('62e90394-69f5-4237-9190-012177145e10', 'e8611ab8-c189-46e8-94e1-60213ab1f814')
+            if (-not @($AccessTokenDetails.DirectoryRoles).Where({ $_ -in $GrantingRoles })) {
+                $WarningMessages.Add('The account CIPP signs in as is not a Global Administrator or Privileged Role Administrator, so CIPP cannot grant its own permissions in your tenant.') | Out-Null
+                $Links.Add([PSCustomObject]@{
+                        Text = 'Permissions not granted in your tenant'
+                        Href = 'https://docs.cipp.app/user-documentation/cipp/settings/permissions#permissions-not-granted-in-your-tenant'
+                    }) | Out-Null
+            }
+        }
+
         if ($GraphToken) {
             $GraphPermissions = Get-CippSamPermissions
         }
@@ -53,18 +93,6 @@ function Test-CIPPAccessPermissions {
             }
         } else {
             $Messages.Add('Your refresh token matches key vault.') | Out-Null
-        }
-
-        try {
-            $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token -erroraction SilentlyContinue
-        } catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            $AccessTokenDetails = [PSCustomObject]@{
-                Name        = ''
-                AuthMethods = @()
-            }
-            Write-LogMessage -Headers $User -API $APINAME -tenant $tenant -message "Token exception: $($ErrorMessage.NormalizedError_) " -Sev 'Error' -LogData $ErrorMessage
-            $Success = $false
         }
 
         if ($AccessTokenDetails.Name -eq '') {
@@ -185,7 +213,7 @@ function Test-CIPPAccessPermissions {
                 $Messages.Add("All Microsoft Graph $($Check.Label) permissions are granted to CIPP-SAM in your tenant.") | Out-Null
             }
         }
-        if ($UngrantedPermissions.Count -gt 0) {
+        if ($UngrantedPermissions.Count -gt 0 -and $Links.Text -notcontains 'Permissions not granted in your tenant') {
             $Links.Add([PSCustomObject]@{
                     Text = 'Permissions not granted in your tenant'
                     Href = 'https://docs.cipp.app/user-documentation/cipp/settings/permissions#permissions-not-granted-in-your-tenant'

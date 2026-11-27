@@ -34,12 +34,13 @@ function Get-AuthorisedRequest {
     if ($Exempt) {
         return $true
     }
-    # Every Graph and Exchange call lands here. A tenant once allowed stays allowed for the rest of this invocation:
-    # Initialize-CippRequestContext clears the memo per request, Craft per background task, and a change of tenant
-    # scope (Assert-CippTenantAccess swaps it briefly) starts a new one.
+    # Every Graph and Exchange call lands here, so an allowed tenant is remembered. Initialize-CippRequestContext clears
+    # the memo per request, a change of tenant scope (Assert-CippTenantAccess swaps it briefly) starts a new one, and it
+    # expires after 60 s because background workers keep $script: between tasks.
     $Scope = if ($script:CippAllowedTenantsStorage) { $script:CippAllowedTenantsStorage.Value }
-    if (-not $script:CippAuthorisedTenantMemo -or -not [object]::ReferenceEquals($script:CippAuthorisedTenantMemo.Scope, $Scope)) {
-        $script:CippAuthorisedTenantMemo = @{ Scope = $Scope; Tenants = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase) }
+    $Now = [datetime]::UtcNow
+    if (-not $script:CippAuthorisedTenantMemo -or $script:CippAuthorisedTenantMemo.Expires -lt $Now -or -not [object]::ReferenceEquals($script:CippAuthorisedTenantMemo.Scope, $Scope)) {
+        $script:CippAuthorisedTenantMemo = @{ Scope = $Scope; Expires = $Now.AddSeconds(60); Tenants = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase) }
     }
     if ($script:CippAuthorisedTenantMemo.Tenants.Contains($TenantID)) { return $true }
 
