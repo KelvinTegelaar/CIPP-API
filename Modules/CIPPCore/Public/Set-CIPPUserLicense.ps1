@@ -102,7 +102,18 @@ function Set-CIPPUserLicense {
     }
 
     # Execute bulk request
-    $BulkResults = if ($LicenseRequests.Count -gt 0) { New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkRequests) }
+    $BulkResults = [System.Collections.Generic.List[object]]::new()
+    if ($LicenseRequests.Count -gt 0) { foreach ($Result in @(New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkRequests))) { $BulkResults.Add($Result) } }
+
+    # A user created moments ago may not have replicated yet, so a not-found user is retried briefly.
+    for ($Attempt = 1; $Attempt -le 2; $Attempt++) {
+        $NotFound = @($BulkResults.Where({ $_.status -eq 404 }))
+        if ($NotFound.Count -eq 0) { break }
+        Start-Sleep -Seconds 3
+        $RetryIds = @($NotFound.id)
+        foreach ($Result in $NotFound) { $null = $BulkResults.Remove($Result) }
+        foreach ($Result in @(New-GraphBulkRequest -tenantid $TenantFilter -Requests @(@($BulkRequests).Where({ $_.id -in $RetryIds })))) { $BulkResults.Add($Result) }
+    }
 
     # Collect users with usage location errors
     $UsageLocationErrors = [System.Collections.Generic.List[object]]::new()

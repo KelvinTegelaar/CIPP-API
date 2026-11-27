@@ -46,6 +46,39 @@ Describe 'Set-CIPPUserLicense' {
         Should -Invoke New-GraphBulkRequest -Times 0
     }
 
+    It 'retries a user that has not replicated yet' {
+        Mock Start-Sleep { }
+        $script:Calls = 0
+        Mock New-GraphBulkRequest {
+            $script:Calls++
+            foreach ($Request in $Requests) {
+                if ($script:Calls -eq 1) { [pscustomobject]@{ id = $Request.id; status = 404; body = @{ error = @{ message = "Resource '$($Request.id)' does not exist" } } } }
+                else { [pscustomobject]@{ id = $Request.id; status = 200; body = @{} } }
+            }
+        }
+        $Requests = [System.Collections.Generic.List[object]]::new()
+        $Requests.Add((New-LicenseRequest 'new'))
+        $Results = @(Set-CIPPUserLicense -LicenseRequests $Requests -TenantFilter 'contoso.com')
+
+        $Results.Count | Should -Be 1
+        $Results[0].state | Should -Be 'success'
+        Should -Invoke New-GraphBulkRequest -Times 2 -Exactly
+    }
+
+    It 'reports a user that is still missing after the retries' {
+        Mock Start-Sleep { }
+        Mock New-GraphBulkRequest {
+            foreach ($Request in $Requests) { [pscustomobject]@{ id = $Request.id; status = 404; body = @{ error = @{ message = 'Resource does not exist' } } } }
+        }
+        $Requests = [System.Collections.Generic.List[object]]::new()
+        $Requests.Add((New-LicenseRequest 'gone'))
+        $Results = @(Set-CIPPUserLicense -LicenseRequests $Requests -TenantFilter 'contoso.com')
+
+        $Results.Count | Should -Be 1
+        $Results[0].state | Should -Be 'error'
+        Should -Invoke New-GraphBulkRequest -Times 3 -Exactly
+    }
+
     It 'still returns a plain string for a single user' {
         $Result = Set-CIPPUserLicense -UserId 'bad' -UserPrincipalName 'bad@contoso.com' -AddLicenses @('sku-1') -TenantFilter 'contoso.com'
         $Result | Should -BeOfType [string]
