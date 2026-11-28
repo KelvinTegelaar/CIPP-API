@@ -20,7 +20,7 @@ BeforeAll {
     function Get-CIPPBaselineDefinition { param($Name) }
     function New-CippQueueEntry { param($Name, $Reference, $TotalTasks) @{ RowKey = 'queue-1' } }
     function Start-CIPPOrchestrator { param($InputObject) }
-    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Body) }
+    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Query, $Body) }
     function Update-CIPPManagedBaselineRequest { param($Row) }
     . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
     . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Baselines/Test-CIPPManagedBaselineIdentifier.ps1')
@@ -204,7 +204,7 @@ Describe 'Invoke-ExecManagedBaselineRequest' {
             $Response = Invoke-ExecManagedBaselineRequest -Request (& $script:NewRequest @{ Action = 'Cancel'; requestId = 'request-9' })
 
             $Response.StatusCode | Should -Be 200
-            Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'requests/request-9' -and $Method -eq 'DELETE' }
+            Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'PartnerRequest' -and $Query.requestId -eq 'request-9' -and $Method -eq 'DELETE' }
             Should -Invoke Remove-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Context -eq 'ManagedBaselineRequests' }
         }
 

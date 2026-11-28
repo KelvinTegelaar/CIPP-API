@@ -30,7 +30,7 @@ function Complete-CIPPManagedBaselineRequest {
         throw [System.ArgumentException]::new("This request is '$($Row.Status)'. Its baseline can be saved once CyberDrain has delivered it.")
     }
 
-    $Package = (Invoke-ManagedBaselinesRequest -Path "requests/$RequestId").package
+    $Package = (Invoke-ManagedBaselinesRequest -Path 'PartnerRequest' -Query @{ requestId = $RequestId }).package
     if (-not $Package.Baseline) {
         throw [System.ArgumentException]::new('CyberDrain has not delivered a baseline for this request yet.')
     }
@@ -49,7 +49,7 @@ function Complete-CIPPManagedBaselineRequest {
         Error          = ''
     }
     try {
-        $null = Invoke-ManagedBaselinesRequest -Path "requests/$RequestId/confirm" -Method POST
+        $null = Invoke-ManagedBaselinesRequest -Path 'PartnerRequestConfirm' -Method POST -Body @{ requestId = $RequestId }
     } catch {
         $Changes.ConfirmPending = $true
         Write-Information "Managed baseline request ${RequestId}: telling CyberDrain it was implemented failed, the hourly check repeats it: $($_.Exception.Message)"

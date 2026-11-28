@@ -10,7 +10,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
     function ConvertTo-CIPPODataFilterValue { param($Value) "$Value" }
     function Write-LogMessage { param($headers, $API, $message, $Sev) }
-    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Body) }
+    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Query, $Body) }
     . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
     . (Join-Path $BackendRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Tenant/Standards/Invoke-ListManagedBaselineGuide.ps1')
 
@@ -23,8 +23,8 @@ BeforeAll {
 Describe 'Invoke-ListManagedBaselineGuide' {
     BeforeEach {
         Mock Write-LogMessage {}
-        Mock Invoke-ManagedBaselinesRequest { $script:Template } -ParameterFilter { $Path -like 'templates/*' }
-        Mock Invoke-ManagedBaselinesRequest { [pscustomobject]@{ status = 'ready'; package = $script:Custom } } -ParameterFilter { $Path -like 'requests/*' }
+        Mock Invoke-ManagedBaselinesRequest { $script:Template } -ParameterFilter { $Path -eq 'PartnerTemplate' }
+        Mock Invoke-ManagedBaselinesRequest { [pscustomobject]@{ status = 'ready'; package = $script:Custom } } -ParameterFilter { $Path -eq 'PartnerRequest' }
         Mock Get-CIPPAzDataTableEntity {}
     }
 
@@ -40,13 +40,13 @@ Describe 'Invoke-ListManagedBaselineGuide' {
         $Guide.stages[1].guide | Should -BeLike '*Basic authentication*'
         @($Guide.stages[1].communications).Count | Should -Be 2
         $Guide.stages[1].communications[0].audience | Should -Be 'Client contact'
-        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'templates/sample-email-protection' }
+        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'PartnerTemplate' -and $Query.id -eq 'sample-email-protection' }
     }
 
     It 'still lists the stages of a baseline that has no guide' {
         $Bare = $script:Template | ConvertTo-Json -Depth 100 | ConvertFrom-Json -Depth 100
         $Bare.PSObject.Properties.Remove('Guide')
-        Mock Invoke-ManagedBaselinesRequest { $Bare } -ParameterFilter { $Path -like 'templates/*' }
+        Mock Invoke-ManagedBaselinesRequest { $Bare } -ParameterFilter { $Path -eq 'PartnerTemplate' }
 
         $Guide = (Invoke-ListManagedBaselineGuide -Request (New-GuideRequest @{ id = 'sample-email-protection' })).Body.Results
 
@@ -61,7 +61,7 @@ Describe 'Invoke-ListManagedBaselineGuide' {
         $Guide = (Invoke-ListManagedBaselineGuide -Request (New-GuideRequest @{ GUID = 'baseline-a' })).Body.Results
 
         $Guide.importedVersion | Should -Be '0'
-        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'templates/sample-email-protection' }
+        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'PartnerTemplate' -and $Query.id -eq 'sample-email-protection' }
     }
 
     It 'reads the guide of a custom baseline from its request' {
@@ -71,7 +71,7 @@ Describe 'Invoke-ListManagedBaselineGuide' {
 
         $Guide.name | Should -Be 'Sample - Custom Baseline'
         @($Guide.stages[0].communications).Count | Should -Be 1
-        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'requests/request-9' }
+        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'PartnerRequest' -and $Query.requestId -eq 'request-9' }
     }
 
     It 'refuses a baseline CyberDrain does not manage' {

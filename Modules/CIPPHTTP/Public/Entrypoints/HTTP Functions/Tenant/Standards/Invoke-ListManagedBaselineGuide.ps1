@@ -28,9 +28,9 @@ function Invoke-ListManagedBaselineGuide {
         }
 
         $Package = if ($RequestId) {
-            (Invoke-ManagedBaselinesRequest -Path "requests/$RequestId").package
+            (Invoke-ManagedBaselinesRequest -Path 'PartnerRequest' -Query @{ requestId = $RequestId }).package
         } elseif ($Id) {
-            Invoke-ManagedBaselinesRequest -Path "templates/$Id"
+            Invoke-ManagedBaselinesRequest -Path 'PartnerTemplate' -Query @{ id = $Id }
         } else {
             throw [System.ArgumentException]::new('Choose a managed baseline to read the guide for.')
         }

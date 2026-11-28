@@ -10,7 +10,7 @@ BeforeAll {
     function Get-CippTable { param($tablename) @{ Context = $tablename } }
     function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
     function Write-LogMessage { param($headers, $API, $message, $Sev) }
-    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Body) }
+    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Query, $Body) }
     function Get-CIPPBaseline { param($ID, [switch]$ResolveIdentityLabels) }
     function Get-CIPPBaselineDefinition { param($Name) }
     function Get-CIPPBaselineOutOfScopeAssignment { param($Assignments) }
@@ -65,7 +65,7 @@ Describe 'Invoke-ExecManagedBaseline' {
 
             $Response.StatusCode | Should -Be 200
             $Response.Body.Results | Should -BeLike "*Sample - Identity Essentials*6 standards*"
-            Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'templates/sample-identity-essentials' }
+            Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'PartnerTemplate' -and $Query.id -eq 'sample-identity-essentials' }
             Should -Invoke Import-CIPPManagedBaseline -Times 1 -Exactly -ParameterFilter {
                 $Kind -eq 'template' -and $User -eq 'admin@partner.example' -and
                 $Baseline.assignedTenants[0].value -eq 'Exported Template' -and
@@ -134,11 +134,11 @@ Describe 'Invoke-ExecManagedBaseline' {
 
         It 'fetches a custom baseline from its request, not from the catalog' {
             Mock Get-CIPPBaseline { New-LocalBaseline -Kind 'custom' }
-            Mock Invoke-ManagedBaselinesRequest { [pscustomobject]@{ status = 'implemented'; package = $script:Package } }
+            Mock Invoke-ManagedBaselinesRequest { [pscustomobject]@{ status = 'ready'; package = $script:Package } }
 
             $null = Invoke-ExecManagedBaseline -Request (& $script:NewRequest @{ Action = 'Align'; GUID = 'baseline-1' })
 
-            Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'requests/request-9' }
+            Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'PartnerRequest' -and $Query.requestId -eq 'request-9' }
             Should -Invoke Import-CIPPManagedBaseline -Times 1 -Exactly -ParameterFilter { $Kind -eq 'custom' -and $RequestId -eq 'request-9' }
         }
 

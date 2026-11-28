@@ -13,6 +13,7 @@ function Invoke-ManagedBaselinesRequest {
     param(
         [Parameter(Mandatory = $true)][string]$Path,
         [ValidateSet('GET', 'POST', 'DELETE')][string]$Method = 'GET',
+        [hashtable]$Query,
         $Body
     )
 
@@ -34,8 +35,15 @@ function Invoke-ManagedBaselinesRequest {
 
     $BaseUrl = 'https://managedbaselines.cipp.app'
     if ($env:CIPP_MANAGED_BASELINES_URL) { $BaseUrl = $env:CIPP_MANAGED_BASELINES_URL.TrimEnd('/') }
+    $Uri = '{0}/api/{1}' -f $BaseUrl, $Path
+    if ($Query.Count -gt 0) {
+        $Pairs = foreach ($Key in $Query.Keys) {
+            '{0}={1}' -f [uri]::EscapeDataString("$Key"), [uri]::EscapeDataString("$($Query[$Key])")
+        }
+        $Uri = '{0}?{1}' -f $Uri, ($Pairs -join '&')
+    }
     $RestMethod = @{
-        Uri     = '{0}/api/{1}' -f $BaseUrl, $Path
+        Uri     = $Uri
         Method  = $Method
         Headers = @{ 'x-api-key' = $APIKey; 'User-Agent' = 'CIPP' }
     }
@@ -48,7 +56,7 @@ function Invoke-ManagedBaselinesRequest {
         Invoke-RestMethod @RestMethod
     } catch {
         switch ([int]$_.Exception.Response.StatusCode.value__) {
-            401 { throw [System.UnauthorizedAccessException]::new('CyberDrain rejected the API key. Check the key under Integrations.') }
+            401 { throw [System.UnauthorizedAccessException]::new('CyberDrain rejected the API key. Check the key under Integrations, or contact CyberDrain if your subscription has ended.') }
             402 { throw [System.UnauthorizedAccessException]::new('The Managed Baselines subscription for this API key is not active.') }
             403 { throw [System.UnauthorizedAccessException]::new('CyberDrain rejected the API key. Check the key under Integrations.') }
             404 { throw [System.Management.Automation.ItemNotFoundException]::new('CyberDrain could not find that baseline or request.') }

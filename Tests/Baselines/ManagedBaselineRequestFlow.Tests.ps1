@@ -10,7 +10,7 @@ BeforeAll {
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" }
     function Select-CippAllowedTenantData { param([Parameter(ValueFromPipeline)]$InputObject, $TenantProperty) process { $InputObject } }
     function Write-LogMessage { param($API, $tenant, $message, $Sev) }
-    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Body) }
+    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Query, $Body) }
     function Import-CIPPManagedBaseline { param($Package, $Baseline, $Kind, $RequestId, $User, [string[]]$TemplateIds) }
     foreach ($Name in 'Get-CIPPManagedBaselineRequestBody', 'Update-CIPPManagedBaselineRequest', 'Complete-CIPPManagedBaselineRequest') {
         . (Join-Path $BackendRoot "Modules/CIPPCore/Public/Baselines/$Name.ps1")
@@ -75,7 +75,7 @@ Describe 'Push-CIPPManagedBaselineSubmit' {
     It 'sends the snapshot and moves the request to Waiting on CyberDrain' {
         Push-CIPPManagedBaselineSubmit -Item @{ Parameters = @{ RequestId = 'request-9' } }
 
-        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'requests' -and $Method -eq 'POST' -and $Body.standards.Count -eq 2 }
+        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'PartnerRequest' -and $Method -eq 'POST' -and $Body.standards.Count -eq 2 }
         $script:Changes.Status | Should -Be 'Waiting on CyberDrain'
         $script:Changes.SubmittedAt | Should -BeGreaterThan 0
     }
@@ -118,7 +118,7 @@ Describe 'Update-CIPPManagedBaselineRequest' {
     }
 
     It 'keeps waiting while CyberDrain is still working on it' {
-        Mock Invoke-ManagedBaselinesRequest { [pscustomobject]@{ status = 'in-progress' } }
+        Mock Invoke-ManagedBaselinesRequest { [pscustomobject]@{ status = 'in_progress' } }
 
         Update-CIPPManagedBaselineRequest -Row (New-Row 'Waiting on CyberDrain' 100) | Should -Be 'Waiting on CyberDrain'
     }
@@ -138,11 +138,11 @@ Describe 'Update-CIPPManagedBaselineRequest' {
     }
 
     It 'repeats a confirm call that failed earlier' {
-        Mock Invoke-ManagedBaselinesRequest { [pscustomobject]@{ status = 'implemented'; version = 2 } }
+        Mock Invoke-ManagedBaselinesRequest { [pscustomobject]@{ status = 'ready'; version = 2 } }
 
         $null = Update-CIPPManagedBaselineRequest -Row (New-Row 'Implemented' 100 $true)
 
-        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'requests/request-9/confirm' -and $Method -eq 'POST' }
+        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'PartnerRequestConfirm' -and $Body.requestId -eq 'request-9' -and $Method -eq 'POST' }
         $script:Changes.ConfirmPending | Should -BeFalse
         $script:Changes.Status | Should -Be 'Implemented'
     }
@@ -166,7 +166,7 @@ Describe 'Complete-CIPPManagedBaselineRequest' {
         Should -Invoke Import-CIPPManagedBaseline -Times 1 -Exactly -ParameterFilter {
             $Kind -eq 'custom' -and $RequestId -eq 'request-9' -and $Baseline.templateName -eq 'Contoso baseline' -and $Package.id -eq 'custom-1'
         }
-        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'requests/request-9/confirm' }
+        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'PartnerRequestConfirm' -and $Body.requestId -eq 'request-9' }
         $script:Changes.Status | Should -Be 'Implemented'
         $script:Changes.BaselineGUID | Should -Be 'baseline-1'
         $script:Changes.ConfirmPending | Should -BeFalse
@@ -181,8 +181,8 @@ Describe 'Complete-CIPPManagedBaselineRequest' {
     }
 
     It 'still saves when telling CyberDrain fails, and leaves the call to be repeated' {
-        Mock Invoke-ManagedBaselinesRequest { [pscustomobject]@{ status = 'ready'; version = 2; package = $script:Package } } -ParameterFilter { $Path -eq 'requests/request-9' }
-        Mock Invoke-ManagedBaselinesRequest { throw 'service is down' } -ParameterFilter { $Path -eq 'requests/request-9/confirm' }
+        Mock Invoke-ManagedBaselinesRequest { [pscustomobject]@{ status = 'ready'; version = 2; package = $script:Package } } -ParameterFilter { $Path -eq 'PartnerRequest' -and $Query.requestId -eq 'request-9' }
+        Mock Invoke-ManagedBaselinesRequest { throw 'service is down' } -ParameterFilter { $Path -eq 'PartnerRequestConfirm' -and $Body.requestId -eq 'request-9' }
 
         $Saved = Complete-CIPPManagedBaselineRequest -RequestId 'request-9' -Baseline $script:Payload -Version '2'
 

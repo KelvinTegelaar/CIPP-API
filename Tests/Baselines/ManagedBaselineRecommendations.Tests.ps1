@@ -15,7 +15,7 @@ BeforeAll {
     function Get-CIPPBaselineDefinition { param($Name) }
     function Get-CIPPBaselineWorkItems { param($TenantFilter) }
     function Invoke-CIPPBaselineStandard { param($Item, $Mode, [switch]$GradeOnly) }
-    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Body) }
+    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Query, $Body) }
     . (Join-Path $BackendRoot 'Modules/CIPPBaselines/Public/Helpers/Get-CIPPBaselineStandardGrade.ps1')
     . (Join-Path $BackendRoot 'Modules/CIPPActivityTriggers/Public/Entrypoints/Activity Triggers/Baselines/Push-CIPPManagedBaselineRecommendationCollect.ps1')
     . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Baselines/Complete-CIPPManagedBaselineRecommendationScan.ps1')

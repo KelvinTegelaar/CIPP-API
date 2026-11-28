@@ -25,7 +25,7 @@ function Push-CIPPManagedBaselineSubmit {
         $Row | Add-Member -NotePropertyName CollectedAt -NotePropertyValue $Now -Force
         $Body = Get-CIPPManagedBaselineRequestBody -Row $Row
         if (@($Body.standards).Count -eq 0) { throw 'no standard could be compared.' }
-        $Answer = Invoke-ManagedBaselinesRequest -Path 'requests' -Method POST -Body $Body
+        $Answer = Invoke-ManagedBaselinesRequest -Path 'PartnerRequest' -Method POST -Body $Body
         $Changes.Status = 'Waiting on CyberDrain'
         $Changes.RemoteStatus = "$($Answer.status)"
         $Changes.SubmittedAt = $Now

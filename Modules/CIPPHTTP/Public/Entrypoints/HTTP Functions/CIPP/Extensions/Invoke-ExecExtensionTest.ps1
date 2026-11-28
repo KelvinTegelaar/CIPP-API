@@ -149,7 +149,7 @@ Function Invoke-ExecExtensionTest {
             }
             'CyberDrainManagedBaselines' {
                 try {
-                    $Account = Invoke-ManagedBaselinesRequest -Path 'account'
+                    $Account = Invoke-ManagedBaselinesRequest -Path 'PartnerAccount'
                 } catch {
                     $StatusCode = [HttpStatusCode]::InternalServerError
                     $Results = [pscustomobject]@{ 'Results' = "Failed to connect to CyberDrain Managed Baselines: $($_.Exception.Message)" }

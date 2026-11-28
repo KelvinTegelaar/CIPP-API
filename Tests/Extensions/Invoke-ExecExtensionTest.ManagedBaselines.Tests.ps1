@@ -8,7 +8,7 @@ BeforeAll {
 
     function Get-CIPPTable { param($TableName) @{} }
     function Get-CIPPAzDataTableEntity { param($Filter) [pscustomobject]@{ config = '{"CyberDrainManagedBaselines":{"Enabled":true}}' } }
-    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Body) }
+    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Query, $Body) }
     . (Join-Path $BackendRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/CIPP/Extensions/Invoke-ExecExtensionTest.ps1')
 
     $script:Request = [pscustomobject]@{ Query = [pscustomobject]@{ extensionName = 'CyberDrainManagedBaselines' } }
@@ -22,7 +22,7 @@ Describe 'Invoke-ExecExtensionTest for CyberDrain Managed Baselines' {
 
         $Response.StatusCode | Should -Be 200
         $Response.Body.Results | Should -BeLike '*Contoso MSP*'
-        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'account' }
+        Should -Invoke Invoke-ManagedBaselinesRequest -Times 1 -Exactly -ParameterFilter { $Path -eq 'PartnerAccount' }
     }
 
     It 'answers with an error status and the reason when CyberDrain refuses the key' {

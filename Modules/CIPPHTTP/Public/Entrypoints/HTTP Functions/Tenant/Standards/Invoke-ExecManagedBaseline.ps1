@@ -19,7 +19,7 @@ function Invoke-ExecManagedBaseline {
         if ($Action -eq 'Import') {
             $Id = "$($Request.Body.id)"
             if (-not $Id) { throw [System.ArgumentException]::new('Choose a published baseline to add.') }
-            $Package = Invoke-ManagedBaselinesRequest -Path "templates/$Id"
+            $Package = Invoke-ManagedBaselinesRequest -Path 'PartnerTemplate' -Query @{ id = $Id }
             if (-not $Package.Baseline.templateName) { throw "CyberDrain returned no baseline for '$Id'." }
 
             $RolloutTable = Get-CippTable -tablename 'BaselineRollouts'
@@ -60,9 +60,9 @@ function Invoke-ExecManagedBaseline {
             $Package = $null
             if ("$($Local.managedKind)" -eq 'custom') {
                 $Kind = 'custom'
-                $Package = (Invoke-ManagedBaselinesRequest -Path "requests/$($Local.managedRequestId)").package
+                $Package = (Invoke-ManagedBaselinesRequest -Path 'PartnerRequest' -Query @{ requestId = "$($Local.managedRequestId)" }).package
             } else {
-                $Package = Invoke-ManagedBaselinesRequest -Path "templates/$($Local.managedId)"
+                $Package = Invoke-ManagedBaselinesRequest -Path 'PartnerTemplate' -Query @{ id = "$($Local.managedId)" }
             }
             if (-not $Package.Baseline) { throw "CyberDrain returned no baseline for '$($Local.templateName)'." }
 

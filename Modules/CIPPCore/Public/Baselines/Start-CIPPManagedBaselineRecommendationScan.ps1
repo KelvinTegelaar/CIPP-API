@@ -23,7 +23,7 @@ function Start-CIPPManagedBaselineRecommendationScan {
     if (-not $TenantFilter -or -not $Partition) { throw [System.ArgumentException]::new('Choose the tenant to scan.') }
     if (-not $PSCmdlet.ShouldProcess($TenantFilter, 'Start a recommendations scan')) { return }
 
-    $List = Invoke-ManagedBaselinesRequest -Path 'recommendations'
+    $List = Invoke-ManagedBaselinesRequest -Path 'PartnerRecommendations'
 
     $Table = Get-CippTable -tablename 'BaselineRecommendations'
     $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())

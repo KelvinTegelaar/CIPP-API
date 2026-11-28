@@ -24,14 +24,14 @@ function Update-CIPPManagedBaselineRequest {
     }
     if ($Row.ConfirmPending -eq $true) {
         try {
-            $null = Invoke-ManagedBaselinesRequest -Path "requests/$($Row.RowKey)/confirm" -Method POST
+            $null = Invoke-ManagedBaselinesRequest -Path 'PartnerRequestConfirm' -Method POST -Body @{ requestId = "$($Row.RowKey)" }
             $Changes.ConfirmPending = $false
         } catch {
             Write-Information "Managed baseline request $($Row.RowKey): telling CyberDrain it was implemented failed again: $($_.Exception.Message)"
         }
     }
 
-    $Answer = Invoke-ManagedBaselinesRequest -Path "requests/$($Row.RowKey)"
+    $Answer = Invoke-ManagedBaselinesRequest -Path 'PartnerRequest' -Query @{ requestId = "$($Row.RowKey)" }
     $Changes.RemoteStatus = "$($Answer.status)"
     $Changes.RemoteVersion = "$($Answer.version)"
     $Changes.EngineerNotes = "$($Answer.engineerNotes)"

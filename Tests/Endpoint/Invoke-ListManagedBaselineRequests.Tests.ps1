@@ -12,7 +12,7 @@ BeforeAll {
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" }
     function Select-CippAllowedTenantData { param([Parameter(ValueFromPipeline)]$InputObject, $TenantProperty) process { $InputObject } }
     function Write-LogMessage { param($headers, $API, $message, $Sev) }
-    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Body) }
+    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Query, $Body) }
     function Get-Tenants { param($TenantFilter) }
     function Get-CIPPBaselineDefinition { param($Name) }
     function Get-CIPPManagedBaselineRequestBody { param($Row) }
@@ -155,7 +155,7 @@ Describe 'Invoke-ListManagedBaselineRequests' {
         }
 
         It 'refuses the delivered baseline before CyberDrain has delivered one' {
-            Mock Invoke-ManagedBaselinesRequest { [pscustomobject]@{ status = 'in-progress' } }
+            Mock Invoke-ManagedBaselinesRequest { [pscustomobject]@{ status = 'in_progress' } }
 
             (Invoke-ListManagedBaselineRequests -Request (& $script:NewRequest @{ requestId = 'request-9'; includeBaseline = 'true' })).StatusCode | Should -Be 400
         }

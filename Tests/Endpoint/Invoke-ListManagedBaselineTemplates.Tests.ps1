@@ -9,7 +9,7 @@ BeforeAll {
     function Get-CippTable { param($tablename) @{ Context = $tablename } }
     function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
     function Write-LogMessage { param($headers, $API, $message, $Sev) }
-    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Body) }
+    function Invoke-ManagedBaselinesRequest { param($Path, $Method, $Query, $Body) }
     function Get-CIPPBaselineDefinition { param($Name) }
     . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/Get-CippErrorStatusCode.ps1')
     . (Join-Path $BackendRoot 'Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions/Tenant/Standards/Invoke-ListManagedBaselineTemplates.ps1')

@@ -22,7 +22,7 @@ function Invoke-ListManagedBaselineRequests {
             if (-not $Row) { throw [System.Management.Automation.ItemNotFoundException]::new('That request was not found.') }
 
             if ("$($Request.Query.includeBaseline)" -eq 'true') {
-                $Package = (Invoke-ManagedBaselinesRequest -Path "requests/$RequestId").package
+                $Package = (Invoke-ManagedBaselinesRequest -Path 'PartnerRequest' -Query @{ requestId = $RequestId }).package
                 if (-not $Package.Baseline) {
                     throw [System.ArgumentException]::new('CyberDrain has not delivered a baseline for this request yet.')
                 }

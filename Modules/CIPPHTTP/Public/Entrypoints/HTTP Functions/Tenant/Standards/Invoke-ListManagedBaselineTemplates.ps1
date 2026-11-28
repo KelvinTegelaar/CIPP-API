@@ -13,7 +13,7 @@ function Invoke-ListManagedBaselineTemplates {
     $APIName = $Request.Params.CIPPEndpoint
     try {
         # Invoke-RestMethod hands a JSON array over as one object; assigning it first unwraps it.
-        $Reply = Invoke-ManagedBaselinesRequest -Path 'templates'
+        $Reply = Invoke-ManagedBaselinesRequest -Path 'PartnerTemplates'
         $Catalog = @($Reply)
 
         $Added = @{}

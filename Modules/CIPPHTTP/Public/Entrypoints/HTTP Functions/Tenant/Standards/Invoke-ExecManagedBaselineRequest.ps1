@@ -170,7 +170,7 @@ function Invoke-ExecManagedBaselineRequest {
                 if ("$($Row.Status)" -eq 'Implemented') { throw [System.ArgumentException]::new('This request is implemented and can no longer be cancelled.') }
                 if ($Row.SubmittedAt) {
                     try {
-                        $null = Invoke-ManagedBaselinesRequest -Path "requests/$RequestId" -Method DELETE
+                        $null = Invoke-ManagedBaselinesRequest -Path 'PartnerRequest' -Method DELETE -Query @{ requestId = $RequestId }
                     } catch {
                         Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Row.TenantFilter -message "Cancelling request $RequestId at CyberDrain failed, it was removed here only: $($_.Exception.Message)" -Sev 'Warning'
                     }
